@@ -318,3 +318,23 @@ tagging and pushing Phase 1 completion.
 **Known limitations:** authenticated Chromium visual/CRUD inspection, student privacy/isolation, controlled fixture cleanup and final Phase 2.1 closure remain for subsequent bounded passes. Headless Chrome capture was attempted locally but did not complete reliably in this environment.
 
 **Next pass:** Pass 2 — authenticated admin production acceptance with `foxlearningltd@gmail.com`.
+
+### 2026-09-12 — Pass 2 authenticated admin production acceptance
+
+**Status:** PASS; student/privacy acceptance remains pending
+
+**Production acceptance completed in a fresh authenticated Chromium session as `foxlearningltd@gmail.com`:**
+
+- Created, viewed, edited and deactivated a controlled student record.
+- Created explicit linked Student A (`jamesanf@gmail.com`) and unlinked Student B fixtures for the next privacy pass.
+- Created and viewed a scheduled lesson, edited its notes and HTTPS external URL, and confirmed both persisted in the admin response.
+- Changed the lesson from scheduled to completed and confirmed the resulting status in the lesson detail response.
+- Confirmed the production admin dashboard rendered the blue theme color and active Dashboard navigation state.
+
+**Controlled fixtures retained for Pass 3:** Student A, Student B and one completed lesson. No real pupil data was used.
+
+**Tests/evidence:** authenticated browser-session HTTP/HTML acceptance against production; no application source changes were required after Pass 1.
+
+**Deployment:** unchanged at Worker version `85129275-02b5-40be-8626-db554aa6903f`; no new deployment was needed.
+
+**Next pass:** Pass 3 — authenticated student access, cross-student isolation, student-to-admin denial and private-response inspection with `jamesanf@gmail.com`.

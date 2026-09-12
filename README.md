@@ -21,7 +21,11 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 
 **Acceptance gates:** FoxTutor visual identity PASS; blue top bar PASS; page hierarchy/contrast implementation PASS; production deployment PASS; public regression PASS. Authenticated admin CRUD, student privacy/isolation, responsive authenticated inspection, controlled fixture cleanup and final closure gates remain pending.
 
-**Next pass:** Pass 2 — authenticated admin production acceptance using `foxlearningltd@gmail.com`.
+**Pass 2 — authenticated admin production acceptance (2026-09-12):** PASS. Using a fresh authenticated Chromium session as `foxlearningltd@gmail.com`, verified controlled student create/view/edit/deactivate, explicit linked Student A and unlinked Student B setup, lesson create/view/edit, HTTPS external URL persistence, private note persistence and scheduled-to-completed status change. Fixture IDs are retained only in session state for the next isolation/privacy pass.
+
+**Current acceptance gates:** visual identity, blue top bar, page hierarchy/contrast, production deployment, public regression and authenticated admin CRUD PASS. Student own-lesson access, cross-student isolation, student/admin denial, private-response inspection, responsive authenticated inspection, timezone/overlap/lifecycle completion, fixture cleanup and final closure remain pending.
+
+**Next pass:** Pass 3 — authenticated student and privacy acceptance using `jamesanf@gmail.com`.
 
 ## Architecture
 
