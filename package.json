@@ -13,7 +13,7 @@
     "test:browser": "node scripts/verify-browser.mjs",
     "test:production": "node scripts/smoke-production.mjs",
     "dev": "npx wrangler dev --config wrangler.local.jsonc",
-    "deploy": "npx wrangler deploy --message \"Phase 1 private Learn foundation\""
+    "deploy": "npx wrangler deploy --message \"Phase 2.1 student and lesson management\""
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260905.1",

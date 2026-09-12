@@ -66,9 +66,21 @@ export function clearSessionCookies(secure = true): string[] {
 
 export async function csrfValid(request: Request, active: ActiveSession): Promise<boolean> {
   if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") return true;
-  const form = request.headers.get("content-type")?.includes("application/x-www-form-urlencoded")
-    ? await request.clone().formData()
+  const contentType = request.headers.get("content-type") ?? "";
+  const form = contentType.includes("application/x-www-form-urlencoded")
+    ? await boundedFormData(request, contentType)
     : null;
   const supplied = request.headers.get("X-CSRF-Token") ?? form?.get("csrf");
   return typeof supplied === "string" && supplied === active.csrfToken;
+}
+
+async function boundedFormData(request: Request, contentType: string): Promise<FormData | null> {
+  const body = await request.clone().arrayBuffer();
+  if (body.byteLength > 32_768) return null;
+  try {
+    return await new Response(body, { headers: { "Content-Type": contentType } }).formData();
+  } catch (error) {
+    if (error instanceof TypeError) return null;
+    throw error;
+  }
 }

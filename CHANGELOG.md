@@ -277,3 +277,23 @@ No delivery or idempotency result was claimed.
 provide the required Learn Worker secret bindings without exposing values.
 Then run exactly one controlled send and exact-key replay before committing,
 tagging and pushing Phase 1 completion.
+
+## Phase 2.1 — Student and lesson management
+
+### 2026-09-12 — Implement the first tutoring-management domain
+
+**Status:** implemented and deployed; authenticated production acceptance pending
+
+**Implementation:**
+
+- Added forward-only `0002_students_lessons.sql` with explicit student-to-Learn-user linking, active/inactive student state, lesson foreign keys, lifecycle constraints and targeted indexes.
+- Added admin student list/create/read/edit/deactivate flows and explicit optional linking to an existing active `STUDENT` Learn account.
+- Added admin lesson list/create/read/edit/status flows with server-side validation, private plain-text notes, HTTPS external lesson URLs, UTC instant plus IANA timezone storage and deterministic overlap rejection.
+- Added student chronological upcoming/past/cancelled lesson views and SQL ownership predicates that resolve the authenticated Learn user before returning lesson data.
+- Preserved the existing Access identity, server-side session, CSRF, role authorization, private headers, noindex metadata, public-site route boundary and Fox Mail adapter.
+
+**Tests/evidence:** baseline and Phase 2.1 `npm test`, `npm run build`, clean local D1 migration/schema inspection, local HTTP authentication/CRUD/ownership smoke and `git diff --check`.
+
+**Deployment:** migration `0002_students_lessons.sql` was applied to the existing production `foxtutor-learn` D1 and final Worker version `3a81dca9-539e-4e42-8c6a-1bc058902fe2` was deployed. Public routes, Access configuration, Fox Mail and public-site infrastructure were not changed.
+
+**Known limitations:** no calendar UI, recurring lessons, availability, notifications, resources, billing or reporting; authenticated Phase 2.1 acceptance still requires the controlled existing identities.

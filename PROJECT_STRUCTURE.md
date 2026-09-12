@@ -20,6 +20,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   │   └── middleware/
 │   ├── auth/
 │   ├── db/
+│   ├── domain/
 │   ├── security/
 │   └── mail/
 ├── public/

@@ -9,6 +9,9 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn")).toBe("entry");
     expect(classifyLearnRoute("/learn/admin")).toBe("admin");
     expect(classifyLearnRoute("/learn/student/lessons")).toBe("student");
+    expect(classifyLearnRoute("/learn/admin/students/new")).toBe("admin-student-form");
+    expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/status")).toBe("admin-lesson-status");
+    expect(classifyLearnRoute("/learn/student/lessons/lesson-1")).toBe("student-lesson");
     expect(classifyLearnRoute("/learn/assets/learn.css")).toBe("asset");
     expect(classifyLearnRoute("/learn/nope")).toBe("not-found");
     expect(classifyLearnRoute("/learn.css")).toBe("not-found");
