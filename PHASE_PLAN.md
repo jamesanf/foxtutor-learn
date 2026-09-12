@@ -210,6 +210,12 @@ The application is live but contains no substantive pupil data. Authentication a
 
 The Worker shell, authorization/session foundation, noindex policy, D1 migration, mail boundary, tests, public-site baseline capture and deployment configuration are implemented in this repository. The phase remains **blocked, not complete**, because the available Cloudflare token cannot access D1, Workers Routes, Zero Trust Access, R2 or Pages APIs. A human with the required permissions must complete the actions in `docs/handover/phase-1.md`, after which a remediation pass (Phase 1.2) must run the production browser and smoke matrix before the phase can be tagged complete.
 
+## Phase 1.2 execution state — 2026-09-12
+
+Phase 1.2 completed the remediation work that is possible with the available credentials: a clean local D1 migration was executed and inspected; the local Worker was exercised against real D1 with admin/student/unauthenticated cases; the Learn route was narrowed to exact `/learn` and `/learn/*` patterns; Learn assets were moved below `/learn/assets/`; the Fox Mail adapter was aligned with the real internal API contract; and the public homepage, robots and sitemap were rechecked unchanged.
+
+The phase remains **blocked, not complete**. Direct REST and Wrangler checks show account/zone/Worker reads work, but remote D1, Workers Route writes, Access writes, R2 access and the required Google/Access configuration are unavailable to the current token. No production D1 migration, live route, Access policy, authenticated browser flow or real mail send was claimed.
+
 ---
 
 ## Phase 2 — Student administration, lessons, calendar, and core domain

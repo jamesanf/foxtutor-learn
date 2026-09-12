@@ -19,6 +19,7 @@
   "vars": {
     "ENVIRONMENT": "local",
     "PUBLIC_ORIGIN": "http://localhost:8787/learn",
-    "MAIL_API_URL": "https://mail.foxtutor.org"
+    "MAIL_API_URL": "https://mail.foxtutor.org",
+    "MAIL_API_FROM": "hello@foxtutor.org"
   }
 }

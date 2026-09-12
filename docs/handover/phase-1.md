@@ -1,42 +1,44 @@
 # HUMAN HANDOVER REQUIRED
 
-Phase 1.1 is blocked before production activation. The safe repository implementation and local validation are complete; the current Cloudflare API token lacks the permissions required to create or inspect the production control-plane resources.
+Phase 1.2 is blocked by a genuine Cloudflare control-plane permission boundary, not by a failed local implementation.
 
-## 1. What is blocked
+## Evidence
 
-- Production D1 database creation and migration.
-- Cloudflare Access application and Google identity policy for `/learn`.
-- Narrow Workers Route `foxtutor.org/learn*` creation/verification.
-- Post-deployment authenticated browser and public-site regression evidence.
+- Account read: `GET /accounts/aeab9f48fa9716273d02bfb3d530bddc` returned HTTP 200 for account `aeab9f48fa9716273d02bfb3d530bddc`.
+- Zone read: `GET /zones?name=foxtutor.org` returned HTTP 200 for zone `ee87e52066b6c9f3057bcc7c346c6ce2`.
+- Worker list: `GET /accounts/{account}/workers/scripts` returned HTTP 200; the intended `foxtutor-learn` script does not yet exist.
+- Wrangler deploy dry-run: PASS.
+- Wrangler real deploy: HTTP 401, Cloudflare error `10000` at the asset upload-session endpoint.
+- D1 list/create: HTTP 401, Cloudflare error `10000`, including Wrangler `d1 list`.
+- Workers Routes read/write: HTTP 403, Cloudflare error `10000`.
+- Access application read: HTTP 200 with no applications; Access application write: HTTP 403, error `auth.forbidden` (`1010`).
+- Access identity-provider/policy reads: HTTP 200 with empty collections.
+- R2 list/create: HTTP 403, Cloudflare error `10000`.
+- Fox Mail unauthenticated probes: HTTP 302 to its existing Access login; no message was sent.
 
-## 2. Why it is blocked
+Both Wrangler and direct REST were attempted. The available token is valid for account/zone/Worker reads but does not carry the permissions needed for the missing production resources.
 
-Cloudflare API calls for D1, Workers Routes, Zero Trust Access, R2 and Pages return authentication error `10000`. Worker version inspection and dry-run are available, but those permissions are insufficient to prove a safe live route.
+## Single unblock action
 
-The safe implementation is pushed as commit `a169edd` with checkpoint tag `phase-1.1-blocked`.
+Provide a Cloudflare API token for account `aeab9f48fa9716273d02bfb3d530bddc` with the minimum required account/zone permissions for:
 
-## 3. Exact action required
+- D1 database read/edit;
+- Workers Routes read/edit on zone `foxtutor.org`;
+- Zero Trust Access application, identity-provider and policy read/edit;
+- Worker script deployment/edit if the existing token is not retained.
 
-Using a Cloudflare token/account with the required account/zone permissions:
+The token must be supplied through `CLOUDFLARE_API_TOKEN`; do not paste it into source, documentation or chat.
+
+## Resume commands
 
 ```sh
 cd /Users/james/Documents/FoxTutorWebsite/learn
 npx wrangler d1 create foxtutor-learn --use-remote --update-config
 npx wrangler d1 migrations apply foxtutor-learn --remote
-npx wrangler deploy --message "Phase 1 private Learn foundation"
+npm run deploy
 ```
 
-Then create a Zero Trust Access self-hosted application for both `https://foxtutor.org/learn` and `https://foxtutor.org/learn/*`, enable Google authentication, and allow only the intended admin/student test identities. Do not change the public-site application, DNS, public Worker, Pages project or existing routes.
-
-Provision users with the migration schema and set `MAIL_API_TOKEN` only through Wrangler secret management after the Fox Mail endpoint contract is confirmed.
-
-## 4. Expected result
-
-Unauthenticated `/learn` requests receive Access challenge/denial; provisioned admin/student identities reach only their role shell; unknown identities receive the application denial; Learn responses have noindex headers/meta; `/` and public assets remain unchanged.
-
-## 5. How to verify
-
-Run:
+Then configure Google/Access for only `/learn` and `/learn/*`, provision controlled test identities, configure the Fox Mail machine-auth path, and run:
 
 ```sh
 npm test
@@ -46,8 +48,4 @@ npm run test:browser
 npm run test:production
 ```
 
-Then run the authenticated Chromium matrix described in `docs/testing/phase-1.md`, capture deployment/access/D1 identifiers and append the results to `docs/evidence/phase-1/`.
-
-## 6. What the next agent can continue
-
-The next agent should read this file, inspect `wrangler.jsonc` for the generated D1 binding, apply the production migration, verify Access and the route without touching public paths, run the browser/public regression suite, update the evidence and changelog, then create the final Phase 1 commit/tag only if every exit criterion passes.
+Do not modify, redeploy or add routes to the public-site application. Do not create a completion tag until authenticated admin/student/unknown browser tests, production noindex checks, real local/remote D1 evidence, controlled mail integration evidence and the public regression comparison all pass.

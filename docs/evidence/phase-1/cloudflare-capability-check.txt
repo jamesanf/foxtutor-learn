@@ -1,15 +1,24 @@
 Captured: 2026-09-12
+Account: aeab9f48fa9716273d02bfb3d530bddc
+Zone: foxtutor.org / ee87e52066b6c9f3057bcc7c346c6ce2
 
-Available:
-- Wrangler authentication: account aeab9f48fa9716273d02bfb3d530bddc
-- Worker version inspection for existing scripts
-- Worker deployment dry-run
+Capability | Method | Result | Evidence
+Account read | REST GET /accounts/{account} | PASS | HTTP 200
+Worker read | REST GET /accounts/{account}/workers/scripts | PASS | HTTP 200; existing scripts listed
+Worker deploy dry-run | Wrangler deploy --dry-run | PASS | assets/typecheck dry-run completed
+Worker deploy/write | Wrangler deploy | BLOCKED | HTTP 401, Cloudflare error 10000 at `/accounts/{account}/workers/scripts/foxtutor-learn/assets-upload-session`
+Worker deploy/write | REST PUT /accounts/{account}/workers/scripts/foxtutor-learn with empty body | BLOCKED | HTTP 403, Cloudflare error 10000
+Worker production deployment | Wrangler/REST | NOT SAFE TO CLAIM | no remote D1 binding and route write are available
+Route read | REST GET /zones/{zone}/workers/routes | BLOCKED | HTTP 403, Cloudflare error 10000
+Route write | REST POST /zones/{zone}/workers/routes | BLOCKED | HTTP 403, Cloudflare error 10000
+D1 list/read | Wrangler/REST GET /accounts/{account}/d1/database | BLOCKED | HTTP 401, Cloudflare error 10000
+D1 create | REST POST /accounts/{account}/d1/database with empty validation body | BLOCKED | HTTP 401, Cloudflare error 10000
+D1 migration/write | Wrangler remote migration | BLOCKED | no D1 binding/database exists in `wrangler.jsonc`; remote migration cannot be addressed until D1 create succeeds
+R2 read | REST GET /accounts/{account}/r2/buckets | BLOCKED | HTTP 403, Cloudflare error 10000
+Access read | REST GET /accounts/{account}/access/apps | PASS | HTTP 200; empty result
+Access identity/provider read | REST GET /accounts/{account}/access/identity_providers | PASS | HTTP 200; empty result
+Access policy read | REST GET /accounts/{account}/access/policies | PASS | HTTP 200; empty result
+Access write | REST POST /accounts/{account}/access/apps with empty validation body | BLOCKED | HTTP 403, auth.forbidden error 1010
 
-Unavailable with the current token:
-- D1 list/create: API authentication error 10000
-- Workers Routes list: API authentication error 10000
-- Zero Trust Access applications list: API authentication error 10000
-- R2 bucket list: API authentication error 10000
-- Pages project list: API authentication error 10000
-
-No Learn production resource was created and no public-site resource was changed.
+Wrangler authentication is valid for account/zone/Worker operations and reports account Foxlearningltd@gmail.com's Account. Direct REST was also tested; the failures are permission-specific, not evidence that Cloudflare is unavailable.
+No production Learn resource, route, Access application or D1 database was created by this pass.

@@ -9,7 +9,9 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn")).toBe("entry");
     expect(classifyLearnRoute("/learn/admin")).toBe("admin");
     expect(classifyLearnRoute("/learn/student/lessons")).toBe("student");
+    expect(classifyLearnRoute("/learn/assets/learn.css")).toBe("asset");
     expect(classifyLearnRoute("/learn/nope")).toBe("not-found");
+    expect(classifyLearnRoute("/learn.css")).toBe("not-found");
   });
   it("enforces role boundaries", () => {
     expect(canAccess(admin, "admin")).toBe(true);

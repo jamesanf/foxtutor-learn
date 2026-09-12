@@ -1,6 +1,6 @@
 # Phase 1 architecture
 
-The Learn application is a single Cloudflare Worker with Static Assets. The Worker is intended to own only `foxtutor.org/learn*`; all other paths remain with the public Foxtutor deployment.
+The Learn application is a single Cloudflare Worker with Static Assets. The Worker is intended to own only the exact `foxtutor.org/learn` route and `foxtutor.org/learn/*`; all other paths remain with the public Foxtutor deployment. Learn assets are addressed below `/learn/assets/` so the Worker does not need global `/learn.css` or `/learn.js` interception.
 
 ## Request flow
 
@@ -11,6 +11,8 @@ The Learn application is a single Cloudflare Worker with Static Assets. The Work
 5. The Worker creates or validates an opaque server-side session in D1.
 6. Route classification enforces `ADMIN` or `STUDENT` before rendering the shell.
 7. Private responses carry no-store, noindex and browser security headers.
+
+The Fox Mail boundary is the machine API `POST /internal/api/v1/messages/send`. Learn supplies a configured authorized `from` identity, recipient array, plain-text body, bearer token and idempotency key. Optional Cloudflare Access service-auth headers are supported when the mail hostname is configured for non-interactive machine access.
 
 The Access header is trusted only on the production route protected by the Access application. The Worker is configured with `workers_dev=false` and `preview_urls=false` to avoid creating an alternate public entry point.
 

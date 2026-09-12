@@ -1,11 +1,11 @@
-Captured: 2026-09-12 after local Learn validation; no Learn production deployment was made.
+Captured: 2026-09-12 before any Learn production deployment and rechecked during Phase 1.2.
 
 Public routes:
-- `/`: HTTP 200, text/html, body hash unchanged
-- `/robots.txt`: HTTP 200, text/plain, body hash unchanged
-- `/sitemap.xml`: HTTP 200, application/xml, body hash unchanged
-- `/about`: HTTP 200, text/html, no redirect
-- `/assets/index-CADhcCgv.css`: HTTP 200, body hash unchanged
-- `/assets/index-dxNN1w7c.js`: HTTP 200, body hash unchanged
+- `/`: HTTP 200, text/html, sha256 937f8e9b479c07915830b6409e0bf35e5530592a3d46d9c2f09aed4f992b3ab0
+- `/robots.txt`: HTTP 200, text/plain, sha256 f49c6f32125dae8fc3978b8c6f24a1081881ea90d7187ff3ae3de0ea8cd271af
+- `/sitemap.xml`: HTTP 200, application/xml, sha256 48e1d871eddc114a8f4f8ddcb7aa5d86db2a2beda8a8cf659fa30e5d5a126b43
+- `/about`: HTTP 200, text/html
+- representative CSS/JS assets: HTTP 200, stored hashes unchanged
 
-No public-site resource was edited, redeployed or routed through Learn.
+No public-site source, deployment, DNS record, route, header, robots.txt or sitemap was modified.
+No post-Learn production comparison exists because the Learn route was not activated.

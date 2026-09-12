@@ -16,7 +16,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin" || path.startsWith("/learn/admin/")) return "admin";
   if (path === "/learn/student" || path.startsWith("/learn/student/")) return "student";
   if (path === "/learn/logout") return "logout";
-  if (path === "/learn.css" || path === "/learn.js") return "asset";
+  if (path === "/learn/assets/learn.css" || path === "/learn/assets/learn.js") return "asset";
   return "not-found";
 }
 

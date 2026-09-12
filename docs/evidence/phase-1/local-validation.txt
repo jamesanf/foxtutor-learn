@@ -1,11 +1,21 @@
 Captured: 2026-09-12
 
-Local validation:
-- npm test: PASS, 6 files, 10 tests
+Automated:
+- npm test: PASS, 6 files, 11 tests
 - npm run build: PASS
-- npm run check: PASS, Wrangler dry-run, 12.13 KiB upload / 4.24 KiB gzip
+- npm run check: PASS, Wrangler dry-run
 - npm run test:browser: PASS, static keyboard-focus/reduced-motion/noindex contract
-- npx wrangler d1 migrations apply foxtutor-learn-local --local --config wrangler.local.jsonc: PASS, 6 commands
-- unauthenticated local GET /learn: 401 with X-Robots-Tag noindex and robots meta
 
-Production validation is intentionally pending the handover in docs/handover/phase-1.md.
+Fresh local D1:
+- npx wrangler d1 migrations apply foxtutor-learn-local --local --persist-to /tmp/foxtutor-learn-d1-clean --config wrangler.local.jsonc: PASS, 0001_foundation.sql, 6 commands
+- Schema query: PASS, users and sessions tables plus all three expected indexes present
+
+Real local Worker/D1 smoke:
+- GET /learn without identity: HTTP 401, X-Robots-Tag noindex
+- GET /learn with admin identity: HTTP 303 to /learn/admin and server session cookies
+- GET /learn/student with student identity: HTTP 200, student shell
+- GET /learn/admin with student identity: HTTP 403, role restriction
+- GET /learn/assets/learn.css: HTTP 200, text/css
+- production cookies remain Secure; local smoke cookies intentionally omit Secure for localhost HTTP
+
+Production validation remains pending Cloudflare D1, route and Access permissions.

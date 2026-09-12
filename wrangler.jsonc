@@ -6,7 +6,8 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
-    { "pattern": "foxtutor.org/learn*", "zone_name": "foxtutor.org" }
+    { "pattern": "foxtutor.org/learn", "zone_name": "foxtutor.org" },
+    { "pattern": "foxtutor.org/learn/*", "zone_name": "foxtutor.org" }
   ],
   "assets": {
     "directory": "public",
@@ -16,7 +17,8 @@
   "vars": {
     "ENVIRONMENT": "production",
     "PUBLIC_ORIGIN": "https://foxtutor.org/learn",
-    "MAIL_API_URL": "https://mail.foxtutor.org"
+    "MAIL_API_URL": "https://mail.foxtutor.org",
+    "MAIL_API_FROM": "hello@foxtutor.org"
   },
   "observability": {
     "enabled": true,

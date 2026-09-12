@@ -1,0 +1,13 @@
+Captured: 2026-09-12 before Learn production activation.
+
+`npm run test:production` correctly reports the public-site baseline as healthy but fails its private-boundary assertion because the Learn route is not active:
+
+- `/`: HTTP 200, public HTML
+- `/robots.txt`: HTTP 200, public text
+- `/sitemap.xml`: HTTP 200, public XML, no `/learn` entry
+- `/learn`: HTTP 200 public HTML with no `X-Robots-Tag` and no Learn noindex meta
+- `/learn/admin`: HTTP 200 public HTML with no Access challenge
+- `/learn/student`: HTTP 200 public HTML with no Access challenge
+- Chrome headless `/learn`: public Fox Tutor title, body sha256 `1b2d8bf63d44b99a9986db537e491a981539426f0294be6ffc1a99e0eff5237b`
+
+This is evidence that Cloudflare Access and the narrow Learn route have not been configured yet. It is not production Learn behavior and is not a passing private-route result.

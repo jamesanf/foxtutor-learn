@@ -12,12 +12,15 @@ export interface Env {
   PUBLIC_ORIGIN?: string;
   MAIL_API_URL?: string;
   MAIL_API_TOKEN?: string;
+  MAIL_API_FROM?: string;
+  MAIL_API_ACCESS_CLIENT_ID?: string;
+  MAIL_API_ACCESS_CLIENT_SECRET?: string;
 }
 
 function htmlDocument(title: string, body: string): Response {
   const headers = privateHeaders("text/html; charset=utf-8");
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><title>${title} | Foxtutor Learn</title><link rel="stylesheet" href="/learn.css"></head><body>${body}</body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><title>${title} | Foxtutor Learn</title><link rel="stylesheet" href="/learn/assets/learn.css"></head><body>${body}</body></html>`,
     { headers }
   );
 }
@@ -67,7 +70,7 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
   if (!user) return { active: null, response: messagePage("Account not provisioned", "This Google identity is authenticated but has not been invited to Foxtutor Learn.", 403) };
   const existing = await readSession(request, env.DB);
   if (existing && existing.user.id === user.id) return { active: existing };
-  const created = await createSession(env.DB, user);
+  const created = await createSession(env.DB, user, env.ENVIRONMENT === "production");
   const response = new Response(null, { status: 204 });
   for (const value of created.setCookies) response.headers.append("Set-Cookie", value);
   return { active: created.active, setCookies: created.setCookies };
@@ -77,7 +80,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const route = classifyLearnRoute(url.pathname);
   if (route === "asset") {
-    const assetPath = url.pathname === "/learn.css" ? "/learn.css" : "/learn.js";
+    const assetPath = url.pathname === "/learn/assets/learn.css" ? "/learn.css" : "/learn.js";
     const asset = await env.ASSETS.fetch(new Request(new URL(assetPath, url)));
     const headers = privateHeaders(asset.headers.get("Content-Type") ?? "text/plain");
     return new Response(asset.body, { status: asset.status, headers });
@@ -89,7 +92,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
   if (route === "logout") {
     if (!(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     if (env.DB) await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(active.user.id).run();
-    return redirect("/learn", clearSessionCookies());
+    return redirect("/learn", clearSessionCookies(env.ENVIRONMENT === "production"));
   }
   if (route === "entry") {
     return redirect(active.user.role === "ADMIN" ? "/learn/admin" : "/learn/student", sessionResult.setCookies);
@@ -107,7 +110,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname === "/learn" || url.pathname.startsWith("/learn/") || url.pathname === "/learn.css" || url.pathname === "/learn.js") {
+    if (url.pathname === "/learn" || url.pathname.startsWith("/learn/")) {
       return learn(request, env);
     }
     return env.ASSETS.fetch(request);

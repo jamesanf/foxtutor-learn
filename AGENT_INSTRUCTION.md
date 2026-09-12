@@ -368,3 +368,7 @@ Every completed task should leave a concise record containing:
 - human handover, if any.
 
 For Phase 1.1, production must not be marked complete while Cloudflare Access, D1, routing or post-deployment public-site regression evidence is missing.
+
+## Phase 1.2 current state
+
+The Phase 1.2 remediation pass must preserve the public site and may only mark Phase 1 complete after remote D1, the exact `/learn` route, Cloudflare Access/Google policy, authenticated browser tests, production noindex checks, mail boundary verification and public regression evidence exist. The 2026-09-12 pass completed the local D1/Worker proof and code/documentation remediation, but remains blocked by documented Cloudflare control-plane permissions. See `docs/evidence/phase-1/cloudflare-capability-check.txt` and `docs/handover/phase-1.md`.

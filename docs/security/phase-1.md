@@ -6,7 +6,7 @@ Cloudflare Access + Google is the perimeter. Application authorization remains i
 
 ## Session and CSRF
 
-Sessions are opaque random values stored as SHA-256 hashes in D1. The session cookie is `Secure`, `HttpOnly`, `SameSite=Strict`, scoped to `/learn`, and expires after 14 days. The CSRF token is separate, secure, strict and sent to the rendered form; state-changing requests must present it.
+Sessions are opaque random values stored as SHA-256 hashes in D1. The production session cookie is `Secure`, `HttpOnly`, `SameSite=Strict`, scoped to `/learn`, and expires after 14 days. Local HTTP development omits only `Secure` so the real local D1 flow can be exercised. The CSRF token is separate, `HttpOnly`-false, strict and sent to the rendered form; state-changing requests must present it.
 
 ## Indexing controls
 
@@ -16,7 +16,7 @@ Every Learn response uses:
 X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
 ```
 
-HTML includes the equivalent robots meta tag. Responses are private and non-cacheable. Learn has no sitemap and the public sitemap is not changed. Access must deny unauthenticated and Googlebot-like requests before useful application content is returned.
+HTML includes the equivalent robots meta tag. Responses are private and non-cacheable. Learn has no sitemap and the public sitemap is not changed. Access must deny unauthenticated and Googlebot-like requests before useful application content is returned. The public `robots.txt` and sitemap are not modified; the route perimeter and response noindex controls protect Learn without changing public-site infrastructure.
 
 ## Logging
 

@@ -70,3 +70,25 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 ### 2026-09-12 — Public regression evidence follow-up
 
 Rechecked the public homepage, robots, sitemap, representative content route and CSS/JS assets after local Learn implementation. Statuses and body hashes remained unchanged. No Learn production deployment was made.
+
+## Phase 1.2 — Remediation and capability reconciliation
+
+### 2026-09-12 — Local D1, route safety and mail contract remediation
+
+**Status:** blocked by genuine external Cloudflare control-plane permissions; production remains unactivated
+
+**Implementation:**
+
+- Executed `0001_foundation.sql` against a fresh local Wrangler D1 persistence directory and queried the resulting users/sessions schema and indexes.
+- Exercised the local Worker against real local D1 with unauthenticated, admin, student and student-to-admin denial cases.
+- Narrowed production routing to exact `foxtutor.org/learn` and `foxtutor.org/learn/*` patterns and moved Learn assets below `/learn/assets/`.
+- Preserved production-only `Secure` cookies while allowing local HTTP smoke tests to use the real session flow.
+- Aligned the mail adapter with Fox Mail's documented `/internal/api/v1/messages/send` contract, bearer token, idempotency key, explicit `from` identity and optional Access Service Auth headers.
+- Rechecked the public homepage, `robots.txt` and sitemap; status, content type and stored body hashes remained unchanged.
+- Audited Wrangler and direct Cloudflare REST access. Account, zone, Worker and Access collection reads work; D1, R2, route writes and Access writes remain permission-blocked.
+
+**Tests run:** `npm test`, `npm run build`, `npm run check`, `npm run test:browser`, fresh local D1 migration/schema inspection and local Worker/D1 HTTP smoke requests.
+
+**Deployment:** no production route or Access policy was changed. No production D1 migration, authenticated browser flow or real mail send was claimed.
+
+**Known limitations:** a token with D1 edit, Workers Routes edit and Zero Trust Access edit permissions is required to activate production safely. See `docs/handover/phase-1.md`.

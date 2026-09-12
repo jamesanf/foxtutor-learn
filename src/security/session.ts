@@ -38,7 +38,8 @@ export async function readSession(request: Request, db: D1Database): Promise<Act
 
 export async function createSession(
   db: D1Database,
-  user: AppUser
+  user: AppUser,
+  secure = true
 ): Promise<{ active: ActiveSession; setCookies: string[] }> {
   const sessionToken = randomToken();
   const csrfToken = randomToken();
@@ -52,12 +53,15 @@ export async function createSession(
     .run();
   return {
     active: { user, csrfToken },
-    setCookies: [cookie("learn_session", sessionToken, 14 * 24 * 60 * 60, true), cookie("learn_csrf", csrfToken, 14 * 24 * 60 * 60, false)]
+    setCookies: [
+      cookie("learn_session", sessionToken, 14 * 24 * 60 * 60, true, secure),
+      cookie("learn_csrf", csrfToken, 14 * 24 * 60 * 60, false, secure)
+    ]
   };
 }
 
-export function clearSessionCookies(): string[] {
-  return [cookie("learn_session", "", 0, true), cookie("learn_csrf", "", 0, false)];
+export function clearSessionCookies(secure = true): string[] {
+  return [cookie("learn_session", "", 0, true, secure), cookie("learn_csrf", "", 0, false, secure)];
 }
 
 export async function csrfValid(request: Request, active: ActiveSession): Promise<boolean> {

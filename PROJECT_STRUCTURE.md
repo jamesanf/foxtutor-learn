@@ -11,7 +11,8 @@ This is the current canonical structure. Agents may refine it when implementatio
 ├── PROJECT_STRUCTURE.md
 ├── package.json
 ├── tsconfig.json
-├── wrangler.toml / wrangler.jsonc
+├── wrangler.jsonc
+├── wrangler.local.jsonc
 ├── src/
 │   ├── worker/
 │   │   ├── index.ts
@@ -22,7 +23,8 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   ├── security/
 │   └── mail/
 ├── public/
-│   └── app/
+│   ├── learn.css
+│   └── learn.js
 ├── migrations/
 ├── tests/
 │   ├── unit/
@@ -37,7 +39,6 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   ├── deployment/
 │   ├── api/
 │   ├── testing/
-│   ├── decisions/
 │   ├── evidence/
 │   └── handover/
 └── agent-work/
@@ -48,6 +49,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 
 - `src/` contains application source only.
 - `public/` contains deployable browser assets, not secrets.
+- Learn browser assets are served at `/learn/assets/*`; top-level public-site paths are not Learn routes.
 - `migrations/` is forward-only D1 migration history.
 - `tests/` contains automated checks.
 - `docs/` contains project operating documentation.
