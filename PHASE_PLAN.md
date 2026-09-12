@@ -391,6 +391,28 @@ Refine the live Month/Week calendar and lesson-creation workflow after real brow
 
 Phase 2.8 is complete only when the compact calendar and lesson workflow pass real authenticated admin/student browser acceptance at the required viewports, the internal subscription confirmation and success feedback are proven, the derived 55-minute/15-minute UK workflow and DST behavior are proven, all security/feed/Access/public-site regressions pass, production matches the repository, controlled data is cleaned up, documentation is accurate, `main` is clean and pushed, historical `phase-2.5-complete` and `phase-2.6-complete` tags remain intact, and only then is `phase-2.8-complete` created. Phase 2 remains open until this gate passes.
 
+## Phase 2.9 — Proper UI Composition and Lesson-Time Workflow Correction
+
+### Objective
+
+Correct the remaining Phase 2 UX defects after the Phase 2.8 implementation demonstrated that reducing copy and adding controls was insufficient without proper layout composition. Establish a professionally designed calendar toolbar, subscription utility and lesson-creation form using conventional grids, columns, spacing, hierarchy and native controls.
+
+### Must achieve
+
+- Preserve Month-first FullCalendar Standard with Week secondary, server-authorized event projection and existing lesson/feed/security architecture.
+- Render clearly visible, consistent inline SVG Previous/Next icons with accessible period-specific labels.
+- Compose navigation, period title and Month/Week controls as one balanced toolbar with sensible spacing at desktop, 75% zoom, tablet and mobile widths.
+- Keep the subscription disclosure closed by default and compose its open state as a small utility with a dedicated read-only link field, grouped actions, concise warning, internal confirmation and success feedback.
+- Replace the create-lesson quarter-hour selector with a native 24-hour `input[type="time"]` using `step="900"`; keep server quarter-hour validation authoritative.
+- Update the derived 55-minute End preview immediately from Start alone, including midnight crossover, while preserving UTC/IANA/DST persistence and overlap validation.
+- Use a real responsive form grid: Student full width, Date/Start paired on desktop, derived duration/timezone grouped, Lesson link full width, Notes behind Additional details and aligned actions.
+- Add automated UI contracts for time input, no 96-option selector, immediate date-independent preview, visible icons, confirmation markup and no browser-native dialogs.
+- Update README, agent instructions, architecture, testing, deployment and changelog records after each material pass.
+
+### Exit criteria
+
+Phase 2.9 is complete only when the rendered admin and student interfaces pass authenticated browser acceptance at 1440px, 1440px/75% zoom, 820px and 390px; the calendar, subscription and create-lesson workflows are visually balanced and accessible; time and DST behavior, ownership, feed, Access and public-site regressions pass; controlled data is cleaned up; production matches the repository; documentation is reconciled; `main` is clean and pushed; historical tags remain intact; and only then is `phase-2.9-complete` created. Phase 2 remains open until this gate passes.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective

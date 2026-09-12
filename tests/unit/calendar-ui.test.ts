@@ -25,4 +25,24 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain("data-confirmation");
     expect(workerSource).not.toContain("data-confirm=");
   });
+
+  it("uses a native quarter-hour time input and a date-independent end preview", () => {
+    expect(workerSource).toContain('type="time" name="startTime"');
+    expect(workerSource).toContain('step="900"');
+    expect(workerSource).not.toContain('name="startTime"><option');
+    expect(workerSource).not.toContain("timeOptions(");
+    expect(clientSource).toContain('time.type !== "time"');
+    expect(clientSource).toContain('time.addEventListener("input", updateEndPreview)');
+    expect(clientSource).not.toContain('date.addEventListener("input", updateEndPreview)');
+    expect(clientSource).toContain("totalMinutes");
+  });
+
+  it("renders visible inline navigation icons and an application confirmation surface", () => {
+    expect(clientSource).toContain("setCalendarNavigationIcon");
+    expect(clientSource).toContain('createElementNS(svgNamespace, "svg")');
+    expect(clientSource).toContain("calendar-nav-icon");
+    expect(workerSource).toContain('role="alertdialog"');
+    expect(workerSource).toContain('aria-modal="true"');
+    expect(workerSource).toContain("subscription-link-group");
+  });
 });

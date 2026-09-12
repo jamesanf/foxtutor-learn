@@ -4,10 +4,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 2.8 calendar and lesson UX refinement in progress
+**Phase:** Phase 2.9 UI composition and workflow refinement in progress
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** Phase 2.8 refines the bundled MIT-licensed FullCalendar Standard `6.1.21` experience after real browser review found excessive vertical density, weak navigation affordances, verbose subscription copy and unnecessary lesson-form complexity. Month remains the default and Week remains secondary. The calendar is compact, Previous/Next controls receive accessible period labels, subscription regeneration uses internal confirmation UI, and new lessons use a UK date/start-time workflow with a derived 55-minute end. Worker `999b4239-49f2-4bc3-9dfd-a2bb29d46637` was deployed on 2026-09-12 at 20:23 UTC with the Phase 2.8 assets; public smoke still passes, while fresh authenticated production browser acceptance is pending because no authenticated production browser session is available to this runtime. The read-only private `.ics` route, D1 schema and Access boundary remain unchanged.
+**Latest state:** Phase 2.9 corrects the remaining composition defects after Phase 2.8: calendar navigation now receives visible inline SVG arrows, the toolbar and subscription utility use deliberate grouping and spacing, and Create Lesson uses a native 24-hour quarter-hour time input with an immediate date-independent 55-minute End preview. FullCalendar Standard `6.1.21`, server-authorized events, UTC/IANA persistence, ownership, feed/token security, Access and D1 remain unchanged. The local implementation is in progress; authenticated browser acceptance and the Phase 2 final gate remain open because no Chromium runtime is available to this session. No Phase 2.9 deployment or completion tag has been created.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -48,6 +48,12 @@ The new renderer defaults to Month, provides a secondary Week switch, Previous/T
 **Implementation:** Calendar page copy and surrounding spacing are reduced; the FullCalendar toolbar is compact, uses the existing Material-style chevron icons with period-aware accessible labels, and keeps Month default/Week secondary. Subscription is collapsed by default and now contains only the private link, Copy, generation/regeneration, a concise invalidation warning and in-app confirmation/success feedback. New lesson creation is a compact Student/Date/Start/Lesson link workflow with 15-minute start choices, a derived 55-minute end, concise `Europe/London` context and Notes behind Additional details. Edit/detail support and all backend validation remain intact.
 
 **Validation:** `npm test` (12 files, 35 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check` pass locally; the post-deployment public smoke also passes. Authenticated production browser acceptance, responsive screenshots, feed regression, cleanup and final Phase 2 closure remain pending. See [`docs/testing/phase-2.8.md`](docs/testing/phase-2.8.md), [`docs/architecture/phase-2.8.md`](docs/architecture/phase-2.8.md) and [`docs/deployment/phase-2.8.md`](docs/deployment/phase-2.8.md).
+
+### Phase 2.9 operating state
+
+**UX audit and implementation (2026-09-12):** Phase 2.8's functional improvements still left a compressed toolbar, subscription utility and lesson form, while the create workflow rendered a 96-option time selector and calculated the End preview only after Date and Start were both present. Phase 2.9 replaces those patterns with a balanced calendar surface and toolbar, visible inline SVG navigation arrows, a grouped subscription utility with an internal confirmation surface, a native 24-hour `input[type="time"]` using `step="900"`, a responsive lesson grid and an immediate date-independent 55-minute End preview. No framework, migration, feed, authorization, Access or public-site architecture changed.
+
+**Current gate:** `npm test` (13 files, 38 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check` pass locally. Real authenticated admin/student browser review at 1440px, 1440px/75% zoom, 820px and 390px remains mandatory and is currently blocked by the absence of a Chromium runtime in this session. Phase 2.9 is not complete and Phase 2 remains open. See [`docs/testing/phase-2.9.md`](docs/testing/phase-2.9.md) and [`docs/architecture/phase-2.9.md`](docs/architecture/phase-2.9.md).
 
 ### Phase 2.4 operating state
 
@@ -93,7 +99,7 @@ The new renderer defaults to Month, provides a secondary Week switch, Previous/T
 
 ## Architecture
 
-`foxtutor.org/learn` and `foxtutor.org/learn/*` are separate, narrowly scoped Worker routes. Cloudflare Access is the identity perimeter; the Worker maps the Access email to an active D1 user, creates an opaque server-side session, enforces `ADMIN`/`STUDENT` authorization and serves private HTML. Student records are explicitly linked to Learn users, and student lesson queries enforce that ownership in SQL. Learn responses use `X-Robots-Tag` and an HTML robots meta tag. Mail remains behind the server-side `mail.foxtutor.org/internal/api/v1/messages/send` adapter boundary.
+`foxtutor.org/learn` and `foxtutor.org/learn/*` are separate, narrowly scoped Worker routes. Cloudflare Access is the identity perimeter; the Worker maps the Access email to an active D1 user, creates an opaque server-side session, enforces `ADMIN`/`STUDENT` authorization and serves private HTML. A student record has one login/contact email; create and edit resolve that email to an active `STUDENT` Learn user and store the explicit `learn_user_id` link, while student lesson queries enforce ownership in SQL. Learn responses use `X-Robots-Tag` and an HTML robots meta tag. Mail remains behind the server-side `mail.foxtutor.org/internal/api/v1/messages/send` adapter boundary.
 
 ## Local development
 
@@ -154,6 +160,9 @@ docs/                 Architecture, security, deployment, API and evidence
 | `docs/testing/phase-2.8.md` | Calendar density, subscription and lesson UX acceptance matrix |
 | `docs/architecture/phase-2.8.md` | Phase 2.8 presentation and lesson interaction decisions |
 | `docs/deployment/phase-2.8.md` | Phase 2.8 deployment and production gate record |
+| `docs/testing/phase-2.9.md` | Phase 2.9 composition, time workflow and acceptance matrix |
+| `docs/architecture/phase-2.9.md` | Phase 2.9 UI composition and client/server interaction decisions |
+| `docs/deployment/phase-2.9.md` | Phase 2.9 release gates and deployment state |
 | `docs/deployment/phase-2.1.md` | Phase 2.1 migration and deployment sequence |
 | `docs/evidence/phase-1/` | Public baseline and deployment evidence |
 | `docs/handover/phase-1.md` | Exact human actions still required |

@@ -129,13 +129,17 @@ function calendarSubscriptionCard(
   statusMessage?: string
 ): string {
   const generated = feedUrl
-    ? `<label class="feed-link-label" for="feed-link">Private calendar link</label><div class="feed-link-row"><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy</button></div>`
+    ? `<div class="subscription-link-group"><label class="feed-link-label" for="feed-link">Private calendar link</label><div class="feed-link-row"><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy link</button></div></div>`
     : "";
   const actionLabel = feed ? "Generate new link" : "Generate link";
   const confirmation = feed
-    ? `<div class="inline-confirmation" data-confirmation-panel hidden role="alertdialog" aria-labelledby="regenerate-title"><strong id="regenerate-title">Regenerate calendar link?</strong><span>The current link will stop working.</span><div class="confirmation-actions"><button class="button secondary" type="button" data-confirm-cancel>Cancel</button><button class="button" type="button" data-confirm-submit>Regenerate</button></div></div>`
+    ? `<div class="inline-confirmation" data-confirmation-panel hidden role="alertdialog" aria-modal="true" aria-labelledby="regenerate-title" aria-describedby="regenerate-description"><strong id="regenerate-title">Regenerate calendar link?</strong><span id="regenerate-description">The current link will stop working.</span><div class="confirmation-actions"><button class="button secondary" type="button" data-confirm-cancel>Cancel</button><button class="button" type="button" data-confirm-submit>Regenerate</button></div></div>`
     : "";
-  return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span class="subscription-summary"><strong>Calendar subscription</strong><span>Private calendar link</span></span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content">${statusMessage ? `<p class="form-success" role="status">${escapeHtml(statusMessage)}</p>` : ""}${generated || `<p class="muted">Generate a private link to use in your calendar app.</p>`}<div class="privacy-warning" role="note"><strong>Keep this link private.</strong>${feed ? "<span>Regenerating invalidates the old link.</span>" : ""}</div><div class="subscription-actions"><form method="post" action="${action}"${feed ? ' data-confirmation="true"' : ""}>${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form>${confirmation}</div></div></details>`;
+  const empty = !feedUrl
+    ? `<div class="subscription-empty"><strong>${feed ? "Generate a new private calendar link." : "Create a private calendar link."}</strong><span>${feed ? "The new link will appear here after generation." : "Use it in your calendar app."}</span></div>`
+    : "";
+  const warning = feed ? `<p class="privacy-warning" role="note">Regenerating the link invalidates the old link.</p>` : "";
+  return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span>Calendar subscription</span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content">${statusMessage ? `<p class="form-success" role="status">${escapeHtml(statusMessage)}</p>` : ""}${generated}${empty}${warning}<div class="subscription-actions"><form method="post" action="${action}"${feed ? ' data-confirmation="true"' : ""}>${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form>${confirmation}</div></div></details>`;
 }
 
 function statusLabel(status: LessonStatus): string {
@@ -168,7 +172,7 @@ function calendarView(lessons: Lesson[], role: Role): string {
       extendedProps: { timezone: lesson.timezone, status: statusLabel(lesson.status) }
     };
   });
-  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div></section>`;
+  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div class="calendar-surface"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div></div></section>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -193,39 +197,22 @@ function inputField(label: string, name: string, value: string, type = "text", r
   return `<label>${escapeHtml(label)}<input type="${type}" name="${name}" value="${escapeHtml(value)}"${required ? " required" : ""}></label>`;
 }
 
-function timeLabel(value: string): string {
-  const [hourText, minute] = value.split(":");
-  const hour = Number(hourText);
-  return `${hour % 12 || 12}:${minute} ${hour >= 12 ? "PM" : "AM"}`;
-}
-
-function timeOptions(selected: string): string {
-  const options: string[] = [];
-  for (let hour = 0; hour < 24; hour += 1) {
-    for (const minute of [0, 15, 30, 45]) {
-      const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-      options.push(`<option value="${value}"${value === selected ? " selected" : ""}>${timeLabel(value)}</option>`);
-    }
-  }
-  return options.join("");
-}
-
 function localStartParts(value: string, timezone: string): { date: string; time: string } {
   const local = value ? (value.includes("Z") ? isoToLocalDateTime(value, timezone) : value) : "";
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
 }
 
-function derivedEndLabel(startAt: string, timezone: string): string {
-  const start = localDateTimeToIso(startAt, timezone);
-  if (start.value) {
-    const end = deriveLessonEnd(start.value);
-    if (end) return new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: timezone }).format(new Date(end));
-  }
-  return "—";
+function derivedEndLabel(startTime: string): string {
+  const match = /^(\d{2}):(\d{2})$/.exec(startTime);
+  if (!match) return "—";
+  const totalMinutes = Number(match[1]) * 60 + Number(match[2]) + STANDARD_LESSON_DURATION_MINUTES;
+  const hour = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minute = totalMinutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 function studentForm(csrfToken: string, action: string, student?: Student, error?: string): string {
-  return `<section class="card form-card"><p class="eyebrow">STUDENT RECORD</p><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}${inputField("Contact email", "email", student?.email ?? "", "email", true)}${inputField("Learn account email (optional explicit link)", "learnAccountEmail", student?.learn_user_email ?? "", "email")}<p class="help">Only an active STUDENT Learn account can be linked. Matching contact email alone never grants access.</p><button class="button" type="submit">Save student</button> <a class="button secondary" href="/learn/admin/students">Cancel</a></form></section>`;
+  return `<section class="card form-card"><p class="eyebrow">STUDENT RECORD</p><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}${inputField("Login email", "email", student?.email ?? "", "email", true)}<p class="help">This email is used for contact and Learn login. It must belong to an active STUDENT Learn account.</p><button class="button" type="submit">Save student</button> <a class="button secondary" href="/learn/admin/students">Cancel</a></form></section>`;
 }
 
 function lessonForm(
@@ -247,8 +234,8 @@ function lessonForm(
   const studentSelect = `<label class="field-wide">Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === studentId ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>`;
   if (!lesson) {
     const selected = localStartParts(start, "Europe/London");
-    const preview = derivedEndLabel(selected.date && selected.time ? `${selected.date}T${selected.time}` : "", "Europe/London");
-    return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Create lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start<select name="startTime" required><option value="">Choose a time</option>${timeOptions(selected.time)}</select></label><div class="derived-time" aria-live="polite"><span>Duration</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes</strong><span>Ends <output data-end-preview>${escapeHtml(preview)}</output></span></div>${inputField("Lesson link", "externalUrl", "", "url")}<details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions"><button class="button" type="submit">Create lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
+    const preview = derivedEndLabel(selected.time);
+    return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Create lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start time<input type="time" name="startTime" value="${escapeHtml(selected.time)}" step="900" lang="en-GB" required aria-describedby="start-time-help"><span id="start-time-help" class="field-help">15-minute intervals · 24-hour time</span></label><div class="derived-time" aria-live="polite"><span>Duration / end time</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes · Ends <output data-end-preview>${escapeHtml(preview)}</output></strong></div><div class="timezone-context"><span>Timezone</span><strong>Europe/London</strong></div><label class="field-wide">Lesson link<input type="url" name="externalUrl" value="" placeholder="https://"></label><details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons">Cancel</a><button class="button" type="submit">Create lesson</button></div></form></section>`;
   }
   return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Edit lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("Lesson link", "externalUrl", lesson.external_url ?? "", "url")}<label class="field-wide">Notes<textarea name="notes" rows="4" maxlength="10000">${escapeHtml(lesson.notes)}</textarea></label></div><input type="hidden" name="status" value="${escapeHtml(lesson.status)}"><div class="form-actions"><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
 }
@@ -341,13 +328,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
     const name = validName(formText(form, "name"));
     const email = validEmail(formText(form, "email"));
-    const accountEmailRaw = formText(form, "learnAccountEmail").trim();
-    const accountEmail = accountEmailRaw ? validEmail(accountEmailRaw) : null;
-    if (!name || !email || (accountEmailRaw && !accountEmail)) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "Enter a valid name, contact email and optional Learn account email."));
-    const account = accountEmail ? await findStudentAccount(db, accountEmail) : null;
-    if (accountEmail && !account) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "The Learn account email must belong to an active STUDENT account."));
-    if (account && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
-    await insertStudent(db, { id: crypto.randomUUID(), name, email, learnUserId: account?.id ?? null, now: new Date().toISOString() });
+    if (!name || !email) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "Enter a valid name and login email."));
+    const account = await findStudentAccount(db, email);
+    if (!account) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "The login email must belong to an active STUDENT Learn account."));
+    if (await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
+    await insertStudent(db, { id: crypto.randomUUID(), name, email, learnUserId: account.id, now: new Date().toISOString() });
     return redirect("/learn/admin/students");
   }
   if (route === "admin-student" || route === "admin-student-edit" || route === "admin-student-deactivate") {
@@ -370,13 +355,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
     const name = validName(formText(form, "name"));
     const email = validEmail(formText(form, "email"));
-    const accountEmailRaw = formText(form, "learnAccountEmail").trim();
-    const accountEmail = accountEmailRaw ? validEmail(accountEmailRaw) : null;
-    if (!name || !email || (accountEmailRaw && !accountEmail)) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "Enter a valid name, contact email and optional Learn account email."));
-    const account = accountEmail ? await findStudentAccount(db, accountEmail) : null;
-    if (accountEmail && !account) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "The Learn account email must belong to an active STUDENT account."));
-    if (account && account.id !== student.learn_user_id && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
-    await updateStudent(db, { id: student.id, name, email, learnUserId: account?.id ?? null, now: new Date().toISOString() });
+    if (!name || !email) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "Enter a valid name and login email."));
+    const account = await findStudentAccount(db, email);
+    if (!account) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "The login email must belong to an active STUDENT Learn account."));
+    if (account.id !== student.learn_user_id && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
+    await updateStudent(db, { id: student.id, name, email, learnUserId: account.id, now: new Date().toISOString() });
     return redirect(`/learn/admin/students/${encodeURIComponent(student.id)}`);
   }
   if (route === "admin-lessons") {
@@ -408,7 +391,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (startError || !validation.value || validation.value.status !== "scheduled") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, startError ?? validation.error ?? "New lessons must start as scheduled.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     const student = await findStudent(db, validation.value.studentId);
     if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "Choose an active student.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
-    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt)) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "This student already has an overlapping active lesson.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
+    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt)) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "This student already has a lesson overlapping this time.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     await insertLesson(db, { ...validation.value, id: crypto.randomUUID(), now: new Date().toISOString() });
     return redirect("/learn/admin/lessons");
   }
@@ -438,7 +421,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!validation.value) return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, validation.error, lesson));
     const student = await findStudent(db, validation.value.studentId);
     if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, "Choose an active student.", lesson));
-    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt, lesson.id)) return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, "This student already has an overlapping active lesson.", lesson));
+    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt, lesson.id)) return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, "This student already has a lesson overlapping this time.", lesson));
     await updateLesson(db, { ...validation.value, id: lesson.id, now: new Date().toISOString() });
     return redirect(`/learn/admin/lessons/${encodeURIComponent(lesson.id)}`);
   }

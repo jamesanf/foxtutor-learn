@@ -4,7 +4,7 @@ Phase 2.1 adds the first tutoring-management domain without changing the Phase 1
 
 ## Student model
 
-`students` is a tutoring record, not a second authentication system. Each record has a stable UUID, name, contact email, active/inactive status and timestamps. `learn_user_id` is nullable and must be linked explicitly by an administrator to an existing active `STUDENT` Learn user. A matching contact email alone never grants access. The unique link prevents one Learn identity from owning multiple student records.
+`students` is a tutoring record, not a second authentication system. Each record has a stable UUID, name, login/contact email, active/inactive status and timestamps. The login/contact email must resolve to an existing active `STUDENT` Learn user when the record is created or edited; the Worker then stores that user's ID in `learn_user_id`. The unique link prevents one Learn identity from owning multiple student records.
 
 Deactivation changes the student record to `INACTIVE`; it does not delete history. Student ownership queries require both an active student record and an active `STUDENT` Learn user.
 

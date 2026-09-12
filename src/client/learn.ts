@@ -100,8 +100,16 @@ import dayGridPlugin from "@fullcalendar/daygrid";
       },
       datesSet: ({ view }) => {
         const period = view.type === "dayGridWeek" ? "week" : "month";
-        element.querySelector<HTMLButtonElement>(".fc-prev-button")?.setAttribute("aria-label", `Previous ${period}`);
-        element.querySelector<HTMLButtonElement>(".fc-next-button")?.setAttribute("aria-label", `Next ${period}`);
+        const previous = element.querySelector<HTMLButtonElement>(".fc-prev-button");
+        const next = element.querySelector<HTMLButtonElement>(".fc-next-button");
+        if (previous) {
+          previous.setAttribute("aria-label", `Previous ${period}`);
+          setCalendarNavigationIcon(previous, "previous");
+        }
+        if (next) {
+          next.setAttribute("aria-label", `Next ${period}`);
+          setCalendarNavigationIcon(next, "next");
+        }
         element.querySelector<HTMLButtonElement>(".fc-today-button")?.setAttribute("aria-label", "Go to today");
         element.querySelector<HTMLButtonElement>(".fc-dayGridMonth-button")?.setAttribute("aria-label", "Show month view");
         element.querySelector<HTMLButtonElement>(".fc-dayGridWeek-button")?.setAttribute("aria-label", "Show week view");
@@ -112,57 +120,46 @@ import dayGridPlugin from "@fullcalendar/daygrid";
   });
 
   document.querySelectorAll<HTMLFormElement>(".lesson-create-form").forEach((form) => {
-    const date = form.elements.namedItem("lessonDate");
     const time = form.elements.namedItem("startTime");
     const output = form.querySelector<HTMLOutputElement>("[data-end-preview]");
-    const timezone = form.dataset.timezone;
     const durationMinutes = Number(form.dataset.durationMinutes ?? "55");
-    if (!(date instanceof HTMLInputElement) || !(time instanceof HTMLSelectElement) || !output || !timezone || !Number.isInteger(durationMinutes) || durationMinutes <= 0) return;
+    if (!(time instanceof HTMLInputElement) || time.type !== "time" || !output || !Number.isInteger(durationMinutes) || durationMinutes <= 0) return;
 
     const updateEndPreview = () => {
-      if (!date.value || !time.value) {
+      if (!time.value) {
         output.textContent = "—";
         return;
       }
-      const candidate = new Date(`${date.value}T${time.value}:00Z`);
-      if (Number.isNaN(candidate.getTime())) {
+      const match = /^(\d{2}):(\d{2})$/.exec(time.value);
+      if (!match) {
         output.textContent = "—";
         return;
       }
-      const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: timezone,
-        calendar: "iso8601",
-        numberingSystem: "latn",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23"
-      }).formatToParts(candidate);
-      const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)]));
-      const displayedAsUtc = Date.UTC(values.year, values.month - 1, values.day, values.hour, values.minute);
-      const start = new Date(candidate.getTime() - (displayedAsUtc - candidate.getTime()));
-      const reconstructed = new Intl.DateTimeFormat("sv-SE", {
-        timeZone: timezone,
-        calendar: "iso8601",
-        numberingSystem: "latn",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23"
-      }).format(start).replace(" ", "T");
-      if (reconstructed !== `${date.value}T${time.value}`) {
-        output.textContent = "Unavailable at this time";
-        return;
-      }
-      output.textContent = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: timezone }).format(new Date(start.getTime() + durationMinutes * 60_000));
+      const totalMinutes = Number(match[1]) * 60 + Number(match[2]) + durationMinutes;
+      const hour = Math.floor((totalMinutes % (24 * 60)) / 60);
+      const minute = totalMinutes % 60;
+      output.textContent = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     };
 
-    date.addEventListener("input", updateEndPreview);
-    time.addEventListener("change", updateEndPreview);
+    time.addEventListener("input", updateEndPreview);
     updateEndPreview();
   });
 })();
+
+function setCalendarNavigationIcon(button: HTMLButtonElement, direction: "previous" | "next"): void {
+  const svgNamespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNamespace, "svg");
+  svg.setAttribute("class", "calendar-nav-icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const path = document.createElementNS(svgNamespace, "path");
+  path.setAttribute("d", direction === "previous" ? "M15.5 5 8.5 12l7 7" : "m8.5 5 7 7-7 7");
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+  path.setAttribute("stroke-width", "2.4");
+  svg.appendChild(path);
+  button.replaceChildren(svg);
+}
