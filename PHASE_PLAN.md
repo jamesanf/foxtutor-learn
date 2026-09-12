@@ -421,6 +421,10 @@ Replace the oversized month-first calendar with a compact weekly timetable focus
 
 This phase exists because repeated calendar and form refinements improved technical functionality but did not achieve the required professional UX. It is the final Phase 2 pass; do not create Phase 2.11.
 
+### Current release state
+
+Phase 2.10 is deployed from commit `68ba651` as Worker version `56471854-7ff2-47bd-b9a0-70f488f0d029` at `2026-09-12T21:58:00.509Z`. Local automated and rendered-browser gates pass, and live public/Access/feed-boundary checks pass. Authenticated production browser acceptance and controlled fixture cleanup remain pending because no authenticated production browser session or Cloudflare Access credential is available in this environment. Do not create `phase-2.10-complete` or mark Phase 2 complete until those gates are evidenced.
+
 ### Must achieve
 
 - Use FullCalendar Standard TimeGrid at the pinned compatible `6.1.21` release with Week as the default and Month as the only secondary view. Keep the MIT-licensed Standard boundary; no Premium Scheduler/resource features, hosted assets, framework wrapper or bespoke timetable engine.

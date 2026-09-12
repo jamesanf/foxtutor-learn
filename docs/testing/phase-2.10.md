@@ -1,7 +1,7 @@
 # Phase 2.10 testing and acceptance record
 
 Date: 2026-09-12  
-Status: local implementation and rendered browser review complete; production acceptance pending
+Status: deployed; authenticated production acceptance pending
 
 ## Automated contracts
 
@@ -91,4 +91,24 @@ production feed, privacy, ownership and Access regression
 controlled fixture cleanup and production parity verification
 ```
 
-Production authenticated acceptance, feed regression, cleanup, deployment parity and the final Phase 2 acceptance matrix remain pending. No Phase 2.10 completion tag or Phase 2 closure claim is recorded.
+Authenticated production acceptance, ownership/privacy workflow verification, controlled fixture cleanup and the final Phase 2 acceptance matrix remain pending. The public smoke, Access boundary, invalid-token feed boundary and deployment parity checks are recorded below. No Phase 2.10 completion tag or Phase 2 closure claim is recorded.
+
+## Post-deployment evidence
+
+```text
+GIT COMMIT: 68ba651
+GIT PUSH: PASS — origin/main contains 68ba651
+WORKER: foxtutor-learn
+WORKER VERSION: 56471854-7ff2-47bd-b9a0-70f488f0d029
+DEPLOYED AT: 2026-09-12T21:58:00.509Z
+DATABASE MIGRATION: NONE REQUIRED — remote D1 reports no migrations to apply
+PRODUCTION SMOKE: PASS — npm run test:production
+ACCESS BOUNDARY: PASS — Learn application routes redirect to Cloudflare Access
+FEED INVALID-TOKEN BOUNDARY: PASS — GET, HEAD and POST return generic 404
+```
+
+```text
+AUTHENTICATED BROWSER ACCEPTANCE: NOT RUN — no authenticated production browser session or Cloudflare Access credential is available in this environment
+```
+
+The deployment is live, but the authenticated production admin/student workflows, production UI behavior, ownership checks and controlled fixture cleanup are intentionally not marked PASS without a production-authenticated session.

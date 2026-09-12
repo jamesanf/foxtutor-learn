@@ -4,7 +4,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-12 — Phase 2.10 final tutoring workflow and information-architecture refinement
 
-**Status:** local implementation and rendered browser review complete; authenticated production acceptance and deployment pending
+**Status:** deployed; authenticated production acceptance and final Phase 2 closure pending
 
 - Opened Phase 2.10 as the final Phase 2 UX pass because the Month-first calendar, duplicate dashboard navigation and missing upcoming-bookings workflow still did not meet the product standard.
 - Added the compatible MIT-licensed Standard `@fullcalendar/timegrid@6.1.21` package beside the existing pinned core/daygrid packages. The bundled calendar now defaults to `timeGridWeek`, keeps `dayGridMonth` secondary, focuses on 09:00–21:00, opens at 09:00, and renders concise in-bounds event title/time content without repeating timezone text.
@@ -14,7 +14,8 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 - Preserved the single student/login email model, explicit active-STUDENT linking, ownership predicates, UTC/IANA storage, 55-minute native lesson time workflow, feed/token security, Access boundary and public-site separation.
 - Added UI/source contracts and query tests for TimeGrid, visible 09:00–21:00 configuration, concise events and server-side Bookings pagination.
 - Scoped mobile table-card rules to Bookings/table surfaces so FullCalendar's internal TimeGrid tables retain their structural layout, and bounded the timetable viewport for a readable desktop/mobile surface.
-- Local validation passes: `npm test` (14 files, 41 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check`. Rendered local authenticated browser review covers 1440px, approximately 75% desktop zoom, 820px and 390px, including Week/Month navigation, event positioning, mobile overflow, Dashboard, Bookings, Create Lesson and Student form checks. Production acceptance, deployment, controlled cleanup and final Phase 2 closure remain pending. The last deployed Worker is `a844a418-b858-4a8c-a348-25a91df964d2`; no `phase-2.10-complete` tag exists.
+- Local validation passes: `npm test` (14 files, 41 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check`. Rendered local authenticated browser review covers 1440px, approximately 75% desktop zoom, 820px and 390px, including Week/Month navigation, event positioning, mobile overflow, Dashboard, Bookings, Create Lesson and Student form checks.
+- Committed as `68ba651` and pushed to `origin/main`. Deployed Worker `foxtutor-learn` version `56471854-7ff2-47bd-b9a0-70f488f0d029` at `2026-09-12T21:58:00.509Z`; `/learn.css` and `/learn.js` were uploaded and the `foxtutor.org/learn` routes were updated. Post-deployment public smoke, Access redirects for Learn routes, invalid-token feed denial and remote D1 migration checks pass. Authenticated production browser acceptance was not run because no authenticated production browser session/Access credential is available in this environment; no `phase-2.10-complete` tag exists.
 
 ### 2026-09-12 — Phase 2.9 UI composition and lesson-time workflow correction
 
