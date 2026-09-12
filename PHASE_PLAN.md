@@ -369,6 +369,28 @@ Replace the bespoke week-first calendar presentation with a polished Month-first
 
 The live admin and student calendars open to a polished current Month view, Week switching and navigation work, lesson clicks and admin creation remain canonical, student ownership is intact, the calendar is usable at desktop/tablet/mobile widths, accessibility and timezone checks pass, the feed and Access boundaries are unchanged, documentation agrees, production matches the repository, `main` is clean and pushed, `phase-2.5-complete` and `phase-2.6-complete` remain intact, and only then is `phase-2.7-complete` created. Phase 2 may be marked COMPLETE only at that point.
 
+## Phase 2.8 — Calendar and Lesson UX Refinement
+
+### Objective
+
+Refine the live Month/Week calendar and lesson-creation workflow after real browser review exposed excessive vertical density, weak navigation iconography, overlong subscription copy, browser-native confirmation UI and unnecessary lesson-form complexity. This remediation follows the Phase 2.7 implementation; it does not reopen or redesign the existing lessons, feed, ownership, timezone, D1, Access or public-site architecture.
+
+### Must achieve
+
+- Keep FullCalendar Standard locally bundled with the existing compatible package versions; Month remains the default and Week remains the only secondary view.
+- Reduce calendar toolbar, title, cell, event and surrounding-wrapper density without making the grid cramped.
+- Keep one integrated toolbar with compact Previous, Today, Next, current title and Month/Week controls; preserve accessible, coherent chevron iconography and period-aware labels.
+- Remove non-functional calendar explanation copy and repeated Add lesson controls; retain one clear admin Add lesson action and canonical lesson routes.
+- Keep subscription below the calendar and collapsed by default. When open, show only the private link, Copy, Generate/Generate new link, concise invalidation warning and internal success/confirmation UI. Browser-native `alert`, `confirm` and `prompt` are prohibited.
+- Redesign standard lesson creation around Student, Date, Start and optional Lesson link. Offer 15-minute start increments, derive a 55-minute end from the UTC/timezone-aware instant, show the derived end, keep `Europe/London` as concise context and de-emphasize Notes behind secondary details.
+- Preserve HTTPS URL validation, overlap protection, lifecycle rules, student ownership, authorization, UTC storage, IANA timezone handling and canonical edit/detail support.
+- Verify desktop 1440px normal and 75% zoom, tablet 820px, mobile 390px, keyboard/focus behavior, admin/student privacy, feed/token regression, Access/public-site boundaries and production cleanup where deployment is available.
+- Update README after every material pass and reconcile agent instructions, phase plan, changelog, architecture, testing and deployment records.
+
+### Exit criteria
+
+Phase 2.8 is complete only when the compact calendar and lesson workflow pass real authenticated admin/student browser acceptance at the required viewports, the internal subscription confirmation and success feedback are proven, the derived 55-minute/15-minute UK workflow and DST behavior are proven, all security/feed/Access/public-site regressions pass, production matches the repository, controlled data is cleaned up, documentation is accurate, `main` is clean and pushed, historical `phase-2.5-complete` and `phase-2.6-complete` tags remain intact, and only then is `phase-2.8-complete` created. Phase 2 remains open until this gate passes.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective

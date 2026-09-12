@@ -2,6 +2,19 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-12 — Phase 2.8 calendar and lesson UX refinement
+
+**Status:** local implementation complete; deployment and authenticated production acceptance pending
+
+- Opened Phase 2.8 after real browser review of Phase 2.7 found excessive calendar height at desktop/75% zoom, weak Previous/Next affordances, unnecessary calendar explanation copy, a text-heavy subscription utility, browser-native regeneration confirmation and a lesson form with unnecessary manual end-time/timezone complexity.
+- Kept FullCalendar Standard `@fullcalendar/core@6.1.21` and `@fullcalendar/daygrid@6.1.21`, with Month as the default, Week as the only secondary view, compact toolbar/grid styling, standard chevrons and period-aware accessible labels.
+- Removed calendar-only instructional copy and retained one admin Add lesson action with canonical lesson links and unchanged student event ownership.
+- Simplified the collapsed subscription utility to the private link, Copy, Generate/Generate new link, a concise invalidation warning and in-app confirmation/status feedback. Removed all browser-native dialog usage from Learn source.
+- Redesigned standard lesson creation around Student, Date, Start, a derived 55-minute end, optional HTTPS Lesson link and collapsed Additional details for Notes. Start choices are limited to 15-minute increments; the existing UTC/IANA and overlap validation remains authoritative.
+- Added Europe/London DST and 55-minute domain coverage, UI contract assertions, responsive calendar/form styles and Phase 2.8 architecture/testing/deployment records.
+- Ran focused UX/timezone tests, the complete Vitest suite (12 files, 35 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check`; local automated/static/production-smoke gates pass. Deployment and authenticated production acceptance remain open.
+- Do not create `phase-2.8-complete`; historical `phase-2.5-complete` and `phase-2.6-complete` tags remain intact.
+
 ### 2026-09-12 — Phase 2.7 deployment pass
 
 **Status:** deployed; authenticated production acceptance pending

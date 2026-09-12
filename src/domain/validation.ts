@@ -15,6 +15,9 @@ export interface ValidationResult<T> {
   error?: string;
 }
 
+export const STANDARD_LESSON_DURATION_MINUTES = 55;
+export const LESSON_START_INTERVAL_MINUTES = 15;
+
 const MAX_NAME_LENGTH = 120;
 const MAX_NOTES_LENGTH = 10_000;
 const MAX_URL_LENGTH = 2_048;
@@ -123,6 +126,17 @@ export function localDateTimeToIso(value: string, timezone: string): ValidationR
 export function isoToLocalDateTime(iso: string, timezone: string): string {
   const parts = zonedParts(new Date(iso), timezone);
   return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}T${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
+}
+
+export function deriveLessonEnd(startAt: string, durationMinutes = STANDARD_LESSON_DURATION_MINUTES): string | null {
+  const start = Date.parse(startAt);
+  if (!Number.isFinite(start) || !Number.isInteger(durationMinutes) || durationMinutes <= 0) return null;
+  return new Date(start + durationMinutes * 60_000).toISOString();
+}
+
+export function isQuarterHourTime(value: string): boolean {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  return Boolean(match && Number(match[2]) % LESSON_START_INTERVAL_MINUTES === 0);
 }
 
 export function validateLessonInput(fields: {

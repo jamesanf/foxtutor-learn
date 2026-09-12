@@ -4,10 +4,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 2.7 calendar UX remediation in progress
+**Phase:** Phase 2.8 calendar and lesson UX refinement in progress
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** Phase 2.7 replaces the bespoke week-first presentation with a bundled MIT-licensed FullCalendar Standard `6.1.21` day-grid calendar. Month is the default, Week is secondary, the toolbar is library-owned, and authorized lessons are embedded as minimal event data for client-side navigation. Worker `db13557c3-ffc2-43d2-a4e5-1f12e21eb44d` is deployed with the replacement; fresh authenticated Phase 2.7 acceptance is still pending because no authenticated production browser session is available to this runtime. The read-only private `.ics` route, D1 schema and Access boundary remain unchanged.
+**Latest state:** Phase 2.8 refines the bundled MIT-licensed FullCalendar Standard `6.1.21` experience after real browser review found excessive vertical density, weak navigation affordances, verbose subscription copy and unnecessary lesson-form complexity. Month remains the default and Week remains secondary. The calendar is compact, Previous/Next controls receive accessible period labels, subscription regeneration uses internal confirmation UI, and new lessons use a UK date/start-time workflow with a derived 55-minute end. Worker `db13557c3-ffc2-43d2-a4e5-1f12e21eb44d` remains the latest deployed implementation; fresh authenticated Phase 2.8 production browser acceptance is still pending because no authenticated production browser session is available to this runtime. The read-only private `.ics` route, D1 schema and Access boundary remain unchanged.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -31,7 +31,7 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 
 **Final validation:** `npm test`, `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check` pass. Production Access, D1, route, responsive, disclosure, feed-boundary and public-site checks pass. The final record is [`docs/testing/phase-2.6.md`](docs/testing/phase-2.6.md); deployment details are in [`docs/deployment/phase-2.6.md`](docs/deployment/phase-2.6.md).
 
-**Closure:** Phase 2.6 is complete and tagged `phase-2.6-complete`. Phase 2 is definitively complete. Phase 3 is the next feature-development phase.
+**Closure:** Phase 2.6 was historically tagged `phase-2.6-complete`; later Phase 2.7 and 2.8 remediation reopened final Phase 2 acceptance. Do not move to Phase 3 until the current browser and production gates pass.
 
 ### Phase 2.7 operating state
 
@@ -40,6 +40,14 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 The new renderer defaults to Month, provides a secondary Week switch, Previous/Today/Next controls, concise linked lesson events, normal overflow handling and no repeated per-day Add lesson controls. Admin lesson creation remains the single heading-level action; students receive only their authorized read-only event projection. Subscription remains below the calendar and collapsed by default.
 
 **Validation:** `npm test`, `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check` pass. Production route smoke and invalid-feed boundary checks pass after Worker `db13557c3-ffc2-43d2-a4e5-1f12e21eb44d`; fresh authenticated admin/student acceptance, responsive/accessibility evidence, feed regression confirmation, cleanup, documentation reconciliation and `phase-2.7-complete` remain pending.
+
+### Phase 2.8 operating state
+
+**Calendar and lesson UX refinement (2026-09-12):** Real browser review of the Phase 2.7 replacement exposed an oversized calendar surface, unexplained navigation blocks, a text-heavy subscription utility, browser-native regeneration confirmation and a lesson form that required manual end-time and timezone decisions. The remediation keeps FullCalendar Standard, the existing server-rendered event projection, canonical lesson routes, ownership queries, feed/token model, UTC storage and Access boundary.
+
+**Implementation:** Calendar page copy and surrounding spacing are reduced; the FullCalendar toolbar is compact, uses the existing Material-style chevron icons with period-aware accessible labels, and keeps Month default/Week secondary. Subscription is collapsed by default and now contains only the private link, Copy, generation/regeneration, a concise invalidation warning and in-app confirmation/success feedback. New lesson creation is a compact Student/Date/Start/Lesson link workflow with 15-minute start choices, a derived 55-minute end, concise `Europe/London` context and Notes behind Additional details. Edit/detail support and all backend validation remain intact.
+
+**Validation:** `npm test` (12 files, 35 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check` pass locally. Authenticated production browser acceptance, responsive screenshots, feed regression, cleanup, deployment evidence and final Phase 2 closure remain pending. See [`docs/testing/phase-2.8.md`](docs/testing/phase-2.8.md), [`docs/architecture/phase-2.8.md`](docs/architecture/phase-2.8.md) and [`docs/deployment/phase-2.8.md`](docs/deployment/phase-2.8.md).
 
 ### Phase 2.4 operating state
 
@@ -101,7 +109,7 @@ Local Wrangler uses `wrangler.local.jsonc` and `ENVIRONMENT=local`; production c
 
 ## Testing and deployment
 
-`npm test` runs unit, integration and security tests. `npm run build` type-checks and bundles the local calendar client. `npm run test:browser` runs the static accessibility/noindex contract. `npm run test:production` performs public-site and `/learn` smoke requests and verifies the live Access redirect and public boundary. Authenticated Chromium production acceptance is recorded in `docs/testing/phase-2.5.md`, the Phase 2.6 final remediation record and the Phase 2.7 acceptance record. `npm run deploy` is only for an authorized production deployment after source/configuration changes.
+`npm test` runs unit, integration and security tests. `npm run build` type-checks and bundles the local calendar client. `npm run test:browser` runs the static accessibility/noindex contract. `npm run test:production` performs public-site and `/learn` smoke requests and verifies the live Access redirect and public boundary. Authenticated Chromium production acceptance is recorded in the historical Phase 2.5/2.6 records and the current Phase 2.7/2.8 acceptance records. `npm run deploy` is only for an authorized production deployment after source/configuration changes.
 
 The deployment procedures are in [`docs/deployment/phase-1.md`](docs/deployment/phase-1.md), [`docs/deployment/phase-2.1.md`](docs/deployment/phase-2.1.md), [`docs/deployment/phase-2.5.md`](docs/deployment/phase-2.5.md) and [`docs/deployment/phase-2.6.md`](docs/deployment/phase-2.6.md). Never deploy from the public Foxtutor repository and never modify its Worker, Pages project, DNS or routes.
 
@@ -143,6 +151,9 @@ docs/                 Architecture, security, deployment, API and evidence
 | `docs/testing/phase-2.6.md` | Final subscription UX, regression and historical sign-off record |
 | `docs/testing/phase-2.7.md` | Month-first calendar replacement and final Phase 2.7 acceptance matrix |
 | `docs/architecture/phase-2.7.md` | Calendar dependency, rendering, timezone and authorization decision |
+| `docs/testing/phase-2.8.md` | Calendar density, subscription and lesson UX acceptance matrix |
+| `docs/architecture/phase-2.8.md` | Phase 2.8 presentation and lesson interaction decisions |
+| `docs/deployment/phase-2.8.md` | Phase 2.8 deployment and production gate record |
 | `docs/deployment/phase-2.1.md` | Phase 2.1 migration and deployment sequence |
 | `docs/evidence/phase-1/` | Public baseline and deployment evidence |
 | `docs/handover/phase-1.md` | Exact human actions still required |
@@ -158,7 +169,8 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.4 | Live read-only iCalendar subscriptions | Deployed; production infrastructure closed through Phase 2.5 |
 | 2.5 | Production calendar completion and initial Phase 2 closure | Complete and tagged `phase-2.5-complete` |
 | 2.6 | Final calendar subscription UX remediation, regression audit and definitive Phase 2 sign-off | Complete and tagged `phase-2.6-complete` |
-| 2.7 | Month-first FullCalendar replacement, optional Week view and final Phase 2 acceptance | In progress |
+| 2.7 | Month-first FullCalendar replacement, optional Week view and final Phase 2 acceptance | Remediated by 2.8; production acceptance pending |
+| 2.8 | Calendar density, navigation, subscription and lesson-creation UX refinement after real browser review | In progress |
 | 3 | R2 resources and document pipeline | Deferred |
 | 4 | Mail notifications and reports | Deferred |
 | 5 | Cancellation automation | Deferred |

@@ -10,6 +10,8 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain('right: "dayGridMonth,dayGridWeek"');
     expect(clientSource).toContain('buttonText: { today: "Today", month: "Month", week: "Week" }');
     expect(clientSource).toContain("left: \"prev,today,next\"");
+    expect(clientSource).toContain('aria-label", `Previous ${period}`');
+    expect(clientSource).not.toContain("window.confirm");
   });
 
   it("renders only the authorized event projection and removes per-day add controls", () => {
@@ -17,5 +19,10 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain("const lessons = await listLessonsForUser(db, active.user.id);");
     expect(workerSource).not.toContain("calendar-add");
     expect(workerSource).not.toContain("calendar-empty");
+    expect(workerSource).toContain("STANDARD_LESSON_DURATION_MINUTES");
+    expect(workerSource).toContain('name="startTime"');
+    expect(workerSource).toContain('name="lessonDate"');
+    expect(workerSource).toContain("data-confirmation");
+    expect(workerSource).not.toContain("data-confirm=");
   });
 });

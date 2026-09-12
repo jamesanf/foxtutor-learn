@@ -38,8 +38,12 @@ import {
 } from "../domain/calendar";
 import {
   canTransitionLessonStatus,
+  deriveLessonEnd,
   isoToLocalDateTime,
+  isQuarterHourTime,
+  localDateTimeToIso,
   isLessonStatus,
+  STANDARD_LESSON_DURATION_MINUTES,
   validEmail,
   validName,
   validateLessonInput,
@@ -122,16 +126,16 @@ function calendarSubscriptionCard(
   action: string,
   feed: CalendarFeed | null,
   feedUrl: string | undefined,
-  role: Role
+  statusMessage?: string
 ): string {
   const generated = feedUrl
     ? `<label class="feed-link-label" for="feed-link">Private calendar link</label><div class="feed-link-row"><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy</button></div>`
     : "";
-  const actionLabel = feed ? "Regenerate private calendar link" : "Generate private calendar link";
-  const calendarDescription = role === "ADMIN"
-    ? "Keep your teaching calendar up to date in another app."
-    : "Keep your lessons up to date in another app.";
-  return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span class="subscription-summary"><strong>Subscribe to this calendar</strong><span>${calendarDescription}</span></span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content"><p class="subscription-intro">Subscribe to this read-only calendar in Apple Calendar, Google Calendar or another app that supports iCalendar.</p><section class="subscription-block"><h3>Private link</h3>${generated || `<p class="muted">Generate a private link to connect this calendar to another app.</p>`}</section><div class="privacy-warning" role="note"><strong>Keep this link private</strong><span>Anyone with the link may be able to view the calendar available through it. Do not post it publicly or share it with anyone you do not trust.</span></div>${feed ? `<p class="feed-state"><strong>Private link active.</strong> Last rotated ${escapeHtml(feed.last_rotated_at)}.</p>` : ""}<form method="post" action="${action}" data-confirm="${feed ? "Your current calendar subscription link will stop working. Any calendar subscribed to the old link will need to be updated with the new link." : ""}">${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form><section class="subscription-block"><h3>Use with</h3><ul class="subscription-apps"><li><strong>Apple Calendar:</strong> choose New Calendar Subscription and paste the link.</li><li><strong>Google Calendar:</strong> choose Other calendars, Add other calendars, then From URL.</li><li>Other apps that support iCalendar subscriptions can use the same link.</li></ul></section></div></details>`;
+  const actionLabel = feed ? "Generate new link" : "Generate link";
+  const confirmation = feed
+    ? `<div class="inline-confirmation" data-confirmation-panel hidden role="alertdialog" aria-labelledby="regenerate-title"><strong id="regenerate-title">Regenerate calendar link?</strong><span>The current link will stop working.</span><div class="confirmation-actions"><button class="button secondary" type="button" data-confirm-cancel>Cancel</button><button class="button" type="button" data-confirm-submit>Regenerate</button></div></div>`
+    : "";
+  return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span class="subscription-summary"><strong>Calendar subscription</strong><span>Private calendar link</span></span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content">${statusMessage ? `<p class="form-success" role="status">${escapeHtml(statusMessage)}</p>` : ""}${generated || `<p class="muted">Generate a private link to use in your calendar app.</p>`}<div class="privacy-warning" role="note"><strong>Keep this link private.</strong>${feed ? "<span>Regenerating invalidates the old link.</span>" : ""}</div><div class="subscription-actions"><form method="post" action="${action}"${feed ? ' data-confirmation="true"' : ""}>${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form>${confirmation}</div></div></details>`;
 }
 
 function statusLabel(status: LessonStatus): string {
@@ -153,7 +157,7 @@ function calendarView(lessons: Lesson[], role: Role): string {
   const showStudent = role === "ADMIN";
   const events = lessons.map((lesson) => {
     const displayTime = formatCalendarLessonTime(lesson);
-    const title = `${showStudent ? `${lesson.student_name ?? "Student"} · ` : ""}${displayTime} · ${statusLabel(lesson.status)}`;
+    const title = `${showStudent ? `${lesson.student_name ?? "Student"} · ` : ""}${displayTime}${lesson.status === "scheduled" ? "" : ` · ${statusLabel(lesson.status)}`}`;
     return {
       id: lesson.id,
       title,
@@ -161,10 +165,10 @@ function calendarView(lessons: Lesson[], role: Role): string {
       end: lesson.end_at,
       url: `${basePath}/${encodeURIComponent(lesson.id)}`,
       classNames: [`lesson-status-${lesson.status}`],
-      extendedProps: { timezone: lesson.timezone, status: lesson.status }
+      extendedProps: { timezone: lesson.timezone, status: statusLabel(lesson.status) }
     };
   });
-  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div><p class="calendar-note">Times are positioned in ${escapeHtml(CALENDAR_TIMEZONE)}. Each lesson keeps its stored timezone in the event label.</p></section>`;
+  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div></section>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -189,6 +193,37 @@ function inputField(label: string, name: string, value: string, type = "text", r
   return `<label>${escapeHtml(label)}<input type="${type}" name="${name}" value="${escapeHtml(value)}"${required ? " required" : ""}></label>`;
 }
 
+function timeLabel(value: string): string {
+  const [hourText, minute] = value.split(":");
+  const hour = Number(hourText);
+  return `${hour % 12 || 12}:${minute} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function timeOptions(selected: string): string {
+  const options: string[] = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    for (const minute of [0, 15, 30, 45]) {
+      const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+      options.push(`<option value="${value}"${value === selected ? " selected" : ""}>${timeLabel(value)}</option>`);
+    }
+  }
+  return options.join("");
+}
+
+function localStartParts(value: string, timezone: string): { date: string; time: string } {
+  const local = value ? (value.includes("Z") ? isoToLocalDateTime(value, timezone) : value) : "";
+  return { date: local.slice(0, 10), time: local.slice(11, 16) };
+}
+
+function derivedEndLabel(startAt: string, timezone: string): string {
+  const start = localDateTimeToIso(startAt, timezone);
+  if (start.value) {
+    const end = deriveLessonEnd(start.value);
+    if (end) return new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: timezone }).format(new Date(end));
+  }
+  return "—";
+}
+
 function studentForm(csrfToken: string, action: string, student?: Student, error?: string): string {
   return `<section class="card form-card"><p class="eyebrow">STUDENT RECORD</p><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}${inputField("Contact email", "email", student?.email ?? "", "email", true)}${inputField("Learn account email (optional explicit link)", "learnAccountEmail", student?.learn_user_email ?? "", "email")}<p class="help">Only an active STUDENT Learn account can be linked. Matching contact email alone never grants access.</p><button class="button" type="submit">Save student</button> <a class="button secondary" href="/learn/admin/students">Cancel</a></form></section>`;
 }
@@ -208,7 +243,14 @@ function lessonForm(
   const timezone = lesson?.timezone ?? selectedTimezone ?? "Europe/London";
   const start = lesson ? isoToLocalDateTime(lesson.start_at, timezone) : selectedStart ?? "";
   const end = lesson ? isoToLocalDateTime(lesson.end_at, timezone) : selectedEnd ?? "";
-  return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>${lesson ? "Edit lesson" : "Create lesson"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<label>Student<select name="studentId" required><option value="">Choose a student</option>${students.filter((student) => student.status === "ACTIVE").map((student) => `<option value="${escapeHtml(student.id)}"${student.id === studentId ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("External lesson URL (HTTPS)", "externalUrl", lesson?.external_url ?? "", "url")}<label>Notes<textarea name="notes" rows="7" maxlength="10000">${escapeHtml(lesson?.notes ?? "")}</textarea></label><input type="hidden" name="status" value="${escapeHtml(lesson?.status ?? "scheduled")}"><p class="help">Times are entered in the selected timezone and stored as UTC instants. Status changes are separate and explicit.</p><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></form></section>`;
+  const activeStudents = students.filter((student) => student.status === "ACTIVE");
+  const studentSelect = `<label class="field-wide">Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === studentId ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>`;
+  if (!lesson) {
+    const selected = localStartParts(start, "Europe/London");
+    const preview = derivedEndLabel(selected.date && selected.time ? `${selected.date}T${selected.time}` : "", "Europe/London");
+    return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Create lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start<select name="startTime" required><option value="">Choose a time</option>${timeOptions(selected.time)}</select></label><div class="derived-time" aria-live="polite"><span>Duration</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes</strong><span>Ends <output data-end-preview>${escapeHtml(preview)}</output></span></div>${inputField("Lesson link", "externalUrl", "", "url")}<details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions"><button class="button" type="submit">Create lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
+  }
+  return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Edit lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("Lesson link", "externalUrl", lesson.external_url ?? "", "url")}<label class="field-wide">Notes<textarea name="notes" rows="4" maxlength="10000">${escapeHtml(lesson.notes)}</textarea></label></div><input type="hidden" name="status" value="${escapeHtml(lesson.status)}"><div class="form-actions"><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
 }
 
 async function parseForm(request: Request): Promise<FormData | null> {
@@ -261,7 +303,7 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
 }
 
 function adminDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/calendar"><h2>Calendar</h2><p>See this month's tutoring lessons, with an optional detailed week view.</p></a><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
+  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/calendar"><h2>Calendar</h2></a><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -271,10 +313,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin") return adminDashboard(active.user, csrfToken);
   if (route === "admin-calendar") {
     const lessons = await listLessons(db);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">See your tutoring lessons by month, with a detailed week view when you need it.</p></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "ADMIN")}`);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
   }
   if (route === "admin-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const existingFeed = await findActiveCalendarFeedForOwner(db, active.user.id);
     const token = generateFeedToken();
     const now = new Date().toISOString();
     await rotateCalendarFeed(db, {
@@ -286,7 +329,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       now
     });
     const lessons = await listLessons(db);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">See your tutoring lessons by month, with a detailed week view when you need it.</p></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "ADMIN")}`);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Link generated.")}</div>`);
   }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
@@ -345,12 +388,27 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
-    const fields = { studentId: formText(form, "studentId"), startAt: formText(form, "startAt"), endAt: formText(form, "endAt"), timezone: formText(form, "timezone").trim(), status: formText(form, "status"), notes: formText(form, "notes"), externalUrl: formText(form, "externalUrl") };
+    const lessonDate = formText(form, "lessonDate");
+    const startTime = formText(form, "startTime");
+    const startAt = lessonDate && startTime ? `${lessonDate}T${startTime}` : "";
+    const startInstant = localDateTimeToIso(startAt, CALENDAR_TIMEZONE);
+    const derivedEnd = startInstant.value ? deriveLessonEnd(startInstant.value) : null;
+    const endAt = derivedEnd ? isoToLocalDateTime(derivedEnd, CALENDAR_TIMEZONE) : "";
+    const fields = {
+      studentId: formText(form, "studentId"),
+      startAt,
+      endAt,
+      timezone: CALENDAR_TIMEZONE,
+      status: formText(form, "status"),
+      notes: formText(form, "notes"),
+      externalUrl: formText(form, "externalUrl")
+    };
+    const startError = startTime && !isQuarterHourTime(startTime) ? "Choose a start time in 15-minute increments." : undefined;
     const validation = validateLessonInput(fields);
-    if (!validation.value || validation.value.status !== "scheduled") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, validation.error ?? "New lessons must start as scheduled.", undefined, fields.studentId));
+    if (startError || !validation.value || validation.value.status !== "scheduled") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, startError ?? validation.error ?? "New lessons must start as scheduled.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     const student = await findStudent(db, validation.value.studentId);
-    if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "Choose an active student.", undefined, fields.studentId));
-    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt)) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "This student already has an overlapping active lesson.", undefined, fields.studentId));
+    if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "Choose an active student.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
+    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt)) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "This student already has an overlapping active lesson.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     await insertLesson(db, { ...validation.value, id: crypto.randomUUID(), now: new Date().toISOString() });
     return redirect("/learn/admin/lessons");
   }
@@ -388,7 +446,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
 }
 
 function studentDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>Calendar</h2><p>View this month's lessons and switch to Week when you need more detail.</p>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
+  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>Calendar</h2>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
 }
 
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -399,12 +457,13 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
   if (route === "student-calendar") {
     const lessons = await listLessonsForUser(db, active.user.id);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "STUDENT")}`);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
   }
   if (route === "student-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const student = await findActiveStudentForUser(db, active.user.id);
     if (!student) return messagePage("Calendar unavailable", "Your Learn account is not linked to an active student record.", 409);
+    const existingFeed = await findActiveCalendarFeedForOwner(db, active.user.id);
     const token = generateFeedToken();
     const now = new Date().toISOString();
     await rotateCalendarFeed(db, {
@@ -416,7 +475,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       now
     });
     const lessons = await listLessonsForUser(db, active.user.id);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "STUDENT")}`);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Link generated.")}</div>`);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);

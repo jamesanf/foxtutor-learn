@@ -47,7 +47,7 @@ nav { padding: 28px 16px; border-right: 1px solid var(--line); background: var(-
 nav a { display: block; padding: 10px 12px; border-radius: 8px; color: #243b53; text-decoration: none; }
 nav a:hover, nav a:focus-visible { color: var(--action-hover); background: #d6e4ee; }
 nav a[aria-current="page"] { color: #0b4f6c; background: var(--surface); box-shadow: inset 3px 0 var(--brand), 0 1px 2px rgb(16 42 67 / 8%); font-weight: 650; }
-.content { width: min(100%, 1080px); padding: clamp(32px, 6vw, 64px); }
+.content { width: min(100%, 1080px); padding: clamp(26px, 4vw, 44px); }
 .eyebrow { margin: 0 0 10px; color: var(--action); font-size: .72rem; font-weight: 700; letter-spacing: .14em; }
 h1, h2 { margin: 0; color: var(--foreground); line-height: 1.15; letter-spacing: -.025em; }
 h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; }
@@ -61,7 +61,25 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .quick-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .quick-links .card { margin-top: 0; text-decoration: none; }
 .quick-links .card:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgb(16 42 67 / 12%); }
-.calendar-shell { margin-top: 28px; }
+.calendar-page h1 { font-size: clamp(1.8rem, 3vw, 2.35rem); }
+.calendar-shell { margin-top: 14px; }
+.calendar-host { min-width: 0; }
+.calendar-host .fc { --fc-border-color: #d6dee8; --fc-button-bg-color: var(--action); --fc-button-border-color: var(--action); --fc-button-hover-bg-color: var(--action-hover); --fc-button-hover-border-color: var(--action-hover); --fc-button-active-bg-color: var(--action-hover); --fc-button-active-border-color: var(--action-hover); --fc-today-bg-color: #f0f9fb; font-size: .84rem; }
+.calendar-host .fc .fc-toolbar { gap: 8px; margin-bottom: 10px; }
+.calendar-host .fc .fc-toolbar-title { font-size: 1.2rem; font-weight: 700; }
+.calendar-host .fc .fc-button { min-height: 34px; padding: .35rem .68rem; border-radius: 7px; box-shadow: none; font-size: .82rem; font-weight: 650; }
+.calendar-host .fc .fc-prev-button, .calendar-host .fc .fc-next-button { width: 36px; padding-inline: 0; }
+.calendar-host .fc .fc-button .fc-icon { font-size: 1.15rem; }
+.calendar-host .fc .fc-button:focus { box-shadow: 0 0 0 3px rgb(6 182 212 / 28%); }
+.calendar-host .fc .fc-col-header-cell-cushion { padding: 6px 4px; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.calendar-host .fc .fc-daygrid-day-frame { min-height: 72px; }
+.calendar-host .fc .fc-daygrid-day-number { padding: 4px 6px; color: var(--muted); font-size: .78rem; }
+.calendar-host .fc .fc-daygrid-day-events { margin-top: 1px; }
+.calendar-host .fc .fc-daygrid-event { margin: 1px 2px; padding: 2px 4px; border: 0; border-radius: 4px; font-size: .72rem; line-height: 1.25; }
+.calendar-host .fc .fc-daygrid-more-link { color: var(--action); font-size: .72rem; }
+.calendar-host .fc .lesson-status-completed { color: #075985; background: #e0f2fe; }
+.calendar-host .fc .lesson-status-cancelled { color: #991b1b; background: #fee2e2; text-decoration: line-through; }
+.calendar-host .fc .lesson-status-scheduled { color: #166534; background: #dcfce7; }
 .subscription-card { margin: 32px 0 0; padding: 0; overflow: hidden; }
 .subscription-card > summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 22px; color: var(--foreground); cursor: pointer; list-style: none; }
 .subscription-card > summary::-webkit-details-marker { display: none; }
@@ -69,24 +87,25 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .subscription-card > summary:focus-visible { outline: 3px solid var(--primary); outline-offset: -3px; }
 .subscription-summary { display: grid; gap: 3px; }
 .subscription-summary strong { color: var(--action); font-size: 1rem; }
-.subscription-summary span { color: var(--muted); font-size: .9rem; font-weight: 400; }
+.subscription-summary span { color: var(--muted); font-size: .82rem; font-weight: 400; }
 .subscription-chevron { width: 10px; height: 10px; flex: 0 0 auto; border-right: 2px solid var(--action); border-bottom: 2px solid var(--action); transform: rotate(45deg) translateY(-3px); transition: transform 150ms ease; }
 .subscription-card[open] .subscription-chevron { transform: rotate(225deg) translate(-2px, -2px); }
-.subscription-content { padding: 0 22px 24px; border-top: 1px solid var(--line); }
-.subscription-intro { max-width: 62ch; margin: 20px 0; color: var(--muted); }
-.subscription-block { margin-top: 20px; }
-.subscription-block h3 { margin: 0 0 8px; color: var(--foreground); font-size: 1rem; }
+.subscription-content { padding: 0 22px 20px; border-top: 1px solid var(--line); }
 .feed-link-label { margin: 0 0 7px; color: var(--foreground); font-size: .9rem; }
-.subscription-card form { margin-top: 14px; }
-.privacy-warning { display: grid; gap: 3px; margin: 20px 0; padding: 12px 14px; border: 1px solid #c3dce5; border-left: 3px solid var(--action); border-radius: 8px; color: var(--foreground); background: #f0f9fb; }
+.subscription-card form { margin-top: 12px; }
+.privacy-warning { display: grid; gap: 2px; margin: 14px 0 0; padding: 9px 11px; border: 1px solid #c3dce5; border-left: 3px solid var(--action); border-radius: 8px; color: var(--foreground); background: #f0f9fb; font-size: .86rem; }
 .privacy-warning strong { color: var(--action-hover); }
-.feed-state { font-size: .9rem; }
 .feed-link { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .feed-link-row { display: flex; align-items: end; gap: 10px; }
 .feed-link-row input { min-width: 0; margin-top: 0; }
 .feed-link-row .button { flex: 0 0 auto; margin-top: 0; cursor: pointer; }
-.subscription-apps { display: grid; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); }
-.subscription-apps strong { color: var(--foreground); }
+.subscription-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.subscription-actions form { margin: 0; }
+.inline-confirmation { display: grid; min-width: min(100%, 300px); gap: 3px; padding: 10px 12px; border: 1px solid #c3dce5; border-radius: 8px; background: #f8fbfd; }
+.inline-confirmation > span { color: var(--muted); font-size: .88rem; }
+.confirmation-actions { display: flex; gap: 8px; margin-top: 5px; }
+.confirmation-actions .button { margin-top: 0; }
+.form-success { margin: 14px 0 0; padding: 9px 11px; border: 1px solid #bbf7d0; border-radius: 7px; color: #166534 !important; background: #f0fdf4; font-size: .88rem; }
 .table-wrap { margin-top: 24px; overflow: hidden; border: 1px solid #c3d0dc; border-radius: 10px; background: var(--surface); box-shadow: 0 1px 3px rgb(16 42 67 / 5%); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 13px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
@@ -101,13 +120,24 @@ tr:last-child td { border-bottom: 0; }
 .status-cancelled { color: #991b1b; background: #fee2e2; }
 .status-inactive { color: #92400e; background: #fef3c7; }
 .muted, .help { color: var(--muted); }
-.form-card { max-width: 720px; margin-top: 0; }
+.form-card { max-width: 760px; margin-top: 0; }
 label { display: block; margin: 18px 0; color: #243b53; font-weight: 650; }
 input, select, textarea { display: block; width: 100%; margin-top: 7px; padding: 10px 12px; border: 1px solid var(--input); border-radius: 8px; color: var(--foreground); background: var(--surface); }
-textarea { min-height: 7rem; resize: vertical; }
+textarea { min-height: 5.5rem; resize: vertical; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); outline: 0; box-shadow: 0 0 0 3px rgb(6 182 212 / 20%); }
 .help { margin: -4px 0 22px; font-size: .9rem; font-weight: 400; }
 .form-error { padding: 12px 14px; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b !important; background: #fef2f2; }
+.lesson-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.lesson-form-grid label { margin: 10px 0; }
+.lesson-form-grid .field-wide, .lesson-form-grid .additional-details { grid-column: 1 / -1; }
+.derived-time { display: grid; align-content: center; gap: 2px; min-height: 74px; margin: 10px 0; padding: 10px 12px; border: 1px solid #c3dce5; border-radius: 8px; color: var(--muted); background: #f0f9fb; font-size: .82rem; }
+.derived-time strong { color: var(--foreground); font-size: .95rem; }
+.derived-time output { color: var(--foreground); font-weight: 650; }
+.additional-details { margin: 10px 0; border-top: 1px solid var(--line); }
+.additional-details summary { padding: 12px 0; color: var(--action); cursor: pointer; font-weight: 650; }
+.additional-details label { margin-top: 0; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.form-actions .button { margin-top: 0; }
 .secondary { border-color: var(--line); color: var(--foreground); background: var(--soft); }
 .secondary:hover { background: #dce7ef; }
 .danger { background: var(--danger); }
@@ -137,9 +167,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .quick-links, .detail-grid { grid-template-columns: 1fr; }
   .full-width { grid-column: auto; }
   .subscription-card > summary { padding: 16px 18px; }
-  .subscription-content { padding: 0 18px 20px; }
+  .subscription-content { padding: 0 18px 18px; }
   .feed-link-row { align-items: stretch; flex-direction: column; }
   .feed-link-row .button { width: 100%; }
+  .subscription-actions { display: block; }
+  .subscription-actions form { margin-top: 12px; }
+  .subscription-actions form .button { width: 100%; }
+  .inline-confirmation { margin-top: 12px; }
+  .lesson-form-grid { grid-template-columns: 1fr; }
+  .lesson-form-grid .field-wide, .lesson-form-grid .additional-details { grid-column: auto; }
   .table-wrap { overflow: visible; border: 0; background: transparent; }
   table, tbody, tr, td { display: block; }
   thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
@@ -147,4 +183,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   td { display: grid; grid-template-columns: minmax(5.5rem, 34%) minmax(0, 1fr); gap: 12px; padding: 11px 14px; }
   td::before { color: var(--muted); content: attr(data-label); font-size: .75rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
   td:last-child { border-bottom: 0; }
+}
+@media (max-width: 480px) {
+  .calendar-host .fc .fc-toolbar { align-items: center; flex-direction: column; }
+  .calendar-host .fc .fc-toolbar-chunk { justify-content: center; width: 100%; }
+  .calendar-host .fc .fc-toolbar-title { font-size: 1.05rem; }
+  .calendar-host .fc .fc-daygrid-event { font-size: .68rem; }
 }
