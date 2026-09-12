@@ -4,10 +4,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 2.3 calendar and scheduling UX implementation in progress; production acceptance not yet claimed
+**Phase:** Phase 2.4 live calendar subscription implementation in progress; production acceptance not yet claimed
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. The local Phase 2.3 implementation adds server-side week range queries, role-scoped calendar routes, responsive week views, status-aware lesson cards, navigation and links into the existing lesson create/detail/edit flows. No production deployment or authenticated Phase 2.3 acceptance is claimed in this pass.
+**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. Phase 2.3 calendar UX is implemented locally. The Phase 2.4 master pass adds a forward-only local migration for hash-backed account-owned calendar feeds, secure token generation/rotation, a live read-only `.ics` route, stable lesson UIDs, UTC timestamps, cancellation mapping, escaping/folding, and admin/student subscription UI. No Phase 2.4 production deployment or authenticated external-client acceptance is claimed.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -24,6 +24,20 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 **Remaining work:** run bounded production passes with controlled fixtures, verify the existing lesson create/edit and overlap/lifecycle paths from calendar links, exercise authenticated desktop/tablet/mobile and keyboard behavior, deploy only after review, update this operating state after each pass, and close only with all Phase 2.3 gates evidenced.
 
 **Next pass:** authenticated/local integration review of the admin calendar and existing lesson-flow handoff, followed by the student privacy and production acceptance passes.
+
+### Phase 2.4 operating state
+
+**Master implementation pass — local implementation (2026-09-12):** added `calendar_feeds` migration `0003_calendar_feeds.sql` with one durable feed identity per Learn user, hash-only opaque bearer tokens, token suffix metadata, rotation timestamps and revocation state. Added admin and explicitly linked-student feed ownership queries, a live `/learn/calendar/feed/<opaque-token>` Worker route, private/no-store/noindex headers, generic invalid-token denial, and on-request lesson projection from the existing `lessons` table. Added a small internal RFC 5545 serializer using CRLF line endings, stable `<lesson-id>@foxtutor.org` UIDs, UTC `DTSTAMP`/`LAST-MODIFIED`/`DTSTART`/`DTEND`, `CONFIRMED`/`CANCELLED` mapping, HTTPS `URL`, escaping and 75-octet line folding. Added calendar subscription cards, copy-link workflow, explicit private-link warning, regeneration confirmation and Apple/Google URL instructions for both roles.
+
+**Feed policy:** the live feed contains the recent 90-day window plus the next 365 days, individual timed lesson events only, no recurrence/all-day events, and no lesson notes. Student feeds query only the active Student record explicitly linked to the authenticated Learn user. Regeneration updates the durable feed row and invalidates the previous token. The raw token is returned only in the intentional post-generation subscription UI; it is not stored in D1.
+
+**Tests:** local type-check, Wrangler dry-run and Vitest coverage for token entropy/validation, migration shape, route classification, stable UIDs, UTC timezone preservation, status changes, escaping, CRLF output, line folding and feed range. Full production, authenticated browser, external Apple/Google client, migration deployment and Cloudflare Access path-scope acceptance are not claimed.
+
+**Deployment status:** not performed in this pass. Production Worker remains `85129275-02b5-40be-8626-db554aa6903f`; migration `0003_calendar_feeds.sql` is not claimed as applied remotely. The existing broad `/learn/*` Worker route remains unchanged; production Access configuration must explicitly exempt only `/learn/calendar/feed/*` from interactive Access before deployment, without weakening other Learn routes.
+
+**Remaining work:** deploy the migration and Worker through controlled production passes, verify the narrowly scoped Access exception, perform admin/student raw-feed and token-isolation acceptance, exercise authenticated responsive subscription UI, test at least one real Apple/Google subscription or document a genuine client limitation, clean controlled fixtures, update deployment evidence, then create `phase-2.4-complete` only if every gate passes.
+
+**Next pass:** local integration/privacy route tests and deployment preflight; no provider API integration or bidirectional synchronization is planned.
 
 ### Phase 2.2 operating state
 
@@ -99,11 +113,13 @@ docs/                 Architecture, security, deployment, API and evidence
 | `CHANGELOG.md` | Material implementation history |
 | `docs/architecture/phase-1.md` | Worker, session and routing foundation |
 | `docs/architecture/phase-2.1.md` | Student, lesson, ownership and time model |
+| `docs/architecture/phase-2.4.md` | Private live iCalendar feed architecture and security model |
 | `docs/security/phase-1.md` | Access, authorization and privacy controls |
 | `docs/deployment/phase-1.md` | Local, staging and production operations |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/testing/phase-1.md` | Test matrix and evidence |
 | `docs/testing/phase-2.1.md` | Phase 2.1 validation and local HTTP matrix |
+| `docs/testing/phase-2.4.md` | Phase 2.4 serializer, token and local HTTP validation |
 | `docs/deployment/phase-2.1.md` | Phase 2.1 migration and deployment sequence |
 | `docs/evidence/phase-1/` | Public baseline and deployment evidence |
 | `docs/handover/phase-1.md` | Exact human actions still required |
@@ -116,6 +132,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 1 | Private `/learn`, Google/Access auth, roles, anti-indexing | Complete and tagged `phase-1-complete` |
 | 2.1 | Students, lessons, ownership and lifecycle | Complete and tagged `phase-2.1-complete` |
 | 2.3 | Calendar and scheduling UX around lessons | In progress; local implementation pending production acceptance |
+| 2.4 | Live read-only iCalendar subscriptions | In progress; local implementation pending deployment and production acceptance |
 | 3 | R2 resources and document pipeline | Deferred |
 | 4 | Mail notifications and reports | Deferred |
 | 5 | Cancellation automation | Deferred |
@@ -132,4 +149,4 @@ There is no public registration and no application password subsystem. Only Acce
 - Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2.1 is intentionally limited to students, lessons, ownership, lifecycle, notes, HTTPS lesson URLs, timezone-safe storage and overlap-aware scheduling.
-- Phase 2.1 acceptance is closed. Phase 2.3 calendar and scheduling UX is implemented locally but not production-accepted. Availability automation, recurrence, notifications, resources, billing and reporting remain deferred.
+- Phase 2.1 acceptance is closed. Phase 2.3 calendar and scheduling UX and Phase 2.4 live feed implementation are local and not production-accepted. The feed is read-only, uses a private bearer token, returns a bounded recent/future range, and does not force external calendar refreshes. Cloudflare Access path scoping, remote migration/deployment, authenticated production acceptance, external-client refresh evidence and controlled cleanup remain outstanding. Availability automation, recurrence, notifications, resources, billing and reporting remain deferred.

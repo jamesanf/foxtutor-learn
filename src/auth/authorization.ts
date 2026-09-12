@@ -13,6 +13,7 @@ export type LearnRoute =
   | "admin"
   | "admin-students"
   | "admin-calendar"
+  | "admin-calendar-feed"
   | "admin-student-form"
   | "admin-student"
   | "admin-student-edit"
@@ -24,6 +25,7 @@ export type LearnRoute =
   | "admin-lesson-status"
   | "student"
   | "student-calendar"
+  | "student-calendar-feed"
   | "student-lessons"
   | "student-lesson"
   | "logout"
@@ -36,6 +38,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin") return "admin";
   if (path === "/learn/admin/students") return "admin-students";
   if (path === "/learn/admin/calendar") return "admin-calendar";
+  if (path === "/learn/admin/calendar/feed") return "admin-calendar-feed";
   if (path === "/learn/admin/students/new") return "admin-student-form";
   if (/^\/learn\/admin\/students\/[^/]+\/edit$/.test(path)) return "admin-student-edit";
   if (/^\/learn\/admin\/students\/[^/]+\/deactivate$/.test(path)) return "admin-student-deactivate";
@@ -47,6 +50,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/lessons\/[^/]+$/.test(path)) return "admin-lesson";
   if (path === "/learn/student") return "student";
   if (path === "/learn/student/calendar") return "student-calendar";
+  if (path === "/learn/student/calendar/feed") return "student-calendar-feed";
   if (path === "/learn/student/lessons") return "student";
   if (/^\/learn\/student\/lessons\/[^/]+$/.test(path)) return "student-lesson";
   if (path === "/learn/logout") return "logout";

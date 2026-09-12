@@ -18,4 +18,12 @@ describe("D1 foundation", () => {
     expect(migration).toContain("CHECK (status IN ('scheduled', 'completed', 'cancelled'))");
     expect(migration).toContain("idx_lessons_student_start");
   });
+
+  it("adds hash-backed, revocable calendar feed records", () => {
+    const migration = readFileSync("migrations/0003_calendar_feeds.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS calendar_feeds");
+    expect(migration).toContain("token_hash TEXT NOT NULL UNIQUE");
+    expect(migration).toContain("revoked_at TEXT");
+    expect(migration).toContain("idx_calendar_feeds_active_owner");
+  });
 });

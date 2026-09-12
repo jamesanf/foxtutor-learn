@@ -2,6 +2,31 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+## Phase 2.4 — Live calendar subscriptions
+
+### 2026-09-12 — Master local implementation: secure tokenized iCalendar feeds
+
+**Status:** local implementation ready; deployment and production acceptance pending
+
+**Implementation:**
+
+- Added forward-only migration `0003_calendar_feeds.sql` for durable account-owned feed identities, hash-only opaque tokens, rotation metadata and revocation.
+- Added admin and explicitly linked-student feed ownership resolution; student feeds cannot be selected by contact email or another student ID.
+- Added live `GET /learn/calendar/feed/<opaque-token>` projection from current lessons with generic denial for invalid, malformed, revoked or non-read-only requests.
+- Added RFC 5545-oriented output with `VCALENDAR`, stable lesson UIDs, UTC timestamps, `LAST-MODIFIED`, status mapping, approved HTTPS URLs, CRLF line endings, text escaping and 75-octet folding.
+- Added a bounded feed range of 90 recent days plus 365 future days; no recurring or all-day events; private lesson notes are excluded.
+- Added admin/student subscription UI with explicit bearer-link warning, intentional regeneration confirmation, copy-link behavior and concise Apple/Google URL instructions.
+
+**Dependency decision:** no iCalendar dependency was added. The required output surface is small and is covered by focused tests for timestamps, UID stability, cancellation, escaping, folding and line endings.
+
+**Tests:** `npm test`; `npm run build`; `npm run check`; `npm run test:browser`; `npm run test:production`; clean local D1 migration through `0003_calendar_feeds.sql`; actual Worker HTTP checks for admin/student isolation, generic denial, headers, live updates, cancellation, token rotation and subscription UI; `git diff --check`.
+
+**Deployment:** not performed. Worker and remote D1 remain at the Phase 2.3 production state; migration `0003_calendar_feeds.sql` is local only. The existing `/learn/*` route still requires a narrowly scoped production Access exception for only `/learn/calendar/feed/*`; no broad Access weakening was made.
+
+**Known limitations:** authenticated production acceptance, remote migration, Worker deployment, Cloudflare Access path verification, raw HTTP privacy/isolation checks, external Apple/Google subscription testing, controlled fixture cleanup and the `phase-2.4-complete` tag remain pending. External calendar applications control refresh timing; Learn cannot force immediate refresh.
+
+**Next step:** run bounded local integration and deployment-preflight validation, then deploy only after the route-scope and migration review.
+
 ## Phase 2.3 — Calendar and scheduling UX
 
 ### 2026-09-12 — Local calendar implementation and query model

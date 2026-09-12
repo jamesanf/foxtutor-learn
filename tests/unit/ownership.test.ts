@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findLessonForUser, hasOverlappingLesson } from "../../src/db/lessons";
+import { findCalendarFeedByTokenHash } from "../../src/db/calendar-feeds";
 
 function mockDb(firstResult: unknown): D1Database {
   let query = "";
@@ -40,5 +41,15 @@ describe("server-side lesson ownership", () => {
     expect((db as D1Database & { query: string }).query).toContain("status != 'cancelled'");
     expect((db as D1Database & { query: string }).query).toContain("start_at < ?");
     expect((db as D1Database & { query: string }).query).toContain("end_at > ?");
+  });
+
+  it("requires role and explicit student linkage when resolving a feed token", async () => {
+    const db = mockDb(null);
+    await findCalendarFeedByTokenHash(db, "hash");
+    const query = (db as D1Database & { query: string }).query;
+    expect(query).toContain("f.token_hash = ?");
+    expect(query).toContain("u.role = 'ADMIN' AND f.student_id IS NULL");
+    expect(query).toContain("u.role = 'STUDENT' AND s.id = f.student_id AND s.learn_user_id = u.id");
+    expect(query).toContain("s.status = 'ACTIVE'");
   });
 });

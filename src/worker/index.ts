@@ -6,6 +6,7 @@ import {
   deactivateStudent,
   findStudent,
   findStudentAccount,
+  findActiveStudentForUser,
   findStudentLinkedToUser,
   insertStudent,
   listStudents,
@@ -25,6 +26,12 @@ import {
   updateLessonStatus,
   type Lesson
 } from "../db/lessons";
+import {
+  findActiveCalendarFeedForOwner,
+  findCalendarFeedByTokenHash,
+  rotateCalendarFeed,
+  type CalendarFeed
+} from "../db/calendar-feeds";
 import {
   CALENDAR_TIMEZONE,
   calendarDateLabel,
@@ -46,6 +53,8 @@ import {
 } from "../domain/validation";
 import { privateHeaders } from "../security/headers";
 import { clearSessionCookies, createSession, csrfValid, readSession, type ActiveSession } from "../security/session";
+import { feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
+import { feedRange, generateIcs } from "../domain/icalendar";
 
 export interface Env {
   ASSETS: Fetcher;
@@ -107,6 +116,24 @@ function withSessionCookies(response: Response, setCookies: string[] | undefined
 
 function buttonLink(href: string, label: string): string {
   return `<a class="button" href="${href}">${escapeHtml(label)}</a>`;
+}
+
+function calendarFeedUrl(request: Request, env: Env, token: string): string {
+  const origin = (env.PUBLIC_ORIGIN ?? `${new URL(request.url).origin}/learn`).replace(/\/+$/, "");
+  return `${origin}/calendar/feed/${token}`;
+}
+
+function calendarSubscriptionCard(
+  csrfToken: string,
+  action: string,
+  feed: CalendarFeed | null,
+  feedUrl?: string
+): string {
+  const generated = feedUrl
+    ? `<label>Private calendar link<input class="feed-link" readonly value="${escapeHtml(feedUrl)}" aria-label="Private calendar link"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy link</button></label>`
+    : "";
+  const actionLabel = feed ? "Regenerate private calendar link" : "Generate private calendar link";
+  return `<section class="card subscription-card"><p class="eyebrow">CALENDAR SUBSCRIPTION</p><h2>Subscribe to calendar</h2><p>Use this private link with Apple Calendar, Google Calendar or another calendar app that supports subscribed iCalendar (.ics) calendars. Learn remains the source of truth; external apps see changes when they next refresh the subscription.</p><div class="privacy-warning" role="note"><strong>Keep this link private</strong><span>It is unique to your account. Anyone who has the link may be able to view the calendar available through it. Do not post it publicly or send it to anyone you do not trust.</span></div>${feed ? `<p class="feed-state"><strong>Feed enabled.</strong> Created ${escapeHtml(feed.created_at)}; last rotated ${escapeHtml(feed.last_rotated_at)}.</p>` : ""}${generated}<form method="post" action="${action}" data-confirm="${feed ? "Your current calendar subscription link will stop working. Any calendar subscribed to the old link will need to be updated with the new link." : ""}">${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form><details><summary>How to add it</summary><p><strong>Google Calendar:</strong> Other calendars → Add other calendars → From URL.</p><p><strong>Apple Calendar:</strong> choose New Calendar Subscription and paste the link.</p></details></section>`;
 }
 
 function statusLabel(status: LessonStatus): string {
@@ -264,7 +291,23 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-calendar") {
     const period = calendarPeriod(url.searchParams.get("week"));
     const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarView(period, lessons, "ADMIN")}`);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id))}${calendarView(period, lessons, "ADMIN")}`);
+  }
+  if (route === "admin-calendar-feed") {
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const token = generateFeedToken();
+    const now = new Date().toISOString();
+    await rotateCalendarFeed(db, {
+      id: crypto.randomUUID(),
+      ownerUserId: active.user.id,
+      studentId: null,
+      tokenHash: await hashFeedToken(token),
+      tokenLast4: feedTokenLast4(token),
+      now
+    });
+    const period = calendarPeriod(url.searchParams.get("week"));
+    const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token))}${calendarView(period, lessons, "ADMIN")}`);
   }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
@@ -372,12 +415,31 @@ function studentDashboard(user: AppUser, csrfToken: string): Response {
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
   const db = env.DB as D1Database;
   const csrfToken = active.csrfToken;
-  const pathname = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
+  const url = new URL(request.url);
+  const pathname = url.pathname.replace(/\/+$/, "") || "/";
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
   if (route === "student-calendar") {
     const period = calendarPeriod(new URL(request.url).searchParams.get("week"));
     const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(period, lessons, "STUDENT")}`);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id))}${calendarView(period, lessons, "STUDENT")}`);
+  }
+  if (route === "student-calendar-feed") {
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const student = await findActiveStudentForUser(db, active.user.id);
+    if (!student) return messagePage("Calendar unavailable", "Your Learn account is not linked to an active student record.", 409);
+    const token = generateFeedToken();
+    const now = new Date().toISOString();
+    await rotateCalendarFeed(db, {
+      id: crypto.randomUUID(),
+      ownerUserId: active.user.id,
+      studentId: student.id,
+      tokenHash: await hashFeedToken(token),
+      tokenLast4: feedTokenLast4(token),
+      now
+    });
+    const period = calendarPeriod(url.searchParams.get("week"));
+    const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token))}${calendarView(period, lessons, "STUDENT")}`);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);
@@ -395,6 +457,25 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
+}
+
+function feedDenial(): Response {
+  const headers = privateHeaders("text/plain; charset=utf-8");
+  return new Response("Calendar feed unavailable.", { status: 404, headers });
+}
+
+async function handleCalendarFeed(request: Request, env: Env, token: string): Promise<Response> {
+  if (!env.DB || !isFeedToken(token)) return feedDenial();
+  const feed = await findCalendarFeedByTokenHash(env.DB, await hashFeedToken(token));
+  if (!feed || (request.method !== "GET" && request.method !== "HEAD")) return feedDenial();
+  const range = feedRange();
+  const lessons = feed.owner_role === "ADMIN"
+    ? await listLessonsInRange(env.DB, range.startAt, range.endAt)
+    : await listLessonsForUserInRange(env.DB, feed.owner_user_id, range.startAt, range.endAt);
+  const body = generateIcs(lessons, feed.owner_role);
+  const headers = privateHeaders("text/calendar; charset=utf-8");
+  headers.set("Content-Disposition", 'inline; filename="foxtutor-learn.ics"');
+  return new Response(request.method === "HEAD" ? null : body, { status: 200, headers });
 }
 
 async function learn(request: Request, env: Env): Promise<Response> {
@@ -430,6 +511,8 @@ async function learn(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const feedMatch = /^\/learn\/calendar\/feed\/([^/]+)$/.exec(url.pathname);
+    if (feedMatch) return handleCalendarFeed(request, env, feedMatch[1]);
     if (url.pathname === "/learn" || url.pathname.startsWith("/learn/")) return learn(request, env);
     return env.ASSETS.fetch(request);
   }

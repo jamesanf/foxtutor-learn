@@ -62,6 +62,17 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .quick-links .card { margin-top: 0; text-decoration: none; }
 .quick-links .card:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgb(16 42 67 / 12%); }
 .calendar-shell { margin-top: 28px; }
+.subscription-card { margin: 28px 0; }
+.subscription-card h2 { margin-bottom: 8px; }
+.subscription-card form { margin-top: 4px; }
+.subscription-card details { margin-top: 18px; color: var(--muted); }
+.subscription-card summary { color: var(--action); cursor: pointer; font-weight: 650; }
+.subscription-card details p { margin-bottom: 8px; }
+.privacy-warning { display: grid; gap: 4px; margin: 18px 0; padding: 14px 16px; border: 1px solid #f59e0b; border-left: 5px solid #d97706; border-radius: 8px; color: #78350f; background: #fffbeb; }
+.privacy-warning strong { color: #92400e; text-transform: uppercase; }
+.feed-state { font-size: .9rem; }
+.feed-link { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.copy-link { margin-top: 10px; cursor: pointer; }
 .calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 20px; border: 1px solid #c3d0dc; border-radius: 12px 12px 0 0; background: var(--surface); }
 .calendar-navigation { display: flex; flex-wrap: wrap; gap: 8px; }
 .calendar-navigation .button { margin-top: 0; }
