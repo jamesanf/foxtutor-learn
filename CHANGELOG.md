@@ -338,3 +338,24 @@ tagging and pushing Phase 1 completion.
 **Deployment:** unchanged at Worker version `85129275-02b5-40be-8626-db554aa6903f`; no new deployment was needed.
 
 **Next pass:** Pass 3 — authenticated student access, cross-student isolation, student-to-admin denial and private-response inspection with `jamesanf@gmail.com`.
+
+### 2026-09-12 — Pass 3 authenticated student and privacy acceptance
+
+**Status:** PASS; responsive/accessibility acceptance remains pending
+
+**Production acceptance completed in a separate authenticated Chromium session as `jamesanf@gmail.com`:**
+
+- Confirmed the explicitly linked Student A account sees its completed lesson in the Past section and can open its own lesson detail.
+- Confirmed the unlinked Student B record and Student B lesson are absent from the student schedule response.
+- Confirmed admin notes are absent from both the student lesson-list and own-lesson detail HTML responses.
+- Requested Student B’s lesson directly by ID and received `404` with no Student B name, URL or note in the response.
+- Requested `/learn/admin`, `/learn/admin/students` and `/learn/admin/lessons` directly and received `403` responses without admin data.
+- Confirmed private noindex metadata and `X-Robots-Tag` remained present on the student response.
+
+**Controlled fixtures retained for Pass 4/5:** CRUD fixture (inactive), Student A linked to `jamesanf@gmail.com`, Student B unlinked, one completed Student A lesson and one scheduled Student B lesson.
+
+**Tests/evidence:** authenticated browser-session HTTP/HTML acceptance against production; direct response-body inspection; no application source changes were required after Pass 1.
+
+**Deployment:** unchanged at Worker version `85129275-02b5-40be-8626-db554aa6903f`; no new deployment was needed.
+
+**Next pass:** Pass 4 — authenticated desktop, tablet and mobile responsive/accessibility acceptance.

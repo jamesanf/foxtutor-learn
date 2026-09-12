@@ -25,7 +25,11 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 
 **Current acceptance gates:** visual identity, blue top bar, page hierarchy/contrast, production deployment, public regression and authenticated admin CRUD PASS. Student own-lesson access, cross-student isolation, student/admin denial, private-response inspection, responsive authenticated inspection, timezone/overlap/lifecycle completion, fixture cleanup and final closure remain pending.
 
-**Next pass:** Pass 3 — authenticated student and privacy acceptance using `jamesanf@gmail.com`.
+**Pass 3 — authenticated student and privacy acceptance (2026-09-12):** PASS. Using a separate authenticated Chromium session as `jamesanf@gmail.com`, verified the explicitly linked Student A lesson is visible, the unlinked Student B lesson is absent, private admin notes and other-student data are absent from raw HTML responses, direct Student B lesson-ID access returns 404 without Student B data, and `/learn/admin`, `/learn/admin/students` and `/learn/admin/lessons` return 403 without admin data.
+
+**Current acceptance gates:** visual identity, blue top bar, page hierarchy/contrast, production deployment, public regression, authenticated admin CRUD, student own-lesson access, cross-student isolation, student/admin denial, explicit account linking and notes/privacy response inspection PASS. Responsive authenticated inspection, timezone/overlap/lifecycle completion, fixture cleanup and final closure remain pending.
+
+**Next pass:** Pass 4 — authenticated responsive and accessibility acceptance at desktop, tablet and mobile viewports.
 
 ## Architecture
 
