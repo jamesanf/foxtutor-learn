@@ -366,6 +366,7 @@ function resourceUploadForm(
 ): string {
   const activeStudents = students.filter((student) => student.status === "ACTIVE");
   const activeLessons = lessons.filter((lesson) => activeStudents.some((student) => student.id === lesson.student_id));
+  const availableLessons = context.kind === "generic" ? activeLessons : activeLessons.filter((lesson) => lesson.student_id === context.student.id);
   const idempotencyKey = values.idempotencyKey ?? crypto.randomUUID();
   const contextualStudent = context.kind !== "generic";
   const selectedStudentId = context.kind === "generic" ? values.studentId : context.student.id;
@@ -375,7 +376,7 @@ function resourceUploadForm(
     : `<label for="resource-student">Student<select id="resource-student" name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === selectedStudentId ? " selected" : ""}>${escapeHtml(student.name)}</option>`).join("")}</select></label>`;
   const lessonControl = context.kind === "lesson"
     ? `<input type="hidden" name="lessonId" value="${escapeHtml(context.lesson.id)}">`
-    : `<label for="resource-lesson">Lesson <span class="muted">(optional)</span><select id="resource-lesson" name="lessonId" data-resource-lesson-select><option value="">General student resource</option>${activeLessons.map((lesson) => `<option value="${escapeHtml(lesson.id)}" data-student-id="${escapeHtml(lesson.student_id)}"${lesson.id === selectedLessonId ? " selected" : ""}>${escapeHtml(lesson.student_name ?? "Lesson")} · ${escapeHtml(bookingDate(lesson))}</option>`).join("")}</select></label>`;
+    : `<label for="resource-lesson">Lesson <span class="muted">(optional)</span><select id="resource-lesson" name="lessonId" data-resource-lesson-select><option value="">General student resource</option>${availableLessons.map((lesson) => `<option value="${escapeHtml(lesson.id)}" data-student-id="${escapeHtml(lesson.student_id)}"${lesson.id === selectedLessonId ? " selected" : ""}>${escapeHtml(lesson.student_name ?? "Lesson")} · ${escapeHtml(bookingDate(lesson))}</option>`).join("")}</select></label>`;
   const contextDisplay = context.kind === "generic" ? "" : `<div class="resource-context-wrap">${resourceContext(context)}</div>`;
   const formFields = context.kind === "generic"
     ? `<div class="resource-fields">${studentControl}${lessonControl}</div>`
