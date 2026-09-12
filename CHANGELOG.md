@@ -2,6 +2,40 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+## Phase 2.5 — Production calendar completion
+
+### 2026-09-12 — Authenticated acceptance, cleanup and Phase 2 closure
+
+**Status:** complete; Phase 2 closed
+
+**Acceptance:**
+
+- Fresh authenticated admin and student Chrome sessions verified the live calendar routes, week navigation, lesson links, creation handoff, read-only student view, subscription cards and role boundaries.
+- Production feed checks verified valid `VCALENDAR`/`VEVENT` output, CRLF line endings, UTC instants, stable lesson UIDs, `CONFIRMED`/`CANCELLED` mapping, private/no-store/noindex headers, generic denial, `HEAD`, mutation denial, token rotation and old-token invalidation.
+- Controlled lessons covered Europe/London, America/New_York, edit/change propagation, completion, cancellation and new-event propagation. Student feed output was ownership-filtered and omitted student names and private notes.
+- Authenticated responsive checks at 1440px, 820px and 390px found no document overflow. Keyboard focus, labeled controls, headings, navigation labels and text status treatment were checked.
+- The exact temporary student and lesson rows were deactivated and removed after the user confirmed the event in the subscribed calendar. The user's active admin feed identity was preserved; production D1 retains only the two intended active users and legitimate feed subscription state.
+- Public-site regression and the full repository validation gates passed. The user confirmed that the real subscribed calendar displayed `Lesson - Calendar verification (temporary)` for 13 September at 10:00 Europe/London after refresh.
+
+**Closure:** README, phase plan, agent instructions, changelog, architecture, deployment and testing documentation now agree that Phase 2 is complete. The `phase-2.5-complete` tag is created only after the final commit, push and clean-tree verification.
+
+## Phase 2.5 — Production calendar completion
+
+### 2026-09-12 — Production deployment and Access path configuration
+
+**Status:** deployment complete; authenticated production acceptance and final Phase 2 closure pending
+
+**Implementation and deployment:**
+
+- Applied forward-only migration `0003_calendar_feeds.sql` to production D1 `foxtutor-learn`; the production schema now contains the hash-backed `calendar_feeds` table and active-owner index.
+- Deployed the existing Phase 2.3/2.4 implementation as Worker version `56ab94cf-a035-4ec2-82b0-c5109299ebfa`.
+- Created the narrowly scoped Cloudflare Access application `foxtutor.org/learn/calendar/feed/*` with `Bypass → Everyone`; the existing `foxtutor.org/learn` application and its Google allow policy were not changed.
+- Verified direct invalid-token feed requests reach the Worker and return generic 404 responses with private/no-store/noindex protections, while normal Learn and malformed feed paths still redirect to interactive Access.
+
+**Validation:** `npm test`; `npm run build`; `npm run check`; `npm run test:browser`; `npm run test:production`; remote migration/schema checks; Worker deployment inspection; direct production GET/HEAD and Access-boundary HTTP checks.
+
+**Remaining gates:** fresh authenticated admin/student Chromium acceptance, controlled production lesson/feed fixtures, token rotation and live change-propagation checks, timezone/mobile/accessibility evidence, real Apple/Google subscription acceptance or a documented client limitation, fixture cleanup, final documentation reconciliation, commit/push and the `phase-2.5-complete` tag.
+
 ## Phase 2.4 — Live calendar subscriptions
 
 ### 2026-09-12 — Master local implementation: secure tokenized iCalendar feeds

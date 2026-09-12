@@ -301,6 +301,29 @@ A real lesson can be created end-to-end and seen correctly by the intended pupil
 
 ---
 
+## Phase 2.5 — Production calendar completion and Phase 2 closure
+
+### Objective
+
+Take the Phase 2.3 calendar UX and Phase 2.4 private iCalendar implementation through production deployment, narrow Access routing, authenticated acceptance, external calendar validation, cleanup and documentation reconciliation. This is a completion pass, not new product scope.
+
+### Must achieve
+
+- Deploy the existing admin and student calendar routes without creating a parallel lesson system.
+- Apply `0003_calendar_feeds.sql` to production D1 and verify the expected table, constraints and indexes.
+- Serve `/learn/calendar/feed/<opaque-token>` without interactive Access login while preserving bearer-token authorization and generic denial.
+- Keep all other `/learn/*` routes behind the existing Google-backed Access application.
+- Verify feed ownership, token hashing, rotation, old-token invalidation, stable UIDs, status mapping, UTC timestamps, timezone behavior and live change propagation.
+- Verify subscription UI, responsive behavior, keyboard/focus behavior and privacy boundaries with fresh authenticated admin and student sessions.
+- Test a real Apple or Google subscription where practical, documenting provider-controlled refresh timing.
+- Remove controlled production fixtures and reconcile README, phase, architecture, deployment, security, testing and changelog records.
+
+### Exit criteria
+
+Production Worker, D1, Access configuration, authenticated UI, feed HTTP behavior, calendar-client behavior, regression evidence, cleanup, documentation and Git state all agree. Only then may `phase-2.5-complete` be created and Phase 2 be marked complete.
+
+**Closure:** Phase 2.5 acceptance is complete. Direct production HTTP/ICS checks and a real subscribed-calendar refresh both passed; provider-specific refresh intervals remain outside Learn's control.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective
