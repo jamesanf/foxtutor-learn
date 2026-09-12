@@ -20,3 +20,15 @@ The `category` column from `0004_resources.sql` is retained as an unused legacy 
 8. Remove exact fixtures, confirm a clean working tree, then create `phase-3.2-complete` only after every gate passes.
 
 Production acceptance is not claimed by this record until the authenticated browser and controlled-fixture checks are actually completed.
+
+## Current deployment
+
+- Git commit: `47564925c04ff0e208f5262565a6400b8dec4d81`
+- Remote `main`: matches the release commit
+- Worker: `foxtutor-learn`
+- Worker version: `b894d6f2-3b3f-4d17-aa88-c571a6117253`
+- Deployment message: `Phase 3.2 resource upload UX remediation`
+- D1 migration: no new migration; remote reports no migrations to apply
+- R2: existing private `foxtutor-learn-resources` binding preserved
+- Public smoke: PASS after deployment
+- Authenticated Add Resource, screenshot review, resource security regression and controlled fixture cleanup: pending because this environment has no authenticated production browser session or Chromium runtime

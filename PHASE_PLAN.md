@@ -498,7 +498,7 @@ The master implementation adds `0004_resources.sql`, the private `RESOURCES_BUCK
 
 ### Phase 3.2 current state — 2026-09-13
 
-The resource infrastructure remains the Phase 3.1 baseline. The Add Resource workflow now uses server-validated lesson/student context, a generic two-column metadata grid, a styled keyboard-accessible file dropzone, selected-file metadata, upload progress, recoverable errors and context-aware success navigation. Category is removed from application code, requests, filters, lists and detail views. The `category` column from `0004_resources.sql` is retained unused for schema compatibility; no destructive migration was created. Production deployment, authenticated browser verification, controlled fixture cleanup and the `phase-3.2-complete` tag remain pending.
+The resource infrastructure remains the Phase 3.1 baseline. The Add Resource workflow now uses server-validated lesson/student context, a generic two-column metadata grid, a styled keyboard-accessible file dropzone, selected-file metadata, upload progress, recoverable errors and context-aware success navigation. Category is removed from application code, requests, filters, lists and detail views. The `category` column from `0004_resources.sql` is retained unused for schema compatibility; no destructive migration was created. Commit `47564925c04ff0e208f5262565a6400b8dec4d81` is deployed as Worker `b894d6f2-3b3f-4d17-aa88-c571a6117253`. Authenticated browser verification, controlled fixture cleanup and the `phase-3.2-complete` tag remain pending.
 
 ### Objective
 
