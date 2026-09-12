@@ -1,4 +1,3 @@
-export type ResourceCategory = "worksheet" | "notes" | "reading" | "homework" | "reference" | "other";
 export type ResourceStatus = "uploading" | "available" | "failed" | "deleted";
 
 export interface Resource {
@@ -12,7 +11,6 @@ export interface Resource {
   size_bytes: number;
   sha256: string | null;
   page_count: number | null;
-  category: ResourceCategory;
   status: ResourceStatus;
   created_at: string;
   updated_at: string;
@@ -20,20 +18,20 @@ export interface Resource {
   retention_until: string;
   student_name?: string | null;
   lesson_start_at?: string | null;
+  lesson_end_at?: string | null;
 }
 
 export interface ResourceListOptions {
   limit: number;
   offset: number;
   search?: string;
-  category?: ResourceCategory;
 }
 
 const resourceColumns = `
   r.id, r.student_id, r.lesson_id, r.uploaded_by_user_id, r.original_filename,
-  r.storage_key,   r.content_type, r.size_bytes, r.sha256, r.page_count, r.category, r.status,
+  r.storage_key, r.content_type, r.size_bytes, r.sha256, r.page_count, r.status,
   r.created_at, r.updated_at, r.deleted_at, r.retention_until,
-  s.name AS student_name, l.start_at AS lesson_start_at
+  s.name AS student_name, l.start_at AS lesson_start_at, l.end_at AS lesson_end_at
 `;
 
 export async function listResources(db: D1Database, options: ResourceListOptions): Promise<Resource[]> {
@@ -43,10 +41,6 @@ export async function listResources(db: D1Database, options: ResourceListOptions
     clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) OR LOWER(s.name) LIKE LOWER(?))");
     const search = `%${options.search}%`;
     bindings.push(search, search);
-  }
-  if (options.category) {
-    clauses.push("r.category = ?");
-    bindings.push(options.category);
   }
   bindings.push(options.limit, options.offset);
   const result = await db
@@ -64,17 +58,13 @@ export async function listResources(db: D1Database, options: ResourceListOptions
   return result.results;
 }
 
-export async function countResources(db: D1Database, options: Pick<ResourceListOptions, "search" | "category">): Promise<number> {
+export async function countResources(db: D1Database, options: Pick<ResourceListOptions, "search">): Promise<number> {
   const clauses = ["r.deleted_at IS NULL"];
   const bindings: string[] = [];
   if (options.search) {
     clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) OR LOWER(s.name) LIKE LOWER(?))");
     const search = `%${options.search}%`;
     bindings.push(search, search);
-  }
-  if (options.category) {
-    clauses.push("r.category = ?");
-    bindings.push(options.category);
   }
   const result = await db
     .prepare(
@@ -143,6 +133,21 @@ export async function listResourcesForLesson(db: D1Database, lessonId: string): 
   return result.results;
 }
 
+export async function listResourcesForStudentRecord(db: D1Database, studentId: string): Promise<Resource[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${resourceColumns}
+       FROM resources r
+       LEFT JOIN students s ON s.id = r.student_id
+       LEFT JOIN lessons l ON l.id = r.lesson_id
+       WHERE r.student_id = ? AND r.deleted_at IS NULL
+       ORDER BY r.created_at DESC, r.id DESC`
+    )
+    .bind(studentId)
+    .all<Resource>();
+  return result.results;
+}
+
 export async function findResource(db: D1Database, id: string): Promise<Resource | null> {
   return db
     .prepare(
@@ -178,7 +183,7 @@ export async function findResourceForStudent(db: D1Database, id: string, userId:
 
 export async function findResourceByIdempotencyKey(db: D1Database, key: string): Promise<Resource | null> {
   return db
-    .prepare("SELECT id, student_id, lesson_id, uploaded_by_user_id, original_filename, storage_key, content_type, size_bytes, sha256, page_count, category, status, created_at, updated_at, deleted_at, retention_until FROM resources WHERE idempotency_key = ?")
+    .prepare("SELECT id, student_id, lesson_id, uploaded_by_user_id, original_filename, storage_key, content_type, size_bytes, sha256, page_count, status, created_at, updated_at, deleted_at, retention_until FROM resources WHERE idempotency_key = ?")
     .bind(key)
     .first<Resource>();
 }
@@ -191,9 +196,9 @@ export async function insertUploadingResource(
     .prepare(
       `INSERT INTO resources
        (id, student_id, lesson_id, uploaded_by_user_id, original_filename, storage_key,
-        content_type, size_bytes, sha256, page_count, category, status, idempotency_key,
+        content_type, size_bytes, sha256, page_count, status, idempotency_key,
         created_at, updated_at, deleted_at, retention_until)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploading', ?, ?, ?, NULL, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploading', ?, ?, ?, NULL, ?)`
     )
     .bind(
       resource.id,
@@ -206,7 +211,6 @@ export async function insertUploadingResource(
       resource.size_bytes,
       resource.sha256,
       resource.page_count,
-      resource.category,
       resource.idempotency_key,
       resource.created_at,
       resource.updated_at,

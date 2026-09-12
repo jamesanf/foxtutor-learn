@@ -1,9 +1,5 @@
-import type { ResourceCategory } from "../db/resources";
-
 export const MAX_RESOURCE_SIZE_BYTES = 25 * 1024 * 1024;
 export const RESOURCE_PAGE_SIZES = [12, 24, 48] as const;
-
-export const RESOURCE_CATEGORIES: readonly ResourceCategory[] = ["worksheet", "notes", "reading", "homework", "reference", "other"];
 
 const FILE_POLICY: Record<string, { contentType: string; label: string }> = {
   pdf: { contentType: "application/pdf", label: "PDF" },
@@ -14,10 +10,6 @@ const FILE_POLICY: Record<string, { contentType: string; label: string }> = {
   jpeg: { contentType: "image/jpeg", label: "JPEG image" },
   webp: { contentType: "image/webp", label: "WebP image" }
 };
-
-export function categoryLabel(category: ResourceCategory): string {
-  return category.charAt(0).toUpperCase() + category.slice(1);
-}
 
 export function fileTypeLabel(contentType: string): string {
   return Object.values(FILE_POLICY).find((policy) => policy.contentType === contentType)?.label ?? "Document";
@@ -73,4 +65,3 @@ export function pdfPageCount(bytes: Uint8Array): number | null {
   const pages = header.match(/\/Type\s*\/Page\b/g)?.length ?? 0;
   return pages > 0 ? pages : null;
 }
-

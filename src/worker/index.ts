@@ -41,11 +41,11 @@ import {
   listResources,
   listResourcesForLessonForStudent,
   listResourcesForLesson,
+  listResourcesForStudentRecord,
   listResourcesForStudent,
   markResourceAvailable,
   markResourceFailed,
-  type Resource,
-  type ResourceCategory
+  type Resource
 } from "../db/resources";
 import {
   findActiveCalendarFeedForOwner,
@@ -76,9 +76,7 @@ import { feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from ".
 import { feedRange, generateIcs } from "../domain/icalendar";
 import {
   MAX_RESOURCE_SIZE_BYTES,
-  RESOURCE_CATEGORIES,
   RESOURCE_PAGE_SIZES,
-  categoryLabel,
   fileTypeLabel,
   hasExpectedSignature,
   pdfPageCount,
@@ -291,11 +289,21 @@ function resourceLessonDate(startAt: string): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: CALENDAR_TIMEZONE }).format(new Date(startAt));
 }
 
+function resourceLessonLabel(resource: Resource): string {
+  if (!resource.lesson_start_at) return "General student resource";
+  const date = resourceLessonDate(resource.lesson_start_at);
+  const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: CALENDAR_TIMEZONE }).format(new Date(resource.lesson_start_at));
+  const end = resource.lesson_end_at
+    ? new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: CALENDAR_TIMEZONE }).format(new Date(resource.lesson_end_at))
+    : null;
+  return `${date} · ${end ? `${time}–${end}` : time}`;
+}
+
 function resourceRows(resources: Resource[]): string {
   if (!resources.length) {
-    return `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Upload a worksheet, reading, notes, or other material for a student.</p><a class="button" href="/learn/admin/resources/new">Upload resource</a></div>`;
+    return `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Add a document for a student or attach it to a lesson.</p><a class="button" href="/learn/admin/resources/new">Add resource</a></div>`;
   }
-  return `<div class="table-wrap resource-list-table"><table><thead><tr><th>File</th><th>Student</th><th>Lesson</th><th>Type</th><th>Category</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>${resources.map((resource) => `<tr><td data-label="File"><strong>${escapeHtml(resource.original_filename)}</strong><small class="resource-meta">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</small></td><td data-label="Student">${escapeHtml(resource.student_name ?? "Student")}</td><td data-label="Lesson">${resource.lesson_start_at ? escapeHtml(resourceLessonDate(resource.lesson_start_at)) : "General student resource"}</td><td data-label="Type">${escapeHtml(fileTypeLabel(resource.content_type))}</td><td data-label="Category">${escapeHtml(categoryLabel(resource.category))}</td><td data-label="Uploaded">${escapeHtml(resourceDate(resource))}</td><td data-label="Actions"><a href="/learn/admin/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a> <a href="/learn/admin/resources/${encodeURIComponent(resource.id)}">Details</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap resource-list-table"><table><thead><tr><th>File</th><th>Student</th><th>Lesson</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>${resources.map((resource) => `<tr><td data-label="File"><strong>${escapeHtml(resource.original_filename)}</strong><small class="resource-meta">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</small></td><td data-label="Student">${escapeHtml(resource.student_name ?? "Student")}</td><td data-label="Lesson">${escapeHtml(resourceLessonLabel(resource))}</td><td data-label="Uploaded">${escapeHtml(resourceDate(resource))}</td><td data-label="Actions"><a href="/learn/admin/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a> <a href="/learn/admin/resources/${encodeURIComponent(resource.id)}">Details</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function resourcePagination(page: number, pageSize: number, total: number, path: string): string {
@@ -320,22 +328,64 @@ function resourcePagination(page: number, pageSize: number, total: number, path:
   return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label><select id="resources-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
+type ResourceUploadContext =
+  | { kind: "generic"; studentId?: string; lessonId?: string; returnContext: "resources" }
+  | { kind: "student"; student: Student; lessonId?: string; returnContext: "student" }
+  | { kind: "lesson"; student: Student; lesson: Lesson; returnContext: "lesson" };
+
+type ResourceUploadValues = {
+  studentId?: string;
+  lessonId?: string;
+  idempotencyKey?: string;
+  returnContext?: ResourceUploadContext["returnContext"];
+};
+
+function resourceContext(context: ResourceUploadContext): string {
+  if (context.kind === "lesson") {
+    return `<div class="resource-context" aria-label="Upload destination"><strong>${escapeHtml(context.student.name)}</strong><span>Lesson · ${escapeHtml(formatLessonTime(context.lesson))}</span></div>`;
+  }
+  if (context.kind === "student") {
+    return `<div class="resource-context" aria-label="Upload destination"><strong>${escapeHtml(context.student.name)}</strong><span>General student resource</span></div>`;
+  }
+  return "";
+}
+
+function resourceReturnPath(context: ResourceUploadContext): string {
+  if (context.kind === "lesson") return `/learn/admin/lessons/${encodeURIComponent(context.lesson.id)}`;
+  if (context.kind === "student") return `/learn/admin/students/${encodeURIComponent(context.student.id)}`;
+  return "/learn/admin/resources";
+}
+
 function resourceUploadForm(
   csrfToken: string,
   students: Student[],
   lessons: Lesson[],
+  context: ResourceUploadContext,
   error?: string,
-  values: { studentId?: string; lessonId?: string; category?: ResourceCategory; idempotencyKey?: string } = {}
+  values: ResourceUploadValues = {}
 ): string {
   const activeStudents = students.filter((student) => student.status === "ACTIVE");
   const activeLessons = lessons.filter((lesson) => activeStudents.some((student) => student.id === lesson.student_id));
   const idempotencyKey = values.idempotencyKey ?? crypto.randomUUID();
-  return `<section class="card form-card"><p class="eyebrow">PRIVATE RESOURCE</p><h1>Upload resource</h1><p class="lede">Give a student a worksheet, reading, notes, homework, or reference document.</p>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="resource-upload-form" method="post" action="/learn/admin/resources/new" enctype="multipart/form-data">${hiddenCsrf(csrfToken)}<input type="hidden" name="idempotencyKey" value="${escapeHtml(idempotencyKey)}"><label>Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === values.studentId ? " selected" : ""}>${escapeHtml(student.name)}</option>`).join("")}</select></label><label>Lesson <span class="muted">(optional)</span><select name="lessonId" data-resource-lesson-select><option value="">General student resource</option>${activeLessons.map((lesson) => `<option value="${escapeHtml(lesson.id)}" data-student-id="${escapeHtml(lesson.student_id)}"${lesson.id === values.lessonId ? " selected" : ""}>${escapeHtml(lesson.student_name ?? "Lesson")} · ${escapeHtml(bookingDate(lesson))}</option>`).join("")}</select></label><label>File<input type="file" name="file" required accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"><span class="field-help">PDF, DOCX, TXT, PNG, JPEG or WEBP · maximum 25 MB</span><output class="file-preview" data-file-preview aria-live="polite"></output></label><label>Category<select name="category">${RESOURCE_CATEGORIES.map((category) => `<option value="${category}"${category === (values.category ?? "other") ? " selected" : ""}>${escapeHtml(categoryLabel(category))}</option>`).join("")}</select></label><div class="form-actions"><a class="button secondary" href="/learn/admin/resources">Cancel</a><button class="button" type="submit">Upload resource</button></div></form></section>`;
+  const contextualStudent = context.kind !== "generic";
+  const selectedStudentId = context.kind === "generic" ? values.studentId : context.student.id;
+  const selectedLessonId = context.kind === "lesson" ? context.lesson.id : values.lessonId;
+  const studentControl = contextualStudent
+    ? `<input type="hidden" name="studentId" value="${escapeHtml(selectedStudentId ?? "")}">`
+    : `<label for="resource-student">Student<select id="resource-student" name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === selectedStudentId ? " selected" : ""}>${escapeHtml(student.name)}</option>`).join("")}</select></label>`;
+  const lessonControl = context.kind === "lesson"
+    ? `<input type="hidden" name="lessonId" value="${escapeHtml(context.lesson.id)}">`
+    : `<label for="resource-lesson">Lesson <span class="muted">(optional)</span><select id="resource-lesson" name="lessonId" data-resource-lesson-select><option value="">General student resource</option>${activeLessons.map((lesson) => `<option value="${escapeHtml(lesson.id)}" data-student-id="${escapeHtml(lesson.student_id)}"${lesson.id === selectedLessonId ? " selected" : ""}>${escapeHtml(lesson.student_name ?? "Lesson")} · ${escapeHtml(bookingDate(lesson))}</option>`).join("")}</select></label>`;
+  const contextDisplay = context.kind === "generic" ? "" : `<div class="resource-context-wrap">${resourceContext(context)}</div>`;
+  const formFields = context.kind === "generic"
+    ? `<div class="resource-fields">${studentControl}${lessonControl}</div>`
+    : `${studentControl}${context.kind === "student" ? `<div class="resource-optional-lesson">${lessonControl}</div>` : lessonControl}`;
+  return `<section class="resource-upload"><div class="resource-upload-heading"><h1>Add resource</h1><p class="lede">Add a document for a student or attach it to a lesson.</p></div>${contextDisplay}${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="resource-upload-form" method="post" action="/learn/admin/resources/new" enctype="multipart/form-data" data-return-context="${escapeHtml(context.returnContext)}">${hiddenCsrf(csrfToken)}<input type="hidden" name="idempotencyKey" value="${escapeHtml(idempotencyKey)}"><input type="hidden" name="returnContext" value="${escapeHtml(context.returnContext)}">${formFields}<div class="resource-file-section"><span class="resource-field-label">File</span><div class="resource-file-dropzone" data-file-dropzone tabindex="0" role="button" aria-labelledby="resource-file-label" aria-describedby="resource-file-help"><span class="resource-file-icon" aria-hidden="true">↥</span><strong id="resource-file-label">Drop a file here or <span class="resource-browse">Browse</span></strong><span id="resource-file-help" class="field-help">PDF · DOCX · TXT · PNG · JPEG · WEBP · Up to 25 MB</span><input id="resource-file-input" type="file" name="file" aria-label="Choose resource file" required accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"><output class="file-preview" data-file-preview aria-live="polite"></output></div></div><p class="upload-status" data-upload-status aria-live="polite"></p><div class="form-actions"><a class="button secondary" href="${resourceReturnPath(context)}">Cancel</a><button class="button" type="submit">Upload resource</button></div></form></section>`;
 }
 
 function resourceSummary(resource: Resource, admin: boolean, csrfToken: string): string {
- const lesson = resource.lesson_start_at ? `Lesson · ${resourceLessonDate(resource.lesson_start_at)}` : "General student resource";
- return `<section class="card resource-detail"><p class="eyebrow">RESOURCE</p><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div><a class="button" href="/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></div><div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Use</strong><br>${escapeHtml(lesson)}</p><p><strong>Category</strong><br>${escapeHtml(categoryLabel(resource.category))}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div>${admin ? `<details class="delete-confirmation"><summary>Delete resource</summary><p>Delete “${escapeHtml(resource.original_filename)}”?</p><form method="post" action="/learn/admin/resources/${encodeURIComponent(resource.id)}/delete">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Delete</button></form></details>` : ""}</section>`;
+ const lesson = resource.lesson_start_at ? `Lesson · ${resourceLessonLabel(resource)}` : "General student resource";
+ return `<section class="card resource-detail"><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div><a class="button" href="/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></div><div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Lesson</strong><br>${escapeHtml(lesson)}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div>${admin ? `<details class="delete-confirmation"><summary>Delete resource</summary><p>Delete “${escapeHtml(resource.original_filename)}”?</p><form method="post" action="/learn/admin/resources/${encodeURIComponent(resource.id)}/delete">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Delete resource</button></form></details>` : ""}</section>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -457,15 +507,45 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
   return { active: created.active, setCookies: created.setCookies };
 }
 
-function isResourceCategory(value: string): value is ResourceCategory {
-  return RESOURCE_CATEGORIES.includes(value as ResourceCategory);
-}
-
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const input = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(input).set(bytes);
   const digest = await crypto.subtle.digest("SHA-256", input);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function resourceReturnContext(value: string): ResourceUploadContext["returnContext"] {
+  return value === "lesson" || value === "student" ? value : "resources";
+}
+
+function resolveResourceUploadContext(
+  students: Student[],
+  lessons: Lesson[],
+  studentId?: string,
+  lessonId?: string,
+  returnContextValue = "resources"
+): ResourceUploadContext {
+  const returnContext = resourceReturnContext(returnContextValue);
+  const activeStudent = students.find((student) => student.id === studentId && student.status === "ACTIVE");
+  const lesson = lessons.find((candidate) => candidate.id === lessonId);
+  if (returnContext === "lesson" && lesson && activeStudent?.id === lesson.student_id) {
+    return { kind: "lesson", student: activeStudent, lesson, returnContext };
+  }
+  if (returnContext === "student" && activeStudent) {
+    return { kind: "student", student: activeStudent, lessonId, returnContext };
+  }
+  return { kind: "generic", studentId, lessonId, returnContext: "resources" };
+}
+
+function resourceSuccessPage(user: AppUser, csrfToken: string, resourceId: string, context: ResourceUploadContext): Response {
+  const returnPath = resourceReturnPath(context);
+  const returnLabel = context.kind === "lesson" ? "Back to lesson" : context.kind === "student" ? "Back to student" : "Back to resources";
+  return appPage(
+    user,
+    csrfToken,
+    "Resource added",
+    `<section class="card resource-success"><p class="form-success" role="status">Resource added.</p><h1>Resource added</h1><p class="lede">The file is ready to use.</p><div class="form-actions"><a class="button" href="/learn/admin/resources/${encodeURIComponent(resourceId)}">View resource</a><a class="button secondary" href="${returnPath}">${returnLabel}</a></div></section>`
+  );
 }
 
 async function resourceUpload(
@@ -487,31 +567,31 @@ async function resourceUpload(
   }
   const studentId = formText(form, "studentId");
   const lessonId = formText(form, "lessonId") || null;
-  const category = formText(form, "category");
   const idempotencyKey = formText(form, "idempotencyKey");
-  const values = { studentId, lessonId: lessonId ?? undefined, category: isResourceCategory(category) ? category : "other" as ResourceCategory, idempotencyKey };
+  const returnContextValue = formText(form, "returnContext");
+  const context = resolveResourceUploadContext(students, lessons, studentId, lessonId ?? undefined, returnContextValue);
+  const values = { studentId, lessonId: lessonId ?? undefined, idempotencyKey, returnContext: context.returnContext };
   if (!csrfTokenMatches(form.get("csrf"), active)) return messagePage("Request not verified", "Refresh the page and try again.", 403);
-  if (!/^[a-zA-Z0-9_-]{20,100}$/.test(idempotencyKey)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "This upload could not be safely identified. Refresh the page and try again.", values));
+  if (!/^[a-zA-Z0-9_-]{20,100}$/.test(idempotencyKey)) return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "This upload could not be safely identified. Refresh the page and try again.", values));
   const existing = await findResourceByIdempotencyKey(env.DB as D1Database, idempotencyKey);
   if (existing) {
     if (existing.uploaded_by_user_id !== active.user.id) return messagePage("Conflict", "This upload could not be completed.", 409);
-    if (existing.status === "available") return redirect("/learn/admin/resources?uploaded=1");
+    if (existing.status === "available") return resourceSuccessPage(active.user, active.csrfToken, existing.id, context);
     if (existing.status === "uploading") return messagePage("Upload in progress", "This upload is already being processed. Try again shortly.", 409);
-    return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "This upload has already failed. Choose the file again to start a new upload.", { ...values, idempotencyKey: crypto.randomUUID() }));
+    return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "This upload has already failed. Choose the file again to start a new upload.", { ...values, idempotencyKey: crypto.randomUUID() }));
   }
   const student = await findStudent(env.DB as D1Database, studentId);
-  if (!student || student.status !== "ACTIVE") return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "Choose an active student.", values));
+  if (!student || student.status !== "ACTIVE") return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "Choose an active student.", values));
   const lesson = lessonId ? await findLesson(env.DB as D1Database, lessonId) : null;
   if (lessonId && (!lesson || lesson.student_id !== student.id)) {
-    return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "This lesson does not belong to the selected student.", values));
+    return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "This lesson does not belong to the selected student.", values));
   }
-  if (!isResourceCategory(category)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "Choose a valid category.", values));
   const fileValue = form.get("file");
-  if (!(fileValue instanceof File)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "Please choose a file.", values));
+  if (!(fileValue instanceof File)) return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "Please choose a file.", values));
   const filePolicy = validateResourceFile(fileValue);
-  if ("error" in filePolicy) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, filePolicy.error, values));
+  if ("error" in filePolicy) return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, filePolicy.error, values));
   const bytes = new Uint8Array(await fileValue.arrayBuffer());
-  if (!hasExpectedSignature(filePolicy.extension, bytes)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "The file contents do not match the selected document type.", values));
+  if (!hasExpectedSignature(filePolicy.extension, bytes)) return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "The file contents do not match the selected document type.", values));
   const now = new Date();
   const resourceId = crypto.randomUUID();
   const storageKey = `resources/${resourceId}/original`;
@@ -528,7 +608,6 @@ async function resourceUpload(
     size_bytes: bytes.byteLength,
     sha256: await sha256Hex(bytes),
     page_count: filePolicy.extension === "pdf" ? pdfPageCount(bytes) : null,
-    category,
     status: "uploading",
     idempotency_key: idempotencyKey,
     created_at: nowIso,
@@ -553,7 +632,7 @@ async function resourceUpload(
     await markResourceFailed(env.DB as D1Database, resourceId, new Date().toISOString());
     return messagePage("Upload incomplete", "The resource was not made available because its metadata could not be committed.", 502);
   }
-  return redirect("/learn/admin/resources?uploaded=1");
+  return resourceSuccessPage(active.user, active.csrfToken, resourceId, context);
 }
 
 async function downloadResource(request: Request, env: Env, resource: Resource): Promise<Response> {
@@ -585,20 +664,27 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-resources") {
     const { page, pageSize } = parseResourcePagination(url);
     const search = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
-    const categoryValue = url.searchParams.get("category") ?? "";
-    const category = isResourceCategory(categoryValue) ? categoryValue : undefined;
-    const total = await countResources(db, { search, category });
+    const total = await countResources(db, { search });
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
-    const resources = await listResources(db, { search, category, limit: pageSize, offset: (safePage - 1) * pageSize });
-    const query = search || category ? `?q=${encodeURIComponent(search)}${category ? `&category=${encodeURIComponent(category)}` : ""}` : "";
-    const heading = `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Documents uploaded for students and lessons.</p></div>${buttonLink("/learn/admin/resources/new", "Upload resource")}</div><form class="resource-filter-form" method="get" action="/learn/admin/resources"><label>Search<input type="search" name="q" value="${escapeHtml(search)}" placeholder="Filename or student"></label><label>Category<select name="category"><option value="">All categories</option>${RESOURCE_CATEGORIES.map((value) => `<option value="${value}"${value === category ? " selected" : ""}>${escapeHtml(categoryLabel(value))}</option>`).join("")}</select></label><button class="button secondary" type="submit">Filter</button></form>${url.searchParams.get("uploaded") === "1" ? `<p class="form-success" role="status">Resource uploaded.</p>` : ""}`;
+    const resources = await listResources(db, { search, limit: pageSize, offset: (safePage - 1) * pageSize });
+    const query = search ? `?q=${encodeURIComponent(search)}` : "";
+    const heading = `<div class="page-heading"><div><h1>Resources</h1><p class="lede">Documents uploaded for students and lessons.</p></div>${buttonLink("/learn/admin/resources/new", "Add resource")}</div><form class="resource-filter-form" method="get" action="/learn/admin/resources"><label>Search<input type="search" name="q" value="${escapeHtml(search)}" placeholder="Filename or student"></label><button class="button secondary" type="submit">Search</button></form>`;
     return appPage(active.user, csrfToken, "Resources", `${heading}${resourceRows(resources)}${resourcePagination(safePage, pageSize, total, `/learn/admin/resources${query}`)}`);
   }
   if (route === "admin-resource-form") {
     const students = await listStudents(db);
     const lessons = await listLessons(db);
-    if (request.method === "GET") return appPage(active.user, csrfToken, "Upload resource", resourceUploadForm(csrfToken, students, lessons, undefined, { studentId: url.searchParams.get("student") ?? undefined, lessonId: url.searchParams.get("lesson") ?? undefined }));
+    const requestedLessonId = url.searchParams.get("lesson") ?? undefined;
+    const requestedStudentId = url.searchParams.get("student") ?? undefined;
+    const requestedLesson = lessons.find((lesson) => lesson.id === requestedLessonId);
+    const requestedStudent = students.find((student) => student.id === (requestedLesson?.student_id ?? requestedStudentId) && student.status === "ACTIVE");
+    const context = requestedLesson && requestedStudent && requestedLesson.student_id === requestedStudent.id
+      ? { kind: "lesson", student: requestedStudent, lesson: requestedLesson, returnContext: "lesson" } as ResourceUploadContext
+      : requestedStudent
+        ? { kind: "student", student: requestedStudent, returnContext: "student" } as ResourceUploadContext
+        : { kind: "generic", studentId: undefined, lessonId: undefined, returnContext: "resources" } as ResourceUploadContext;
+    if (request.method === "GET") return appPage(active.user, csrfToken, "Add resource", resourceUploadForm(csrfToken, students, lessons, context));
     if (request.method !== "POST") return messagePage("Request not verified", "Refresh the page and try again.", 403);
     return withSessionCookies(await resourceUpload(request, env, active, students, lessons), undefined);
   }
@@ -686,7 +772,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!student) return messagePage("Not found", "That student record does not exist.", 404);
     if (route === "admin-student") {
       const lessons = (await listLessons(db)).filter((lesson) => lesson.student_id === student.id);
-      return appPage(active.user, csrfToken, "Student", `<p class="eyebrow">STUDENT RECORD</p><div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div>${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p><strong>Created</strong><br>${escapeHtml(student.created_at)}</p><p><strong>Updated</strong><br>${escapeHtml(student.updated_at)}</p></section><div class="page-heading"><h2>Lessons</h2>${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}</div>${lessonTable(lessons, "/learn/admin/lessons", true)}${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
+      const resources = await listResourcesForStudentRecord(db, student.id);
+      return appPage(active.user, csrfToken, "Student", `<p class="eyebrow">STUDENT RECORD</p><div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div>${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p><strong>Created</strong><br>${escapeHtml(student.created_at)}</p><p><strong>Updated</strong><br>${escapeHtml(student.updated_at)}</p></section><div class="page-heading"><h2>Lessons</h2>${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}</div>${lessonTable(lessons, "/learn/admin/lessons", true)}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2><p class="muted">Documents for this student.</p></div>${student.status === "ACTIVE" ? buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource") : ""}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources for this student yet.</p>`}</section>${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
     }
     if (route === "admin-student-deactivate") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -743,7 +830,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
     if (route === "admin-lesson") {
       const resources = await listResourcesForLesson(db, lesson.id);
-      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div>${buttonLink(`${url.pathname}/edit`, "Edit lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${encodeURIComponent(lesson.id)}`, "Upload resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
+      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div>${buttonLink(`${url.pathname}/edit`, "Edit lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${encodeURIComponent(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
     }
     if (route === "admin-lesson-status") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);

@@ -4,10 +4,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 3.1 lesson resources and private document infrastructure in progress
+**Phase:** Phase 3.2 resource upload UX remediation in progress
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** Phase 3.1 adds the private `resources` D1 metadata model, dedicated private R2 buckets (`foxtutor-learn-resources` in production and `foxtutor-learn-resources-local` locally), server-authorized admin upload/download/delete flows, student resource lists and lesson resource sections. The implementation uses opaque server-generated keys, a 25 MiB allowlist, content-signature checks, SHA-256 metadata, PDF page inspection, upload idempotency and explicit partial-failure states. Migration `0004_resources.sql` and Worker version `dfebaca6-f1e4-4019-bb5a-37f92344c161` are deployed; authenticated resource acceptance remains pending because no production Chromium session is available. Phase 2.12 remains functionally deployed as Worker `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20` from commit `167cfc297bb8b745bc530d0cea8c07c5d6cf2313`, but its authenticated production, visual and formal completion-tag gates remain open and are not being rewritten by Phase 3.
+**Latest state:** Phase 3.1 established the private `resources` D1 metadata model, dedicated private R2 buckets, server-authorized upload/download/delete flows, student resource lists and lesson resource sections. Phase 3.2 removes category from the application model, adds contextual lesson/student entry points, redesigns Add Resource around an accessible dropzone and adds compact list/detail metadata without changing resource infrastructure. The legacy D1 category column remains unused for schema compatibility; authenticated production acceptance remains pending.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -160,6 +160,9 @@ docs/                 Architecture, security, deployment, API and evidence
 | `docs/security/phase-3.1.md` | Resource upload, download, deletion and private-storage controls |
 | `docs/testing/phase-3.1.md` | Resource acceptance matrix and remaining authenticated gates |
 | `docs/deployment/phase-3.1.md` | Resource bucket, migration and Worker deployment record |
+| `docs/architecture/phase-3.2.md` | Contextual resource upload UX and category decision |
+| `docs/testing/phase-3.2.md` | Resource UX contracts and acceptance matrix |
+| `docs/deployment/phase-3.2.md` | Phase 3.2 release and production verification sequence |
 | `docs/architecture/phase-2.7.md` | Calendar dependency, rendering, timezone and authorization decision |
 | `docs/testing/phase-2.8.md` | Calendar density, subscription and lesson UX acceptance matrix |
 | `docs/architecture/phase-2.8.md` | Phase 2.8 presentation and lesson interaction decisions |
@@ -194,6 +197,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.10 | Final timetable, Bookings, navigation, dashboard, student model and end-to-end UX closure | In progress |
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
+| 3.2 | Contextual Add Resource UX, dropzone selection and category removal from application code | Local implementation; production acceptance pending |
 | 4 | Mail notifications and reports | Deferred |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |

@@ -2,6 +2,16 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 3.2 resource upload UX remediation
+
+**Status:** local implementation; production deployment and authenticated acceptance pending
+
+- Redesigned Add Resource around a focused file-selection workflow with a styled, keyboard-accessible drag/drop zone, derived filename/type/size state, Change file interaction, upload progress and concise success navigation.
+- Added server-resolved lesson and student entry contexts so known associations are displayed as read-only context instead of repeated selectors; retained the generic Student + optional Lesson workflow for the resource manager.
+- Removed category from resource policy, D1 queries, upload creation, list rendering, detail rendering and filters. Phase 3.1 historically introduced the category column; the deployed D1 column is intentionally retained unused for schema compatibility.
+- Added student and lesson resource entry buttons, compact resource list metadata and responsive resource upload composition without changing R2 keys, private storage, validation, idempotency, authorization, deletion, retention or PDF inspection.
+- Added resource UX source contracts and Phase 3.2 architecture/testing/deployment records.
+
 ### 2026-09-13 — Phase 3.1 lesson resources and private document infrastructure
 
 **Status:** deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated resource acceptance pending

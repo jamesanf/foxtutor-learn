@@ -20,7 +20,7 @@ Original filenames, student names, lesson names and browser-supplied keys are ne
 
 ## D1 metadata and ownership
 
-`resources` stores the original filename, trusted content type, byte size, SHA-256 fingerprint, optional PDF page count, category, status, uploader, student and lesson relationships, timestamps, a 12-month retention date and an idempotency key. A resource must have a student or lesson association; the upload flow currently sets the authoritative student relationship for both general student resources and lesson resources.
+`resources` stores the original filename, trusted content type, byte size, SHA-256 fingerprint, optional PDF page count, status, uploader, student and lesson relationships, timestamps, a 12-month retention date and an idempotency key. Phase 3.1 also introduced a `category` column in `0004_resources.sql`; Phase 3.2 removed that field from the application after product review. The deployed nullable schema column is retained for forward compatibility and no application code reads or writes it. A resource must have a student or lesson association; the upload flow sets the authoritative student relationship for both general student resources and lesson resources.
 
 Student queries authorize through the active Learn user to student relationship in SQL. Lesson resources additionally resolve `resource -> lesson -> student`. Admin queries are role-gated by the existing Learn session and route authorization.
 
@@ -39,4 +39,3 @@ Downloads are Worker-authenticated `GET`/`HEAD` responses. The Worker authorizes
 Deletion is an explicit in-app confirmation. The Worker authorizes first, deletes the exact R2 key, then tombstones the D1 row as `deleted`. If metadata cleanup fails after object deletion, the response reports reconciliation is required rather than claiming a clean success.
 
 Active resources do not expire automatically. The stored `retention_until` date records the initial 12-month review horizon without deleting genuine learning material. Failed and deleted rows remain available for controlled reconciliation; no broad destructive cleanup job is enabled in this pass.
-

@@ -496,6 +496,10 @@ The implementation is deployed from commit `167cfc297bb8b745bc530d0cea8c07c5d6cf
 
 The master implementation adds `0004_resources.sql`, the private `RESOURCES_BUCKET` binding, dedicated production/local R2 buckets, server-authorized resource upload/download/delete routes, student and lesson resource views, controlled file validation, SHA-256/page-count metadata, idempotent upload rows and a 12-month retention review date. Production D1 migration, bucket creation and Worker deployment `dfebaca6-f1e4-4019-bb5a-37f92344c161` are complete. Authenticated admin/student acceptance remains pending; do not claim Phase 3.1 complete or create a completion tag before that gate passes.
 
+### Phase 3.2 current state — 2026-09-13
+
+The resource infrastructure remains the Phase 3.1 baseline. The Add Resource workflow now uses server-validated lesson/student context, a generic two-column metadata grid, a styled keyboard-accessible file dropzone, selected-file metadata, upload progress, recoverable errors and context-aware success navigation. Category is removed from application code, requests, filters, lists and detail views. The `category` column from `0004_resources.sql` is retained unused for schema compatibility; no destructive migration was created. Production deployment, authenticated browser verification, controlled fixture cleanup and the `phase-3.2-complete` tag remain pending.
+
 ### Objective
 
 Make the lesson the student's permanent learning record while preventing the application from becoming a general-purpose file drive.
