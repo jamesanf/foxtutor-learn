@@ -1,0 +1,9 @@
+Phase 1.2 repository checkpoint
+Captured: 2026-09-12
+Branch: main
+Implementation commit: 9120b76
+Checkpoint tag: phase-1.2-blocked
+Remote: origin https://github.com/jamesanf/foxtutor-learn.git
+Working tree: clean after the pushed remediation commit
+
+This is a blocked checkpoint, not a Phase 1 completion record. The completion tag must only be created after remote D1, Access, route, authenticated browser, production noindex, mail and public-regression evidence exist.
