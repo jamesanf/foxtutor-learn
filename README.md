@@ -29,7 +29,11 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 
 **Current acceptance gates:** visual identity, blue top bar, page hierarchy/contrast, production deployment, public regression, authenticated admin CRUD, student own-lesson access, cross-student isolation, student/admin denial, explicit account linking and notes/privacy response inspection PASS. Responsive authenticated inspection, timezone/overlap/lifecycle completion, fixture cleanup and final closure remain pending.
 
-**Next pass:** Pass 4 — authenticated responsive and accessibility acceptance at desktop, tablet and mobile viewports.
+**Pass 4 — authenticated responsive and accessibility acceptance (2026-09-12):** PASS. In live authenticated Chromium sessions, checked student and admin dashboards, lists, forms and lesson details at 1440px desktop, 820px tablet and 390px mobile widths. Rendered pages had no document or control overflow; mobile navigation became horizontally scrollable within its own surface; table cards, form controls, status badges, active navigation, blue top bar and content surfaces remained usable. Screenshots were captured from the authenticated mobile admin lesson form and student lesson list.
+
+**Current acceptance gates:** visual identity, blue top bar, page hierarchy/contrast, production deployment, public regression, authenticated admin CRUD, student own-lesson access, cross-student isolation, student/admin denial, explicit account linking, notes/privacy response inspection and responsive desktop/tablet/mobile inspection PASS. Timezone/overlap/lifecycle completion, fixture cleanup, full regression and final closure remain pending.
+
+**Next pass:** Pass 5 — final regression, lifecycle/timezone/overlap checks, controlled fixture cleanup and closure decision.
 
 ## Architecture
 

@@ -359,3 +359,21 @@ tagging and pushing Phase 1 completion.
 **Deployment:** unchanged at Worker version `85129275-02b5-40be-8626-db554aa6903f`; no new deployment was needed.
 
 **Next pass:** Pass 4 — authenticated desktop, tablet and mobile responsive/accessibility acceptance.
+
+### 2026-09-12 — Pass 4 authenticated responsive and accessibility acceptance
+
+**Status:** PASS; final regression and cleanup remain pending
+
+**Production acceptance completed in authenticated Chromium sessions:**
+
+- Checked student dashboard, lesson list and lesson detail at desktop (1440px), tablet (820px) and mobile (390px) widths.
+- Checked admin dashboard, student list/form and lesson list/form/detail at the same three widths.
+- Confirmed no document-level horizontal clipping and that all rendered buttons, inputs, selects, textareas and links fit their viewport.
+- Confirmed mobile navigation is contained in its own horizontal navigation surface, with active navigation visible.
+- Confirmed screenshots of the mobile admin lesson form and student lesson list show the blue FoxTutor top bar, grounded background, readable surfaces, responsive table cards and usable controls.
+
+**Tests/evidence:** authenticated Chromium layout metrics and screenshots across desktop/tablet/mobile; existing focus-visible and reduced-motion CSS contract remained present.
+
+**Deployment:** unchanged at Worker version `85129275-02b5-40be-8626-db554aa6903f`; no new deployment was needed.
+
+**Next pass:** Pass 5 — final regression, lifecycle/timezone/overlap checks, controlled fixture cleanup and closure decision.
