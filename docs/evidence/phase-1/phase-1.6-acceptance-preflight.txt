@@ -49,3 +49,33 @@ Missing acceptance evidence
 - Fox Mail delivery pass;
 - Fox Mail idempotency pass;
 - clean pushed acceptance commit and phase-1-complete tag.
+
+Latest recheck
+--------------
+Captured: 2026-09-12
+
+The exposed CLOUDFLARE_API_TOKEN remains valid for the Foxlearningltd account
+but is not authorized to read or write the deployed Learn Access resources.
+The existing Wrangler OAuth session can read and update D1 and inspect the
+Learn deployment, but it has no Zero Trust Access application or policy write
+scope. No Access policy mutation was attempted.
+
+The Learn Worker secret inventory is empty. Fox Mail's production secret
+inventory contains no INTERNAL_API_TOKEN. An unauthenticated request to the
+Fox Mail internal endpoint returned the expected Cloudflare Access redirect
+and was not treated as a delivery attempt.
+
+Latest automated results:
+- `npm test`: 12 tests passed;
+- `npm run build`: passed;
+- `npm run check`: passed;
+- `npm run test:browser`: passed;
+- `npm run test:production`: passed;
+- remote D1 query: exactly the two final controlled users above;
+- public regression: `/`, `/robots.txt`, `/sitemap.xml` body hashes match
+  `public-site-baseline.txt`; `/about` returned HTTP 200;
+- `/learn` with a Googlebot user agent returned the Cloudflare Access login
+  boundary, not public-site content.
+
+No code, public-site resource, Learn route, Access policy, Fox Mail resource
+or production mail data was changed by this recheck.

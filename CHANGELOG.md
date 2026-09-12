@@ -219,3 +219,29 @@ rotate, replace or record a new token. See
 - Rechecked `/`, `/robots.txt`, `/sitemap.xml` and `/about`; public body hashes remain equal to the stored baseline, and `/learn` remains an Access redirect rather than public-site fall-through.
 
 **Outstanding human actions:** expose the existing Access-write-capable Learn credential so the Learn policy can replace `student.test@foxtutor.org` with `jamesanf@gmail.com`; configure Fox Mail’s existing machine-auth boundary and provide the required Learn Worker secret bindings without exposing values; then complete the three clean-profile Google browser checkpoints and one controlled Fox Mail send plus exact-key replay. No `phase-1-complete` tag or completion claim is permitted before those gates pass.
+
+### 2026-09-12 — Acceptance recheck and explicit handover confirmation
+
+**Status:** blocked; no completion tag created
+
+**Verification:**
+
+- Re-ran `npm test`, `npm run build`, `npm run check`, `npm run test:browser`
+  and `npm run test:production`; all passed.
+- Queried production D1 through the existing Wrangler OAuth session and
+  confirmed exactly `foxlearningltd@gmail.com` as `ADMIN`/`ACTIVE` and
+  `jamesanf@gmail.com` as `STUDENT`/`ACTIVE`.
+- Rechecked the public homepage, `robots.txt`, sitemap and `/about`; the
+  homepage, robots and sitemap hashes still match the stored baseline.
+- Rechecked `/learn` with a Googlebot user agent; it reaches the Cloudflare
+  Access login boundary and does not fall through to the public homepage.
+- Rechecked Learn and Fox Mail Worker secret inventories without printing
+  values. Learn has no mail secret bindings; Fox Mail has no
+  `INTERNAL_API_TOKEN` secret.
+
+**Handover:** the runtime still lacks Access policy write capability, the Fox
+Mail bearer secret and a non-interactive Fox Mail Access Service Auth path.
+Authenticated Chromium role/denial/noindex evidence and controlled Fox Mail
+delivery/idempotency evidence remain unproven. See
+`docs/handover/phase-1.md` and
+`docs/evidence/phase-1/phase-1.6-acceptance-preflight.txt`.
