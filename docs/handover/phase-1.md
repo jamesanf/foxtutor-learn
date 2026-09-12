@@ -58,3 +58,20 @@ Make an **existing** Cloudflare credential or authenticated mechanism with Acces
 After that capability is available, Phase 1.4 can proceed with read-before-write activation: create the `foxtutor-learn` D1 database only if still absent, apply the migration, configure Google/Access only for `/learn` and `/learn/*`, deploy the Worker, create the exact routes, and run the authenticated/browser/public regression gates. Do not create `phase-1-complete` until all required production evidence exists.
 
 No public-site change, DNS change, production Worker deployment, D1 creation, route creation, Access mutation or production mail send was performed in Phase 1.3.
+
+## Phase 1.5 remaining handover
+
+Learn-scoped production infrastructure is now deployed. The remaining
+acceptance work requires:
+
+- clean Chromium authentication with the controlled admin identity;
+- clean Chromium authentication with the controlled student identity;
+- an authenticated unknown-identity denial check;
+- a student-to-admin denial check;
+- a controlled Fox Mail `INTERNAL_API_TOKEN` and destination for one
+  production delivery plus duplicate idempotency verification.
+
+The production D1 currently contains only `foxlearningltd@gmail.com` as the
+controlled admin and `student.test@foxtutor.org` as the controlled student
+placeholder. No real student data was added. The completion tag must not be
+created until the remaining browser and mail evidence is captured.

@@ -1,27 +1,41 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "foxtutor-learn",
-  "main": "src/worker/index.ts",
-  "compatibility_date": "2026-09-05",
-  "workers_dev": false,
-  "preview_urls": false,
-  "routes": [
-    { "pattern": "foxtutor.org/learn", "zone_name": "foxtutor.org" },
-    { "pattern": "foxtutor.org/learn/*", "zone_name": "foxtutor.org" }
-  ],
-  "assets": {
-    "directory": "public",
-    "binding": "ASSETS",
-    "run_worker_first": true
-  },
-  "vars": {
-    "ENVIRONMENT": "production",
-    "PUBLIC_ORIGIN": "https://foxtutor.org/learn",
-    "MAIL_API_URL": "https://mail.foxtutor.org",
-    "MAIL_API_FROM": "hello@foxtutor.org"
-  },
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1
-  }
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "foxtutor-learn",
+	"main": "src/worker/index.ts",
+	"compatibility_date": "2026-09-05",
+	"workers_dev": false,
+	"preview_urls": false,
+	"routes": [
+		{
+			"pattern": "foxtutor.org/learn",
+			"zone_name": "foxtutor.org"
+		},
+		{
+			"pattern": "foxtutor.org/learn/*",
+			"zone_name": "foxtutor.org"
+		}
+	],
+	"assets": {
+		"directory": "public",
+		"binding": "ASSETS",
+		"run_worker_first": true
+	},
+	"vars": {
+		"ENVIRONMENT": "production",
+		"PUBLIC_ORIGIN": "https://foxtutor.org/learn",
+		"MAIL_API_URL": "https://mail.foxtutor.org",
+		"MAIL_API_FROM": "hello@foxtutor.org"
+	},
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "foxtutor-learn",
+			"database_id": "204dadc5-46ff-41b7-9da1-049f85d29422",
+			"remote": true
+		}
+	]
 }

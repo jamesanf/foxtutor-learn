@@ -228,6 +228,12 @@ The production activation recheck confirmed that the runtime still exposes the p
 
 The local suite passes after hardening malformed cookie parsing, and the current public homepage, `robots.txt` and `sitemap.xml` hashes match the stored baseline. No production resource, route, Access configuration, DNS record, mail delivery or public-site deployment was changed. Phase 1 remains **blocked, not complete**.
 
+## Phase 1.5 execution state — 2026-09-12
+
+The dedicated Learn credential was verified against account `aeab9f48fa9716273d02bfb3d530bddc`. Production activation completed for Learn-scoped infrastructure: D1 `foxtutor-learn` was created and migrated; controlled admin/student records were inserted; Worker `foxtutor-learn` was deployed; exact `/learn` and `/learn/*` routes were installed; and a new self-hosted Access application and policy were created using the existing Google identity provider. The public homepage, robots, sitemap and representative public route remained unchanged, and `/learn` now reaches the Access sign-in boundary instead of the public-site fall-through.
+
+Local tests, production smoke, D1 schema verification, route verification and clean unauthenticated Chromium verification passed. Phase 1 remains **not complete** until controlled authenticated admin/student/unknown browser flows and a controlled Fox Mail delivery/idempotency test are performed with the required test identities and mail credentials.
+
 ---
 
 ## Phase 2 — Student administration, lessons, calendar, and core domain

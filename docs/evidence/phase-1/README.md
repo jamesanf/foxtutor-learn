@@ -42,3 +42,17 @@ Token rather than the expected account-token format. The local suite passed
 with 12 tests after malformed cookie parsing was hardened, and live public
 homepage, robots and sitemap hashes still match the baseline. Production
 activation remains blocked by the missing Access write capability.
+
+## Phase 1.5 production activation
+
+The dedicated Learn credential was subsequently exposed and verified. The
+production activation evidence is recorded in
+`phase-1.5-production-activation.txt`. It includes the Worker version, D1 UUID
+and migration result, exact route inventory, isolated Access app/policy and
+public-site regression hashes. No public-site Worker, route, DNS, robots,
+sitemap or asset was modified.
+
+Authenticated admin/student/unknown Chromium flows and controlled Fox Mail
+delivery remain unproven because this runtime has no controlled Google student
+credentials or Fox Mail internal API secret. Do not mark Phase 1 complete or
+create the completion tag until those tests pass.

@@ -386,3 +386,17 @@ The 2026-09-12 production activation preflight rechecked the configured runtime 
 The existing Wrangler OAuth session remains available for Worker, D1 and Workers Routes operations, but it does not authorize Access writes. No production mutation is safe until the intended existing credential is exposed through the configured runtime path. The public site remains unchanged; `/learn` is still the known public-site fall-through and `npm run test:production` correctly fails the private-route assertion. See `docs/evidence/phase-1/phase-1.4-credential-check.txt`.
 
 The latest local hardening pass makes malformed percent-encoded cookie values fail closed instead of throwing before authorization. The change is covered by the unit suite; production activation remains blocked independently by the missing Access write capability.
+
+## Phase 1.5 current state
+
+On 2026-09-12 the dedicated `foxtutor-learn` credential was verified for the
+Foxlearningltd account and used for Learn-only production activation. D1,
+Worker deployment, exact routes and a new self-hosted Access application and
+policy are live. The existing Google identity provider, Mail Access
+application, EDInterval Access application and unrelated Workers remain
+unchanged.
+
+The phase is still not complete. Authenticated Chromium role/denial flows and
+the controlled Fox Mail delivery/idempotency test require credentials that
+were not available to the runtime. Do not create `phase-1-complete` until
+those acceptance gates are evidenced.

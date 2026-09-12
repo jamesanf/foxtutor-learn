@@ -4,12 +4,12 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** 1.4 production activation rechecked; blocked because the intended Access-capable credential is not exposed to this runtime
-**Production URL:** `https://foxtutor.org/learn` (route not activated)
+**Phase:** 1.5 production activation deployed; authenticated browser and controlled mail verification remain pending
+**Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest local state:** Worker, branded shell, role model, session foundation, fresh local D1 migration, corrected Fox Mail adapter, tests and public regression evidence are implemented
+**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed
 
-Phase 1 is not declared complete until Cloudflare Access, Google identity, D1, the narrow route, deployment and post-deployment smoke evidence all pass. The 2026-09-12 Phase 1.4 recheck performed no production mutation because the runtime still supplied the previously blocked user API-token credential rather than the stated account token.
+Phase 1 is not declared complete until authenticated admin/student/unknown browser flows, production noindex/session checks and a controlled Fox Mail delivery/idempotency test also pass. The 2026-09-12 Phase 1.5 activation deployed only Learn-scoped infrastructure and did not modify public-site infrastructure.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | Phase | Goal | State |
 |---|---|---|
 | 0 | Constitution and repository foundation | Bootstrap inherited |
-| 1 | Private `/learn`, Google/Access auth, roles, anti-indexing | Implementation prepared; production blocked |
+| 1 | Private `/learn`, Google/Access auth, roles, anti-indexing | Production perimeter and foundation deployed; authenticated/mail evidence pending |
 | 2 | Students, lessons and calendar | Deferred |
 | 3 | R2 resources and document pipeline | Deferred |
 | 4 | Mail notifications and reports | Deferred |
@@ -82,8 +82,7 @@ There is no public registration and no application password subsystem. Only Acce
 
 ## Known limitations
 
-- The runtime does not currently expose the intended Access-write-capable `foxtutor build token`; the supplied user API token remains unable to perform the required D1, route, R2, Worker deployment and Access writes.
-- The existing Wrangler OAuth session can provisionally authorize Worker scripts, D1 and Workers Routes operations, but it has no effective Zero Trust Access application, identity-provider or policy write permission and must not be used to bypass the required credential gate.
-- The account currently has four other Workers, two unrelated D1 databases, two R2 buckets, no `foxtutor-learn` Worker, no Workers Routes, no `foxtutor-learn` D1 database, and no Access applications, identity providers or policies.
-- The remaining human blocker is exposing an existing credential with Access application, identity-provider and policy write permissions. Production D1 migration, route creation, Access configuration, deployment and authenticated browser evidence remain intentionally pending.
+- Authenticated Chromium flows could not be completed because no controlled Google student credentials were available to this runtime; the clean unauthenticated profile reached the Google Access sign-in boundary.
+- The production Fox Mail adapter is present, but no Fox Mail `INTERNAL_API_TOKEN` or Access Service Auth credentials were available, so no controlled production delivery was claimed.
+- The production D1 currently contains only the controlled `foxlearningltd@gmail.com` admin identity and the placeholder `student.test@foxtutor.org` student identity; no real student data was added.
 - Phase 2 domain features are intentionally not included.

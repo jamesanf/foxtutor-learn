@@ -1,0 +1,75 @@
+FoxTutor Learn Phase 1.5 production activation
+Captured: 2026-09-12
+Production mutation scope: Learn infrastructure only
+
+Runtime
+-------
+Token prefix: cfut_YdM
+Account: Foxlearningltd@gmail.com's Account
+Account ID: aeab9f48fa9716273d02bfb3d530bddc
+Token verification: active
+Wrangler account verification: passed
+
+Cloudflare resources
+--------------------
+Worker: foxtutor-learn
+Worker version: 24b3ab69-ed6c-4721-aad3-8eda0a99fba7
+D1: foxtutor-learn
+D1 UUID: 204dadc5-46ff-41b7-9da1-049f85d29422
+Migration: 0001_foundation.sql applied remotely successfully
+Routes:
+- foxtutor.org/learn -> foxtutor-learn
+- foxtutor.org/learn/* -> foxtutor-learn
+Route IDs:
+- 2236aee2492f465ca06773d206e47b44
+- ceaebec0c43045b6b1e03a75417e7af7
+
+Access
+------
+Application: FoxTutor Learn
+Application ID: 13a98192-7cbc-4a2c-bf2f-d4a4e1d2d70b
+Protected domains:
+- foxtutor.org/learn
+- foxtutor.org/learn/*
+Identity provider: existing Google IdP
+Google IdP ID: 86ca3414-b629-4b1c-874c-f05be074737c
+Policy: FoxTutor Learn Controlled Users
+Policy ID: 4f444ffd-503f-467e-b6e6-8914508f89fc
+Policy identities:
+- foxlearningltd@gmail.com
+- student.test@foxtutor.org
+
+D1
+--
+Schema verified remotely: users, sessions, indexes and d1_migrations.
+Controlled users:
+- learn-admin-test / foxlearningltd@gmail.com / ADMIN / ACTIVE
+- learn-student-test / student.test@foxtutor.org / STUDENT / ACTIVE
+
+Verification
+------------
+PASS: npm test
+PASS: npm run build
+PASS: npm run check
+PASS: npm run test:browser
+PASS: npm run test:production
+PASS: clean Chromium unauthenticated request reached Google Access sign-in
+PASS: public homepage body hash unchanged
+PASS: public robots body hash unchanged
+PASS: public sitemap body hash unchanged
+PASS: public /about returned HTTP 200
+PASS: /learn returned Cloudflare Access HTTP 302 and no longer served the public homepage
+
+Pending evidence
+----------------
+Authenticated admin, student and unknown-identity Chromium flows were not
+completed because no controlled Google student credentials were available to
+this runtime. Fox Mail delivery and duplicate-idempotency verification were
+not performed because no Fox Mail INTERNAL_API_TOKEN or controlled destination
+was available. No real student data was used.
+
+Safety
+------
+Existing public Worker foxtutor, Mail/EDInterval Access applications, Google
+IdP, unrelated policies, unrelated databases, DNS and public routes were not
+modified.

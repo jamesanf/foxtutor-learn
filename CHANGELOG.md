@@ -180,3 +180,25 @@ message, DNS record or public-site resource was changed.
 `CLOUDFLARE_API_TOKEN` or another authorized runtime path. Do not create,
 rotate, replace or record a new token. See
 `docs/evidence/phase-1/phase-1.4-credential-check.txt`.
+
+## Phase 1.5 — Learn production activation
+
+### 2026-09-12 — Deploy isolated Learn production foundation
+
+**Status:** deployed; Phase 1 acceptance remains pending authenticated browser and mail evidence
+
+**Production resources:**
+
+- Worker `foxtutor-learn`, version `24b3ab69-ed6c-4721-aad3-8eda0a99fba7`.
+- D1 `foxtutor-learn`, UUID `204dadc5-46ff-41b7-9da1-049f85d29422`.
+- Remote `0001_foundation.sql` migration applied successfully.
+- Routes `foxtutor.org/learn` and `foxtutor.org/learn/*` only.
+- Access app `FoxTutor Learn`, ID `13a98192-7cbc-4a2c-bf2f-d4a4e1d2d70b`.
+- Access policy `FoxTutor Learn Controlled Users`, ID `4f444ffd-503f-467e-b6e6-8914508f89fc`.
+- Existing Google IdP reused; existing Mail and EDInterval Access resources were not modified.
+
+**Controlled data:** seeded only `foxlearningltd@gmail.com` as `ADMIN` and `student.test@foxtutor.org` as `STUDENT`.
+
+**Verification:** local test/build/check/browser suites passed; production smoke passed; D1 schema and route inventory passed; `/learn` reaches the Google Access boundary; public homepage, robots, sitemap and representative public route remained unchanged.
+
+**Remaining limitations:** authenticated admin/student/unknown Chromium flows require controlled Google credentials, and the Fox Mail production adapter requires an `INTERNAL_API_TOKEN` plus a controlled destination for delivery/idempotency verification. No `phase-1-complete` tag was created.
