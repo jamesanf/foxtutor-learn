@@ -127,13 +127,17 @@ function calendarSubscriptionCard(
   csrfToken: string,
   action: string,
   feed: CalendarFeed | null,
-  feedUrl?: string
+  feedUrl: string | undefined,
+  role: Role
 ): string {
   const generated = feedUrl
-    ? `<label>Private calendar link<input class="feed-link" readonly value="${escapeHtml(feedUrl)}" aria-label="Private calendar link"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy link</button></label>`
+    ? `<label class="feed-link-label" for="feed-link">Private calendar link</label><div class="feed-link-row"><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy</button></div>`
     : "";
   const actionLabel = feed ? "Regenerate private calendar link" : "Generate private calendar link";
-  return `<section class="card subscription-card"><p class="eyebrow">CALENDAR SUBSCRIPTION</p><h2>Subscribe to calendar</h2><p>Use this private link with Apple Calendar, Google Calendar or another calendar app that supports subscribed iCalendar (.ics) calendars. Learn remains the source of truth; external apps see changes when they next refresh the subscription.</p><div class="privacy-warning" role="note"><strong>Keep this link private</strong><span>It is unique to your account. Anyone who has the link may be able to view the calendar available through it. Do not post it publicly or send it to anyone you do not trust.</span></div>${feed ? `<p class="feed-state"><strong>Feed enabled.</strong> Created ${escapeHtml(feed.created_at)}; last rotated ${escapeHtml(feed.last_rotated_at)}.</p>` : ""}${generated}<form method="post" action="${action}" data-confirm="${feed ? "Your current calendar subscription link will stop working. Any calendar subscribed to the old link will need to be updated with the new link." : ""}">${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form><details><summary>How to add it</summary><p><strong>Google Calendar:</strong> Other calendars → Add other calendars → From URL.</p><p><strong>Apple Calendar:</strong> choose New Calendar Subscription and paste the link.</p></details></section>`;
+  const calendarDescription = role === "ADMIN"
+    ? "Keep your teaching calendar up to date in another app."
+    : "Keep your lessons up to date in another app.";
+  return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span class="subscription-summary"><strong>Subscribe to this calendar</strong><span>${calendarDescription}</span></span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content"><p class="subscription-intro">Subscribe to this read-only calendar in Apple Calendar, Google Calendar or another app that supports iCalendar.</p><section class="subscription-block"><h3>Private link</h3>${generated || `<p class="muted">Generate a private link to connect this calendar to another app.</p>`}</section><div class="privacy-warning" role="note"><strong>Keep this link private</strong><span>Anyone with the link may be able to view the calendar available through it. Do not post it publicly or share it with anyone you do not trust.</span></div>${feed ? `<p class="feed-state"><strong>Private link active.</strong> Last rotated ${escapeHtml(feed.last_rotated_at)}.</p>` : ""}<form method="post" action="${action}" data-confirm="${feed ? "Your current calendar subscription link will stop working. Any calendar subscribed to the old link will need to be updated with the new link." : ""}">${hiddenCsrf(csrfToken)}<button class="button${feed ? " secondary" : ""}" type="submit">${actionLabel}</button></form><section class="subscription-block"><h3>Use with</h3><ul class="subscription-apps"><li><strong>Apple Calendar:</strong> choose New Calendar Subscription and paste the link.</li><li><strong>Google Calendar:</strong> choose Other calendars, Add other calendars, then From URL.</li><li>Other apps that support iCalendar subscriptions can use the same link.</li></ul></section></div></details>`;
 }
 
 function statusLabel(status: LessonStatus): string {
@@ -291,7 +295,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-calendar") {
     const period = calendarPeriod(url.searchParams.get("week"));
     const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id))}${calendarView(period, lessons, "ADMIN")}`);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarView(period, lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "ADMIN")}`);
   }
   if (route === "admin-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -307,7 +311,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     });
     const period = calendarPeriod(url.searchParams.get("week"));
     const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token))}${calendarView(period, lessons, "ADMIN")}`);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarView(period, lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "ADMIN")}`);
   }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
@@ -421,7 +425,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   if (route === "student-calendar") {
     const period = calendarPeriod(new URL(request.url).searchParams.get("week"));
     const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id))}${calendarView(period, lessons, "STUDENT")}`);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(period, lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "STUDENT")}`);
   }
   if (route === "student-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -439,7 +443,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     });
     const period = calendarPeriod(url.searchParams.get("week"));
     const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token))}${calendarView(period, lessons, "STUDENT")}`);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(period, lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "STUDENT")}`);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);

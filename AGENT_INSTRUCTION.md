@@ -13,7 +13,7 @@ Agents are expected to operate without conversational context. The repository it
 - An agent may not declare a phase complete merely because its master pass ended.
 - Completion requires documented acceptance criteria, passing test evidence, deployment evidence where applicable, a clean tree, and the required commit/tag/push record.
 
-Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, Phase 2.4 implemented private iCalendar subscriptions, and Phase 2.5 completes production deployment, Access path scoping, external-client acceptance and Phase 2 closure. Do not describe the deployed calendar implementation as local-only.
+Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, Phase 2.4 implemented private iCalendar subscriptions, Phase 2.5 completed the initial production deployment and calendar acceptance, and Phase 2.6 is the final remediation, documentation reconciliation and definitive Phase 2 sign-off pass. Do not describe the deployed calendar implementation as local-only. Once Phase 2.6 is complete, do not reopen Phase 2 for optional calendar enhancements; only an actual regression should do so. Phase 3 is the next feature-development phase.
 
 ## Mandatory first action
 
@@ -113,6 +113,7 @@ Any operation that sends an email, processes a document, creates an external acc
 Documentation is part of implementation, not a final administrative task.
 
 Every task must update relevant documentation in the same change.
+After every material implementation, verification, testing, production or cleanup pass, update `README.md` with what is now true, what remains and the current acceptance state. Do not claim phase completion prematurely.
 
 ### README must contain
 

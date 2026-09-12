@@ -324,6 +324,29 @@ Production Worker, D1, Access configuration, authenticated UI, feed HTTP behavio
 
 **Closure:** Phase 2.5 acceptance is complete. Direct production HTTP/ICS checks and a real subscribed-calendar refresh both passed; provider-specific refresh intervals remain outside Learn's control.
 
+## Phase 2.6 — Final calendar UX remediation and definitive Phase 2 sign-off
+
+### Objective
+
+Perform the final independent closure pass after the historical Phase 2.5 production completion: make the subscription utility visually secondary to the calendar, re-audit the live source/database/Worker/Access/UI/feed chain, reconcile documentation and rerun all release gates. This is a remediation and sign-off pass, not a new feature phase.
+
+### Current state
+
+The local implementation pass is in progress. Both admin and student calendar pages now render the calendar before a native, collapsed-by-default subscription disclosure with restrained warning styling and responsive URL/copy controls. No D1 migration or feed architecture change was introduced. Production deployment, fresh authenticated acceptance, complete regression evidence, documentation reconciliation and the final tag remain required.
+
+### Must achieve
+
+- Keep the calendar as the first visual priority on both role routes.
+- Keep subscription closed by default and accessible by keyboard with visible focus.
+- Preserve feed generation, ownership, token rotation/invalidation, stable UIDs, statuses, timezone behavior, no-store headers and Access path scope.
+- Re-audit production, run the established automated gates, test responsive behavior at 1440px, 820px and 390px, and clean any controlled fixtures.
+- Reconcile current-state documentation without rewriting historical Phase 2.5 records.
+- Create `phase-2.6-complete` only after the production, QA, documentation and Git gates all pass.
+
+### Exit criteria
+
+The live calendar feels restrained and professional, the subscription remains a secondary optional utility, all Phase 2 security and feed regressions pass, documentation describes reality, `main` is clean and pushed, `phase-2.5-complete` remains intact, and `phase-2.6-complete` is created. Phase 3 is then the next deferred feature-development phase.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective
