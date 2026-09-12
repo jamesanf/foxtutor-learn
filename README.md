@@ -4,12 +4,12 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** 1.3 capability reconciliation complete; production activation has a genuine Cloudflare Access write blocker
+**Phase:** 1.4 production activation preflight attempted; blocked because the intended Access-capable credential is not exposed to this runtime
 **Production URL:** `https://foxtutor.org/learn` (route not activated)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
 **Latest local state:** Worker, branded shell, role model, session foundation, fresh local D1 migration, corrected Fox Mail adapter, tests and public regression evidence are implemented
 
-Phase 1 is not declared complete until Cloudflare Access, Google identity, D1, the narrow route, deployment and post-deployment smoke evidence all pass.
+Phase 1 is not declared complete until Cloudflare Access, Google identity, D1, the narrow route, deployment and post-deployment smoke evidence all pass. The 2026-09-12 Phase 1.4 preflight performed no production mutation because the runtime still supplied the previously blocked API-token credential.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Local Wrangler uses `wrangler.local.jsonc` and `ENVIRONMENT=local`; production c
 
 ## Testing and deployment
 
-`npm test` runs unit, integration and security tests. `npm run test:browser` runs the static accessibility/noindex contract; authenticated Chromium production flows remain pending Access configuration. `npm run test:production` performs public-site and `/learn` smoke requests. `npm run deploy` is only for an authorized production deployment after remote D1, Access and route permissions are available.
+`npm test` runs unit, integration and security tests. `npm run test:browser` runs the static accessibility/noindex contract; authenticated Chromium production flows remain pending Access configuration. `npm run test:production` performs public-site and `/learn` smoke requests and is expected to fail its private-route assertion while `/learn` is still served by the public site. `npm run deploy` is only for an authorized production deployment after remote D1, Access and route permissions are available.
 
 The deployment procedure and required manual Cloudflare steps are in [`docs/deployment/phase-1.md`](docs/deployment/phase-1.md). Never deploy from the public Foxtutor repository and never modify its Worker, Pages project, DNS or routes.
 
@@ -82,8 +82,8 @@ There is no public registration and no application password subsystem. Only Acce
 
 ## Known limitations
 
-- `CLOUDFLARE_API_TOKEN` is active but is read-only for the required D1, route, R2 and Worker deployment control-plane operations.
-- The existing Wrangler OAuth session is the usable deployment mechanism for Worker scripts, D1, Workers Routes and R2 reads. It has no effective Zero Trust Access application, identity-provider or policy write permission.
+- The runtime does not currently expose the intended Access-write-capable `foxtutor build token`; the supplied API token remains unable to perform the required D1, route, R2, Worker deployment and Access writes.
+- The existing Wrangler OAuth session can provisionally authorize Worker scripts, D1 and Workers Routes operations, but it has no effective Zero Trust Access application, identity-provider or policy write permission and must not be used to bypass the required credential gate.
 - The account currently has four other Workers, two unrelated D1 databases, two R2 buckets, no `foxtutor-learn` Worker, no Workers Routes, no `foxtutor-learn` D1 database, and no Access applications, identity providers or policies.
 - The remaining human blocker is exposing an existing credential with Access application, identity-provider and policy write permissions. Production D1 migration, route creation, Access configuration, deployment and authenticated browser evidence remain intentionally pending.
 - Phase 2 domain features are intentionally not included.

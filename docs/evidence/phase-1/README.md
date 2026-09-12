@@ -30,3 +30,9 @@ Phase 1.4 credential verification:
   2026-09-12. The exposed API token authenticated to the intended account and
   zone but still failed the required Access application and identity-provider
   write boundary, so production activation was correctly stopped.
+
+The Phase 1.4 runtime recheck on 2026-09-12 confirmed that the intended
+Access-write-capable credential is still not exposed to the Learn terminal.
+The exact capability results and the unmodified public-site/pre-activation
+state are recorded in `phase-1.4-credential-check.txt`. No production
+mutation was attempted after the failure.

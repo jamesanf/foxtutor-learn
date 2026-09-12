@@ -132,3 +132,20 @@ Rechecked the public homepage, robots, sitemap, representative content route and
 **Production result:** no D1, Worker, route, Access, DNS, public-site or mail mutation was performed. The exact sanitized results are recorded in `docs/evidence/phase-1/phase-1.4-credential-check.txt`.
 
 **Handover:** expose the existing Access-write-capable `foxtutor build token` through the runtime without creating, rolling or recording another credential. Do not begin production mutation until the Access application and identity-provider write probes authorize.
+
+### 2026-09-12 — Runtime recheck after credential handover
+
+**Status:** blocked before production mutation
+
+**Verification:**
+
+- Rechecked the runtime `CLOUDFLARE_API_TOKEN` without recording its value; it remains the previously blocked API-token mechanism rather than the intended Access-write-capable credential.
+- Confirmed account, zone, Worker and Access collection reads.
+- Confirmed D1, Workers Routes, R2 and Worker deployment operations remain authentication-blocked.
+- Confirmed invalid-payload writes for Access applications, identity providers and policies remain forbidden (`HTTP 403`, `auth.forbidden`, error `1010`).
+- Confirmed the separate Wrangler OAuth profile still lacks Access write capability and was not used for production mutation.
+- Re-ran the public-site baseline and `npm run test:production`; public resources remain at their recorded hashes, while `/learn` remains the known public-site fall-through until the route and Access perimeter are activated.
+
+**Production result:** no Worker, D1 database, route, Access resource, DNS record, mail message or public-site resource was created or changed.
+
+**Evidence:** `docs/evidence/phase-1/phase-1.4-credential-check.txt`.
