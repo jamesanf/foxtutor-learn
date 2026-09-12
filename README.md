@@ -4,12 +4,12 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** 1.6 acceptance blocked at controlled Google browser and Fox Mail machine-authentication checkpoints
+**Phase:** 1.6 acceptance blocked only at the Fox Mail production machine-authentication checkpoint
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
 **Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. Production D1 now contains `foxlearningltd@gmail.com` as `ADMIN` and `jamesanf@gmail.com` as `STUDENT`.
 
-Phase 1 is not declared complete until the Access policy is reconciled to the final two identities, authenticated admin/student/unknown browser flows and production noindex/session checks pass, and a controlled Fox Mail delivery/idempotency test succeeds. The 2026-09-12 Phase 1.5 activation and Phase 1.6 D1 update modified only Learn-scoped infrastructure/data and did not modify public-site infrastructure.
+The final Access policy now permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains those same active admin/student records. Authenticated admin and student browser flows, student-to-admin denial, the unknown-identity Access denial, authenticated noindex/session checks, exact Learn routes and public-site regression checks are evidenced. Phase 1 is not declared complete until the controlled Fox Mail delivery/idempotency test succeeds. The 2026-09-12 Phase 1.5 activation and Phase 1.6 work modified only Learn-scoped infrastructure/data and did not modify public-site infrastructure.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | Phase | Goal | State |
 |---|---|---|
 | 0 | Constitution and repository foundation | Bootstrap inherited |
-| 1 | Private `/learn`, Google/Access auth, roles, anti-indexing | Production perimeter deployed; Phase 1.6 acceptance blocked on Access reconciliation, authenticated browser evidence and Fox Mail machine-auth evidence |
+| 1 | Private `/learn`, Google/Access auth, roles, anti-indexing | Production perimeter deployed; Phase 1.6 acceptance blocked only on Fox Mail machine-authenticated delivery/idempotency evidence |
 | 2 | Students, lessons and calendar | Deferred |
 | 3 | R2 resources and document pipeline | Deferred |
 | 4 | Mail notifications and reports | Deferred |
@@ -82,8 +82,7 @@ There is no public registration and no application password subsystem. Only Acce
 
 ## Known limitations
 
-- Authenticated Chromium flows require user-assisted Google sign-in in separate clean profiles; no passwords or browser credentials are requested or recorded.
-- The production Access policy still requires reconciliation from the temporary `student.test@foxtutor.org` entry to `jamesanf@gmail.com`; the old identity is no longer active in D1.
+- Authenticated Chromium evidence was captured with separate clean profiles; no passwords or browser credentials were requested or recorded. The unknown identity was denied at the final Cloudflare Access perimeter before reaching Learn.
 - Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2 domain features are intentionally not included.

@@ -5,29 +5,15 @@
 **Status: BLOCKED.** Safe acceptance work is complete, but the completion
 gates cannot be claimed yet.
 
-### 1. Expose the existing Learn Cloudflare credential
+The Learn Access policy has been reconciled and now permits only
+`foxlearningltd@gmail.com` and `jamesanf@gmail.com`. Authenticated admin,
+student, student-to-admin denial, unknown-identity perimeter denial,
+authenticated noindex/session inspection, exact route, D1 and public regression
+evidence are recorded in
+`docs/evidence/phase-1/phase-1.6-acceptance-evidence.txt` and the
+Phase 1 evidence index.
 
-The current `CLOUDFLARE_API_TOKEN` verifies as an active token for the correct
-account but is not authorized for the Learn Access application/policy. Do not
-create, rotate or paste a token into chat. Make the already-verified dedicated
-Learn credential available to this runtime through the existing
-`CLOUDFLARE_API_TOKEN` environment path.
-
-Verify without revealing the value:
-
-```bash
-printf '%s\n' "${CLOUDFLARE_API_TOKEN:0:8}"
-curl -sS https://api.cloudflare.com/client/v4/user/tokens/verify \
-  --oauth2-bearer "$CLOUDFLARE_API_TOKEN"
-npx wrangler whoami
-```
-
-The agent will then inspect the existing `FoxTutor Learn` application and
-replace only the policy identity `student.test@foxtutor.org` with
-`jamesanf@gmail.com`. The existing Google IdP and unrelated Mail/EDInterval
-Access resources must remain unchanged.
-
-### 2. Configure the existing Fox Mail machine boundary
+### Remaining human action — configure the existing Fox Mail machine boundary
 
 Fox Mail source documents `POST
 https://mail.foxtutor.org/internal/api/v1/messages/send` as requiring the Fox
@@ -69,33 +55,13 @@ production mail test` and idempotency key
 Mail's documented replay behavior without recording message contents or
 secrets.
 
-### 3. Human-assisted Google browser checkpoints
+### Browser evidence already completed
 
-Use separate clean Chromium profiles and never provide passwords:
-
-```text
-HUMAN CHECKPOINT 1 — ADMIN GOOGLE LOGIN
-Please authenticate the clean Chromium profile as foxlearningltd@gmail.com.
-Do not provide me with the password. Tell me when the Learn admin page is visible.
-
-HUMAN CHECKPOINT 2 — STUDENT GOOGLE LOGIN
-Please authenticate the clean Chromium profile as jamesanf@gmail.com.
-Do not provide me with the password. Tell me when the Learn student page is visible.
-
-HUMAN CHECKPOINT 3 — UNKNOWN GOOGLE LOGIN
-Please authenticate the clean Chromium profile with a controlled Google account
-that is not an approved Learn user. Tell me when Google authentication succeeds
-or when Learn displays the denial.
-```
-
-The agent will verify `/learn`, `/learn/admin`, `/learn/student`, student-to-admin
-denial, unknown-user denial, session persistence, Secure/HttpOnly cookie
-metadata where exposed, absence of authentication tokens in localStorage, and
-authenticated `X-Robots-Tag`/HTML noindex metadata.
-
-The temporary student identity is no longer active in D1, but remains in the
-Access policy until step 1 is completed. Do not create `phase-1-complete` until
-that policy entry is removed and all browser/mail evidence passes.
+The three clean-profile Google checkpoints are complete. The unknown identity
+was denied by the final perimeter before reaching the Learn application,
+which is the required production denial outcome for the final restricted
+policy. Do not create `phase-1-complete` until the Fox Mail send and exact-key
+replay are evidenced.
 
 ## Phase 1.4 status
 

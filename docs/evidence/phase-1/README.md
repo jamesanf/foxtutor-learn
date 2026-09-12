@@ -88,8 +88,48 @@ PASS evidence captured in this pass:
 
 Required evidence still missing:
 
-- final Access policy with only the admin and James identities;
-- authenticated admin, student, student-to-admin denial and unknown-user browser passes;
-- authenticated session-cookie/localStorage and noindex inspection;
 - controlled Fox Mail delivery and exact-key idempotency replay;
 - clean tree, pushed acceptance commit and `phase-1-complete` tag.
+
+## Phase 1.6 acceptance recheck
+
+The final Learn Access policy now contains only:
+
+- `foxlearningltd@gmail.com`
+- `jamesanf@gmail.com`
+
+Production D1 contains exactly those two active users with roles `ADMIN` and
+`STUDENT`. Exact route inventory remains `foxtutor.org/learn` and
+`foxtutor.org/learn/*`, both targeting `foxtutor-learn`.
+
+Authenticated browser evidence:
+
+- admin profile: `/learn/admin` rendered `Admin dashboard`;
+- student profile: `/learn/student` rendered `Student dashboard`;
+- student direct request to `/learn/admin`: `Not authorized` application denial;
+- unknown controlled identity: denied by the final Cloudflare Access perimeter;
+- authenticated admin response: HTTP 200, `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`;
+- authenticated admin HTML: robots meta `noindex,nofollow,noarchive,nosnippet`;
+- authenticated admin refresh: session remained at `/learn/admin`;
+- session cookie metadata: Secure, HttpOnly, SameSite=Strict; no authentication
+  token was present in localStorage.
+
+Automated and regression evidence:
+
+- `npm test` — 12 tests passed;
+- `npm run build` — passed;
+- `npm run check` — passed;
+- `npm run test:browser` — passed;
+- `npm run test:production` — passed;
+- public `/`, `/robots.txt`, `/sitemap.xml` and `/about` returned expected
+  statuses/content types; homepage, robots and sitemap hashes match the
+  stored baseline;
+- `/learn` with a Googlebot user agent returned the Cloudflare Access login
+  boundary and the public sitemap contains no Learn URL.
+
+Fox Mail remains blocked at the production boundary. The authoritative
+endpoint is `https://mail.foxtutor.org/internal/api/v1/messages/send`; source
+requires `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path,
+but the Fox Mail production secret inventory does not contain that token and
+an unauthenticated request returns HTTP 302 to the interactive Access login.
+No delivery or idempotency result was claimed.

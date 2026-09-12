@@ -38,8 +38,9 @@ The 2026-09-12 Phase 1.5 activation used the dedicated Learn credential. It crea
 The deployed resources were left in place. The production D1 student row was
 updated with a guarded statement from `student.test@foxtutor.org` to
 `jamesanf@gmail.com`; no duplicate or additional active user was created.
-The Learn Access policy still requires the same identity replacement because
-the currently exposed environment token is not authorized for Access writes.
+The Learn Access policy was then updated in place to contain only
+`foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the existing Google IdP
+and unrelated Access applications were not changed.
 
 Fox Mail's authoritative contract requires its `INTERNAL_API_TOKEN` bearer
 secret and a non-interactive Cloudflare Access path for
@@ -47,3 +48,10 @@ secret and a non-interactive Cloudflare Access path for
 does not contain `INTERNAL_API_TOKEN`, and a request without Service Auth is
 redirected to interactive Access. Do not invent or copy a token. See
 `docs/handover/phase-1.md` for the exact human steps.
+
+Authenticated Chromium evidence covers the admin and student shells,
+student-to-admin denial, unknown-identity Access denial, refresh persistence,
+Secure/HttpOnly/Strict session cookies, empty localStorage, authenticated
+noindex metadata and the `X-Robots-Tag` response. The only remaining
+acceptance gate is a real Fox Mail delivery followed by the documented exact
+idempotency-key replay.

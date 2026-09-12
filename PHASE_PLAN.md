@@ -236,9 +236,20 @@ Local tests, production smoke, D1 schema verification, route verification and cl
 
 ## Phase 1.6 execution state — 2026-09-12
 
-Phase 1.6 has completed the safe reconciliation work available to the runtime without rebuilding Phase 1.5: the live Worker, D1, exact routes and Learn Access application were inspected; the production D1 student was changed from `student.test@foxtutor.org` to `jamesanf@gmail.com`; the final D1 role set is the unchanged admin plus the active James student; Fox Mail’s authoritative internal API and idempotency contract were inspected; and the complete local, build, Wrangler, browser-contract and production-smoke commands passed.
+Phase 1.6 has completed the safe reconciliation work available without
+rebuilding Phase 1.5: the production D1 student was changed from
+`student.test@foxtutor.org` to `jamesanf@gmail.com`; the Learn Access policy now
+contains only the final admin and student identities; exact routes and final
+D1 users were verified; Fox Mail’s authoritative internal API and idempotency
+contract were inspected; authenticated admin/student/denial/noindex/session
+evidence was captured; and the complete local, build, Wrangler,
+browser-contract and production-smoke commands passed.
 
-The phase remains **blocked, not complete**. The exposed Cloudflare environment token cannot read or write the Learn Access application policy, so the policy still contains the temporary student identity and must be reconciled before browser acceptance. Fox Mail’s `INTERNAL_API_TOKEN` is not present in its production Worker secret inventory, and its internal endpoint still requires a non-interactive Access Service Auth path. Human-assisted Google sign-in and the controlled Fox Mail send/replay remain unperformed. No completion tag may be created.
+The phase remains **blocked, not complete** because Fox Mail’s
+`INTERNAL_API_TOKEN` is absent from its production Worker secret inventory and
+the internal endpoint still requires a non-interactive Access Service Auth
+path. No production delivery or idempotency result can be claimed, and no
+completion tag may be created.
 
 ---
 

@@ -1,0 +1,63 @@
+FoxTutor Learn Phase 1.6 acceptance evidence
+Captured: 2026-09-12
+Status: BLOCKED only at Fox Mail production delivery/idempotency
+
+Production
+----------
+Worker: foxtutor-learn
+D1: foxtutor-learn
+Routes:
+- foxtutor.org/learn -> foxtutor-learn
+- foxtutor.org/learn/* -> foxtutor-learn
+Access application: FoxTutor Learn
+Identity provider: existing Google IdP
+Access policy: FoxTutor Learn Controlled Users
+Final policy identities:
+- foxlearningltd@gmail.com
+- jamesanf@gmail.com
+
+Final D1 users
+--------------
+- foxlearningltd@gmail.com / ADMIN / ACTIVE
+- jamesanf@gmail.com / STUDENT / ACTIVE
+
+Browser evidence
+----------------
+PASS: admin clean profile reached /learn/admin and rendered Admin dashboard
+PASS: student clean profile reached /learn/student and rendered Student dashboard
+PASS: student direct request to /learn/admin rendered Not authorized
+PASS: unknown controlled identity was denied by the final Access perimeter
+PASS: authenticated admin refresh preserved /learn/admin session
+PASS: authenticated response returned X-Robots-Tag noindex policy
+PASS: authenticated HTML contained the noindex robots metadata
+PASS: session cookie metadata was Secure, HttpOnly and SameSite=Strict
+PASS: no authentication token was present in localStorage
+
+Fox Mail
+--------
+Endpoint: https://mail.foxtutor.org/internal/api/v1/messages/send
+Required auth: Fox Mail INTERNAL_API_TOKEN bearer secret plus the existing
+non-interactive Access Service Auth path when configured.
+Current result: BLOCKED. Fox Mail production secret inventory has no
+INTERNAL_API_TOKEN, and an unauthenticated request returned HTTP 302 to the
+interactive Cloudflare Access login. No message was sent and no idempotency
+result was claimed.
+
+Automated and public regression
+-------------------------------
+PASS: npm test
+PASS: npm run build
+PASS: npm run check
+PASS: npm run test:browser
+PASS: npm run test:production
+PASS: public homepage, robots and sitemap hashes match the stored baseline
+PASS: public /about returned HTTP 200
+PASS: public sitemap contains no Learn URL
+PASS: Googlebot request to /learn reached the Access login boundary
+
+Completion gate
+---------------
+Do not create phase-1-complete until one controlled Fox Mail message is
+delivered and the exact idempotency key phase1-6-mail-test-20260912 is replayed
+with no duplicate message effect. Clean-tree commit/tag/push remain pending
+until that gate passes.

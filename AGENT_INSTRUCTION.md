@@ -403,22 +403,22 @@ those acceptance gates are evidenced.
 
 ## Phase 1.6 current state
 
-The Phase 1.6 acceptance preflight verified the deployed Learn Worker, D1,
-exact routes and existing Learn Access application without recreating any
-Phase 1.5 resource. The production D1 student record was safely changed from
+The Phase 1.6 acceptance pass verified the deployed Learn Worker, D1, exact
+routes and existing Learn Access application without recreating any Phase 1.5
+resource. The production D1 student record was safely changed from
 `student.test@foxtutor.org` to `jamesanf@gmail.com`; the admin remained
-`foxlearningltd@gmail.com` with `ADMIN`/`ACTIVE` status.
+`foxlearningltd@gmail.com` with `ADMIN`/`ACTIVE` status; and the Access policy
+was updated to contain only those two identities.
 
-The current runtime exposes a valid account token for basic verification but
-not the Access-write-capable Learn credential. The existing Wrangler OAuth
-session can update D1, but neither mechanism available to the agent can
-reconcile the Learn Access policy. The policy therefore still contains the
-temporary student entry while that identity is no longer active in D1; this
-must be corrected before acceptance.
+Separate clean Chromium profiles proved the admin shell, student shell,
+student-to-admin server denial, and unknown-identity denial at the final Access
+perimeter. Authenticated admin inspection proved the HTML noindex metadata,
+`X-Robots-Tag`, session persistence after refresh, Secure/HttpOnly/Strict
+cookie attributes, and absence of authentication tokens in localStorage.
 
-Fox Mail source and production configuration were inspected directly. The
-internal API requires the Fox Mail Worker secret `INTERNAL_API_TOKEN`, which
-is absent from Fox Mail's current production secret inventory. The endpoint
+Fox Mail source and production configuration were inspected directly. Its
+internal API requires the Fox Mail Worker secret `INTERNAL_API_TOKEN`, which is
+absent from the current Fox Mail production secret inventory. The endpoint
 also remains behind interactive Cloudflare Access, so a narrowly scoped
 non-interactive Service Auth path must be configured by the system owner if
 one is not already present. Learn's optional
@@ -427,6 +427,5 @@ only be populated with the existing Fox Mail Service Auth credentials when
 Fox Mail confirms that mechanism.
 
 `npm test`, `npm run build`, `npm run check`, `npm run test:browser` and
-`npm run test:production` passed. Authenticated Chromium, authenticated
-noindex/session inspection, production Fox Mail delivery/idempotency and the
-final policy state remain unproven. Do not create `phase-1-complete`.
+`npm run test:production` passed. The controlled Fox Mail delivery/idempotency
+gate remains unproven. Do not create `phase-1-complete`.

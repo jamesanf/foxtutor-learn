@@ -245,3 +245,35 @@ Authenticated Chromium role/denial/noindex evidence and controlled Fox Mail
 delivery/idempotency evidence remain unproven. See
 `docs/handover/phase-1.md` and
 `docs/evidence/phase-1/phase-1.6-acceptance-preflight.txt`.
+
+### 2026-09-12 — Phase 1.6 authenticated acceptance evidence
+
+**Status:** blocked only by Fox Mail production machine authentication; no completion tag created
+
+**Completed:**
+
+- Reconciled the existing `FoxTutor Learn` Access policy in place so only
+  `foxlearningltd@gmail.com` and `jamesanf@gmail.com` are allowed.
+- Verified production D1 contains exactly those active admin/student records;
+  the temporary student identity is not active.
+- Completed separate clean-profile Chromium checks for the admin shell, student
+  shell, student-to-admin server denial and unknown-identity Access denial.
+- Verified authenticated admin noindex metadata and `X-Robots-Tag`, session
+  persistence after refresh, Secure/HttpOnly/Strict cookie attributes and
+  absence of authentication tokens in localStorage.
+- Verified exact Learn routes still target only `foxtutor-learn`; public
+  homepage, robots, sitemap and `/about` regression checks remain unchanged.
+
+**Tests:** `npm test`, `npm run build`, `npm run check`,
+`npm run test:browser`, `npm run test:production`.
+
+**Fox Mail result:** source and configuration inspection confirm the internal
+endpoint requires `INTERNAL_API_TOKEN` and a non-interactive Access Service
+Auth path. The Fox Mail production secret inventory has no
+`INTERNAL_API_TOKEN`; the endpoint returns the interactive Access redirect.
+No delivery or idempotency result was claimed.
+
+**Handover:** restore/configure Fox Mail's existing machine-auth boundary and
+provide the required Learn Worker secret bindings without exposing values.
+Then run exactly one controlled send and exact-key replay before committing,
+tagging and pushing Phase 1 completion.
