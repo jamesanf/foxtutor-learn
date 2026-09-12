@@ -2,6 +2,17 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-12 — Production acceptance and definitive Phase 2 sign-off
+
+**Status:** complete; Phase 2 closed
+
+- Deployed the refined calendar subscription UX as Worker `12109e60-3f5a-4bc2-8b89-8eefc7586249`.
+- Independently verified the live admin calendar hierarchy at 1440px, 820px and 390px: calendar first, subscription closed by default, native disclosure keyboard behavior, restrained warning and no horizontal overflow in the expanded mobile view.
+- Reconfirmed the live Access boundary, exact D1 migration set, final user/feed population, invalid feed denial and unchanged public-site boundary. The accepted Phase 2.5 student/feed/ownership evidence remains valid because no student authorization or feed architecture changed.
+- Ran `npm test`, `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check`; all passed.
+- Reconciled README, agent instructions, phase plan, architecture, deployment, testing and changelog records. No D1 migration, public-site change, Fox Mail change or new service was introduced.
+- Created `phase-2.6-complete` only after the final commit, push, clean-tree and tag verification. Phase 3 is next.
+
 ## Phase 2.6 — Final calendar UX remediation and definitive Phase 2 sign-off
 
 ### 2026-09-12 — Independent audit and local subscription UX refinement

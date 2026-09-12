@@ -332,7 +332,7 @@ Perform the final independent closure pass after the historical Phase 2.5 produc
 
 ### Current state
 
-The local implementation pass is in progress. Both admin and student calendar pages now render the calendar before a native, collapsed-by-default subscription disclosure with restrained warning styling and responsive URL/copy controls. No D1 migration or feed architecture change was introduced. Production deployment, fresh authenticated acceptance, complete regression evidence, documentation reconciliation and the final tag remain required.
+Complete. Both admin and student calendar pages render the calendar before a native, collapsed-by-default subscription disclosure with restrained warning styling and responsive URL/copy controls. No D1 migration or feed architecture change was introduced. Production deployment, fresh authenticated admin visual acceptance, inherited authenticated student regression evidence, complete automated checks, documentation reconciliation and Git release verification all passed.
 
 ### Must achieve
 
@@ -345,7 +345,7 @@ The local implementation pass is in progress. Both admin and student calendar pa
 
 ### Exit criteria
 
-The live calendar feels restrained and professional, the subscription remains a secondary optional utility, all Phase 2 security and feed regressions pass, documentation describes reality, `main` is clean and pushed, `phase-2.5-complete` remains intact, and `phase-2.6-complete` is created. Phase 3 is then the next deferred feature-development phase.
+The live calendar feels restrained and professional, the subscription remains a secondary optional utility, all Phase 2 security and feed regressions pass, documentation describes reality, `main` is clean and pushed, `phase-2.5-complete` remains intact, and `phase-2.6-complete` is created. Phase 2 is complete and Phase 3 is the next deferred feature-development phase.
 
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 

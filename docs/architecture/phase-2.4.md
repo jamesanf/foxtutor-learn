@@ -20,6 +20,8 @@ An admin feed has an admin owner and no student ID. A student feed has a student
 
 Regeneration updates the existing feed identity with a new token hash and invalidates the previous bearer token. The subscription UI intentionally reveals the raw URL only in the response that generated or regenerated it.
 
+The subscription utility is intentionally secondary to the calendar: admin and student pages render the calendar first and expose the utility through a native `<details>/<summary>` disclosure closed by default. Opening it reveals the private-link warning, labeled URL/copy control, rotation action and concise external-client instructions. Disclosure state is not persisted in D1.
+
 ## iCalendar projection
 
 The serializer emits CRLF-terminated RFC 5545-style output with:

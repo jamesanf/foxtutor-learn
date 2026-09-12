@@ -6,6 +6,8 @@ This document defines how coding agents must work on the Foxtutor Learn platform
 
 Agents are expected to operate without conversational context. The repository itself is the source of truth.
 
+Checkpoint sections below may retain the wording and blockers that were true at the time of an earlier pass. For current reality, use the README current-status block and the latest phase record; do not interpret superseded checkpoint text as an open blocker.
+
 ## Permanent phase numbering policy
 
 - `.1` is the master implementation pass and must attempt the entire phase.
@@ -13,7 +15,7 @@ Agents are expected to operate without conversational context. The repository it
 - An agent may not declare a phase complete merely because its master pass ended.
 - Completion requires documented acceptance criteria, passing test evidence, deployment evidence where applicable, a clean tree, and the required commit/tag/push record.
 
-Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, Phase 2.4 implemented private iCalendar subscriptions, Phase 2.5 completed the initial production deployment and calendar acceptance, and Phase 2.6 is the final remediation, documentation reconciliation and definitive Phase 2 sign-off pass. Do not describe the deployed calendar implementation as local-only. Once Phase 2.6 is complete, do not reopen Phase 2 for optional calendar enhancements; only an actual regression should do so. Phase 3 is the next feature-development phase.
+Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, Phase 2.4 implemented private iCalendar subscriptions, Phase 2.5 completed the initial production deployment and calendar acceptance, and Phase 2.6 completed the final remediation, documentation reconciliation and definitive Phase 2 sign-off pass. Do not describe the deployed calendar implementation as local-only. Do not reopen Phase 2 for optional calendar enhancements; only an actual regression should do so. Phase 3 is the next feature-development phase.
 
 ## Mandatory first action
 
@@ -401,8 +403,7 @@ unchanged.
 
 The phase is still not complete. Authenticated Chromium role/denial flows and
 the controlled Fox Mail delivery/idempotency test require credentials that
-were not available to the runtime. Do not create `phase-1-complete` until
-those acceptance gates are evidenced.
+were not available to the runtime. Those acceptance gates were historical Phase 1.6 blockers and were resolved by the later Phase 1.7/2.1 production work; do not treat this retained checkpoint text as the current phase state.
 
 ## Phase 1.6 current state
 
@@ -431,4 +432,9 @@ Fox Mail confirms that mechanism.
 
 `npm test`, `npm run build`, `npm run check`, `npm run test:browser` and
 `npm run test:production` passed. The controlled Fox Mail delivery/idempotency
-gate remains unproven. Do not create `phase-1-complete`.
+gate remained unproven in this historical Phase 1.6 checkpoint and is outside
+the completed Phase 2 scope.
+
+## Phase 2.6 current state
+
+Phase 2.6 is complete and tagged `phase-2.6-complete`. The calendar subscription utility is intentionally collapsed by default and secondary to the calendar on both admin and student routes. Future agents must read the repository documentation before every phase and update `README.md` after every material pass. Phase 2 must not be reopened for optional calendar features; Phase 3 is next unless an actual regression is demonstrated.
