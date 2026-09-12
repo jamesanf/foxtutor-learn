@@ -1,0 +1,54 @@
+FoxTutor Learn Phase 1.7 production mail verification
+Captured: 2026-09-12
+Status: PASS
+
+Endpoint
+--------
+POST https://mail.foxtutor.org/internal/api/v1/messages/send
+
+Machine authentication
+----------------------
+PASS: Learn's production adapter sent the bearer authorization and both
+Cloudflare Access Service Auth headers without exposing their values.
+PASS: the path-specific Fox Mail Access application accepted the Service Auth
+identity.
+PASS: Fox Mail accepted the existing bearer token.
+
+Controlled message
+------------------
+From: hello@foxtutor.org
+To: jamesanf@gmail.com
+Subject: FoxTutor Learn Phase 1.7 production mail test
+Body: This is a controlled FoxTutor Learn Phase 1.7 production mail test.
+Idempotency-Key: phase1-7-mail-test-20260912
+
+First request: HTTP 200, Fox Mail accepted, provider acceptance established.
+Delivery: PASS; the owner confirmed receipt in jamesanf@gmail.com.
+
+Exact replay
+------------
+PASS: the unchanged request with the exact same idempotency key returned HTTP
+200 and Fox Mail replayed the existing operation. No second provider send was
+performed and no duplicate delivery effect occurred.
+
+Changed payload
+---------------
+PASS: changing the subject while reusing the same idempotency key returned
+HTTP 409 with idempotency_conflict.
+
+Temporary verification mechanism
+--------------------------------
+An ADMIN-session/CSRF-protected temporary Learn handler was deployed only for
+the controlled send, replay, and conflict checks. It was removed immediately
+after verification and Learn was redeployed without the handler. No test route,
+debug route, or permanent mail capability remains.
+
+Regression
+----------
+PASS: npm test
+PASS: npm run build
+PASS: npm run check
+PASS: npm run test:browser
+PASS: npm run test:production
+PASS: Fox Mail human UI remains behind normal Google/Cloudflare Access.
+PASS: no public FoxTutor repository or public-site resource was modified.
