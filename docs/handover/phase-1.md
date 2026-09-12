@@ -13,6 +13,8 @@ Phase 1.1 is blocked before production activation. The safe repository implement
 
 Cloudflare API calls for D1, Workers Routes, Zero Trust Access, R2 and Pages return authentication error `10000`. Worker version inspection and dry-run are available, but those permissions are insufficient to prove a safe live route.
 
+The safe implementation is pushed as commit `a169edd` with checkpoint tag `phase-1.1-blocked`.
+
 ## 3. Exact action required
 
 Using a Cloudflare token/account with the required account/zone permissions:

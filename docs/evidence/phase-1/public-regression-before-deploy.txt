@@ -1,0 +1,11 @@
+Captured: 2026-09-12 after local Learn validation; no Learn production deployment was made.
+
+Public routes:
+- `/`: HTTP 200, text/html, body hash unchanged
+- `/robots.txt`: HTTP 200, text/plain, body hash unchanged
+- `/sitemap.xml`: HTTP 200, application/xml, body hash unchanged
+- `/about`: HTTP 200, text/html, no redirect
+- `/assets/index-CADhcCgv.css`: HTTP 200, body hash unchanged
+- `/assets/index-dxNN1w7c.js`: HTTP 200, body hash unchanged
+
+No public-site resource was edited, redeployed or routed through Learn.

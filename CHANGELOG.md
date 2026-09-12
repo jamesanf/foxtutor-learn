@@ -63,3 +63,10 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 **Deployment:** not performed. The available Cloudflare token can inspect/deploy Worker versions but lacks permissions for D1, Workers Routes, Zero Trust Access, R2 and Pages. No public-site resource was changed.
 
 **Known limitations:** production D1, Access Google policy, `/learn*` route, production secret and authenticated Chromium/post-deployment regression evidence remain pending. See `docs/handover/phase-1.md`.
+
+**Safe implementation commit:** `a169edd`
+**Checkpoint tag:** `phase-1.1-blocked`
+
+### 2026-09-12 — Public regression evidence follow-up
+
+Rechecked the public homepage, robots, sitemap, representative content route and CSS/JS assets after local Learn implementation. Statuses and body hashes remained unchanged. No Learn production deployment was made.
