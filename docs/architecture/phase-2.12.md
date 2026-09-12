@@ -1,7 +1,7 @@
 # Phase 2.12 bookings, history and subscription workflow architecture
 
 Date: 2026-09-13  
-Status: implementation in progress; production deployment pending
+Status: deployed; authenticated production acceptance pending
 
 ## Information architecture
 
@@ -41,4 +41,3 @@ Phase 2.12 does not alter FullCalendar configuration, Week/Month sizing, event p
 ## Database migration
 
 **DATABASE MIGRATION: NONE REQUIRED**
-

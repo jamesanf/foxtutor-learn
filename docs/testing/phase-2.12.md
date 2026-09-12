@@ -1,7 +1,7 @@
 # Phase 2.12 workflow acceptance record
 
 Date: 2026-09-13  
-Status: local implementation in progress; deployment and production acceptance pending
+Status: deployed; local gates pass; authenticated production acceptance pending
 
 ## Information architecture
 
@@ -72,3 +72,6 @@ git diff --check
 
 Focused browser review covers 1440x900, 1024x768, 820px and 390x844 for navigation, Bookings, Past Lessons, pagination, page-size changes and the subscription panel. Calendar review is limited to Week/Month usability and sizing regression; no new calendar redesign is in scope. Authenticated production review must verify admin-only list access, student isolation, feed invalidation and unchanged public-site boundaries.
 
+## Deployment evidence
+
+The release is deployed as Worker `64be107f-9167-4056-bd23-959569f7a63d` from commit `d75f40d78ebd15046c8235d69fcd829611293e8c` at `2026-09-12T23:06:43.416Z`. Public production smoke passes. Authenticated production browser and real-Chromium visual verification are not claimed because this environment has no Chromium binary or `127.0.0.1:9222` debug endpoint. See [`docs/deployment/phase-2.12.md`](../deployment/phase-2.12.md).

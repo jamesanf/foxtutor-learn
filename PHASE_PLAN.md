@@ -486,6 +486,10 @@ Make the remaining lesson workflows immediately understandable without reopening
 
 Phase 2.12 is complete only after local tests/build/checks, focused list/query/subscription tests, browser review at desktop/tablet/mobile widths, production deployment, authenticated production verification, feed invalidation verification, security/public regression, clean working tree, pushed release commit, and the `phase-2.12-complete` tag are all complete. The calendar receives regression checks only; no broad sizing or visual redesign is permitted.
 
+### Current release state
+
+The implementation is deployed from commit `d75f40d78ebd15046c8235d69fcd829611293e8c` as Worker `64be107f-9167-4056-bd23-959569f7a63d` at `2026-09-12T23:06:43.416Z`. Local tests/build/check/browser/public-smoke gates pass. Authenticated production browser, feed rotation and real-Chromium visual verification remain pending because no Chromium binary or debug endpoint is available in the current environment. Do not create `phase-2.12-complete` until those gates are run.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective

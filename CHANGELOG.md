@@ -4,14 +4,14 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-13 — Phase 2.12 final tutoring workflow refinement
 
-**Status:** local implementation in progress; production deployment pending
+**Status:** deployed as Worker `64be107f-9167-4056-bd23-959569f7a63d`; authenticated production acceptance pending
 
 - Replaced the generic admin Lessons navigation destination with the operational `Past Lessons` label while retaining `/learn/admin/lessons` and the existing `lessons` D1 table.
 - Added a server-side historical query for completed, cancelled and elapsed lessons, ordered newest first, without allowing future scheduled lessons into Past Lessons.
 - Unified Bookings and Past Lessons around one lesson-list presentation and one conventional footer with `Showing start-end of total`, accessible Previous/Next navigation, compressed page numbers and a labeled `Show per page` selector supporting exactly 12, 24 and 48.
 - Removed the obsolete Rows links and calendar regeneration confirmation markup/client flow. Generation and regeneration are now one-click secure POST actions; regeneration immediately replaces the existing token and displays the new URL.
 - Updated subscription copy to identify Apple Calendar, Google Calendar, Outlook and other iCalendar-compatible apps. No calendar sizing, feed security, authorization, D1 schema or public-site changes were made.
-- Added Phase 2.12 architecture/testing records and updated the README/phase plan. Local production deployment, authenticated browser acceptance, feed invalidation verification and release tagging remain pending.
+- Added Phase 2.12 architecture/testing/deployment records and updated the README/phase plan. The public production smoke passes; authenticated browser acceptance, feed invalidation verification and release tagging remain pending because no Chromium runtime is available in this environment.
 
 ### 2026-09-12 — Phase 2.11 definitive calendar UI remediation
 
