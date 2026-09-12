@@ -5,6 +5,16 @@ const workerSource = readFileSync("src/worker/index.ts", "utf8");
 const clientSource = readFileSync("src/client/learn.ts", "utf8");
 const cssSource = readFileSync("public/learn.css", "utf8");
 
+function contrastRatio(foreground: [number, number, number], background: [number, number, number]): number {
+  const luminance = (rgb: [number, number, number]) => {
+    const channels = rgb.map((channel) => channel / 255).map((channel) => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const lighter = Math.max(luminance(foreground), luminance(background));
+  const darker = Math.min(luminance(foreground), luminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 describe("calendar presentation contract", () => {
   it("uses a week-first TimeGrid toolbar with a secondary month view", () => {
     expect(clientSource).toContain('initialView: "timeGridWeek"');
@@ -15,10 +25,14 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain('slotMinTime: "09:00:00"');
     expect(clientSource).toContain('slotMaxTime: "21:00:00"');
     expect(clientSource).toContain('scrollTime: "09:00:00"');
-    expect(clientSource).toContain('height: "clamp(560px, calc(100vh - 230px), 760px)"');
+    expect(clientSource).toContain("expandRows: false");
+    expect(clientSource).toContain('height: "auto"');
+    expect(clientSource).toContain("fixedWeekCount: false");
     expect(clientSource).toContain('titleFormat: { day: "numeric", month: "long", year: "numeric" }');
     expect(clientSource).toContain('import timeGridPlugin from "@fullcalendar/timegrid"');
     expect(clientSource).not.toContain("window.confirm");
+    expect(cssSource).not.toMatch(/\.calendar[^{}]*\{[^}]*min-height:\s*(?:[6-9]\d\d|\d{4,})px/);
+    expect(cssSource).not.toContain("clamp(560px");
   });
 
   it("renders only the authorized event projection and removes per-day add controls", () => {
@@ -54,7 +68,11 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain("calendar-nav-icon");
     expect(workerSource).toContain('role="alertdialog"');
     expect(workerSource).toContain('aria-modal="true"');
-    expect(workerSource).toContain("subscription-link-group");
+    expect(workerSource).toContain("subscription-panel");
+    expect(workerSource).toContain("subscription-action-row");
+    expect(cssSource).toContain(".subscription-content { display: grid");
+    expect(cssSource).toContain(".subscription-action-row { display: grid");
+    expect(cssSource).toContain(".subscription-card [hidden] { display: none !important; }");
   });
 
   it("keeps event labels concise and renders a single admin bookings destination", () => {
@@ -62,5 +80,20 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain("lesson-event-title");
     expect(clientSource).toContain("lesson-event-time");
     expect(workerSource).toContain('["/learn/admin/bookings", "Bookings"]');
+  });
+
+  it("keeps every lesson status above the normal-text contrast threshold", () => {
+    const white: [number, number, number] = [255, 255, 255];
+    const statusColours: Record<string, [number, number, number]> = {
+      scheduled: [22, 101, 52],
+      completed: [7, 89, 133],
+      cancelled: [153, 27, 27]
+    };
+    for (const [status, background] of Object.entries(statusColours)) {
+      expect(contrastRatio(white, background), status).toBeGreaterThanOrEqual(4.5);
+      expect(cssSource).toContain(`.lesson-status-${status}`);
+    }
+    expect(cssSource).toContain(".calendar-host.fc .fc-event-main");
+    expect(cssSource).toContain("color: inherit");
   });
 });

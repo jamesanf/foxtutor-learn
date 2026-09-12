@@ -2,6 +2,18 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-12 — Phase 2.11 definitive calendar UI remediation
+
+**Status:** local implementation and real-browser visual contracts pass; deployment and authenticated production acceptance pending
+
+- Identified the Phase 2.10 root cause in rendered Chrome: a clamp-based FullCalendar host height expanded Month rows to roughly 116px, while FullCalendar's actual event text was white over pastel status backgrounds.
+- Replaced the giant host-height strategy with FullCalendar Standard `height: "auto"`, `expandRows: false`, `fixedWeekCount: false` and compact natural day-frame sizing. Week remains the default with 09:00–21:00 focus and 30-minute visual slots; quarter-hour lesson placement and creation are unchanged.
+- Changed Month events to one-line `time student` content and added view-aware weekday headers so Month labels remain concise and correct on desktop/mobile.
+- Corrected all rendered status colours to saturated dark surfaces and explicitly inherited colour through `.fc-event-main`; real Chrome computed-colour checks measure 7.13:1–8.31:1 for Scheduled, Completed and Cancelled.
+- Recomposed the subscription utility into a grid-based panel with a link row, action/warning row and self-contained confirmation. Hidden confirmation contributes no layout height; mobile controls stack without horizontal overflow.
+- Added `npm run test:browser:visual`, a real Chrome contract that checks rendered contrast, event/text bounds, Month row fit/no internal scrollbar, collapsed subscription geometry and overflow. Captured ignored evidence under `test-results/phase-2.11/`.
+- Local gates pass: `npm test` (14 files, 42 tests), `npm run build`, `npm run test:browser`, `npm run test:browser:visual` and `git diff --check`. Production deployment and authenticated production acceptance remain intentionally unclaimed.
+
 ### 2026-09-12 — Phase 2.10 final tutoring workflow and information-architecture refinement
 
 **Status:** deployed; authenticated production acceptance and final Phase 2 closure pending

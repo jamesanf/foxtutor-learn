@@ -69,9 +69,9 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .page-heading h2 { margin: 0; }
 .calendar-page h1 { font-size: clamp(1.8rem, 3vw, 2.35rem); }
 .calendar-shell { margin-top: var(--space-4); }
-.calendar-surface { padding: clamp(16px, 2.5vw, 28px); overflow: hidden; border: 1px solid #d6dee8; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 2px 5px rgb(16 42 67 / 7%); }
+.calendar-surface { padding: clamp(16px, 2.5vw, 24px); overflow: visible; border: 1px solid #d6dee8; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 2px 5px rgb(16 42 67 / 7%); }
 .calendar-host { min-width: 0; }
-.calendar-host.fc { --fc-border-color: #d6dee8; --fc-button-bg-color: var(--action); --fc-button-border-color: var(--action); --fc-button-hover-bg-color: var(--action-hover); --fc-button-hover-border-color: var(--action-hover); --fc-button-active-bg-color: var(--action-hover); --fc-button-active-border-color: var(--action-hover); --fc-today-bg-color: #f0f9fb; font-size: .84rem; }
+.calendar-host.fc { --fc-border-color: #d6dee8; --fc-button-bg-color: var(--action); --fc-button-border-color: var(--action); --fc-button-hover-bg-color: var(--action-hover); --fc-button-hover-border-color: var(--action-hover); --fc-button-active-bg-color: var(--action-hover); --fc-button-active-border-color: var(--action-hover); --fc-today-bg-color: #f0f9fb; --fc-event-text-color: #fff; font-size: .84rem; }
 .calendar-host.fc .fc-toolbar { gap: var(--space-4); margin-bottom: var(--space-5); }
 .calendar-host.fc .fc-toolbar-chunk { display: flex; align-items: center; gap: var(--space-2); }
 .calendar-host.fc .fc-toolbar-title { font-size: 1.2rem; font-weight: 700; }
@@ -84,7 +84,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .calendar-host.fc .fc-timeGridWeek-button.fc-button-active, .calendar-host.fc .fc-dayGridMonth-button.fc-button-active { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 30%); }
 .calendar-host.fc .fc-button:focus { box-shadow: 0 0 0 3px rgb(6 182 212 / 28%); }
 .calendar-host.fc .fc-col-header-cell-cushion { padding: 6px 4px; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.calendar-host.fc .fc-daygrid-day-frame { min-height: 84px; }
+.calendar-host.fc .fc-daygrid-day-frame { min-height: 60px; }
 .calendar-host.fc .fc-daygrid-day-number { padding: 4px 6px; color: var(--muted); font-size: .78rem; }
 .calendar-host.fc .fc-daygrid-day-events { margin-top: 1px; }
 .calendar-host.fc .fc-daygrid-event { margin: 1px 2px; padding: 2px 4px; border: 0; border-radius: 4px; font-size: .72rem; line-height: 1.25; }
@@ -93,13 +93,14 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .calendar-host.fc .fc-timegrid-axis-cushion, .calendar-host.fc .fc-timegrid-slot-label-cushion { color: var(--muted); font-size: .72rem; }
 .calendar-host.fc .fc-timegrid-col.fc-day-today { background: #fbfeff; }
 .calendar-host.fc .fc-timegrid-event { padding: 4px 6px; border: 0; border-radius: 5px; overflow: hidden; line-height: 1.2; }
-.lesson-event-title, .lesson-event-time { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-host.fc .fc-event-main, .calendar-host.fc .lesson-event-title, .calendar-host.fc .lesson-event-time, .calendar-host.fc .lesson-event-month { color: inherit; }
+.lesson-event-title, .lesson-event-time, .lesson-event-month { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lesson-event-title { font-size: .76rem; font-weight: 700; }
 .lesson-event-time { margin-top: 2px; font-size: .7rem; opacity: .86; }
-.calendar-host.fc .fc-daygrid-event .lesson-event-time { display: none; }
-.calendar-host.fc .lesson-status-completed { color: #075985; background: #e0f2fe; }
-.calendar-host.fc .lesson-status-cancelled { color: #991b1b; background: #fee2e2; text-decoration: line-through; }
-.calendar-host.fc .lesson-status-scheduled { color: #166534; background: #dcfce7; }
+.lesson-event-month { font-size: .72rem; font-weight: 700; }
+.calendar-host.fc .lesson-status-completed { color: #fff; background: #075985; }
+.calendar-host.fc .lesson-status-cancelled { color: #fff; background: #991b1b; text-decoration: line-through; }
+.calendar-host.fc .lesson-status-scheduled { color: #fff; background: #166534; }
 .subscription-card { margin: var(--space-7) 0 0; padding: 0; overflow: hidden; }
 .subscription-card > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); padding: 18px 22px; color: var(--foreground); cursor: pointer; list-style: none; font-weight: 650; }
 .subscription-card > summary::-webkit-details-marker { display: none; }
@@ -107,24 +108,25 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .subscription-card > summary:focus-visible { outline: 3px solid var(--primary); outline-offset: -3px; }
 .subscription-chevron { width: 10px; height: 10px; flex: 0 0 auto; border-right: 2px solid var(--action); border-bottom: 2px solid var(--action); transform: rotate(45deg) translateY(-3px); transition: transform 150ms ease; }
 .subscription-card[open] .subscription-chevron { transform: rotate(225deg) translate(-2px, -2px); }
-.subscription-content { display: grid; gap: var(--space-5); padding: 22px; border-top: 1px solid var(--line); }
-.subscription-link-group { display: grid; gap: var(--space-2); }
-.feed-link-label { margin: 0; color: var(--foreground); font-size: .9rem; }
+.subscription-content { display: grid; gap: 12px; padding: 18px 22px 20px; border-top: 1px solid var(--line); }
+.subscription-panel { display: grid; gap: 12px; }
+.subscription-panel-heading { display: grid; gap: 2px; }
+.subscription-panel-heading strong { color: var(--foreground); font-size: .94rem; }
+.subscription-panel-heading span { color: var(--muted); font-size: .84rem; }
 .subscription-card form { margin: 0; }
-.privacy-warning { margin: 0; padding: 10px 12px; border: 1px solid #c3dce5; border-left: 3px solid var(--action); border-radius: var(--radius-sm); color: var(--foreground); background: #f0f9fb; font-size: .86rem; }
+.subscription-card .button { margin-top: 0; }
+.privacy-warning { margin: 0; padding: 9px 11px; border: 1px solid #c3dce5; border-left: 3px solid var(--action); border-radius: var(--radius-sm); color: var(--foreground); background: #f0f9fb; font-size: .82rem; }
 .feed-link { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-.feed-link-row { display: flex; align-items: end; gap: 10px; }
+.feed-link-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
 .feed-link-row input { min-width: 0; margin-top: 0; }
-.feed-link-row .button { flex: 0 0 auto; margin-top: 0; cursor: pointer; }
-.subscription-empty { display: grid; gap: var(--space-1); padding: 14px 16px; border: 1px dashed var(--line); border-radius: var(--radius-sm); background: #f8fbfd; }
-.subscription-empty strong { color: var(--foreground); font-size: .92rem; }
-.subscription-empty span { color: var(--muted); font-size: .86rem; }
-.subscription-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--space-3); }
-.subscription-actions form { margin: 0; }
-.inline-confirmation { display: grid; min-width: min(100%, 340px); gap: var(--space-2); padding: 16px; border: 1px solid #c3dce5; border-radius: var(--radius-sm); background: #f8fbfd; }
+.feed-link-row .button { cursor: pointer; }
+.subscription-actions { display: flex; align-items: center; gap: 12px; }
+.subscription-action-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.inline-confirmation { display: grid; max-width: 520px; gap: 6px; padding: 14px 16px; border: 1px solid #c3dce5; border-radius: var(--radius-sm); background: #f8fbfd; }
 .inline-confirmation > span { color: var(--muted); font-size: .88rem; }
-.confirmation-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.confirmation-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: 6px; }
 .confirmation-actions .button { margin-top: 0; }
+.subscription-card [hidden] { display: none !important; }
 .form-success { margin: 14px 0 0; padding: 9px 11px; border: 1px solid #bbf7d0; border-radius: 7px; color: #166534 !important; background: #f0fdf4; font-size: .88rem; }
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
 .summary-card { display: grid; gap: 4px; padding: 18px; border: 1px solid #d6dee8; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 1px 3px rgb(16 42 67 / 5%); }
@@ -205,6 +207,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; margin-top: 10px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--radius-sm); color: white; background: var(--action); text-decoration: none; font-weight: 650; }
 .button:hover { background: var(--action-hover); }
 .button:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 @media (max-width: 700px) {
   .topbar { align-items: flex-start; flex-direction: column; }
@@ -219,13 +222,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .detail-grid, .summary-grid { grid-template-columns: 1fr; }
   .full-width { grid-column: auto; }
   .subscription-card > summary { padding: 16px 18px; }
-  .subscription-content { padding: 18px; }
-  .feed-link-row { align-items: stretch; flex-direction: column; }
+  .subscription-content { padding: 16px 18px 18px; }
+  .feed-link-row { grid-template-columns: 1fr; align-items: stretch; }
   .feed-link-row .button { width: 100%; }
-  .subscription-actions { display: grid; }
-  .subscription-actions form { margin-top: 0; }
-  .subscription-actions form .button { width: 100%; }
-  .inline-confirmation { margin-top: 12px; }
+  .subscription-actions, .subscription-action-row { grid-template-columns: 1fr; display: grid; align-items: stretch; }
+  .subscription-actions form .button, .subscription-action-row form .button { width: 100%; }
+  .inline-confirmation { max-width: none; }
   .lesson-form-grid { grid-template-columns: 1fr; }
   .lesson-form-grid .field-wide, .lesson-form-grid .additional-details { grid-column: auto; }
   .list-toolbar, .dashboard-empty, .section-heading { align-items: flex-start; flex-direction: column; }
@@ -254,12 +256,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .calendar-host.fc .fc-toolbar-chunk { justify-content: center; width: 100%; }
   .calendar-host.fc .fc-toolbar-title { font-size: 1.05rem; }
   .calendar-surface { padding: 12px; }
-  .calendar-host.fc .fc-daygrid-day-frame { min-height: 70px; }
+  .calendar-host.fc .fc-daygrid-day-frame { min-height: 48px; }
   .calendar-host.fc .fc-daygrid-event { font-size: .68rem; }
   .calendar-host.fc .fc-toolbar { margin-bottom: var(--space-4); }
   .calendar-host.fc .fc-timegrid-event { padding: 3px 4px; }
   .lesson-event-title { font-size: .68rem; }
   .lesson-event-time { font-size: .64rem; }
+  .lesson-event-month { font-size: .66rem; }
 }
 @media (max-width: 700px) {
   .calendar-host.fc .fc-toolbar { display: grid !important; grid-template-areas: "title" "navigation" "views"; grid-template-columns: 1fr; }

@@ -419,11 +419,11 @@ Phase 2.9 is complete only when the rendered admin and student interfaces pass a
 
 Replace the oversized month-first calendar with a compact weekly timetable focused on the practical tutoring day, retain Month as a secondary overview, add a first-class upcoming Bookings view with server-side pagination, remove redundant dashboard navigation cards, simplify student identity/email entry, and perform the definitive end-to-end Phase 2 product acceptance.
 
-This phase exists because repeated calendar and form refinements improved technical functionality but did not achieve the required professional UX. It is the final Phase 2 pass; do not create Phase 2.11.
+This phase exists because repeated calendar and form refinements improved technical functionality but did not achieve the required professional UX. Its visual acceptance was superseded by Phase 2.11 after rendered review found an oversized Month layout and unreadable event text.
 
 ### Current release state
 
-Phase 2.10 is deployed from commit `68ba651` as Worker version `56471854-7ff2-47bd-b9a0-70f488f0d029` at `2026-09-12T21:58:00.509Z`. Local automated and rendered-browser gates pass, and live public/Access/feed-boundary checks pass. Authenticated production browser acceptance and controlled fixture cleanup remain pending because no authenticated production browser session or Cloudflare Access credential is available in this environment. Do not create `phase-2.10-complete` or mark Phase 2 complete until those gates are evidenced.
+Phase 2.10 is deployed from commit `68ba651` as Worker version `56471854-7ff2-47bd-b9a0-70f488f0d029` at `2026-09-12T21:58:00.509Z`. Its local and public boundary gates pass, but rendered visual acceptance found blockers that are remediated by Phase 2.11. Do not create `phase-2.10-complete`.
 
 ### Must achieve
 
@@ -440,7 +440,26 @@ Phase 2.10 is deployed from commit `68ba651` as Worker version `56471854-7ff2-47
 
 ### Exit criteria
 
-Phase 2.10 is complete only when the rendered product passes the full calendar, Bookings, Dashboard, Students, Create Lesson, subscription, accessibility, security, feed, Access, responsive and production acceptance matrix; local and production builds match; controlled data is cleaned; documentation reconciles to reality; `main` is clean and pushed; `phase-2.5-complete` and `phase-2.6-complete` remain intact; and only then is `phase-2.10-complete` created and Phase 2 marked COMPLETE. Known limitations must be recorded honestly. No Phase 2.11 may be created.
+Phase 2.10 is not a closure gate. Phase 2.11 owns the remaining calendar visual, subscription composition and measurable browser acceptance requirements.
+
+## Phase 2.11 — Definitive calendar UI remediation
+
+### Objective
+
+Remediate the failed Phase 2.10 acceptance process and implementation. Identify rendered geometry and computed-colour root causes, redesign Month/Week sizing and subscription composition, and make unreadable or oversized states fail automated browser contracts.
+
+### Required outcomes
+
+- FullCalendar Standard Month uses intrinsic natural rows with `fixedWeekCount: false`, `expandRows: false`, no internal vertical scrollbar and no giant fixed/clamp host height.
+- Week remains operationally focused on 09:00–21:00, with compact intrinsic slot density and readable events.
+- Every rendered Scheduled, Completed and Cancelled event has computed contrast of at least 4.5:1, and its text remains within event bounds.
+- Real Chrome checks cover 1440x900, 1440x800, 1280x800, 1024x768, 820x1180, 390x844 and 1440x900 at 75% zoom where available.
+- Subscription open state uses an intentional grid; hidden confirmation contributes no height; confirmation buttons remain separated and mobile-safe.
+- Existing lesson routes, feed/token ownership, Access, D1 and public-site behavior remain unchanged.
+
+### Exit criteria
+
+Phase 2.11 is complete only when local full-suite/build/check/browser/production gates pass, real Chrome visual contracts and screenshots are recorded, production deployment and authenticated admin/student browser acceptance pass, feed/security/ownership/public regressions pass, documentation matches the deployed Worker, `main` is clean and pushed, and only then is `phase-2.11-complete` created.
 
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 

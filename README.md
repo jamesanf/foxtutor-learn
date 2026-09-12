@@ -4,10 +4,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 2.10 final product UX remediation in progress
+**Phase:** Phase 2.11 definitive calendar UI remediation in progress
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** Phase 2.10 is deployed to the production Worker, but final Phase 2 closure remains open pending authenticated production browser acceptance. The release uses FullCalendar Standard TimeGrid `6.1.21` with Week as the default, Month secondary, a focused 09:00–21:00 range, concise event content, and a bounded responsive surface. Admin navigation now includes first-class Bookings backed by server-side pagination over upcoming scheduled lessons with 12/24/48 page sizes; Dashboard shows upcoming work and compact summaries instead of duplicate navigation cards. Student records continue to use one login/contact email with explicit server-side account linking, and Create Lesson retains the native quarter-hour time input with immediate 55-minute End preview. Local authenticated browser review covers the required desktop, 75% zoom, tablet and mobile renders, including calendar positioning, mobile overflow, Dashboard, Bookings, Create Lesson and Student form checks. Production Worker `56471854-7ff2-47bd-b9a0-70f488f0d029` was deployed at `2026-09-12T21:58:00.509Z` with commit `68ba651`; public smoke, Access boundaries, invalid-feed denial and production migration checks pass. Authenticated production browser acceptance was not run because no authenticated production browser session/Access credential is available in this environment. Do not create `phase-2.10-complete` or claim Phase 2 complete.
+**Latest state:** Phase 2.11 removes the failed Phase 2.10 calendar height model, restores natural FullCalendar Month sizing, fixes rendered event contrast, compacts Week slots and redesigns the subscription disclosure as an internal grid with a self-contained confirmation. Real local Chrome checks pass at 1440x900, 1440x800, 1280x800, 1024x768, 820x1180 and 390x844, including computed-colour contrast, Month final-row fit, event bounds, mobile overflow and subscription geometry. The current production Worker remains Phase 2.10 version `56471854-7ff2-47bd-b9a0-70f488f0d029` until Phase 2.11 deployment and authenticated production acceptance are complete. Do not create `phase-2.11-complete` or claim Phase 2 complete.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -166,6 +166,9 @@ docs/                 Architecture, security, deployment, API and evidence
 | `docs/testing/phase-2.10.md` | Final Phase 2.10 UX, security, responsive and production acceptance matrix |
 | `docs/architecture/phase-2.10.md` | Final timetable, Bookings, dashboard, student and lesson interaction decisions |
 | `docs/deployment/phase-2.10.md` | Phase 2.10 deployment gates and current production parity |
+| `docs/testing/phase-2.11.md` | Measured visual contracts and real-browser acceptance matrix |
+| `docs/architecture/phase-2.11.md` | Root cause and redesigned calendar/subscription composition |
+| `docs/deployment/phase-2.11.md` | Phase 2.11 release and production gate record |
 | `docs/deployment/phase-2.1.md` | Phase 2.1 migration and deployment sequence |
 | `docs/evidence/phase-1/` | Public baseline and deployment evidence |
 | `docs/handover/phase-1.md` | Exact human actions still required |
@@ -185,6 +188,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.8 | Calendar density, navigation, subscription and lesson-creation UX refinement after real browser review | Remediated by 2.10 |
 | 2.9 | UI composition and lesson-time workflow correction | Remediated by 2.10 |
 | 2.10 | Final timetable, Bookings, navigation, dashboard, student model and end-to-end UX closure | In progress |
+| 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3 | R2 resources and document pipeline | Deferred |
 | 4 | Mail notifications and reports | Deferred |
 | 5 | Cancellation automation | Deferred |

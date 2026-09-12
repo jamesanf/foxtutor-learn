@@ -12,6 +12,7 @@
     "test:integration": "vitest run tests/integration",
     "test:security": "vitest run tests/security",
     "test:browser": "node scripts/verify-browser.mjs",
+    "test:browser:visual": "node scripts/verify-calendar-visual.mjs",
     "test:production": "node scripts/smoke-production.mjs",
     "dev": "npx wrangler dev --config wrangler.local.jsonc",
     "deploy": "npx wrangler deploy --message \"Phase 2.10 final tutoring workflow UX\""

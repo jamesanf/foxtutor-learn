@@ -20,7 +20,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   if (activeLink) activeLink.setAttribute("aria-current", "page");
 
   document.querySelectorAll<HTMLFormElement>("[data-confirmation]").forEach((form) => {
-    const container = form.closest(".subscription-actions");
+    const container = form.closest(".subscription-panel");
     const confirmation = container?.querySelector<HTMLElement>("[data-confirmation-panel]");
     const cancel = confirmation?.querySelector<HTMLButtonElement>("[data-confirm-cancel]");
     const accept = confirmation?.querySelector<HTMLButtonElement>("[data-confirm-submit]");
@@ -82,8 +82,14 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       initialDate,
       timeZone: timezone,
       firstDay: 1,
-      dayHeaderFormat: { weekday: "short", day: "numeric", month: "short" },
+      dayHeaderContent: ({ date, view }) => {
+        const format = view.type === "dayGridMonth"
+          ? { weekday: "short" as const }
+          : { weekday: "short" as const, day: "numeric" as const, month: "short" as const };
+        return new Intl.DateTimeFormat("en-GB", { ...format, timeZone: timezone }).format(date);
+      },
       fixedWeekCount: false,
+      expandRows: false,
       dayMaxEvents: 3,
       displayEventTime: false,
       eventDisplay: "block",
@@ -91,15 +97,21 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       slotMinTime: "09:00:00",
       slotMaxTime: "21:00:00",
       scrollTime: "09:00:00",
-      slotDuration: "00:15:00",
+      slotDuration: "00:30:00",
       slotLabelInterval: "01:00",
-      height: "clamp(560px, calc(100vh - 230px), 760px)",
+      height: "auto",
       titleFormat: { day: "numeric", month: "long", year: "numeric" },
       // FullCalendar TimeGrid supports this option; 6.1.21 omits its ambient type from the package entrypoint.
       // @ts-expect-error
       allDaySlot: false,
       buttonText: { today: "Today", month: "Month", week: "Week" },
-      eventContent: ({ event }) => {
+      eventContent: ({ event, view }) => {
+        if (view.type === "dayGridMonth") {
+          const monthEvent = document.createElement("span");
+          monthEvent.className = "lesson-event-month";
+          monthEvent.textContent = `${String(event.extendedProps.displayTime ?? "").split("–")[0]} ${event.title}`;
+          return { domNodes: [monthEvent] };
+        }
         const title = document.createElement("span");
         title.className = "lesson-event-title";
         title.textContent = event.title;
