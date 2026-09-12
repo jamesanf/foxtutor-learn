@@ -93,6 +93,7 @@ Repeat valid/invalid `.ics` requests, stable UID, status mapping, private notes 
 | Access/public-site regression | PENDING production |
 | Accessibility | PENDING authenticated browser |
 | Automated tests/build/checks | Partial: test/build PASS, full gates pending |
-| Production deployment and acceptance | PENDING |
+| Production deployment | PASS — Worker `999b4239-49f2-4bc3-9dfd-a2bb29d46637` |
+| Authenticated production acceptance | PENDING |
 | Cleanup and documentation reconciliation | PENDING final pass |
 | Git clean and Phase 2.8 completion | PENDING |

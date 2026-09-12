@@ -1,7 +1,7 @@
 # Phase 2.8 deployment and release record
 
 Date: 2026-09-12  
-Status: local implementation complete; deployment and authenticated production acceptance pending
+Status: deployed; authenticated production acceptance pending
 
 ## Release scope
 
@@ -16,7 +16,18 @@ Deployment message: Phase 2.7 month-first calendar UX
 Routes: foxtutor.org/learn and foxtutor.org/learn/*
 ```
 
-No Phase 2.8 deployment is claimed until local `npm run check`, browser/static checks and the authorized deployment command complete.
+## Deployment evidence
+
+```text
+Worker: foxtutor-learn
+Version: 999b4239-49f2-4bc3-9dfd-a2bb29d46637
+Deployment timestamp: 2026-09-12T20:23:42Z
+Deployment message: Phase 2.8 calendar and lesson UX refinement
+Routes: foxtutor.org/learn and foxtutor.org/learn/*
+Assets uploaded: /learn.css, /learn.js
+```
+
+The deploy output noted that the configured token lacks `All Zones` permission; Wrangler used the zone-based endpoint for the intended `foxtutor.org` routes. No D1 migration, feed code, Access policy or public-site asset was changed.
 
 ## Pre-deployment gates
 
@@ -33,9 +44,12 @@ git diff --check
 
 Then inspect the generated bundle, verify no secrets or unintended dependency changes, deploy only the Learn Worker and repeat public smoke, Access-boundary, feed and authenticated browser checks.
 
-## Production acceptance record
+## Production smoke record
+
+`npm run test:production` passed after deployment at 2026-09-12. The public homepage, robots and sitemap returned expected responses, the sitemap excluded Learn, and `/learn` continued to return the existing Access redirect (`302`).
+
+## Authenticated production acceptance record
 
 Still required: fresh admin/student sessions at 1440px normal, 1440px 75% zoom, 820px and 390px; Month/Week/navigation; Add lesson; 55-minute creation and DST; subscription Copy/regeneration/internal confirmation; student privacy; feed/token regression; Access/public-site regression; exact fixture cleanup; final documentation reconciliation and clean Git state.
 
 Do not create `phase-2.8-complete` or mark Phase 2 complete without those records.
-
