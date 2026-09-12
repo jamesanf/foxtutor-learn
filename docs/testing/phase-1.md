@@ -14,6 +14,12 @@ The local Worker smoke flow demonstrated 401 for unauthenticated requests, 303 r
 
 ## Required production suite
 
-Production remains pending the external Cloudflare permissions and Access/mail configuration in `docs/handover/phase-1.md`. Once available, use Chromium with separate clean profiles for admin, student and unknown identities. Test direct navigation to `/learn`, `/learn/admin` and `/learn/student`, role isolation, logout, responsive layout, noindex headers/meta and Googlebot-like denial.
+Production infrastructure is deployed, but acceptance remains pending the
+Access policy reconciliation and Fox Mail machine-auth configuration in
+`docs/handover/phase-1.md`. Once available, use Chromium with separate clean
+profiles for admin, student and unknown identities. Test direct navigation to
+`/learn`, `/learn/admin` and `/learn/student`, role isolation, logout,
+responsive layout, session persistence, cookie metadata, localStorage
+exposure, noindex headers/meta and Googlebot-like denial.
 
 Run public regression requests for `/`, `/robots.txt`, `/sitemap.xml`, one public asset and one content route. Compare status, content type, key headers and body hashes with `docs/evidence/phase-1/public-site-baseline.txt` and the captured bodies.

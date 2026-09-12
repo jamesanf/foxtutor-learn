@@ -56,3 +56,40 @@ Authenticated admin/student/unknown Chromium flows and controlled Fox Mail
 delivery remain unproven because this runtime has no controlled Google student
 credentials or Fox Mail internal API secret. Do not mark Phase 1 complete or
 create the completion tag until those tests pass.
+
+## Phase 1.6 acceptance preflight
+
+The 2026-09-12 preflight inspected the live resources without recreating them
+and changed only the production D1 student email with a guarded update:
+
+- `foxlearningltd@gmail.com` — `ADMIN`, `ACTIVE`
+- `jamesanf@gmail.com` — `STUDENT`, `ACTIVE`
+
+The Learn Access policy still requires reconciliation from the temporary
+`student.test@foxtutor.org` entry because the runtime token cannot perform
+Access writes. The temporary identity is no longer active in D1.
+
+Fox Mail source confirms that production machine sends require its
+`INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path. Fox
+Mail's current production secret inventory does not contain
+`INTERNAL_API_TOKEN`; the live internal endpoint returns the interactive
+Access login boundary without machine credentials. No send or idempotency
+claim was made.
+
+PASS evidence captured in this pass:
+
+- `npm test`
+- `npm run build`
+- `npm run check`
+- `npm run test:browser`
+- `npm run test:production`
+- production D1 final user query
+- public `/`, `/robots.txt`, `/sitemap.xml` and `/about` status/content-type/hash regression
+
+Required evidence still missing:
+
+- final Access policy with only the admin and James identities;
+- authenticated admin, student, student-to-admin denial and unknown-user browser passes;
+- authenticated session-cookie/localStorage and noindex inspection;
+- controlled Fox Mail delivery and exact-key idempotency replay;
+- clean tree, pushed acceptance commit and `phase-1-complete` tag.

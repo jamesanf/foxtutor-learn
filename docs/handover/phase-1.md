@@ -1,5 +1,102 @@
 # HUMAN HANDOVER REQUIRED
 
+## Phase 1.6 current checkpoint — 2026-09-12
+
+**Status: BLOCKED.** Safe acceptance work is complete, but the completion
+gates cannot be claimed yet.
+
+### 1. Expose the existing Learn Cloudflare credential
+
+The current `CLOUDFLARE_API_TOKEN` verifies as an active token for the correct
+account but is not authorized for the Learn Access application/policy. Do not
+create, rotate or paste a token into chat. Make the already-verified dedicated
+Learn credential available to this runtime through the existing
+`CLOUDFLARE_API_TOKEN` environment path.
+
+Verify without revealing the value:
+
+```bash
+printf '%s\n' "${CLOUDFLARE_API_TOKEN:0:8}"
+curl -sS https://api.cloudflare.com/client/v4/user/tokens/verify \
+  --oauth2-bearer "$CLOUDFLARE_API_TOKEN"
+npx wrangler whoami
+```
+
+The agent will then inspect the existing `FoxTutor Learn` application and
+replace only the policy identity `student.test@foxtutor.org` with
+`jamesanf@gmail.com`. The existing Google IdP and unrelated Mail/EDInterval
+Access resources must remain unchanged.
+
+### 2. Configure the existing Fox Mail machine boundary
+
+Fox Mail source documents `POST
+https://mail.foxtutor.org/internal/api/v1/messages/send` as requiring the Fox
+Mail Worker secret `INTERNAL_API_TOKEN`. Direct inspection shows that secret is
+not currently listed on the Fox Mail Worker, and unauthenticated requests are
+redirected to interactive Cloudflare Access.
+
+On the Fox Mail side, restore the existing `INTERNAL_API_TOKEN` secret using
+the normal Fox Mail deployment owner workflow; do not send its value to the
+agent or commit it. Configure the intended narrowly scoped Cloudflare Access
+Service Auth path for only `/internal/api/v1/*` if it is not already present.
+Do not broaden or remove the human Google Access protection for Fox Mail.
+
+On the Learn side, add the same bearer value only through the Worker secret
+binding:
+
+```bash
+npx wrangler secret put MAIL_API_TOKEN --config wrangler.jsonc
+```
+
+If Fox Mail confirms that Service Auth is required, add the two corresponding
+Learn Worker secrets through Wrangler, without exposing their values:
+
+```bash
+npx wrangler secret put MAIL_API_ACCESS_CLIENT_ID --config wrangler.jsonc
+npx wrangler secret put MAIL_API_ACCESS_CLIENT_SECRET --config wrangler.jsonc
+```
+
+Verify presence without printing values:
+
+```bash
+npx wrangler secret list --config wrangler.jsonc
+```
+
+The agent will then send exactly one controlled test message to the agreed
+owner-controlled destination with subject `FoxTutor Learn Phase 1.6
+production mail test` and idempotency key
+`phase1-6-mail-test-20260912`, repeat the exact request, and verify Fox
+Mail's documented replay behavior without recording message contents or
+secrets.
+
+### 3. Human-assisted Google browser checkpoints
+
+Use separate clean Chromium profiles and never provide passwords:
+
+```text
+HUMAN CHECKPOINT 1 — ADMIN GOOGLE LOGIN
+Please authenticate the clean Chromium profile as foxlearningltd@gmail.com.
+Do not provide me with the password. Tell me when the Learn admin page is visible.
+
+HUMAN CHECKPOINT 2 — STUDENT GOOGLE LOGIN
+Please authenticate the clean Chromium profile as jamesanf@gmail.com.
+Do not provide me with the password. Tell me when the Learn student page is visible.
+
+HUMAN CHECKPOINT 3 — UNKNOWN GOOGLE LOGIN
+Please authenticate the clean Chromium profile with a controlled Google account
+that is not an approved Learn user. Tell me when Google authentication succeeds
+or when Learn displays the denial.
+```
+
+The agent will verify `/learn`, `/learn/admin`, `/learn/student`, student-to-admin
+denial, unknown-user denial, session persistence, Secure/HttpOnly cookie
+metadata where exposed, absence of authentication tokens in localStorage, and
+authenticated `X-Robots-Tag`/HTML noindex metadata.
+
+The temporary student identity is no longer active in D1, but remains in the
+Access policy until step 1 is completed. Do not create `phase-1-complete` until
+that policy entry is removed and all browser/mail evidence passes.
+
 ## Phase 1.4 status
 
 The production activation preflight was repeated on 2026-09-12 using the

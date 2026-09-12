@@ -1,0 +1,51 @@
+FoxTutor Learn Phase 1.6 acceptance preflight
+Captured: 2026-09-12
+Status: BLOCKED at explicit human checkpoints
+
+Production state
+----------------
+Worker: foxtutor-learn
+D1: foxtutor-learn
+Routes: foxtutor.org/learn and foxtutor.org/learn/*
+Access app: FoxTutor Learn
+Google IdP: existing production Google IdP
+
+Final D1 users after guarded update
+------------------------------------
+- foxlearningltd@gmail.com / ADMIN / ACTIVE
+- jamesanf@gmail.com / STUDENT / ACTIVE
+
+The temporary student.test@foxtutor.org row is no longer active in D1.
+The existing Access policy still requires the corresponding identity
+replacement because the runtime token cannot perform Access writes.
+
+Fox Mail boundary
+-----------------
+Endpoint: https://mail.foxtutor.org/internal/api/v1/messages/send
+Authentication contract: Fox Mail INTERNAL_API_TOKEN bearer secret, plus
+Cloudflare Access Service Auth when configured for the protected endpoint.
+Fox Mail production secret inventory did not contain INTERNAL_API_TOKEN.
+An unauthenticated request returned the interactive Cloudflare Access login.
+No production send or idempotency result was claimed.
+
+Automated evidence
+------------------
+PASS: npm test
+PASS: npm run build
+PASS: npm run check
+PASS: npm run test:browser
+PASS: npm run test:production
+PASS: production D1 final user query
+PASS: public /, /robots.txt, /sitemap.xml and /about regression status/type/hash
+
+Missing acceptance evidence
+---------------------------
+- final Access policy containing only the two controlled identities;
+- authenticated admin browser pass;
+- authenticated student browser pass;
+- student-to-admin denial pass;
+- unknown-user denial pass;
+- authenticated session/noindex pass;
+- Fox Mail delivery pass;
+- Fox Mail idempotency pass;
+- clean pushed acceptance commit and phase-1-complete tag.

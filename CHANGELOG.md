@@ -202,3 +202,20 @@ rotate, replace or record a new token. See
 **Verification:** local test/build/check/browser suites passed; production smoke passed; D1 schema and route inventory passed; `/learn` reaches the Google Access boundary; public homepage, robots, sitemap and representative public route remained unchanged.
 
 **Remaining limitations:** authenticated admin/student/unknown Chromium flows require controlled Google credentials, and the Fox Mail production adapter requires an `INTERNAL_API_TOKEN` plus a controlled destination for delivery/idempotency verification. No `phase-1-complete` tag was created.
+
+## Phase 1.6 — Acceptance and closure preflight
+
+### 2026-09-12 — Reconcile controlled identity and verify remaining acceptance boundaries
+
+**Status:** blocked at explicit human checkpoints; completion tag not created
+
+**Completed:**
+
+- Verified the live Learn boundary, Worker deployment, production D1, exact routes and existing Learn Access application without recreating Phase 1.5 resources.
+- Updated the production D1 student record from `student.test@foxtutor.org` to `jamesanf@gmail.com` with a guarded role/status/email predicate; the admin remained unchanged.
+- Confirmed the final desired D1 users are `foxlearningltd@gmail.com` (`ADMIN`, `ACTIVE`) and `jamesanf@gmail.com` (`STUDENT`, `ACTIVE`).
+- Inspected Fox Mail’s authoritative internal API contract. It requires the Fox Mail `INTERNAL_API_TOKEN`; its production secret inventory currently does not contain that secret, and the endpoint still returns the interactive Cloudflare Access boundary to unauthenticated machine requests.
+- Re-ran `npm test`, `npm run build`, `npm run check`, `npm run test:browser` and `npm run test:production`; all passed.
+- Rechecked `/`, `/robots.txt`, `/sitemap.xml` and `/about`; public body hashes remain equal to the stored baseline, and `/learn` remains an Access redirect rather than public-site fall-through.
+
+**Outstanding human actions:** expose the existing Access-write-capable Learn credential so the Learn policy can replace `student.test@foxtutor.org` with `jamesanf@gmail.com`; configure Fox Mail’s existing machine-auth boundary and provide the required Learn Worker secret bindings without exposing values; then complete the three clean-profile Google browser checkpoints and one controlled Fox Mail send plus exact-key replay. No `phase-1-complete` tag or completion claim is permitted before those gates pass.

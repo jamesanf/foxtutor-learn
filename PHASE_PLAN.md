@@ -234,6 +234,12 @@ The dedicated Learn credential was verified against account `aeab9f48fa9716273d0
 
 Local tests, production smoke, D1 schema verification, route verification and clean unauthenticated Chromium verification passed. Phase 1 remains **not complete** until controlled authenticated admin/student/unknown browser flows and a controlled Fox Mail delivery/idempotency test are performed with the required test identities and mail credentials.
 
+## Phase 1.6 execution state — 2026-09-12
+
+Phase 1.6 has completed the safe reconciliation work available to the runtime without rebuilding Phase 1.5: the live Worker, D1, exact routes and Learn Access application were inspected; the production D1 student was changed from `student.test@foxtutor.org` to `jamesanf@gmail.com`; the final D1 role set is the unchanged admin plus the active James student; Fox Mail’s authoritative internal API and idempotency contract were inspected; and the complete local, build, Wrangler, browser-contract and production-smoke commands passed.
+
+The phase remains **blocked, not complete**. The exposed Cloudflare environment token cannot read or write the Learn Access application policy, so the policy still contains the temporary student identity and must be reconciled before browser acceptance. Fox Mail’s `INTERNAL_API_TOKEN` is not present in its production Worker secret inventory, and its internal endpoint still requires a non-interactive Access Service Auth path. Human-assisted Google sign-in and the controlled Fox Mail send/replay remain unperformed. No completion tag may be created.
+
 ---
 
 ## Phase 2 — Student administration, lessons, calendar, and core domain
