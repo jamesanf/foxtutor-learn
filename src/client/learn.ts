@@ -19,31 +19,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   }
   if (activeLink) activeLink.setAttribute("aria-current", "page");
 
-  document.querySelectorAll<HTMLFormElement>("[data-confirmation]").forEach((form) => {
-    const container = form.closest(".subscription-panel");
-    const confirmation = container?.querySelector<HTMLElement>("[data-confirmation-panel]");
-    const cancel = confirmation?.querySelector<HTMLButtonElement>("[data-confirm-cancel]");
-    const accept = confirmation?.querySelector<HTMLButtonElement>("[data-confirm-submit]");
-    if (!confirmation || !cancel || !accept) return;
-    form.addEventListener("submit", (event) => {
-      if (form.dataset.confirmed === "true") {
-        delete form.dataset.confirmed;
-        return;
-      }
-      event.preventDefault();
-      confirmation.hidden = false;
-      accept.focus();
-    });
-    cancel.addEventListener("click", () => {
-      confirmation.hidden = true;
-      form.querySelector<HTMLButtonElement>("button[type=submit]")?.focus();
-    });
-    accept.addEventListener("click", () => {
-      form.dataset.confirmed = "true";
-      form.requestSubmit();
-    });
-  });
-
   document.querySelectorAll(".copy-link").forEach((button) => {
     button.addEventListener("click", async () => {
       const targetId = button.getAttribute("data-copy-target");

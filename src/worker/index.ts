@@ -19,8 +19,10 @@ import {
   hasOverlappingLesson,
   insertLesson,
   countActiveStudents,
+  countPastLessons,
   countUpcomingLessons,
   listLessons,
+  listPastLessons,
   listUpcomingLessons,
   listLessonsForUserInRange,
   listLessonsInRange,
@@ -100,7 +102,7 @@ function escapeHtml(value: string): string {
 
 function navigation(role: Role): string {
   const links = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/students", "Students"], ["/learn/admin/lessons", "Lessons"]]
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"]];
   return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
 }
@@ -132,13 +134,13 @@ function calendarSubscriptionCard(
   statusMessage?: string
 ): string {
   const generated = feedUrl
-    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>Use this read-only feed in your calendar app.</span></div><div class="feed-link-row"><label class="sr-only" for="feed-link">Private calendar URL</label><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy link</button></div><div class="subscription-action-row"><form method="post" action="${action}" data-confirmation="true">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Regenerate link</button></form><p class="privacy-warning" role="note">Regenerating invalidates the existing link.</p></div><div class="inline-confirmation" data-confirmation-panel hidden role="alertdialog" aria-modal="true" aria-labelledby="regenerate-title" aria-describedby="regenerate-description"><strong id="regenerate-title">Regenerate calendar link?</strong><span id="regenerate-description">The current link will stop working.</span><div class="confirmation-actions"><button class="button secondary" type="button" data-confirm-cancel>Cancel</button><button class="button" type="button" data-confirm-submit>Regenerate</button></div></div></div>`
+    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>Use this read-only feed in Apple Calendar, Google Calendar, Outlook, or another iCalendar-compatible app.</span></div><div class="feed-link-row"><label class="sr-only" for="feed-link">Private calendar URL</label><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy</button></div><div class="subscription-action-row"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Regenerate calendar link</button></form><p class="privacy-warning" role="note">Regenerating replaces the existing calendar link.</p></div></div>`
     : "";
   const empty = !feedUrl && !feed
-    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>No calendar link has been generated yet.</span></div><div class="subscription-actions"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button" type="submit">Generate link</button></form></div></div>`
+    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>No calendar link has been generated yet.</span></div><div class="subscription-actions"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button" type="submit">Generate calendar link</button></form></div></div>`
     : "";
   const existing = !feedUrl && feed
-    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>An active link exists. Generate a new link to reveal a fresh URL.</span></div><div class="subscription-actions"><form method="post" action="${action}" data-confirmation="true">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Regenerate link</button></form></div><div class="inline-confirmation" data-confirmation-panel hidden role="alertdialog" aria-modal="true" aria-labelledby="regenerate-title" aria-describedby="regenerate-description"><strong id="regenerate-title">Regenerate calendar link?</strong><span id="regenerate-description">The current link will stop working.</span><div class="confirmation-actions"><button class="button secondary" type="button" data-confirm-cancel>Cancel</button><button class="button" type="button" data-confirm-submit>Regenerate</button></div></div></div>`
+    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>An active link exists. Regenerate it to reveal a fresh URL.</span></div><div class="subscription-actions"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Regenerate calendar link</button></form><p class="privacy-warning" role="note">Regenerating replaces the existing calendar link.</p></div></div>`
     : "";
   return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span>Calendar subscription</span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content">${statusMessage ? `<p class="form-success" role="status">${escapeHtml(statusMessage)}</p>` : ""}${generated}${empty}${existing}</div></details>`;
 }
@@ -195,26 +197,48 @@ function bookingDuration(lesson: Lesson): string {
   return `${minutes} minutes`;
 }
 
-function bookingRows(lessons: Lesson[]): string {
-  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>No upcoming bookings</h2><p>There are no scheduled lessons ahead.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
-  return `<div class="table-wrap bookings-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
+const LESSON_PAGE_SIZES = [12, 24, 48] as const;
+
+function parseLessonPagination(url: URL): { page: number; pageSize: number } {
+  const requestedSize = Number(url.searchParams.get("size"));
+  const pageSize = LESSON_PAGE_SIZES.includes(requestedSize as (typeof LESSON_PAGE_SIZES)[number]) ? requestedSize : 12;
+  const requestedPage = Number(url.searchParams.get("page"));
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  return { page, pageSize };
 }
 
-function bookingPagination(page: number, pageSize: number, total: number): string {
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  if (pageCount <= 1) return "";
-  const link = (nextPage: number, label: string, disabled = false) =>
-    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${label}</span>` : `<a class="pagination-link" href="/learn/admin/bookings?page=${nextPage}&size=${pageSize}">${label}</a>`;
-  const pages = Array.from({ length: pageCount }, (_, index) => index + 1).map((number) =>
-    number === page
+function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, emptyAction?: string): string {
+  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? `<a class="button" href="/learn/admin/lessons/new">${escapeHtml(emptyAction)}</a>` : ""}</div>`;
+  return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function paginationPageNumbers(page: number, pageCount: number, path: string, pageSize: number): string {
+  const numbers = pageCount <= 7
+    ? Array.from({ length: pageCount }, (_, index) => index + 1)
+    : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
+  const output: string[] = [];
+  let previous = 0;
+  for (const number of numbers) {
+    if (number - previous > 1) output.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
+    output.push(number === page
       ? `<span class="pagination-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link" href="/learn/admin/bookings?page=${number}&size=${pageSize}">${number}</a>`
-  );
-  return `<nav class="pagination" aria-label="Bookings pagination">${link(page - 1, "Previous", page <= 1)}<span class="pagination-pages">${pages.join("")}</span>${link(page + 1, "Next", page >= pageCount)}</nav>`;
+      : `<a class="pagination-link" href="${path}?page=${number}&size=${pageSize}">${number}</a>`);
+    previous = number;
+  }
+  return output.join("");
 }
 
-function pageSizeControl(pageSize: number): string {
-  return `<div class="page-size-control" aria-label="Bookings per page"><span>Rows</span>${[12, 24, 48].map((size) => size === pageSize ? `<span class="page-size is-current" aria-current="true">${size}</span>` : `<a class="page-size" href="/learn/admin/bookings?page=1&size=${size}">${size}</a>`).join("")}</div>`;
+function lessonPagination(page: number, pageSize: number, total: number, path: string, label: string): string {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const first = total ? (page - 1) * pageSize + 1 : 0;
+  const last = total ? Math.min(page * pageSize, total) : 0;
+  const link = (nextPage: number, text: string, disabled: boolean) =>
+    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link" href="${path}?page=${nextPage}&size=${pageSize}">${text}</a>`;
+  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? paginationPageNumbers(page, pageCount, path, pageSize) : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="${label.toLowerCase().replaceAll(" ", "-")}-page-size">Show per page</label><select id="${label.toLowerCase().replaceAll(" ", "-")}-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${LESSON_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+}
+
+function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; eyebrow: string; title: string; subtitle: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
+  return `<div class="page-heading"><div><p class="eyebrow">${escapeHtml(options.eyebrow)}</p><h1>${escapeHtml(options.title)}</h1><p class="lede">${escapeHtml(options.subtitle)}</p></div>${options.emptyAction ? buttonLink("/learn/admin/lessons/new", "Add lesson") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -364,20 +388,25 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       now
     });
     const lessons = await listLessons(db);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Link generated.")}</div>`);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Calendar link generated.")}</div>`);
   }
   if (route === "admin-bookings") {
-    const allowedPageSizes = [12, 24, 48];
-    const requestedSize = Number(url.searchParams.get("size"));
-    const pageSize = allowedPageSizes.includes(requestedSize) ? requestedSize : 12;
-    const requestedPage = Number(url.searchParams.get("page"));
-    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const { page, pageSize } = parseLessonPagination(url);
     const now = new Date().toISOString();
     const total = await countUpcomingLessons(db, now);
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
     const bookings = await listUpcomingLessons(db, now, pageSize, (safePage - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Bookings", `<div class="page-heading"><div><p class="eyebrow">UPCOMING SCHEDULE</p><h1>Bookings</h1><p class="lede">Upcoming scheduled lessons, earliest first.</p></div></div><div class="list-toolbar">${pageSizeControl(pageSize)}${total ? `<span class="result-count">${total} upcoming ${total === 1 ? "booking" : "bookings"}</span>` : ""}</div>${bookingRows(bookings)}${bookingPagination(safePage, pageSize, total)}`);
+    return appPage(active.user, csrfToken, "Bookings", lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", eyebrow: "UPCOMING SCHEDULE", title: "Bookings", subtitle: "Upcoming lessons", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" }));
+  }
+  if (route === "admin-lessons") {
+    const { page, pageSize } = parseLessonPagination(url);
+    const now = new Date().toISOString();
+    const total = await countPastLessons(db, now);
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, pageCount);
+    const lessons = await listPastLessons(db, now, pageSize, (safePage - 1) * pageSize);
+    return appPage(active.user, csrfToken, "Past Lessons", lessonList(lessons, total, safePage, pageSize, { path: "/learn/admin/lessons", label: "Past Lessons", eyebrow: "LESSON HISTORY", title: "Past Lessons", subtitle: "Lesson history", emptyHeading: "No past lessons", emptyCopy: "Completed and historical lessons will appear here." }));
   }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
@@ -422,9 +451,6 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (account.id !== student.learn_user_id && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
     await updateStudent(db, { id: student.id, name, email, learnUserId: account.id, now: new Date().toISOString() });
     return redirect(`/learn/admin/students/${encodeURIComponent(student.id)}`);
-  }
-  if (route === "admin-lessons") {
-    return appPage(active.user, csrfToken, "Lessons", `<div class="page-heading"><div><p class="eyebrow">LESSON MANAGEMENT</p><h1>Lessons</h1></div>${buttonLink("/learn/admin/lessons/new", "Create lesson")}</div>${lessonTable(await listLessons(db), "/learn/admin/lessons", true)}`);
   }
   if (route === "admin-lesson-form") {
     const students = await listStudents(db);
@@ -519,7 +545,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       now
     });
     const lessons = await listLessonsForUser(db, active.user.id);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Link generated.")}</div>`);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Calendar link generated.")}</div>`);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);

@@ -34,7 +34,7 @@ export async function listUpcomingLessons(
     .prepare(
       `SELECT ${lessonColumns}, s.name AS student_name
        FROM lessons l JOIN students s ON s.id = l.student_id
-       WHERE l.status = 'scheduled' AND l.start_at >= ?
+       WHERE l.status = 'scheduled' AND l.start_at > ?
        ORDER BY l.start_at ASC, l.id ASC
        LIMIT ? OFFSET ?`
     )
@@ -45,7 +45,34 @@ export async function listUpcomingLessons(
 
 export async function countUpcomingLessons(db: D1Database, now: string): Promise<number> {
   const result = await db
-    .prepare("SELECT COUNT(*) AS count FROM lessons WHERE status = 'scheduled' AND start_at >= ?")
+    .prepare("SELECT COUNT(*) AS count FROM lessons WHERE status = 'scheduled' AND start_at > ?")
+    .bind(now)
+    .first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
+export async function listPastLessons(
+  db: D1Database,
+  now: string,
+  limit: number,
+  offset: number
+): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${lessonColumns}, s.name AS student_name
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       WHERE l.status != 'scheduled' OR l.start_at <= ?
+       ORDER BY l.start_at DESC, l.id DESC
+       LIMIT ? OFFSET ?`
+    )
+    .bind(now, limit, offset)
+    .all<Lesson>();
+  return result.results;
+}
+
+export async function countPastLessons(db: D1Database, now: string): Promise<number> {
+  const result = await db
+    .prepare("SELECT COUNT(*) AS count FROM lessons WHERE status != 'scheduled' OR start_at <= ?")
     .bind(now)
     .first<{ count: number | string }>();
   return Number(result?.count ?? 0);

@@ -465,6 +465,27 @@ Phase 2.11 is deployed from commit `4b099f8` as Worker version `8f157d02-a729-48
 
 Phase 2.11 is complete only when local full-suite/build/check/browser/production gates pass, real Chrome visual contracts and screenshots are recorded, production deployment and authenticated admin/student browser acceptance pass, feed/security/ownership/public regressions pass, documentation matches the deployed Worker, `main` is clean and pushed, and only then is `phase-2.11-complete` created.
 
+## Phase 2.12 — Final tutoring workflow refinement
+
+### Objective
+
+Make the remaining lesson workflows immediately understandable without reopening the accepted calendar sizing design. Bookings is the upcoming scheduled list; Past Lessons is the historical list; both use one conventional server-side list, pagination and page-size model. Calendar subscription generation and regeneration are one-click actions.
+
+### Required outcomes
+
+- Admin navigation reads Dashboard, Calendar, Bookings, Past Lessons, Students.
+- Bookings remains `/learn/admin/bookings`, filters scheduled lessons with `start_at > now`, and orders earliest first.
+- Past Lessons remains `/learn/admin/lessons`, filters all non-upcoming lesson history, and orders newest first.
+- Both lists share presentation, status/action rows, result count, accessible Previous/Next navigation and a bottom `Show per page` select with exactly 12/24/48.
+- Invalid page/size parameters are safe, page-size changes reset to page 1, and the browser never receives the full history.
+- Calendar subscription generation/regeneration performs the secure existing POST flow immediately, invalidates the old token, displays the new link and has no confirmation UI or duplicate action.
+- Existing authorization, ownership, feed, D1, Access, student and public-site boundaries remain unchanged.
+- Documentation, tests, deployment evidence and production verification are reconciled.
+
+### Exit criteria
+
+Phase 2.12 is complete only after local tests/build/checks, focused list/query/subscription tests, browser review at desktop/tablet/mobile widths, production deployment, authenticated production verification, feed invalidation verification, security/public regression, clean working tree, pushed release commit, and the `phase-2.12-complete` tag are all complete. The calendar receives regression checks only; no broad sizing or visual redesign is permitted.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective

@@ -43,8 +43,8 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain("STANDARD_LESSON_DURATION_MINUTES");
     expect(workerSource).toContain('name="startTime"');
     expect(workerSource).toContain('name="lessonDate"');
-    expect(workerSource).toContain("data-confirmation");
-    expect(workerSource).not.toContain("data-confirm=");
+    expect(workerSource).not.toContain("data-confirmation");
+    expect(workerSource).not.toContain("data-confirm-submit");
     expect(workerSource).toContain("/learn/admin/bookings");
     expect(workerSource).toContain("listUpcomingLessons");
     expect(cssSource).toContain(".table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td");
@@ -62,17 +62,21 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain("totalMinutes");
   });
 
-  it("renders visible inline navigation icons and an application confirmation surface", () => {
+  it("renders visible inline navigation icons and a one-click subscription action", () => {
     expect(clientSource).toContain("setCalendarNavigationIcon");
     expect(clientSource).toContain('createElementNS(svgNamespace, "svg")');
     expect(clientSource).toContain("calendar-nav-icon");
-    expect(workerSource).toContain('role="alertdialog"');
-    expect(workerSource).toContain('aria-modal="true"');
     expect(workerSource).toContain("subscription-panel");
     expect(workerSource).toContain("subscription-action-row");
     expect(cssSource).toContain(".subscription-content { display: grid");
     expect(cssSource).toContain(".subscription-action-row { display: grid");
-    expect(cssSource).toContain(".subscription-card [hidden] { display: none !important; }");
+    expect(workerSource).toContain("Apple Calendar");
+    expect(workerSource).toContain("Google Calendar");
+    expect(workerSource).toContain("Outlook");
+    expect(workerSource).toContain("Calendar link generated.");
+    expect(workerSource).toContain("Calendar link regenerated.");
+    expect(workerSource).not.toContain("Regenerate link");
+    expect(workerSource).not.toContain("Generate link");
   });
 
   it("keeps event labels concise and renders a single admin bookings destination", () => {
@@ -80,6 +84,9 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain("lesson-event-title");
     expect(clientSource).toContain("lesson-event-time");
     expect(workerSource).toContain('["/learn/admin/bookings", "Bookings"]');
+    expect(workerSource).toContain('["/learn/admin/lessons", "Past Lessons"]');
+    expect(workerSource).not.toContain('["/learn/admin/lessons", "Lessons"]');
+    expect(workerSource).not.toContain(">Rows<");
   });
 
   it("keeps every lesson status above the normal-text contrast threshold", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countUpcomingLessons, listUpcomingLessons } from "../../src/db/lessons";
+import { countPastLessons, countUpcomingLessons, listPastLessons, listUpcomingLessons } from "../../src/db/lessons";
 
 function mockDb(results: unknown[], count = 0): D1Database {
   let query = "";
@@ -32,7 +32,7 @@ describe("upcoming bookings queries", () => {
     await expect(listUpcomingLessons(db, "2026-09-12T21:00:00.000Z", 12, 24)).resolves.toEqual([{ id: "lesson-a" }]);
     const inspected = db as D1Database & { query: string; bindings: unknown[] };
     expect(inspected.query).toContain("l.status = 'scheduled'");
-    expect(inspected.query).toContain("l.start_at >= ?");
+    expect(inspected.query).toContain("l.start_at > ?");
     expect(inspected.query).toContain("ORDER BY l.start_at ASC, l.id ASC");
     expect(inspected.query).toContain("LIMIT ? OFFSET ?");
     expect(inspected.bindings).toEqual(["2026-09-12T21:00:00.000Z", 12, 24]);
@@ -44,6 +44,24 @@ describe("upcoming bookings queries", () => {
     const inspected = db as D1Database & { query: string; bindings: unknown[] };
     expect(inspected.query).toContain("COUNT(*)");
     expect(inspected.query).toContain("status = 'scheduled'");
+    expect(inspected.bindings).toEqual(["2026-09-12T21:00:00.000Z"]);
+  });
+
+  it("lists historical lessons newest first without future scheduled lessons", async () => {
+    const db = mockDb([{ id: "lesson-past" }]);
+    await expect(listPastLessons(db, "2026-09-12T21:00:00.000Z", 12, 24)).resolves.toEqual([{ id: "lesson-past" }]);
+    const inspected = db as D1Database & { query: string; bindings: unknown[] };
+    expect(inspected.query).toContain("l.status != 'scheduled' OR l.start_at <= ?");
+    expect(inspected.query).toContain("ORDER BY l.start_at DESC, l.id DESC");
+    expect(inspected.query).toContain("LIMIT ? OFFSET ?");
+    expect(inspected.bindings).toEqual(["2026-09-12T21:00:00.000Z", 12, 24]);
+  });
+
+  it("counts historical lessons using the same non-upcoming boundary", async () => {
+    const db = mockDb([], 37);
+    await expect(countPastLessons(db, "2026-09-12T21:00:00.000Z")).resolves.toBe(37);
+    const inspected = db as D1Database & { query: string; bindings: unknown[] };
+    expect(inspected.query).toContain("status != 'scheduled' OR start_at <= ?");
     expect(inspected.bindings).toEqual(["2026-09-12T21:00:00.000Z"]);
   });
 });
