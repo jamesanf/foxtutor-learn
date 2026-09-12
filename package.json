@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "tsc --noEmit && npm run build:client",
+    "build:client": "esbuild src/client/learn.ts --bundle --minify --outfile=public/learn.js",
     "check": "npm run build && npx wrangler deploy --dry-run",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
@@ -13,14 +14,19 @@
     "test:browser": "node scripts/verify-browser.mjs",
     "test:production": "node scripts/smoke-production.mjs",
     "dev": "npx wrangler dev --config wrangler.local.jsonc",
-    "deploy": "npx wrangler deploy --message \"Phase 2.6 calendar subscription UX remediation\""
+    "deploy": "npx wrangler deploy --message \"Phase 2.7 month-first calendar UX\""
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260905.1",
     "@types/node": "^22.14.0",
+    "esbuild": "0.28.2",
     "happy-dom": "^20.14.0",
     "typescript": "^5.9.2",
     "vitest": "^4.1.11",
     "wrangler": "^4.39.0"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "6.1.21",
+    "@fullcalendar/daygrid": "6.1.21"
   }
 }

@@ -347,6 +347,28 @@ Complete. Both admin and student calendar pages render the calendar before a nat
 
 The live calendar feels restrained and professional, the subscription remains a secondary optional utility, all Phase 2 security and feed regressions pass, documentation describes reality, `main` is clean and pushed, `phase-2.5-complete` remains intact, and `phase-2.6-complete` is created. Phase 2 is complete and Phase 3 is the next deferred feature-development phase.
 
+## Phase 2.7 — Calendar UX replacement and final Phase 2 sign-off
+
+### Objective
+
+Replace the bespoke week-first calendar presentation with a polished Month-first calendar using a mature open-source dependency where appropriate, retain an optional Week view, preserve the existing lesson/feed/security architecture, and perform definitive final Phase 2 acceptance. This remediation became necessary after the Phase 2.6 UX review found that subscription hierarchy had improved while the core calendar still felt too bespoke and week-centric.
+
+### Must achieve
+
+- Evaluate FullCalendar Standard and compatible alternatives against package size, browser support, TypeScript, server-rendered integration, local Worker asset bundling, responsive behavior, accessibility, timezone behavior, licensing and maintenance.
+- Use only locally bundled, MIT-licensed Standard functionality; do not use Premium/Scheduler packages, CDN assets, hosted services or a client-side framework.
+- Make Month the default view on both admin and student calendar routes and keep Week as the only secondary view.
+- Provide one integrated Previous/Today/Next/title/Month/Week toolbar with no duplicate navigation header.
+- Remove repeated per-day Add lesson controls and empty-day action clutter while keeping the canonical admin lesson creation action and lesson links.
+- Pass only already-authorized, minimal lesson event data to the browser; preserve server-side ownership and the existing UTC/IANA timezone model.
+- Keep the subscription utility below the calendar and collapsed by default.
+- Update README after dependency assessment, implementation, deployment and browser acceptance; add architecture and testing records.
+- Run the full automated, browser, production, privacy, feed, Access, responsive and cleanup gates before creating `phase-2.7-complete`.
+
+### Exit criteria
+
+The live admin and student calendars open to a polished current Month view, Week switching and navigation work, lesson clicks and admin creation remain canonical, student ownership is intact, the calendar is usable at desktop/tablet/mobile widths, accessibility and timezone checks pass, the feed and Access boundaries are unchanged, documentation agrees, production matches the repository, `main` is clean and pushed, `phase-2.5-complete` and `phase-2.6-complete` remain intact, and only then is `phase-2.7-complete` created. Phase 2 may be marked COMPLETE only at that point.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective

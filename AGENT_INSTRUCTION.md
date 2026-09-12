@@ -15,7 +15,7 @@ Checkpoint sections below may retain the wording and blockers that were true at 
 - An agent may not declare a phase complete merely because its master pass ended.
 - Completion requires documented acceptance criteria, passing test evidence, deployment evidence where applicable, a clean tree, and the required commit/tag/push record.
 
-Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, Phase 2.4 implemented private iCalendar subscriptions, Phase 2.5 completed the initial production deployment and calendar acceptance, and Phase 2.6 completed the final remediation, documentation reconciliation and definitive Phase 2 sign-off pass. Do not describe the deployed calendar implementation as local-only. Do not reopen Phase 2 for optional calendar enhancements; only an actual regression should do so. Phase 3 is the next feature-development phase.
+Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, Phase 2.4 implemented private iCalendar subscriptions, Phase 2.5 completed the initial production deployment and calendar acceptance, Phase 2.6 improved subscription hierarchy, and Phase 2.7 exists because the underlying week-first calendar UX remained insufficient. Phase 2.7 is a Month-first replacement with Week as a secondary view, using a mature local dependency where appropriate. Do not reintroduce a hand-built scheduler without a compelling architectural reason, do not use FullCalendar Premium features or CDN assets, and do not sign off Phase 2 until the actual calendar UX, security, responsive behavior and production state are accepted.
 
 ## Mandatory first action
 
@@ -24,7 +24,7 @@ Before modifying anything, read in this order:
 1. `README.md`
 2. `AGENT_INSTRUCTION.md`
 3. `CHANGELOG.md`
-4. the current phase document in `docs/phases/`
+4. the current phase document in `PHASE_PLAN.md` or the applicable `docs/` phase record
 5. relevant architecture/security/data-model documents
 6. current git status and recent commit history
 
@@ -438,3 +438,7 @@ the completed Phase 2 scope.
 ## Phase 2.6 current state
 
 Phase 2.6 is complete and tagged `phase-2.6-complete`. The calendar subscription utility is intentionally collapsed by default and secondary to the calendar on both admin and student routes. Future agents must read the repository documentation before every phase and update `README.md` after every material pass. Phase 2 must not be reopened for optional calendar features; Phase 3 is next unless an actual regression is demonstrated.
+
+## Phase 2.7 current state
+
+Phase 2.7 is in progress because the prior week-first calendar remained too bespoke for the tutoring use case. Month is the intended default and Week is secondary. FullCalendar Standard `6.1.21` is bundled locally with only the MIT-licensed core and day-grid packages; no premium features, hosted assets or SPA framework are permitted. The existing lessons table, server-side authorization, UTC/IANA timezone model, canonical lesson routes, feed system, Access boundary and collapsed secondary subscription utility remain authoritative. Future agents must read documentation before every phase, update `README.md` after every material pass, and close Phase 2 only after the real calendar UX is acceptable.

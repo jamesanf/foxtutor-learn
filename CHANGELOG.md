@@ -2,6 +2,27 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-12 — Phase 2.7 deployment pass
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Deployed the Month-first FullCalendar Standard replacement as Worker `db13557c3-ffc2-43d2-a4e5-1f12e21eb44d` with the existing `foxtutor.org/learn` routes.
+- Live checks confirmed admin/student calendar paths remain behind the existing Access application, invalid feed requests retain generic private `404` behavior, and the public homepage, robots and sitemap remain unaffected.
+- No D1 migration, feed serializer, token model, Access policy or public-site code changed. The previous Worker `12109e60-3f5a-4bc2-8b89-8eefc7586249` remains the rollback target.
+- Fresh authenticated Chromium acceptance, cross-student privacy, timezone/feed regression, responsive/accessibility evidence, controlled cleanup and the completion tag remain open.
+
+### 2026-09-12 — Phase 2.7 calendar UX replacement
+
+**Status:** local implementation complete; production deployment and final Phase 2 acceptance pending
+
+- Reopened calendar UX remediation because Phase 2.6 improved subscription hierarchy but the core calendar remained bespoke, week-first and cluttered with repeated per-day actions.
+- Evaluated the existing renderer, FullCalendar Standard, framework wrappers and Premium/Scheduler options against the Worker architecture, browser bundle, responsive behavior, accessibility, timezone model, licensing and five-year maintenance goal.
+- Selected and pinned the compatible MIT-licensed Standard packages `@fullcalendar/core@6.1.21` and `@fullcalendar/daygrid@6.1.21`; no Premium package, license key, CDN, hosted service or SPA framework was introduced. The registry's incompatible `@fullcalendar/core@7.1.0` package was not mixed with unavailable v7 view plugins.
+- Replaced the server-rendered bespoke week grid with a server-authorized event projection and bundled vanilla FullCalendar enhancement. Month is the default; Week is secondary; the single toolbar owns Previous, Today, Next, title and view switching.
+- Removed repeated per-day Add lesson links and empty-day action surfaces. Admin retains one canonical Add lesson action, event clicks retain canonical role-specific lesson routes, and students remain read-only.
+- Preserved the lessons table, ownership queries, UTC/IANA timezone model, feed system, Access boundary and collapsed secondary subscription utility.
+- Local gates pass: `npm test`, `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check`. Fresh authenticated production browser acceptance, deployment, feed/privacy regression, cleanup, final documentation reconciliation and `phase-2.7-complete` remain open.
+
 ### 2026-09-12 — Production acceptance and definitive Phase 2 sign-off
 
 **Status:** complete; Phase 2 closed

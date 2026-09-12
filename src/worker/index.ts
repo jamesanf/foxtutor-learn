@@ -34,13 +34,7 @@ import {
 } from "../db/calendar-feeds";
 import {
   CALENDAR_TIMEZONE,
-  calendarDateLabel,
-  calendarPeriod,
-  calendarPeriodLabel,
-  lessonCalendarDate,
-  nextCalendarWeek,
-  previousCalendarWeek,
-  type CalendarPeriod
+  currentCalendarDate
 } from "../domain/calendar";
 import {
   canTransitionLessonStatus,
@@ -154,40 +148,23 @@ function formatCalendarLessonTime(lesson: Lesson): string {
   return `${formatter.format(new Date(lesson.start_at))} - ${formatter.format(new Date(lesson.end_at))} (${lesson.timezone})`;
 }
 
-function calendarQuery(periodDate: string): string {
-  return `?week=${encodeURIComponent(periodDate)}`;
-}
-
-function calendarLessonCard(lesson: Lesson, basePath: string, showStudent: boolean): string {
-  const student = showStudent ? `<strong>${escapeHtml(lesson.student_name ?? "Student")}</strong>` : "";
-  const label = `${showStudent ? `${lesson.student_name ?? "Student"}, ` : ""}${formatCalendarLessonTime(lesson)}, ${statusLabel(lesson.status)}`;
-  return `<a class="calendar-lesson status-${lesson.status}" href="${basePath}/${encodeURIComponent(lesson.id)}" aria-label="${escapeHtml(label)}">${student}<span>${escapeHtml(formatCalendarLessonTime(lesson))}</span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`;
-}
-
-function calendarView(
-  period: CalendarPeriod,
-  lessons: Lesson[],
-  role: Role
-): string {
+function calendarView(lessons: Lesson[], role: Role): string {
   const basePath = role === "ADMIN" ? "/learn/admin/lessons" : "/learn/student/lessons";
   const showStudent = role === "ADMIN";
-  const lessonGroups = new Map<string, Lesson[]>();
-  for (const date of period.dates) lessonGroups.set(date, []);
-  for (const lesson of lessons) {
-    const date = lessonCalendarDate(lesson.start_at, period.timezone);
-    lessonGroups.get(date)?.push(lesson);
-  }
-  const days = period.dates.map((date) => {
-    const dayLessons = lessonGroups.get(date) ?? [];
-    const createLink = role === "ADMIN"
-      ? `<a class="calendar-add" href="/learn/admin/lessons/new?date=${encodeURIComponent(date)}&startAt=${encodeURIComponent(`${date}T09:00`)}&endAt=${encodeURIComponent(`${date}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}">Add lesson</a>`
-      : "";
-    return `<section class="calendar-day" aria-labelledby="calendar-day-${date}"><div class="calendar-day-heading"><h2 id="calendar-day-${date}">${escapeHtml(calendarDateLabel(date, period.timezone))}</h2>${createLink}</div><div class="calendar-lessons">${dayLessons.length ? dayLessons.map((lesson) => calendarLessonCard(lesson, basePath, showStudent)).join("") : `<p class="calendar-empty">No lessons</p>`}</div></section>`;
-  }).join("");
-  const previous = calendarQuery(previousCalendarWeek(period));
-  const next = calendarQuery(nextCalendarWeek(period));
-  const today = calendarQuery(calendarPeriod(null, period.timezone).startDate);
-  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div class="calendar-toolbar"><div class="calendar-navigation" aria-label="Calendar navigation"><a class="button secondary" href="${previous}">Previous</a><a class="button secondary" href="${today}">Today</a><a class="button secondary" href="${next}">Next</a></div><p class="calendar-period" aria-live="polite">${escapeHtml(calendarPeriodLabel(period))}</p></div><p class="calendar-help">Week shown in ${escapeHtml(period.timezone)}. Each lesson time is displayed in its stored lesson timezone. Status is shown by text and badge.</p><div class="calendar-week">${days}</div></section>`;
+  const events = lessons.map((lesson) => {
+    const displayTime = formatCalendarLessonTime(lesson);
+    const title = `${showStudent ? `${lesson.student_name ?? "Student"} · ` : ""}${displayTime} · ${statusLabel(lesson.status)}`;
+    return {
+      id: lesson.id,
+      title,
+      start: lesson.start_at,
+      end: lesson.end_at,
+      url: `${basePath}/${encodeURIComponent(lesson.id)}`,
+      classNames: [`lesson-status-${lesson.status}`],
+      extendedProps: { timezone: lesson.timezone, status: lesson.status }
+    };
+  });
+  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div><p class="calendar-note">Times are positioned in ${escapeHtml(CALENDAR_TIMEZONE)}. Each lesson keeps its stored timezone in the event label.</p></section>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -284,7 +261,7 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
 }
 
 function adminDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/calendar"><h2>Calendar</h2><p>See the current tutoring week, open lessons and create a lesson from a day.</p></a><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
+  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/calendar"><h2>Calendar</h2><p>See this month's tutoring lessons, with an optional detailed week view.</p></a><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -293,9 +270,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken);
   if (route === "admin-calendar") {
-    const period = calendarPeriod(url.searchParams.get("week"));
-    const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarView(period, lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "ADMIN")}`);
+    const lessons = await listLessons(db);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">See your tutoring lessons by month, with a detailed week view when you need it.</p></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "ADMIN")}`);
   }
   if (route === "admin-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -309,9 +285,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       tokenLast4: feedTokenLast4(token),
       now
     });
-    const period = calendarPeriod(url.searchParams.get("week"));
-    const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarView(period, lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "ADMIN")}`);
+    const lessons = await listLessons(db);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">See your tutoring lessons by month, with a detailed week view when you need it.</p></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "ADMIN")}`);
   }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
@@ -413,7 +388,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
 }
 
 function studentDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>Calendar</h2><p>View your lessons by week and open a lesson for its details.</p>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
+  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>Calendar</h2><p>View this month's lessons and switch to Week when you need more detail.</p>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
 }
 
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -423,9 +398,8 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
   if (route === "student-calendar") {
-    const period = calendarPeriod(new URL(request.url).searchParams.get("week"));
-    const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(period, lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "STUDENT")}`);
+    const lessons = await listLessonsForUser(db, active.user.id);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined, "STUDENT")}`);
   }
   if (route === "student-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -441,9 +415,8 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       tokenLast4: feedTokenLast4(token),
       now
     });
-    const period = calendarPeriod(url.searchParams.get("week"));
-    const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(period, lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "STUDENT")}`);
+    const lessons = await listLessonsForUser(db, active.user.id);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), "STUDENT")}`);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);
