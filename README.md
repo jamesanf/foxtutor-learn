@@ -4,12 +4,12 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** 1.4 production activation preflight attempted; blocked because the intended Access-capable credential is not exposed to this runtime
+**Phase:** 1.4 production activation rechecked; blocked because the intended Access-capable credential is not exposed to this runtime
 **Production URL:** `https://foxtutor.org/learn` (route not activated)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
 **Latest local state:** Worker, branded shell, role model, session foundation, fresh local D1 migration, corrected Fox Mail adapter, tests and public regression evidence are implemented
 
-Phase 1 is not declared complete until Cloudflare Access, Google identity, D1, the narrow route, deployment and post-deployment smoke evidence all pass. The 2026-09-12 Phase 1.4 preflight performed no production mutation because the runtime still supplied the previously blocked API-token credential.
+Phase 1 is not declared complete until Cloudflare Access, Google identity, D1, the narrow route, deployment and post-deployment smoke evidence all pass. The 2026-09-12 Phase 1.4 recheck performed no production mutation because the runtime still supplied the previously blocked user API-token credential rather than the stated account token.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ There is no public registration and no application password subsystem. Only Acce
 
 ## Known limitations
 
-- The runtime does not currently expose the intended Access-write-capable `foxtutor build token`; the supplied API token remains unable to perform the required D1, route, R2, Worker deployment and Access writes.
+- The runtime does not currently expose the intended Access-write-capable `foxtutor build token`; the supplied user API token remains unable to perform the required D1, route, R2, Worker deployment and Access writes.
 - The existing Wrangler OAuth session can provisionally authorize Worker scripts, D1 and Workers Routes operations, but it has no effective Zero Trust Access application, identity-provider or policy write permission and must not be used to bypass the required credential gate.
 - The account currently has four other Workers, two unrelated D1 databases, two R2 buckets, no `foxtutor-learn` Worker, no Workers Routes, no `foxtutor-learn` D1 database, and no Access applications, identity providers or policies.
 - The remaining human blocker is exposing an existing credential with Access application, identity-provider and policy write permissions. Production D1 migration, route creation, Access configuration, deployment and authenticated browser evidence remain intentionally pending.

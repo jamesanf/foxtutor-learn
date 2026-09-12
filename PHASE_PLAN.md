@@ -222,6 +222,12 @@ Phase 1.3 reconciled all Cloudflare authentication mechanisms exposed to the run
 
 The OAuth-backed inventory is now known: the account has four existing Workers but no `foxtutor-learn` Worker, two unrelated D1 databases but no `foxtutor-learn` database, zero Workers Routes, two R2 buckets, and empty Access application, identity-provider and policy collections. Access application and identity-provider writes return HTTP 403 with `auth.forbidden` error `1010` for the OAuth session. Phase 1 remains **not complete** and has a genuine human blocker limited to an existing Access-write-capable credential or equivalent authenticated mechanism. No production resource, route, Access configuration, DNS record or mail delivery was changed.
 
+## Phase 1.4 execution state — 2026-09-12
+
+The production activation recheck confirmed that the runtime still exposes the previously blocked user API token rather than the stated Access-write-capable account token. Account, zone, Worker and Access collection reads pass, but D1, Workers Routes, R2 and Worker deployment requests remain authentication-blocked; Access application, identity-provider and policy write validations remain forbidden with HTTP 403, `auth.forbidden`, error 1010. The existing Wrangler OAuth session can validate Worker, D1 and route operations but still lacks Access writes.
+
+The local suite passes after hardening malformed cookie parsing, and the current public homepage, `robots.txt` and `sitemap.xml` hashes match the stored baseline. No production resource, route, Access configuration, DNS record, mail delivery or public-site deployment was changed. Phase 1 remains **blocked, not complete**.
+
 ---
 
 ## Phase 2 — Student administration, lessons, calendar, and core domain

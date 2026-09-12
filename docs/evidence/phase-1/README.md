@@ -36,3 +36,9 @@ Access-write-capable credential is still not exposed to the Learn terminal.
 The exact capability results and the unmodified public-site/pre-activation
 state are recorded in `phase-1.4-credential-check.txt`. No production
 mutation was attempted after the failure.
+
+The subsequent recheck again identified `CLOUDFLARE_API_TOKEN` as a User API
+Token rather than the expected account-token format. The local suite passed
+with 12 tests after malformed cookie parsing was hardened, and live public
+homepage, robots and sitemap hashes still match the baseline. Production
+activation remains blocked by the missing Access write capability.

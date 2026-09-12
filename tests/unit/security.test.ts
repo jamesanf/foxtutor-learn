@@ -13,4 +13,8 @@ describe("private security defaults", () => {
     const request = { headers: { get: (name: string) => name.toLowerCase() === "cookie" ? "a=1; b=two" : null } } as Request;
     expect(parseCookies(request)).toEqual({ a: "1", b: "two" });
   });
+  it("ignores malformed cookie values instead of throwing", () => {
+    const request = { headers: { get: (name: string) => name.toLowerCase() === "cookie" ? "learn_session=%; valid=ok" : null } } as Request;
+    expect(parseCookies(request)).toEqual({ valid: "ok" });
+  });
 });

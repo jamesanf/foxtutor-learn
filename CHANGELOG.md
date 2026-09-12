@@ -149,3 +149,34 @@ Rechecked the public homepage, robots, sitemap, representative content route and
 **Production result:** no Worker, D1 database, route, Access resource, DNS record, mail message or public-site resource was created or changed.
 
 **Evidence:** `docs/evidence/phase-1/phase-1.4-credential-check.txt`.
+
+### 2026-09-12 — Runtime capability recheck and malformed-cookie hardening
+
+**Status:** blocked; production remains unactivated
+
+**Implementation/evidence:**
+
+- Re-ran the account capability matrix with the credential exposed to this
+  terminal. Wrangler still identifies it as the blocked User API Token rather
+  than the intended Access-write-capable account token.
+- Confirmed account, zone, Worker and Access reads, while D1, Workers Routes,
+  R2, Worker deployment and Access application/identity-provider/policy writes
+  remain blocked with the previously recorded HTTP 401/403 errors.
+- Confirmed the existing Wrangler OAuth session can dry-run the Worker and
+  inventory unrelated D1 databases but cannot write Access configuration.
+- Hardened malformed cookie parsing so invalid percent-encoding fails closed
+  without throwing before application authorization.
+- Rechecked the public homepage, `robots.txt` and `sitemap.xml`; current body
+  hashes match the stored baseline.
+
+**Tests:** `npm test` (6 files, 12 tests), `npm run build`, `npm run check`,
+`npm run test:browser`, `npm run test:production` (expected private-route
+failure while production is inactive), direct public hash comparison.
+
+**Deployment:** none. No production Worker, D1, route, Access resource, mail
+message, DNS record or public-site resource was changed.
+
+**Handover:** expose the existing `foxtutor build token` through
+`CLOUDFLARE_API_TOKEN` or another authorized runtime path. Do not create,
+rotate, replace or record a new token. See
+`docs/evidence/phase-1/phase-1.4-credential-check.txt`.
