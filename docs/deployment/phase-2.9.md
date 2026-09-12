@@ -1,7 +1,7 @@
 # Phase 2.9 deployment and release record
 
 Date: 2026-09-12  
-Status: local implementation in progress; deployment and authenticated browser acceptance pending
+Status: deployed; authenticated browser acceptance pending
 
 ## Release scope
 
@@ -40,4 +40,15 @@ Version: 999b4239-49f2-4bc3-9dfd-a2bb29d46637
 Deployment message: Phase 2.8 calendar and lesson UX refinement
 ```
 
-The Phase 2.9 changes are not yet deployed in this record. Chromium is unavailable to the current runtime, so authenticated visual acceptance cannot be claimed locally or in production.
+The Phase 2.9 Worker was deployed successfully:
+
+```text
+Worker: foxtutor-learn
+Version: a844a418-b858-4a8c-a348-25a91df964d2
+Deployment timestamp: 2026-09-12T21:04:41Z
+Deployment message: Phase 2.9 UI composition and lesson-time workflow
+Routes: foxtutor.org/learn and foxtutor.org/learn/*
+Assets uploaded: /learn.css, /learn.js
+```
+
+Post-deployment public smoke passed. Chromium is unavailable to the current runtime, so authenticated visual acceptance cannot be claimed locally or in production.

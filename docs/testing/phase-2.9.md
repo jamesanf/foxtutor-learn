@@ -53,8 +53,8 @@ The browser pass must verify calendar composition, plainly visible arrows, Month
 | Lesson URL and Notes | PASS by unchanged domain flow / production pending |
 | Ownership and private notes | PASS by unchanged authorization/query tests / production pending |
 | Feed/token regression | PENDING production |
-| Access boundary | PENDING production |
-| Public-site regression | PENDING current deployment |
+| Access boundary | PASS for public `/learn` redirect; authenticated scope pending |
+| Public-site regression | PASS post-deployment smoke |
 | Accessibility | PENDING browser |
 | Automated tests/build/checks | PASS locally — `npm test` (13 files, 38 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production`, `git diff --check` |
 | Cleanup and Git state | PENDING final pass |
@@ -74,4 +74,4 @@ npm run test:production  PASS — public endpoints and /learn Access redirect
 git diff --check         PASS
 ```
 
-The production smoke was run against `https://foxtutor.org`; `/` returned 200, `/robots.txt` and `/sitemap.xml` returned 200 without Learn in the sitemap, and `/learn` returned the expected 302 Access redirect. No authenticated browser, feed regression, production cleanup or final acceptance claim is recorded.
+The production smoke was run against `https://foxtutor.org` before and after deployment; `/` returned 200, `/robots.txt` and `/sitemap.xml` returned 200 without Learn in the sitemap, and `/learn` returned the expected 302 Access redirect. No authenticated browser, feed regression, production cleanup or final acceptance claim is recorded.

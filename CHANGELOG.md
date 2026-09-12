@@ -4,14 +4,14 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-12 — Phase 2.9 UI composition and lesson-time workflow correction
 
-**Status:** local implementation in progress; browser acceptance pending
+**Status:** deployed; authenticated browser acceptance pending
 
 - Opened Phase 2.9 because Phase 2.8 improved behavior but still presented compressed composition, weakly demonstrated calendar iconography, a cramped subscription utility and a 96-option start-time selector.
 - Added a deliberate calendar surface and toolbar spacing, visible inline SVG Previous/Next icons with period-aware accessible labels, and a compact Month/Week control treatment without changing FullCalendar Standard or server-authorized events.
 - Reworked the subscription disclosure into a grouped utility with a dedicated read-only link field, Copy link action, grouped regeneration action, concise warning, internal alertdialog confirmation and success status.
 - Replaced the create-lesson time select with a native 24-hour `input[type="time"]` using `step="900"`, preserved server-side quarter-hour validation, and made the 55-minute End preview update immediately from Start alone, including midnight crossover.
 - Added responsive form-grid composition for Student, Date, Start, derived duration/timezone, Lesson link, Additional details and aligned actions. Updated UI contracts to reject the obsolete 96-option selector and require visible icon/confirmation mechanisms.
-- No migration, dependency, feed, authorization, Access, public-site or calendar-engine change was made. Authenticated browser acceptance remains blocked until a Chromium runtime is available; do not create a Phase 2.9 or final Phase 2 tag.
+- No migration, dependency, feed, authorization, Access, public-site or calendar-engine change was made. Deployed Worker `a844a418-b858-4a8c-a348-25a91df964d2` at 2026-09-12 21:04 UTC; post-deployment public smoke passes. Authenticated browser acceptance remains blocked until a Chromium runtime is available; do not create a Phase 2.9 or final Phase 2 tag.
 
 ### 2026-09-12 — Student login email simplification
 
