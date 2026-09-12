@@ -143,6 +143,21 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .compact-empty { margin-top: var(--space-5); padding: 24px; }
 .compact-empty h2 { font-size: 1.15rem; }
 .compact-empty .button { width: fit-content; }
+.resource-filter-form { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) auto; align-items: end; gap: 12px; margin-bottom: var(--space-4); }
+.resource-filter-form label { margin: 0; }
+.resource-filter-form .button { margin-top: 0; }
+.resource-meta { display: block; margin-top: 3px; color: var(--muted); font-size: .78rem; }
+.file-preview { display: block; margin-top: 8px; color: var(--foreground); font-size: .86rem; font-weight: 600; }
+.resource-student-list { display: grid; gap: 12px; margin-top: var(--space-5); }
+.resource-student-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 0; padding: 18px 20px; }
+.resource-student-item h2 { font-size: 1.05rem; overflow-wrap: anywhere; }
+.resource-student-item p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
+.resource-student-item .button { flex: 0 0 auto; margin-top: 0; }
+.resource-section { margin-top: var(--space-6); }
+.delete-confirmation { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.delete-confirmation summary { color: var(--danger); cursor: pointer; font-weight: 650; }
+.delete-confirmation p { color: var(--foreground) !important; }
+.delete-confirmation .button { margin-top: 0; }
 .lesson-list-table { margin-top: var(--space-4); }
 .list-footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
 .result-range { color: var(--muted); font-size: .86rem; }
@@ -229,6 +244,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .list-footer { grid-template-columns: 1fr; justify-items: stretch; }
   .result-range { text-align: center; }
   .page-size-form { justify-content: center; }
+  .resource-filter-form { grid-template-columns: 1fr; }
+  .resource-filter-form .button { width: 100%; }
+  .resource-student-item { align-items: flex-start; flex-direction: column; }
+  .resource-student-item .button { width: 100%; }
   .pagination { align-items: stretch; flex-wrap: wrap; }
   .pagination-pages { order: -1; width: 100%; }
   .table-wrap { overflow: visible; border: 0; background: transparent; }

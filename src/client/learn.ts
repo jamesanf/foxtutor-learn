@@ -151,6 +151,33 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     time.addEventListener("input", updateEndPreview);
     updateEndPreview();
   });
+
+  document.querySelectorAll<HTMLFormElement>(".resource-upload-form").forEach((form) => {
+    const student = form.elements.namedItem("studentId");
+    const lessonElement = form.querySelector("[data-resource-lesson-select]");
+    const file = form.elements.namedItem("file");
+    const preview = form.querySelector("[data-file-preview]");
+    if (!(student instanceof HTMLSelectElement) || !(lessonElement instanceof HTMLSelectElement)) return;
+    const lesson = lessonElement;
+    const syncLessons = () => {
+      const selectedStudent = student.value;
+      for (const option of Array.from(lesson.options) as HTMLOptionElement[]) {
+        if (!option.dataset.studentId) continue;
+        const allowed = option.dataset.studentId === selectedStudent;
+        option.hidden = !allowed;
+        option.disabled = !allowed;
+        if (!allowed && option.selected) lesson.value = "";
+      }
+    };
+    student.addEventListener("change", syncLessons);
+    syncLessons();
+    if (file instanceof HTMLInputElement && preview instanceof HTMLOutputElement) {
+      file.addEventListener("change", () => {
+        const selected = file.files?.[0];
+        preview.textContent = selected ? `${selected.name} · ${(selected.size / (1024 * 1024)).toFixed(1)} MB` : "";
+      });
+    }
+  });
 })();
 
 function setCalendarNavigationIcon(button: HTMLButtonElement, direction: "previous" | "next"): void {

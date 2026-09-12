@@ -32,6 +32,22 @@ import {
   type Lesson
 } from "../db/lessons";
 import {
+  countResources,
+  deleteResourceMetadata,
+  findResource,
+  findResourceByIdempotencyKey,
+  findResourceForStudent,
+  insertUploadingResource,
+  listResources,
+  listResourcesForLessonForStudent,
+  listResourcesForLesson,
+  listResourcesForStudent,
+  markResourceAvailable,
+  markResourceFailed,
+  type Resource,
+  type ResourceCategory
+} from "../db/resources";
+import {
   findActiveCalendarFeedForOwner,
   findCalendarFeedByTokenHash,
   rotateCalendarFeed,
@@ -55,9 +71,20 @@ import {
   type LessonStatus
 } from "../domain/validation";
 import { privateHeaders } from "../security/headers";
-import { clearSessionCookies, createSession, csrfValid, readSession, type ActiveSession } from "../security/session";
+import { clearSessionCookies, createSession, csrfTokenMatches, csrfValid, readSession, type ActiveSession } from "../security/session";
 import { feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
 import { feedRange, generateIcs } from "../domain/icalendar";
+import {
+  MAX_RESOURCE_SIZE_BYTES,
+  RESOURCE_CATEGORIES,
+  RESOURCE_PAGE_SIZES,
+  categoryLabel,
+  fileTypeLabel,
+  hasExpectedSignature,
+  pdfPageCount,
+  sanitizeHeaderFilename,
+  validateResourceFile
+} from "../resources/policy";
 
 export interface Env {
   ASSETS: Fetcher;
@@ -69,6 +96,7 @@ export interface Env {
   MAIL_API_FROM?: string;
   MAIL_API_ACCESS_CLIENT_ID?: string;
   MAIL_API_ACCESS_CLIENT_SECRET?: string;
+  RESOURCES_BUCKET?: R2Bucket;
 }
 
 function htmlDocument(title: string, body: string): Response {
@@ -102,8 +130,8 @@ function escapeHtml(value: string): string {
 
 function navigation(role: Role): string {
   const links = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/students", "Students"]]
-    : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"]];
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/resources", "Resources"], ["/learn/admin/students", "Students"]]
+    : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/resources", "Resources"]];
   return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
 }
 
@@ -241,6 +269,75 @@ function lessonList(lessons: Lesson[], total: number, page: number, pageSize: nu
   return `<div class="page-heading"><div><p class="eyebrow">${escapeHtml(options.eyebrow)}</p><h1>${escapeHtml(options.title)}</h1><p class="lede">${escapeHtml(options.subtitle)}</p></div>${options.emptyAction ? buttonLink("/learn/admin/lessons/new", "Add lesson") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
 }
 
+function parseResourcePagination(url: URL): { page: number; pageSize: number } {
+  const requestedSize = Number(url.searchParams.get("size"));
+  const pageSize = RESOURCE_PAGE_SIZES.includes(requestedSize as (typeof RESOURCE_PAGE_SIZES)[number]) ? requestedSize : 12;
+  const requestedPage = Number(url.searchParams.get("page"));
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  return { page, pageSize };
+}
+
+function resourceDate(resource: Resource): string {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(resource.created_at));
+}
+
+function resourceSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function resourceLessonDate(startAt: string): string {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: CALENDAR_TIMEZONE }).format(new Date(startAt));
+}
+
+function resourceRows(resources: Resource[]): string {
+  if (!resources.length) {
+    return `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Upload a worksheet, reading, notes, or other material for a student.</p><a class="button" href="/learn/admin/resources/new">Upload resource</a></div>`;
+  }
+  return `<div class="table-wrap resource-list-table"><table><thead><tr><th>File</th><th>Student</th><th>Lesson</th><th>Type</th><th>Category</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>${resources.map((resource) => `<tr><td data-label="File"><strong>${escapeHtml(resource.original_filename)}</strong><small class="resource-meta">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</small></td><td data-label="Student">${escapeHtml(resource.student_name ?? "Student")}</td><td data-label="Lesson">${resource.lesson_start_at ? escapeHtml(resourceLessonDate(resource.lesson_start_at)) : "General student resource"}</td><td data-label="Type">${escapeHtml(fileTypeLabel(resource.content_type))}</td><td data-label="Category">${escapeHtml(categoryLabel(resource.category))}</td><td data-label="Uploaded">${escapeHtml(resourceDate(resource))}</td><td data-label="Actions"><a href="/learn/admin/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a> <a href="/learn/admin/resources/${encodeURIComponent(resource.id)}">Details</a></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function resourcePagination(page: number, pageSize: number, total: number, path: string): string {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const first = total ? (page - 1) * pageSize + 1 : 0;
+  const last = total ? Math.min(page * pageSize, total) : 0;
+  const separator = path.includes("?") ? "&" : "?";
+  const link = (nextPage: number, text: string, disabled: boolean) =>
+    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link" href="${path}${separator}page=${nextPage}&size=${pageSize}">${text}</a>`;
+  const numbers = pageCount <= 7
+    ? Array.from({ length: pageCount }, (_, index) => index + 1)
+    : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
+  const pageLinks: string[] = [];
+  let previous = 0;
+  for (const number of numbers) {
+    if (number - previous > 1) pageLinks.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
+    pageLinks.push(number === page
+      ? `<span class="pagination-link is-current" aria-current="page">${number}</span>`
+      : `<a class="pagination-link" href="${path}${separator}page=${number}&size=${pageSize}">${number}</a>`);
+    previous = number;
+  }
+  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label><select id="resources-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+}
+
+function resourceUploadForm(
+  csrfToken: string,
+  students: Student[],
+  lessons: Lesson[],
+  error?: string,
+  values: { studentId?: string; lessonId?: string; category?: ResourceCategory; idempotencyKey?: string } = {}
+): string {
+  const activeStudents = students.filter((student) => student.status === "ACTIVE");
+  const activeLessons = lessons.filter((lesson) => activeStudents.some((student) => student.id === lesson.student_id));
+  const idempotencyKey = values.idempotencyKey ?? crypto.randomUUID();
+  return `<section class="card form-card"><p class="eyebrow">PRIVATE RESOURCE</p><h1>Upload resource</h1><p class="lede">Give a student a worksheet, reading, notes, homework, or reference document.</p>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="resource-upload-form" method="post" action="/learn/admin/resources/new" enctype="multipart/form-data">${hiddenCsrf(csrfToken)}<input type="hidden" name="idempotencyKey" value="${escapeHtml(idempotencyKey)}"><label>Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === values.studentId ? " selected" : ""}>${escapeHtml(student.name)}</option>`).join("")}</select></label><label>Lesson <span class="muted">(optional)</span><select name="lessonId" data-resource-lesson-select><option value="">General student resource</option>${activeLessons.map((lesson) => `<option value="${escapeHtml(lesson.id)}" data-student-id="${escapeHtml(lesson.student_id)}"${lesson.id === values.lessonId ? " selected" : ""}>${escapeHtml(lesson.student_name ?? "Lesson")} · ${escapeHtml(bookingDate(lesson))}</option>`).join("")}</select></label><label>File<input type="file" name="file" required accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"><span class="field-help">PDF, DOCX, TXT, PNG, JPEG or WEBP · maximum 25 MB</span><output class="file-preview" data-file-preview aria-live="polite"></output></label><label>Category<select name="category">${RESOURCE_CATEGORIES.map((category) => `<option value="${category}"${category === (values.category ?? "other") ? " selected" : ""}>${escapeHtml(categoryLabel(category))}</option>`).join("")}</select></label><div class="form-actions"><a class="button secondary" href="/learn/admin/resources">Cancel</a><button class="button" type="submit">Upload resource</button></div></form></section>`;
+}
+
+function resourceSummary(resource: Resource, admin: boolean, csrfToken: string): string {
+ const lesson = resource.lesson_start_at ? `Lesson · ${resourceLessonDate(resource.lesson_start_at)}` : "General student resource";
+ return `<section class="card resource-detail"><p class="eyebrow">RESOURCE</p><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div><a class="button" href="/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></div><div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Use</strong><br>${escapeHtml(lesson)}</p><p><strong>Category</strong><br>${escapeHtml(categoryLabel(resource.category))}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div>${admin ? `<details class="delete-confirmation"><summary>Delete resource</summary><p>Delete “${escapeHtml(resource.original_filename)}”?</p><form method="post" action="/learn/admin/resources/${encodeURIComponent(resource.id)}/delete">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Delete</button></form></details>` : ""}</section>`;
+}
+
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
   return `<tr><td data-label="${showStudent ? "Student" : "Lesson"}">${showStudent ? `<a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>` : "Lesson"}</td><td data-label="Date and time"><a href="${basePath}/${encodeURIComponent(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td></tr>`;
 }
@@ -334,6 +431,11 @@ function lessonIdFromPath(pathname: string): string | null {
   return match ? decodePathSegment(match[1]) : null;
 }
 
+function resourceIdFromPath(pathname: string): string | null {
+  const match = /^\/learn\/(?:admin|student)\/resources\/([^/]+)(?:\/(?:download|delete))?$/.exec(pathname.replace(/\/+$/, ""));
+  return match ? decodePathSegment(match[1]) : null;
+}
+
 function decodePathSegment(value: string): string | null {
   try {
     return decodeURIComponent(value);
@@ -355,6 +457,116 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
   return { active: created.active, setCookies: created.setCookies };
 }
 
+function isResourceCategory(value: string): value is ResourceCategory {
+  return RESOURCE_CATEGORIES.includes(value as ResourceCategory);
+}
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const input = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(input).set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", input);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function resourceUpload(
+  request: Request,
+  env: Env,
+  active: ActiveSession,
+  students: Student[],
+  lessons: Lesson[]
+): Promise<Response> {
+  if (!env.RESOURCES_BUCKET) return messagePage("Service unavailable", "Resource storage is not configured for this environment.", 503);
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_RESOURCE_SIZE_BYTES + 1_048_576) return messagePage("Upload too large", "This file is too large. The maximum is 25 MB.", 413);
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    if (error instanceof TypeError) return messagePage("Invalid upload", "The submitted upload could not be read.", 400);
+    throw error;
+  }
+  const studentId = formText(form, "studentId");
+  const lessonId = formText(form, "lessonId") || null;
+  const category = formText(form, "category");
+  const idempotencyKey = formText(form, "idempotencyKey");
+  const values = { studentId, lessonId: lessonId ?? undefined, category: isResourceCategory(category) ? category : "other" as ResourceCategory, idempotencyKey };
+  if (!csrfTokenMatches(form.get("csrf"), active)) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+  if (!/^[a-zA-Z0-9_-]{20,100}$/.test(idempotencyKey)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "This upload could not be safely identified. Refresh the page and try again.", values));
+  const existing = await findResourceByIdempotencyKey(env.DB as D1Database, idempotencyKey);
+  if (existing) {
+    if (existing.uploaded_by_user_id !== active.user.id) return messagePage("Conflict", "This upload could not be completed.", 409);
+    if (existing.status === "available") return redirect("/learn/admin/resources?uploaded=1");
+    if (existing.status === "uploading") return messagePage("Upload in progress", "This upload is already being processed. Try again shortly.", 409);
+    return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "This upload has already failed. Choose the file again to start a new upload.", { ...values, idempotencyKey: crypto.randomUUID() }));
+  }
+  const student = await findStudent(env.DB as D1Database, studentId);
+  if (!student || student.status !== "ACTIVE") return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "Choose an active student.", values));
+  const lesson = lessonId ? await findLesson(env.DB as D1Database, lessonId) : null;
+  if (lessonId && (!lesson || lesson.student_id !== student.id)) {
+    return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "This lesson does not belong to the selected student.", values));
+  }
+  if (!isResourceCategory(category)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "Choose a valid category.", values));
+  const fileValue = form.get("file");
+  if (!(fileValue instanceof File)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "Please choose a file.", values));
+  const filePolicy = validateResourceFile(fileValue);
+  if ("error" in filePolicy) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, filePolicy.error, values));
+  const bytes = new Uint8Array(await fileValue.arrayBuffer());
+  if (!hasExpectedSignature(filePolicy.extension, bytes)) return appPage(active.user, active.csrfToken, "Upload resource", resourceUploadForm(active.csrfToken, students, lessons, "The file contents do not match the selected document type.", values));
+  const now = new Date();
+  const resourceId = crypto.randomUUID();
+  const storageKey = `resources/${resourceId}/original`;
+  const nowIso = now.toISOString();
+  const retentionUntil = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+  await insertUploadingResource(env.DB as D1Database, {
+    id: resourceId,
+    student_id: student.id,
+    lesson_id: lesson?.id ?? null,
+    uploaded_by_user_id: active.user.id,
+    original_filename: filePolicy.filename,
+    storage_key: storageKey,
+    content_type: filePolicy.contentType,
+    size_bytes: bytes.byteLength,
+    sha256: await sha256Hex(bytes),
+    page_count: filePolicy.extension === "pdf" ? pdfPageCount(bytes) : null,
+    category,
+    status: "uploading",
+    idempotency_key: idempotencyKey,
+    created_at: nowIso,
+    updated_at: nowIso,
+    retention_until: retentionUntil
+  });
+  try {
+    await env.RESOURCES_BUCKET.put(storageKey, bytes, {
+      httpMetadata: {
+        contentType: filePolicy.contentType,
+        contentDisposition: `${filePolicy.extension === "pdf" ? "inline" : "attachment"}; filename="${sanitizeHeaderFilename(filePolicy.filename)}"`
+      }
+    });
+  } catch (error) {
+    await markResourceFailed(env.DB as D1Database, resourceId, new Date().toISOString());
+    return messagePage("Upload failed", "The resource could not be stored. No downloadable resource was created.", 502);
+  }
+  try {
+    await markResourceAvailable(env.DB as D1Database, resourceId, new Date().toISOString());
+  } catch (error) {
+    await env.RESOURCES_BUCKET.delete(storageKey);
+    await markResourceFailed(env.DB as D1Database, resourceId, new Date().toISOString());
+    return messagePage("Upload incomplete", "The resource was not made available because its metadata could not be committed.", 502);
+  }
+  return redirect("/learn/admin/resources?uploaded=1");
+}
+
+async function downloadResource(request: Request, env: Env, resource: Resource): Promise<Response> {
+  if (!env.RESOURCES_BUCKET) return messagePage("Service unavailable", "Resource storage is not configured for this environment.", 503);
+  const object = await env.RESOURCES_BUCKET.get(resource.storage_key);
+  if (!object) return messagePage("Resource unavailable", "This resource is no longer available.", 404);
+  const headers = privateHeaders(resource.content_type);
+  headers.set("Content-Disposition", `${resource.content_type === "application/pdf" ? "inline" : "attachment"}; filename="${sanitizeHeaderFilename(resource.original_filename)}"`);
+  headers.set("Content-Length", String(resource.size_bytes));
+  headers.set("X-Content-Type-Options", "nosniff");
+  return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers });
+}
+
 async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
   const upcoming = await listUpcomingLessons(db, new Date().toISOString(), 5, 0);
   const upcomingCount = await countUpcomingLessons(db, new Date().toISOString());
@@ -370,6 +582,48 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   const url = new URL(request.url);
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
+  if (route === "admin-resources") {
+    const { page, pageSize } = parseResourcePagination(url);
+    const search = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
+    const categoryValue = url.searchParams.get("category") ?? "";
+    const category = isResourceCategory(categoryValue) ? categoryValue : undefined;
+    const total = await countResources(db, { search, category });
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, pageCount);
+    const resources = await listResources(db, { search, category, limit: pageSize, offset: (safePage - 1) * pageSize });
+    const query = search || category ? `?q=${encodeURIComponent(search)}${category ? `&category=${encodeURIComponent(category)}` : ""}` : "";
+    const heading = `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Documents uploaded for students and lessons.</p></div>${buttonLink("/learn/admin/resources/new", "Upload resource")}</div><form class="resource-filter-form" method="get" action="/learn/admin/resources"><label>Search<input type="search" name="q" value="${escapeHtml(search)}" placeholder="Filename or student"></label><label>Category<select name="category"><option value="">All categories</option>${RESOURCE_CATEGORIES.map((value) => `<option value="${value}"${value === category ? " selected" : ""}>${escapeHtml(categoryLabel(value))}</option>`).join("")}</select></label><button class="button secondary" type="submit">Filter</button></form>${url.searchParams.get("uploaded") === "1" ? `<p class="form-success" role="status">Resource uploaded.</p>` : ""}`;
+    return appPage(active.user, csrfToken, "Resources", `${heading}${resourceRows(resources)}${resourcePagination(safePage, pageSize, total, `/learn/admin/resources${query}`)}`);
+  }
+  if (route === "admin-resource-form") {
+    const students = await listStudents(db);
+    const lessons = await listLessons(db);
+    if (request.method === "GET") return appPage(active.user, csrfToken, "Upload resource", resourceUploadForm(csrfToken, students, lessons, undefined, { studentId: url.searchParams.get("student") ?? undefined, lessonId: url.searchParams.get("lesson") ?? undefined }));
+    if (request.method !== "POST") return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    return withSessionCookies(await resourceUpload(request, env, active, students, lessons), undefined);
+  }
+  if (route === "admin-resource" || route === "admin-resource-download" || route === "admin-resource-delete") {
+    const id = resourceIdFromPath(url.pathname);
+    if (!id) return messagePage("Not found", "That resource does not exist.", 404);
+    const resource = await findResource(db, id);
+    if (!resource || resource.deleted_at || resource.status !== "available") return messagePage("Not found", "That resource does not exist.", 404);
+    if (route === "admin-resource-download") {
+      if (request.method !== "GET" && request.method !== "HEAD") return messagePage("Method not allowed", "Resource downloads are read-only.", 405);
+      return downloadResource(request, env, resource);
+    }
+    if (route === "admin-resource-delete") {
+      if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+      if (!env.RESOURCES_BUCKET) return messagePage("Service unavailable", "Resource storage is not configured for this environment.", 503);
+      await env.RESOURCES_BUCKET.delete(resource.storage_key);
+      try {
+        await deleteResourceMetadata(db, resource.id, new Date().toISOString());
+      } catch (error) {
+        return messagePage("Deletion incomplete", "The file was removed from storage, but its metadata needs reconciliation.", 502);
+      }
+      return redirect("/learn/admin/resources?deleted=1");
+    }
+    return appPage(active.user, csrfToken, "Resource", resourceSummary(resource, true, csrfToken));
+  }
   if (route === "admin-calendar") {
     const lessons = await listLessons(db);
     return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
@@ -488,7 +742,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const lesson = await findLesson(db, id);
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
     if (route === "admin-lesson") {
-      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div>${buttonLink(`${url.pathname}/edit`, "Edit lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form>`);
+      const resources = await listResourcesForLesson(db, lesson.id);
+      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div>${buttonLink(`${url.pathname}/edit`, "Edit lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${encodeURIComponent(lesson.id)}`, "Upload resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
     }
     if (route === "admin-lesson-status") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -529,6 +784,17 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const lessons = await listLessonsForUser(db, active.user.id);
     return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
   }
+  if (route === "student-resources") {
+    const resources = await listResourcesForStudent(db, active.user.id);
+    return appPage(active.user, csrfToken, "Resources", `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Documents shared with you for your lessons and study.</p></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="card resource-student-item"><div><h2>${escapeHtml(resource.original_filename)}</h2><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}${resource.lesson_start_at ? ` · Lesson · ${escapeHtml(resourceLessonDate(resource.lesson_start_at))}` : ""}</p></div><a class="button" href="/learn/student/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></article>`).join("")}</div>` : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Your tutor's worksheets, notes, and other shared material will appear here.</p></div>`}`);
+  }
+  if (route === "student-resource-download") {
+    const id = resourceIdFromPath(url.pathname);
+    if (!id || (request.method !== "GET" && request.method !== "HEAD")) return messagePage("Not found", "That resource does not exist.", 404);
+    const resource = await findResourceForStudent(db, id, active.user.id);
+    if (!resource) return messagePage("Not found", "That resource does not exist.", 404);
+    return downloadResource(request, env, resource);
+  }
   if (route === "student-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const student = await findActiveStudentForUser(db, active.user.id);
@@ -560,7 +826,8 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (!id) return messagePage("Not found", "That lesson does not exist.", 404);
     const lesson = await findLessonForUser(db, id, active.user.id);
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
-    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section>`);
+    const resources = await listResourcesForLessonForStudent(db, lesson.id, active.user.id);
+    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div><a class="button secondary" href="/learn/student/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }

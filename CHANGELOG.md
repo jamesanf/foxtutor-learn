@@ -2,6 +2,22 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 3.1 lesson resources and private document infrastructure
+
+**Status:** deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated resource acceptance pending
+
+- Added forward-only `0004_resources.sql` with student/lesson relationships, uploader ownership, opaque storage keys, original filename/content metadata, SHA-256, PDF page count, category, upload status, idempotency key, timestamps and 12-month retention review metadata.
+- Added private production bucket `foxtutor-learn-resources` and local bucket `foxtutor-learn-resources-local`, both bound as `RESOURCES_BUCKET`; existing mail/image buckets were not reused.
+- Added admin resource manager at `/learn/admin/resources` with server-side search/category filtering, shared 12/24/48 pagination, upload form, compact metadata view, private open/download, detail view and explicit delete confirmation.
+- Added student `/learn/student/resources`, lesson-level resource sections and authorized download routes. Student queries resolve resource-to-lesson-to-student ownership in D1 and return generic 404 responses for unauthorized IDs.
+- Added synchronous Worker upload validation for PDF, DOCX, TXT, PNG, JPEG and WEBP; dangerous active-content types are rejected, server-generated keys are used, and multipart uploads have CSRF, size, signature and association checks.
+- Added idempotent `uploading` → `available`/`failed` handling with exact-key R2 cleanup on metadata failure. PDFs receive lightweight signature/page-count inspection; OCR and asynchronous compression remain explicitly deferred because the 25 MiB hard limit avoids an oversized synchronous processing path.
+- Updated navigation, responsive resource UI, client lesson filtering/file preview, security documentation and deployment/testing records. Phase 2.12's open production/visual/tag gates remain distinct and were not rewritten.
+
+**Tests:** `npm test`; `npm run build`; `npm run check`; `npm run test:production`; `npm run test:browser`; clean local D1 migration through `0004_resources.sql`; `git diff --check`.
+
+**Production:** `0004_resources.sql` applied to D1 `foxtutor-learn`; dedicated R2 buckets created; Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161` deployed. Authenticated admin/student resource acceptance remains pending.
+
 ### 2026-09-13 — Phase 2.12 final tutoring workflow refinement
 
 **Status:** deployed as Worker `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20`; authenticated production acceptance pending

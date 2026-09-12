@@ -4,10 +4,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 2.12 final tutoring workflow refinement in progress
+**Phase:** Phase 3.1 lesson resources and private document infrastructure in progress
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** Phase 2.12 changes the admin information architecture to Dashboard, Calendar, Bookings, Past Lessons and Students; adds a shared server-paginated history list at `/learn/admin/lessons`; replaces the unclear Rows control with a bottom `Show per page` selector for 12/24/48; and makes calendar subscription regeneration a single POST action with explicit Apple Calendar, Google Calendar and Outlook copy. The release is deployed as Worker `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20` from commit `167cfc297bb8b745bc530d0cea8c07c5d6cf2313`; public smoke passes. The protected Week/Month calendar subsystem, feed security, authorization, D1 schema and public-site boundary remain unchanged. Authenticated production browser and real-Chromium visual acceptance remain pending because no Chromium binary/debug endpoint is available. Do not create `phase-2.12-complete` until all release gates pass.
+**Latest state:** Phase 3.1 adds the private `resources` D1 metadata model, dedicated private R2 buckets (`foxtutor-learn-resources` in production and `foxtutor-learn-resources-local` locally), server-authorized admin upload/download/delete flows, student resource lists and lesson resource sections. The implementation uses opaque server-generated keys, a 25 MiB allowlist, content-signature checks, SHA-256 metadata, PDF page inspection, upload idempotency and explicit partial-failure states. Migration `0004_resources.sql` and Worker version `dfebaca6-f1e4-4019-bb5a-37f92344c161` are deployed; authenticated resource acceptance remains pending because no production Chromium session is available. Phase 2.12 remains functionally deployed as Worker `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20` from commit `167cfc297bb8b745bc530d0cea8c07c5d6cf2313`, but its authenticated production, visual and formal completion-tag gates remain open and are not being rewritten by Phase 3.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -156,6 +156,10 @@ docs/                 Architecture, security, deployment, API and evidence
 | `docs/testing/phase-2.5.md` | Production calendar acceptance matrix and evidence |
 | `docs/testing/phase-2.6.md` | Final subscription UX, regression and historical sign-off record |
 | `docs/testing/phase-2.7.md` | Month-first calendar replacement and final Phase 2.7 acceptance matrix |
+| `docs/architecture/phase-3.1.md` | Resource storage, metadata, authorization, retention and failure model |
+| `docs/security/phase-3.1.md` | Resource upload, download, deletion and private-storage controls |
+| `docs/testing/phase-3.1.md` | Resource acceptance matrix and remaining authenticated gates |
+| `docs/deployment/phase-3.1.md` | Resource bucket, migration and Worker deployment record |
 | `docs/architecture/phase-2.7.md` | Calendar dependency, rendering, timezone and authorization decision |
 | `docs/testing/phase-2.8.md` | Calendar density, subscription and lesson UX acceptance matrix |
 | `docs/architecture/phase-2.8.md` | Phase 2.8 presentation and lesson interaction decisions |
@@ -189,7 +193,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.9 | UI composition and lesson-time workflow correction | Remediated by 2.10 |
 | 2.10 | Final timetable, Bookings, navigation, dashboard, student model and end-to-end UX closure | In progress |
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
-| 3 | R2 resources and document pipeline | Deferred |
+| 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
 | 4 | Mail notifications and reports | Deferred |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |
@@ -205,4 +209,4 @@ There is no public registration and no application password subsystem. Only Acce
 - Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2.1 is intentionally limited to students, lessons, ownership, lifecycle, notes, HTTPS lesson URLs, timezone-safe storage and overlap-aware scheduling.
-- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Phase 2.10 is remediating the final product UX locally: TimeGrid Week is now primary, Month remains secondary, Bookings is a paginated view over lessons, and the Dashboard is no longer a duplicate navigation surface. The feed remains read-only, uses a private bearer token, returns a bounded recent/future range, and does not force instant external refreshes. Availability automation, recurrence, notifications, resources, billing and reporting remain deferred.
+- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Phase 2.12 is functionally deployed, but its authenticated production, visual and formal release gates remain open. Phase 3.1 has established the first resource architecture; asynchronous PDF compression, OCR, notifications, billing and reporting remain deferred.

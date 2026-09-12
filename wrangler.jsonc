@@ -37,5 +37,11 @@
 			"database_id": "204dadc5-46ff-41b7-9da1-049f85d29422",
 			"remote": true
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "RESOURCES_BUCKET",
+			"bucket_name": "foxtutor-learn-resources"
+		}
 	]
 }

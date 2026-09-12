@@ -69,9 +69,15 @@ export async function csrfValid(request: Request, active: ActiveSession): Promis
   const contentType = request.headers.get("content-type") ?? "";
   const form = contentType.includes("application/x-www-form-urlencoded")
     ? await boundedFormData(request, contentType)
-    : null;
+    : contentType.includes("multipart/form-data")
+      ? await request.clone().formData()
+      : null;
   const supplied = request.headers.get("X-CSRF-Token") ?? form?.get("csrf");
-  return typeof supplied === "string" && supplied === active.csrfToken;
+  return csrfTokenMatches(supplied, active);
+}
+
+export function csrfTokenMatches(value: FormDataEntryValue | null | undefined, active: ActiveSession): boolean {
+  return typeof value === "string" && value === active.csrfToken;
 }
 
 async function boundedFormData(request: Request, contentType: string): Promise<FormData | null> {

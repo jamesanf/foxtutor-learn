@@ -26,4 +26,14 @@ describe("D1 foundation", () => {
     expect(migration).toContain("revoked_at TEXT");
     expect(migration).toContain("idx_calendar_feeds_active_owner");
   });
+
+  it("adds private resource metadata with ownership, status and retention constraints", () => {
+    const migration = readFileSync("migrations/0004_resources.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS resources");
+    expect(migration).toContain("storage_key TEXT NOT NULL UNIQUE");
+    expect(migration).toContain("idempotency_key TEXT NOT NULL UNIQUE");
+    expect(migration).toContain("retention_until TEXT NOT NULL");
+    expect(migration).toContain("CHECK (student_id IS NOT NULL OR lesson_id IS NOT NULL)");
+    expect(migration).toContain("idx_resources_lesson_created");
+  });
 });

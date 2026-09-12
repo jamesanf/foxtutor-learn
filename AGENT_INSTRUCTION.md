@@ -471,3 +471,7 @@ Phase 2.10 is the final Phase 2 UX pass. Do not create Phase 2.11 and do not cla
 - Browser dialogs (`alert`, `confirm`, `prompt`) remain prohibited. Subscription stays below the timetable, collapsed by default, and uses the existing internal confirmation surface.
 
 The final acceptance must cover calendar positioning at 09:00, 10:15, 13:00, 17:00, 18:15 and 20:00; 21:00 and off-range boundaries; Week/Month navigation; concise event rendering; Create Lesson time preview and DST; Bookings 0/1/12/13/24/25/48/49 cases with 12/24/48 server pagination; dashboard/navigation duplication; student linking security; feed, Access, ownership, privacy, responsive and public-site regression. Do not create a completion tag while authenticated browser or production evidence is unavailable.
+
+## Phase 3.1 current state
+
+The resource master pass is deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`. R2 remains private and bound as `RESOURCES_BUCKET`; D1 migration `0004_resources.sql` stores resource metadata and relationships; all resource access is server-authorized through the existing Learn session and student/lesson ownership model. The implementation uses opaque keys, a 25 MiB allowlist, content validation, upload idempotency, explicit failure states, private Worker downloads and an explicit deletion confirmation. Do not weaken the perimeter, expose R2 URLs, create a broad bucket token or claim Phase 3.1 complete until authenticated admin/student isolation acceptance is evidenced.

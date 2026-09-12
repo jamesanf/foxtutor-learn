@@ -16,6 +16,13 @@
       "migrations_dir": "migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "RESOURCES_BUCKET",
+      "bucket_name": "foxtutor-learn-resources-local",
+      "preview_bucket_name": "foxtutor-learn-resources-local"
+    }
+  ],
   "vars": {
     "ENVIRONMENT": "local",
     "PUBLIC_ORIGIN": "http://localhost:8787/learn",

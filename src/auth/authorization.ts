@@ -15,6 +15,11 @@ export type LearnRoute =
   | "admin-calendar"
   | "admin-calendar-feed"
   | "admin-bookings"
+  | "admin-resources"
+  | "admin-resource-form"
+  | "admin-resource"
+  | "admin-resource-delete"
+  | "admin-resource-download"
   | "admin-student-form"
   | "admin-student"
   | "admin-student-edit"
@@ -29,6 +34,8 @@ export type LearnRoute =
   | "student-calendar-feed"
   | "student-lessons"
   | "student-lesson"
+  | "student-resources"
+  | "student-resource-download"
   | "logout"
   | "asset"
   | "not-found";
@@ -41,6 +48,11 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin/calendar") return "admin-calendar";
   if (path === "/learn/admin/calendar/feed") return "admin-calendar-feed";
   if (path === "/learn/admin/bookings") return "admin-bookings";
+  if (path === "/learn/admin/resources") return "admin-resources";
+  if (path === "/learn/admin/resources/new") return "admin-resource-form";
+  if (/^\/learn\/admin\/resources\/[^/]+\/download$/.test(path)) return "admin-resource-download";
+  if (/^\/learn\/admin\/resources\/[^/]+\/delete$/.test(path)) return "admin-resource-delete";
+  if (/^\/learn\/admin\/resources\/[^/]+$/.test(path)) return "admin-resource";
   if (path === "/learn/admin/students/new") return "admin-student-form";
   if (/^\/learn\/admin\/students\/[^/]+\/edit$/.test(path)) return "admin-student-edit";
   if (/^\/learn\/admin\/students\/[^/]+\/deactivate$/.test(path)) return "admin-student-deactivate";
@@ -55,6 +67,8 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/student/calendar/feed") return "student-calendar-feed";
   if (path === "/learn/student/lessons") return "student";
   if (/^\/learn\/student\/lessons\/[^/]+$/.test(path)) return "student-lesson";
+  if (path === "/learn/student/resources") return "student-resources";
+  if (/^\/learn\/student\/resources\/[^/]+\/download$/.test(path)) return "student-resource-download";
   if (path === "/learn/logout") return "logout";
   if (
     path === "/learn/assets/learn.css" ||
