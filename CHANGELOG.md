@@ -377,3 +377,19 @@ tagging and pushing Phase 1 completion.
 **Deployment:** unchanged at Worker version `85129275-02b5-40be-8626-db554aa6903f`; no new deployment was needed.
 
 **Next pass:** Pass 5 — final regression, lifecycle/timezone/overlap checks, controlled fixture cleanup and closure decision.
+
+### 2026-09-12 — Pass 5 final regression, cleanup and Phase 2.1 closure
+
+**Status:** COMPLETE; `phase-2.1-complete` created after this documentation commit
+
+**Final acceptance:**
+
+- Re-ran `npm test`, `npm run build`, `npm run check`, `npm run test:browser` and `npm run test:production`; all passed.
+- Rechecked public `/`, `/about`, `/robots.txt` and `/sitemap.xml` (all 200), confirmed `/learn` remains a 302 Cloudflare Access boundary, and confirmed the public repository was not modified by this work.
+- Verified authenticated post-cleanup admin and student responses contain no Phase 2.2 fixture data.
+- Verified Europe/London and America/New_York timezone display under an overridden browser timezone, overlap rejection and non-overlap acceptance, scheduled/completed/cancelled lifecycle behavior, invalid lifecycle transition rejection and student lifecycle immutability.
+- Deactivated controlled students and cancelled scheduled controlled lessons through the authenticated admin mechanisms, then removed only the exact controlled fixture IDs with guarded production D1 cleanup. Final D1 contains only `foxlearningltd@gmail.com` (`ADMIN`, `ACTIVE`) and `jamesanf@gmail.com` (`STUDENT`, `ACTIVE`); production migrations are `0001_foundation.sql` and `0002_students_lessons.sql`.
+
+**Production:** Worker version `85129275-02b5-40be-8626-db554aa6903f` remains current; no new application deployment was required after Pass 1.
+
+**Closure decision:** all required visual, authorization, privacy, responsive, lifecycle, timezone, overlap, regression, cleanup, documentation, Git and deployment gates passed. Phase 2.1 is closed. Calendar, availability, recurrence, notifications, resources, billing and reporting remain deferred.
