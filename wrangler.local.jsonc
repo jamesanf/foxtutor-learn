@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "foxtutor-learn-local",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-09-05",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "foxtutor-learn-local",
+      "database_id": "local",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "local",
+    "PUBLIC_ORIGIN": "http://localhost:8787/learn",
+    "MAIL_API_URL": "https://mail.foxtutor.org"
+  }
+}

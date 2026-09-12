@@ -1,0 +1,26 @@
+{
+  "name": "foxtutor-learn",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check": "npm run build && npx wrangler deploy --dry-run",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:security": "vitest run tests/security",
+    "test:browser": "node scripts/verify-browser.mjs",
+    "test:production": "node scripts/smoke-production.mjs",
+    "dev": "npx wrangler dev --config wrangler.local.jsonc",
+    "deploy": "npx wrangler deploy --message \"Phase 1 private Learn foundation\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260905.1",
+    "@types/node": "^22.14.0",
+    "happy-dom": "^20.14.0",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.39.0"
+  }
+}

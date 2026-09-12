@@ -1,0 +1,15 @@
+Captured: 2026-09-12
+
+Available:
+- Wrangler authentication: account aeab9f48fa9716273d02bfb3d530bddc
+- Worker version inspection for existing scripts
+- Worker deployment dry-run
+
+Unavailable with the current token:
+- D1 list/create: API authentication error 10000
+- Workers Routes list: API authentication error 10000
+- Zero Trust Access applications list: API authentication error 10000
+- R2 bucket list: API authentication error 10000
+- Pages project list: API authentication error 10000
+
+No Learn production resource was created and no public-site resource was changed.
