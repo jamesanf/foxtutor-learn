@@ -448,6 +448,10 @@ Phase 2.10 is not a closure gate. Phase 2.11 owns the remaining calendar visual,
 
 Remediate the failed Phase 2.10 acceptance process and implementation. Identify rendered geometry and computed-colour root causes, redesign Month/Week sizing and subscription composition, and make unreadable or oversized states fail automated browser contracts.
 
+### Current release state
+
+Phase 2.11 is deployed from commit `4b099f8` as Worker version `8f157d02-a729-4813-b017-2049371dec3c` at `2026-09-12T22:50:18.740Z`. Local visual contracts, public smoke, invalid-token feed denial and remote migration checks pass. Authenticated production browser acceptance and feed ownership isolation remain pending because no production Cloudflare Access/browser credential is available. Do not create `phase-2.11-complete`.
+
 ### Required outcomes
 
 - FullCalendar Standard Month uses intrinsic natural rows with `fixedWeekCount: false`, `expandRows: false`, no internal vertical scrollbar and no giant fixed/clamp host height.
