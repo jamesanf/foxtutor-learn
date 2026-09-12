@@ -113,3 +113,22 @@ Rechecked the public homepage, robots, sitemap, representative content route and
 **Deployment:** none. No production Worker, D1, route, Access application/policy, DNS record or mail delivery was changed.
 
 **Handover:** make an existing Cloudflare credential with Zero Trust Access application, identity-provider and policy write permissions available to the runtime. Create a new credential only if no existing authorized mechanism exists. See `docs/evidence/phase-1/cloudflare-capability-check.txt` and `docs/handover/phase-1.md`.
+
+## Phase 1.4 — Production activation preflight
+
+### 2026-09-12 — Verify the intended production credential before mutation
+
+**Status:** blocked; production remains unactivated
+
+**Verification:**
+
+- The only exposed `CLOUDFLARE_API_TOKEN` authenticated to the intended Foxlearningltd account and `foxtutor.org` zone.
+- Account, zone, Worker and Access collection reads passed.
+- D1, Workers Routes and R2 reads remained blocked.
+- Safe invalid-payload probes for Access application and identity-provider writes returned HTTP 403, `auth.forbidden`, error `1010`.
+- Wrangler reported missing user details and membership permissions for the exposed API token.
+- The existing Wrangler OAuth session remains able to validate Worker, D1 and Workers Routes operations but does not provide the required Access write boundary.
+
+**Production result:** no D1, Worker, route, Access, DNS, public-site or mail mutation was performed. The exact sanitized results are recorded in `docs/evidence/phase-1/phase-1.4-credential-check.txt`.
+
+**Handover:** expose the existing Access-write-capable `foxtutor build token` through the runtime without creating, rolling or recording another credential. Do not begin production mutation until the Access application and identity-provider write probes authorize.

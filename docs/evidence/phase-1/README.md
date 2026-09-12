@@ -23,3 +23,10 @@ Phase 1.2 and Phase 1.3 add capability and local-runtime evidence in `cloudflare
 `production-inactive.txt` records the live pre-activation result: the public application still serves `/learn` and related paths because no Learn route or Access policy exists yet. A real Chrome headless capture of `/learn` had the public Fox Tutor title and body hash `1b2d8bf63d44b99a9986db537e491a981539426f0294be6ffc1a99e0eff5237b`.
 
 Do not store tokens, cookies, OAuth assertions, private pupil data or authenticated browser profiles.
+
+Phase 1.4 credential verification:
+
+- `phase-1.4-credential-check.txt` records the safe pre-mutation probes from
+  2026-09-12. The exposed API token authenticated to the intended account and
+  zone but still failed the required Access application and identity-provider
+  write boundary, so production activation was correctly stopped.

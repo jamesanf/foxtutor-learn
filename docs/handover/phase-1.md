@@ -1,5 +1,17 @@
 # HUMAN HANDOVER REQUIRED
 
+## Phase 1.4 status
+
+The production activation preflight was repeated on 2026-09-12 using the
+credential exposed through `CLOUDFLARE_API_TOKEN`. It authenticated to the
+intended Foxlearningltd account and `foxtutor.org` zone, but Access application
+and identity-provider write probes still returned HTTP 403 (`auth.forbidden`,
+error 1010). D1, Workers Routes, R2 and user membership/details permissions
+also remain unavailable through that token.
+
+Production mutation was correctly stopped. See
+`docs/evidence/phase-1/phase-1.4-credential-check.txt`.
+
 ## Phase 1.3 status
 
 **Status:** genuine human blocker. Production remains unchanged and Phase 1 is not complete.
