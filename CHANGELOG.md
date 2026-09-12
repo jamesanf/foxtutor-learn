@@ -4,7 +4,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-13 — Phase 3.2 resource upload UX remediation
 
-**Status:** deployed as Worker `b894d6f2-3b3f-4d17-aa88-c571a6117253` from commit `47564925c04ff0e208f5262565a6400b8dec4d81`; authenticated acceptance pending
+**Status:** deployed as Worker `86417b0e-3656-4087-b787-a0c5cb1014f5` from commit `74e9ddd266e69cee3c6bf6d1245f02d17572c755`; authenticated acceptance pending
 
 - Redesigned Add Resource around a focused file-selection workflow with a styled, keyboard-accessible drag/drop zone, derived filename/type/size state, Change file interaction, upload progress and concise success navigation.
 - Added server-resolved lesson and student entry contexts so known associations are displayed as read-only context instead of repeated selectors; retained the generic Student + optional Lesson workflow for the resource manager.

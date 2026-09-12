@@ -23,11 +23,11 @@ Production acceptance is not claimed by this record until the authenticated brow
 
 ## Current deployment
 
-- Git commit: `47564925c04ff0e208f5262565a6400b8dec4d81`
+- Git commit: `74e9ddd266e69cee3c6bf6d1245f02d17572c755`
 - Remote `main`: matches the release commit
 - Worker: `foxtutor-learn`
-- Worker version: `b894d6f2-3b3f-4d17-aa88-c571a6117253`
-- Deployment message: `Phase 3.2 resource upload UX remediation`
+- Worker version: `86417b0e-3656-4087-b787-a0c5cb1014f5`
+- Deployment message: `Phase 3.2 contextual resource lesson filtering`
 - D1 migration: no new migration; remote reports no migrations to apply
 - R2: existing private `foxtutor-learn-resources` binding preserved
 - Public smoke: PASS after deployment
