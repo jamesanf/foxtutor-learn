@@ -31,33 +31,63 @@ Not yet run. A Chromium runtime is not available in this session, so no visual P
 
 The browser pass must verify calendar composition, plainly visible arrows, Month/Week grouping, readable events, subscription open/closed states, internal regeneration confirmation, create-form columns, native time entry, immediate preview for `16:00`, `16:15`, `16:30`, `16:45`, `09:00`, `12:45` and `23:15`, mobile stacking, focus, ownership/privacy and student absence of admin controls.
 
-## Regression matrix
+## Acceptance matrix
 
 | Area | Result |
 | --- | --- |
-| Calendar composition and density | PENDING browser |
+| Calendar composition | PENDING browser |
+| Calendar visual density | PENDING browser |
 | Previous icon visible | PENDING browser |
 | Next icon visible | PENDING browser |
+| Previous accessible label | PASS automated contract / browser pending |
+| Next accessible label | PASS automated contract / browser pending |
 | Today control | PENDING browser |
 | Month/Week control | PENDING browser |
-| Month default / Week view | PENDING browser |
-| Subscription closed/open layout | PENDING browser |
-| Subscription link field / Copy | PENDING browser |
-| Regeneration / internal confirmation / success | PENDING browser |
-| Create Lesson desktop grid | PENDING browser |
-| Create Lesson mobile layout | PENDING browser |
-| 24-hour time input / no 96 options | PASS locally / browser pending |
-| Quarter-hour validation | PASS by existing domain/server tests |
-| Immediate End preview / midnight crossover | PASS in implementation contract / browser pending |
-| Europe/London and DST persistence | PASS by existing domain tests / production pending |
-| Lesson URL and Notes | PASS by unchanged domain flow / production pending |
-| Ownership and private notes | PASS by unchanged authorization/query tests / production pending |
-| Feed/token regression | PENDING production |
-| Access boundary | PASS for public `/learn` redirect; authenticated scope pending |
-| Public-site regression | PASS post-deployment smoke |
+| Month default | PASS automated contract / browser pending |
+| Week view | PASS automated contract / browser pending |
+| Calendar event readability | PENDING browser |
+| Desktop layout | PENDING browser |
+| 75% desktop layout | PENDING browser |
+| Tablet layout | PENDING browser |
+| Mobile layout | PENDING browser |
+| Subscription closed state | PENDING browser |
+| Subscription open layout | PENDING browser |
+| Subscription link field | PENDING browser |
+| Copy action | PENDING browser |
+| Regenerate action | PENDING browser |
+| Internal confirmation | PASS markup contract / browser pending |
+| Internal success feedback | PASS markup contract / browser pending |
+| No browser-native dialogs | PASS source contract |
+| Create Lesson composition | PENDING browser |
+| Desktop form grid | PENDING browser |
+| Mobile form layout | PENDING browser |
+| Student field | PENDING browser |
+| Date field | PENDING browser |
+| 24-hour time input | PASS automated/runtime contract / browser pending |
+| No 96-option time selector | PASS automated contract |
+| Quarter-hour validation | PASS existing domain/server tests |
+| Immediate End preview | PASS runtime contract / browser pending |
+| End preview independent of Date | PASS runtime contract |
+| 55-minute duration | PASS existing domain/runtime tests |
+| Midnight crossover | PASS runtime contract |
+| Europe/London | PASS existing domain tests / production pending |
+| DST behaviour | PASS existing domain tests / production pending |
+| Lesson URL | PASS unchanged domain flow / production pending |
+| Notes secondary | PASS source contract / browser pending |
+| Validation | PASS existing domain/server tests / production pending |
+| Ownership | PASS existing authorization/query tests / production pending |
+| Feed regression | PENDING production |
+| Access boundary | PASS public `/learn` redirect / authenticated scope pending |
 | Accessibility | PENDING browser |
-| Automated tests/build/checks | PASS locally — `npm test` (13 files, 38 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production`, `git diff --check` |
-| Cleanup and Git state | PENDING final pass |
+| Automated tests | PASS — 13 files, 38 tests |
+| Build | PASS |
+| Static checks | PASS |
+| Production smoke | PASS post-deployment |
+| Authenticated browser acceptance | PENDING — Chromium unavailable |
+| Cleanup | PENDING final browser/production pass |
+| Documentation reconciliation | PASS for current in-progress state |
+| README material-pass updates | PASS |
+| Git clean | PASS after documentation commit |
 | Phase 2.9 completion | FAIL/PENDING until browser evidence exists |
 | Phase 2 final sign-off | FAIL/PENDING |
 
