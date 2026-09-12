@@ -45,7 +45,19 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/student" || path === "/learn/student/lessons") return "student";
   if (/^\/learn\/student\/lessons\/[^/]+$/.test(path)) return "student-lesson";
   if (path === "/learn/logout") return "logout";
-  if (path === "/learn/assets/learn.css" || path === "/learn/assets/learn.js") return "asset";
+  if (
+    path === "/learn/assets/learn.css" ||
+    path === "/learn/assets/learn.js" ||
+    path === "/learn/assets/foxlearninglogo-120.webp" ||
+    path === "/learn/assets/foxlearninglogo-240.webp" ||
+    path === "/learn/assets/fonts/geist-latin-wght-normal.woff2" ||
+    path === "/learn/assets/my-favicon/favicon.ico" ||
+    path === "/learn/assets/my-favicon/favicon-96x96.png" ||
+    path === "/learn/assets/my-favicon/apple-touch-icon.png" ||
+    path === "/learn/assets/my-favicon/site.webmanifest" ||
+    path === "/learn/assets/my-favicon/web-app-manifest-192x192.png" ||
+    path === "/learn/assets/my-favicon/web-app-manifest-512x512.png"
+  ) return "asset";
   return "not-found";
 }
 

@@ -50,7 +50,7 @@ export interface Env {
 function htmlDocument(title: string, body: string): Response {
   const headers = privateHeaders("text/html; charset=utf-8");
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><title>${escapeHtml(title)} | Foxtutor Learn</title><link rel="stylesheet" href="/learn/assets/learn.css"></head><body>${body}</body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta name="theme-color" content="#faf9f6"><title>${escapeHtml(title)} | FoxTutor Learn</title><link rel="icon" type="image/png" href="/learn/assets/my-favicon/favicon-96x96.png" sizes="96x96"><link rel="shortcut icon" href="/learn/assets/my-favicon/favicon.ico"><link rel="apple-touch-icon" href="/learn/assets/my-favicon/apple-touch-icon.png"><link rel="manifest" href="/learn/assets/my-favicon/site.webmanifest"><link rel="preload" href="/learn/assets/fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/learn/assets/learn.css"></head><body>${body}</body></html>`,
     { headers }
   );
 }
@@ -84,7 +84,7 @@ function navigation(role: Role): string {
 }
 
 function appPage(user: AppUser, csrfToken: string, title: string, content: string): Response {
-  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><span class="brand-mark">F</span><span>Foxtutor <strong>Learn</strong></span></a><div class="identity"><span>${escapeHtml(user.display_name)}<small>${user.role}</small></span><form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation">${navigation(user.role)}</nav><main class="content">${content}</main></div></div>`;
+  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>James Fox</strong><small>FoxTutor Learn</small></span></a><div class="identity"><span>${escapeHtml(user.display_name)}<small>${user.role}</small></span><form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div>`;
   return htmlDocument(title, body);
 }
 
@@ -107,7 +107,7 @@ function formatLessonTime(lesson: Lesson): string {
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
-  return `<tr><td>${showStudent ? `<a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>` : "Lesson"}</td><td><a href="${basePath}/${encodeURIComponent(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td></tr>`;
+  return `<tr><td data-label="${showStudent ? "Student" : "Lesson"}">${showStudent ? `<a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>` : "Lesson"}</td><td data-label="Date and time"><a href="${basePath}/${encodeURIComponent(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td></tr>`;
 }
 
 function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean): string {
@@ -117,7 +117,7 @@ function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean):
 
 function studentRows(students: Student[]): string {
   if (!students.length) return `<p class="muted">No students yet.</p>`;
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody>${students.map((student) => `<tr><td><a href="/learn/admin/students/${encodeURIComponent(student.id)}">${escapeHtml(student.name)}</a></td><td>${escapeHtml(student.email)}</td><td><span class="status status-${student.status.toLowerCase()}">${student.status === "ACTIVE" ? "Active" : "Inactive"}</span></td><td><a href="/learn/admin/students/${encodeURIComponent(student.id)}/edit">Edit</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody>${students.map((student) => `<tr><td data-label="Name"><a href="/learn/admin/students/${encodeURIComponent(student.id)}">${escapeHtml(student.name)}</a></td><td data-label="Email">${escapeHtml(student.email)}</td><td data-label="Status"><span class="status status-${student.status.toLowerCase()}">${student.status === "ACTIVE" ? "Active" : "Inactive"}</span></td><td data-label="Actions"><a href="/learn/admin/students/${encodeURIComponent(student.id)}/edit">Edit</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function hiddenCsrf(csrfToken: string): string {
@@ -335,7 +335,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const route = classifyLearnRoute(url.pathname);
   if (route === "asset") {
-    const assetPath = url.pathname === "/learn/assets/learn.css" ? "/learn.css" : "/learn.js";
+    const assetPath = url.pathname.slice("/learn/assets".length) || "/";
     const asset = await env.ASSETS.fetch(new Request(new URL(assetPath, url)));
     const headers = privateHeaders(asset.headers.get("Content-Type") ?? "text/plain");
     return new Response(asset.body, { status: asset.status, headers });

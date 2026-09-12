@@ -13,6 +13,9 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/status")).toBe("admin-lesson-status");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1")).toBe("student-lesson");
     expect(classifyLearnRoute("/learn/assets/learn.css")).toBe("asset");
+    expect(classifyLearnRoute("/learn/assets/foxlearninglogo-240.webp")).toBe("asset");
+    expect(classifyLearnRoute("/learn/assets/fonts/geist-latin-wght-normal.woff2")).toBe("asset");
+    expect(classifyLearnRoute("/learn/assets/my-favicon/site.webmanifest")).toBe("asset");
     expect(classifyLearnRoute("/learn/nope")).toBe("not-found");
     expect(classifyLearnRoute("/learn.css")).toBe("not-found");
   });
