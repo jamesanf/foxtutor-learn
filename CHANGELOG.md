@@ -2,6 +2,20 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-12 — Phase 2.10 final tutoring workflow and information-architecture refinement
+
+**Status:** local implementation and rendered browser review complete; authenticated production acceptance and deployment pending
+
+- Opened Phase 2.10 as the final Phase 2 UX pass because the Month-first calendar, duplicate dashboard navigation and missing upcoming-bookings workflow still did not meet the product standard.
+- Added the compatible MIT-licensed Standard `@fullcalendar/timegrid@6.1.21` package beside the existing pinned core/daygrid packages. The bundled calendar now defaults to `timeGridWeek`, keeps `dayGridMonth` secondary, focuses on 09:00–21:00, opens at 09:00, and renders concise in-bounds event title/time content without repeating timezone text.
+- Added visible TimeGrid-specific event styling, compact slot density, Week/Month toolbar contracts and maintained the existing inline SVG navigation affordances, canonical lesson links, authorized event projection and status styling.
+- Added admin-only `/learn/admin/bookings`, a server-side D1 query/count model over future `scheduled` lessons, earliest-first ordering, safe page/size validation, 12/24/48 page sizes, responsive rows and conventional pagination. Completed and cancelled lessons are excluded from the normal upcoming list.
+- Replaced the duplicate dashboard quick-link card grid with upcoming-booking preview, next lesson, upcoming count and active-student summaries. Added Bookings to the admin sidebar while retaining Lessons as the broader record-management destination.
+- Preserved the single student/login email model, explicit active-STUDENT linking, ownership predicates, UTC/IANA storage, 55-minute native lesson time workflow, feed/token security, Access boundary and public-site separation.
+- Added UI/source contracts and query tests for TimeGrid, visible 09:00–21:00 configuration, concise events and server-side Bookings pagination.
+- Scoped mobile table-card rules to Bookings/table surfaces so FullCalendar's internal TimeGrid tables retain their structural layout, and bounded the timetable viewport for a readable desktop/mobile surface.
+- Local validation passes: `npm test` (14 files, 41 tests), `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production` and `git diff --check`. Rendered local authenticated browser review covers 1440px, approximately 75% desktop zoom, 820px and 390px, including Week/Month navigation, event positioning, mobile overflow, Dashboard, Bookings, Create Lesson and Student form checks. Production acceptance, deployment, controlled cleanup and final Phase 2 closure remain pending. The last deployed Worker is `a844a418-b858-4a8c-a348-25a91df964d2`; no `phase-2.10-complete` tag exists.
+
 ### 2026-09-12 — Phase 2.9 UI composition and lesson-time workflow correction
 
 **Status:** deployed; authenticated browser acceptance pending

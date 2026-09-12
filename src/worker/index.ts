@@ -18,7 +18,10 @@ import {
   findLessonForUser,
   hasOverlappingLesson,
   insertLesson,
+  countActiveStudents,
+  countUpcomingLessons,
   listLessons,
+  listUpcomingLessons,
   listLessonsForUserInRange,
   listLessonsInRange,
   listLessonsForUser,
@@ -97,7 +100,7 @@ function escapeHtml(value: string): string {
 
 function navigation(role: Role): string {
   const links = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/students", "Students"], ["/learn/admin/lessons", "Lessons"]]
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/students", "Students"], ["/learn/admin/lessons", "Lessons"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"]];
   return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
 }
@@ -153,7 +156,7 @@ function formatLessonTime(lesson: Lesson): string {
 
 function formatCalendarLessonTime(lesson: Lesson): string {
   const formatter = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: lesson.timezone });
-  return `${formatter.format(new Date(lesson.start_at))} - ${formatter.format(new Date(lesson.end_at))} (${lesson.timezone})`;
+  return `${formatter.format(new Date(lesson.start_at))}–${formatter.format(new Date(lesson.end_at))}`;
 }
 
 function calendarView(lessons: Lesson[], role: Role): string {
@@ -161,7 +164,7 @@ function calendarView(lessons: Lesson[], role: Role): string {
   const showStudent = role === "ADMIN";
   const events = lessons.map((lesson) => {
     const displayTime = formatCalendarLessonTime(lesson);
-    const title = `${showStudent ? `${lesson.student_name ?? "Student"} · ` : ""}${displayTime}${lesson.status === "scheduled" ? "" : ` · ${statusLabel(lesson.status)}`}`;
+    const title = showStudent ? lesson.student_name ?? "Student" : "Lesson";
     return {
       id: lesson.id,
       title,
@@ -169,10 +172,51 @@ function calendarView(lessons: Lesson[], role: Role): string {
       end: lesson.end_at,
       url: `${basePath}/${encodeURIComponent(lesson.id)}`,
       classNames: [`lesson-status-${lesson.status}`],
-      extendedProps: { timezone: lesson.timezone, status: statusLabel(lesson.status) }
+      extendedProps: { displayTime, status: statusLabel(lesson.status) }
     };
   });
   return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div class="calendar-surface"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div></div></section>`;
+}
+
+function bookingDate(lesson: Lesson): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    timeZone: lesson.timezone
+  }).format(new Date(lesson.start_at));
+}
+
+function bookingTime(lesson: Lesson): string {
+  const formatter = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: lesson.timezone });
+  return `${formatter.format(new Date(lesson.start_at))}–${formatter.format(new Date(lesson.end_at))}`;
+}
+
+function bookingDuration(lesson: Lesson): string {
+  const minutes = Math.round((Date.parse(lesson.end_at) - Date.parse(lesson.start_at)) / 60_000);
+  return `${minutes} minutes`;
+}
+
+function bookingRows(lessons: Lesson[]): string {
+  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>No upcoming bookings</h2><p>There are no scheduled lessons ahead.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
+  return `<div class="table-wrap bookings-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function bookingPagination(page: number, pageSize: number, total: number): string {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  if (pageCount <= 1) return "";
+  const link = (nextPage: number, label: string, disabled = false) =>
+    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${label}</span>` : `<a class="pagination-link" href="/learn/admin/bookings?page=${nextPage}&size=${pageSize}">${label}</a>`;
+  const pages = Array.from({ length: pageCount }, (_, index) => index + 1).map((number) =>
+    number === page
+      ? `<span class="pagination-link is-current" aria-current="page">${number}</span>`
+      : `<a class="pagination-link" href="/learn/admin/bookings?page=${number}&size=${pageSize}">${number}</a>`
+  );
+  return `<nav class="pagination" aria-label="Bookings pagination">${link(page - 1, "Previous", page <= 1)}<span class="pagination-pages">${pages.join("")}</span>${link(page + 1, "Next", page >= pageCount)}</nav>`;
+}
+
+function pageSizeControl(pageSize: number): string {
+  return `<div class="page-size-control" aria-label="Bookings per page"><span>Rows</span>${[12, 24, 48].map((size) => size === pageSize ? `<span class="page-size is-current" aria-current="true">${size}</span>` : `<a class="page-size" href="/learn/admin/bookings?page=1&size=${size}">${size}</a>`).join("")}</div>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -289,15 +333,21 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
   return { active: created.active, setCookies: created.setCookies };
 }
 
-function adminDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/calendar"><h2>Calendar</h2></a><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
+async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
+  const upcoming = await listUpcomingLessons(db, new Date().toISOString(), 5, 0);
+  const upcomingCount = await countUpcomingLessons(db, new Date().toISOString());
+  const activeStudents = await countActiveStudents(db);
+  const preview = upcoming.length
+    ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
+    : `<div class="dashboard-empty"><p>No upcoming bookings.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
+  return appPage(user, csrfToken, "Admin dashboard", `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Dashboard</h1><p class="lede">A quick view of what needs attention today.</p></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong><small>${upcoming[0] ? escapeHtml(bookingTime(upcoming[0])) : "No scheduled lessons"}</small></section><section class="summary-card"><span>Upcoming bookings</span><strong>${upcomingCount}</strong><small>Scheduled lessons ahead</small></section><section class="summary-card"><span>Active students</span><strong>${activeStudents}</strong><small>Current student records</small></section></div><section class="card dashboard-section"><div class="section-heading"><div><p class="eyebrow">NEXT UP</p><h2>Upcoming bookings</h2></div><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
   const db = env.DB as D1Database;
   const url = new URL(request.url);
   const csrfToken = active.csrfToken;
-  if (route === "admin") return adminDashboard(active.user, csrfToken);
+  if (route === "admin") return adminDashboard(active.user, csrfToken, db);
   if (route === "admin-calendar") {
     const lessons = await listLessons(db);
     return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
@@ -317,6 +367,19 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     });
     const lessons = await listLessons(db);
     return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Link generated.")}</div>`);
+  }
+  if (route === "admin-bookings") {
+    const allowedPageSizes = [12, 24, 48];
+    const requestedSize = Number(url.searchParams.get("size"));
+    const pageSize = allowedPageSizes.includes(requestedSize) ? requestedSize : 12;
+    const requestedPage = Number(url.searchParams.get("page"));
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const now = new Date().toISOString();
+    const total = await countUpcomingLessons(db, now);
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, pageCount);
+    const bookings = await listUpcomingLessons(db, now, pageSize, (safePage - 1) * pageSize);
+    return appPage(active.user, csrfToken, "Bookings", `<div class="page-heading"><div><p class="eyebrow">UPCOMING SCHEDULE</p><h1>Bookings</h1><p class="lede">Upcoming scheduled lessons, earliest first.</p></div></div><div class="list-toolbar">${pageSizeControl(pageSize)}${total ? `<span class="result-count">${total} upcoming ${total === 1 ? "booking" : "bookings"}</span>` : ""}</div>${bookingRows(bookings)}${bookingPagination(safePage, pageSize, total)}`);
   }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);

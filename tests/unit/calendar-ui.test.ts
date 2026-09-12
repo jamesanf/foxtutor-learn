@@ -3,14 +3,21 @@ import { readFileSync } from "node:fs";
 
 const workerSource = readFileSync("src/worker/index.ts", "utf8");
 const clientSource = readFileSync("src/client/learn.ts", "utf8");
+const cssSource = readFileSync("public/learn.css", "utf8");
 
 describe("calendar presentation contract", () => {
-  it("uses a month-first FullCalendar toolbar with an optional week view", () => {
-    expect(clientSource).toContain('initialView: "dayGridMonth"');
-    expect(clientSource).toContain('right: "dayGridMonth,dayGridWeek"');
+  it("uses a week-first TimeGrid toolbar with a secondary month view", () => {
+    expect(clientSource).toContain('initialView: "timeGridWeek"');
+    expect(clientSource).toContain('right: "timeGridWeek,dayGridMonth"');
     expect(clientSource).toContain('buttonText: { today: "Today", month: "Month", week: "Week" }');
     expect(clientSource).toContain("left: \"prev,today,next\"");
     expect(clientSource).toContain('aria-label", `Previous ${period}`');
+    expect(clientSource).toContain('slotMinTime: "09:00:00"');
+    expect(clientSource).toContain('slotMaxTime: "21:00:00"');
+    expect(clientSource).toContain('scrollTime: "09:00:00"');
+    expect(clientSource).toContain('height: "clamp(560px, calc(100vh - 230px), 760px)"');
+    expect(clientSource).toContain('titleFormat: { day: "numeric", month: "long", year: "numeric" }');
+    expect(clientSource).toContain('import timeGridPlugin from "@fullcalendar/timegrid"');
     expect(clientSource).not.toContain("window.confirm");
   });
 
@@ -24,6 +31,10 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('name="lessonDate"');
     expect(workerSource).toContain("data-confirmation");
     expect(workerSource).not.toContain("data-confirm=");
+    expect(workerSource).toContain("/learn/admin/bookings");
+    expect(workerSource).toContain("listUpcomingLessons");
+    expect(cssSource).toContain(".table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td");
+    expect(cssSource).not.toContain("table, tbody, tr, td { display: block; }");
   });
 
   it("uses a native quarter-hour time input and a date-independent end preview", () => {
@@ -44,5 +55,12 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('role="alertdialog"');
     expect(workerSource).toContain('aria-modal="true"');
     expect(workerSource).toContain("subscription-link-group");
+  });
+
+  it("keeps event labels concise and renders a single admin bookings destination", () => {
+    expect(workerSource).toContain("extendedProps: { displayTime, status");
+    expect(clientSource).toContain("lesson-event-title");
+    expect(clientSource).toContain("lesson-event-time");
+    expect(workerSource).toContain('["/learn/admin/bookings", "Bookings"]');
   });
 });

@@ -14,7 +14,7 @@
     "test:browser": "node scripts/verify-browser.mjs",
     "test:production": "node scripts/smoke-production.mjs",
     "dev": "npx wrangler dev --config wrangler.local.jsonc",
-    "deploy": "npx wrangler deploy --message \"Phase 2.8 calendar and lesson UX refinement\""
+    "deploy": "npx wrangler deploy --message \"Phase 2.10 final tutoring workflow UX\""
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260905.1",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@fullcalendar/core": "6.1.21",
-    "@fullcalendar/daygrid": "6.1.21"
+    "@fullcalendar/daygrid": "6.1.21",
+    "@fullcalendar/timegrid": "6.1.21"
   }
 }

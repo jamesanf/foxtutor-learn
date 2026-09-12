@@ -413,6 +413,31 @@ Correct the remaining Phase 2 UX defects after the Phase 2.8 implementation demo
 
 Phase 2.9 is complete only when the rendered admin and student interfaces pass authenticated browser acceptance at 1440px, 1440px/75% zoom, 820px and 390px; the calendar, subscription and create-lesson workflows are visually balanced and accessible; time and DST behavior, ownership, feed, Access and public-site regressions pass; controlled data is cleaned up; production matches the repository; documentation is reconciled; `main` is clean and pushed; historical tags remain intact; and only then is `phase-2.9-complete` created. Phase 2 remains open until this gate passes.
 
+## Phase 2.10 — Final tutoring workflow and information-architecture refinement
+
+### Purpose
+
+Replace the oversized month-first calendar with a compact weekly timetable focused on the practical tutoring day, retain Month as a secondary overview, add a first-class upcoming Bookings view with server-side pagination, remove redundant dashboard navigation cards, simplify student identity/email entry, and perform the definitive end-to-end Phase 2 product acceptance.
+
+This phase exists because repeated calendar and form refinements improved technical functionality but did not achieve the required professional UX. It is the final Phase 2 pass; do not create Phase 2.11.
+
+### Must achieve
+
+- Use FullCalendar Standard TimeGrid at the pinned compatible `6.1.21` release with Week as the default and Month as the only secondary view. Keep the MIT-licensed Standard boundary; no Premium Scheduler/resource features, hosted assets, framework wrapper or bespoke timetable engine.
+- Focus the timetable on 09:00–21:00, open around 09:00, keep the hour and quarter-hour guidance readable, and use a compact viewport with evening lessons easy to inspect.
+- Provide one coherent toolbar with visible Previous/Next icons, Today, current Week/Month title and a compact `Week | Month` switch. Do not add Day, List or Year views.
+- Render concise event content inside event bounds, preserve existing status styling, canonical lesson links, overlap behavior and server-authorized event projection, and keep timezone as global/contextual information rather than repeated event text.
+- Keep one Add lesson action and the existing secondary collapsed subscription utility.
+- Add `/learn/admin/bookings` as an admin-only view over future scheduled `lessons`, ordered earliest first, excluding completed/cancelled rows, with server-side validated 12/24/48 pagination, safe invalid query handling and responsive mobile rows.
+- Make Dashboard show upcoming bookings, next lesson and active-student summaries without a duplicate navigation-card grid. Keep the sidebar as the primary information architecture: Dashboard, Calendar, Bookings, Students, Lessons.
+- Keep the student record UI to Name and one login/contact Email while preserving explicit active-STUDENT account linking, uniqueness and server-side ownership.
+- Keep Create Lesson as Student, Date, 24-hour Start, immediate derived 55-minute End, Lesson link and secondary details; do not reintroduce a large time dropdown.
+- Verify desktop, 75% zoom, tablet and mobile layout, keyboard/focus states, ownership/privacy, feed and Access boundaries, public-site regression, production parity, cleanup and documentation.
+
+### Exit criteria
+
+Phase 2.10 is complete only when the rendered product passes the full calendar, Bookings, Dashboard, Students, Create Lesson, subscription, accessibility, security, feed, Access, responsive and production acceptance matrix; local and production builds match; controlled data is cleaned; documentation reconciles to reality; `main` is clean and pushed; `phase-2.5-complete` and `phase-2.6-complete` remain intact; and only then is `phase-2.10-complete` created and Phase 2 marked COMPLETE. Known limitations must be recorded honestly. No Phase 2.11 may be created.
+
 ## Phase 3 — Lesson resources, R2, PDF/document processing, retention, and admin file manager
 
 ### Objective

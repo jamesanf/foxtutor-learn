@@ -24,6 +24,38 @@ export async function listLessons(db: D1Database): Promise<Lesson[]> {
   return result.results;
 }
 
+export async function listUpcomingLessons(
+  db: D1Database,
+  now: string,
+  limit: number,
+  offset: number
+): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${lessonColumns}, s.name AS student_name
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       WHERE l.status = 'scheduled' AND l.start_at >= ?
+       ORDER BY l.start_at ASC, l.id ASC
+       LIMIT ? OFFSET ?`
+    )
+    .bind(now, limit, offset)
+    .all<Lesson>();
+  return result.results;
+}
+
+export async function countUpcomingLessons(db: D1Database, now: string): Promise<number> {
+  const result = await db
+    .prepare("SELECT COUNT(*) AS count FROM lessons WHERE status = 'scheduled' AND start_at >= ?")
+    .bind(now)
+    .first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
+export async function countActiveStudents(db: D1Database): Promise<number> {
+  const result = await db.prepare("SELECT COUNT(*) AS count FROM students WHERE status = 'ACTIVE'").first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
 export async function listLessonsInRange(db: D1Database, startAt: string, endAt: string): Promise<Lesson[]> {
   const result = await db
     .prepare(

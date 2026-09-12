@@ -454,3 +454,20 @@ README must be updated after every material UX, testing, deployment or cleanup p
 Phase 2.9 is in progress because Phase 2.8 improved function but did not yet produce a consistently composed professional interface. Compactness must not mean visual compression: use standard hierarchy, grouping, alignment, whitespace, spacing tokens and responsive grids. Calendar navigation must render plainly visible inline SVG arrows, not rely only on accessible labels or icon classes. Subscription content must be a comfortable grouped utility with a dedicated link field, action group and internal confirmation surface. Create Lesson must use a native 24-hour `input[type="time"]` with `step="900"`, never a 96-option selector; quarter-hour validation remains server-authoritative and the derived 55-minute End preview must update immediately from Start without requiring Date. Preserve FullCalendar Standard, UTC/IANA storage, overlap protection, authorization, ownership, feed/token, Access and D1 architecture.
 
 Rendered UI evidence overrides source claims. Phase 2.9 cannot close until actual authenticated admin/student browser acceptance at 1440px, 1440px/75% zoom, 820px and 390px proves the composition, icon visibility, time workflow, accessibility, privacy, feed/Access boundaries, production parity, cleanup and documentation. Do not create `phase-2.9-complete` or any final Phase 2 tag while browser evidence is unavailable or any visual blocker remains.
+
+## Phase 2.10 current state
+
+Phase 2.10 is the final Phase 2 UX pass. Do not create Phase 2.11 and do not claim Phase 2 complete until the rendered product and production gates pass.
+
+- The primary admin and student calendar is FullCalendar Standard TimeGrid Week, with Month as the only secondary view.
+- The timetable focuses on 09:00–21:00, opens at 09:00, keeps hour/quarter-hour guidance readable, and must remain compact rather than becoming a 700px+ empty Month surface.
+- Use `@fullcalendar/core`, `@fullcalendar/daygrid` and `@fullcalendar/timegrid` at the coherent pinned version `6.1.21`; all are MIT-licensed Standard packages. Never use Premium Scheduler/resource features, CDN assets or a bespoke timetable engine.
+- Calendar events use concise student/title and time content without repeating timezone, notes or implementation status text unnecessarily. Previous and Next must render visible directional icons with accessible labels.
+- Admin navigation is Dashboard, Calendar, Bookings, Students and Lessons. Bookings is a server-paginated view over upcoming scheduled rows in `lessons`, not a second database or lifecycle.
+- Dashboard is an at-a-glance surface for upcoming bookings and compact counts, not a duplicate grid of navigation cards.
+- Student forms expose one login/contact email field. The server still resolves an active `STUDENT` account and stores the explicit `learn_user_id` link; matching email is not authentication.
+- Create Lesson uses a 24-hour native time input with `step="900"` and an immediate client preview of Start + 55 minutes. The server remains authoritative for timezone-aware UTC instants, DST gaps, overlap protection and validation.
+- Use the existing FoxTutor Geist, blue/cyan, surface, border, button and focus system. Use grids and columns where they improve hierarchy, then stack naturally at mobile widths.
+- Browser dialogs (`alert`, `confirm`, `prompt`) remain prohibited. Subscription stays below the timetable, collapsed by default, and uses the existing internal confirmation surface.
+
+The final acceptance must cover calendar positioning at 09:00, 10:15, 13:00, 17:00, 18:15 and 20:00; 21:00 and off-range boundaries; Week/Month navigation; concise event rendering; Create Lesson time preview and DST; Bookings 0/1/12/13/24/25/48/49 cases with 12/24/48 server pagination; dashboard/navigation duplication; student linking security; feed, Access, ownership, privacy, responsive and public-site regression. Do not create a completion tag while authenticated browser or production evidence is unavailable.

@@ -1,5 +1,6 @@
 import { Calendar } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
 
 (() => {
   document.documentElement.dataset.learnReady = "true";
@@ -76,30 +77,49 @@ import dayGridPlugin from "@fullcalendar/daygrid";
     if (!rawEvents || !timezone || !initialDate) throw new Error("Calendar configuration is incomplete.");
     const events = JSON.parse(rawEvents);
     const calendar = new Calendar(element, {
-      plugins: [dayGridPlugin],
-      initialView: "dayGridMonth",
+      plugins: [dayGridPlugin, timeGridPlugin],
+      initialView: "timeGridWeek",
       initialDate,
       timeZone: timezone,
       firstDay: 1,
-      dayHeaderFormat: { weekday: "short" },
+      dayHeaderFormat: { weekday: "short", day: "numeric", month: "short" },
       fixedWeekCount: false,
       dayMaxEvents: 3,
       displayEventTime: false,
       eventDisplay: "block",
       eventOrder: "start,title",
+      slotMinTime: "09:00:00",
+      slotMaxTime: "21:00:00",
+      scrollTime: "09:00:00",
+      slotDuration: "00:15:00",
+      slotLabelInterval: "01:00",
+      height: "clamp(560px, calc(100vh - 230px), 760px)",
+      titleFormat: { day: "numeric", month: "long", year: "numeric" },
+      // FullCalendar TimeGrid supports this option; 6.1.21 omits its ambient type from the package entrypoint.
+      // @ts-expect-error
+      allDaySlot: false,
       buttonText: { today: "Today", month: "Month", week: "Week" },
+      eventContent: ({ event }) => {
+        const title = document.createElement("span");
+        title.className = "lesson-event-title";
+        title.textContent = event.title;
+        const time = document.createElement("span");
+        time.className = "lesson-event-time";
+        time.textContent = String(event.extendedProps.displayTime ?? "");
+        return { domNodes: [title, time] };
+      },
       eventDidMount: ({ event, el }) => {
-        const accessibleLabel = `${event.title} · ${event.extendedProps.status}`;
+        const accessibleLabel = `${event.title} · ${event.extendedProps.displayTime} · ${event.extendedProps.status}`;
         el.setAttribute("aria-label", accessibleLabel);
         el.setAttribute("title", accessibleLabel);
       },
       headerToolbar: {
         left: "prev,today,next",
         center: "title",
-        right: "dayGridMonth,dayGridWeek"
+        right: "timeGridWeek,dayGridMonth"
       },
       datesSet: ({ view }) => {
-        const period = view.type === "dayGridWeek" ? "week" : "month";
+        const period = view.type === "timeGridWeek" ? "week" : "month";
         const previous = element.querySelector<HTMLButtonElement>(".fc-prev-button");
         const next = element.querySelector<HTMLButtonElement>(".fc-next-button");
         if (previous) {
@@ -112,7 +132,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
         }
         element.querySelector<HTMLButtonElement>(".fc-today-button")?.setAttribute("aria-label", "Go to today");
         element.querySelector<HTMLButtonElement>(".fc-dayGridMonth-button")?.setAttribute("aria-label", "Show month view");
-        element.querySelector<HTMLButtonElement>(".fc-dayGridWeek-button")?.setAttribute("aria-label", "Show week view");
+        element.querySelector<HTMLButtonElement>(".fc-timeGridWeek-button")?.setAttribute("aria-label", "Show week view");
       },
       events
     });

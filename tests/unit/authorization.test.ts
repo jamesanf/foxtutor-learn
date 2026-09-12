@@ -9,6 +9,7 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn")).toBe("entry");
     expect(classifyLearnRoute("/learn/admin")).toBe("admin");
     expect(classifyLearnRoute("/learn/admin/calendar")).toBe("admin-calendar");
+    expect(classifyLearnRoute("/learn/admin/bookings")).toBe("admin-bookings");
     expect(classifyLearnRoute("/learn/student/lessons")).toBe("student");
     expect(classifyLearnRoute("/learn/student/calendar")).toBe("student-calendar");
     expect(classifyLearnRoute("/learn/admin/calendar/feed")).toBe("admin-calendar-feed");
@@ -25,7 +26,9 @@ describe("Learn route authorization", () => {
   });
   it("enforces role boundaries", () => {
     expect(canAccess(admin, "admin")).toBe(true);
+    expect(canAccess(admin, "admin-bookings")).toBe(true);
     expect(canAccess(admin, "student")).toBe(false);
+    expect(canAccess(student, "admin-bookings")).toBe(false);
     expect(canAccess(student, "student")).toBe(true);
     expect(canAccess(student, "admin")).toBe(false);
     expect(requiredRole("admin")).toBe("ADMIN");
