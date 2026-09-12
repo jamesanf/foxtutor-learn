@@ -18,11 +18,23 @@ import {
   hasOverlappingLesson,
   insertLesson,
   listLessons,
+  listLessonsForUserInRange,
+  listLessonsInRange,
   listLessonsForUser,
   updateLesson,
   updateLessonStatus,
   type Lesson
 } from "../db/lessons";
+import {
+  CALENDAR_TIMEZONE,
+  calendarDateLabel,
+  calendarPeriod,
+  calendarPeriodLabel,
+  lessonCalendarDate,
+  nextCalendarWeek,
+  previousCalendarWeek,
+  type CalendarPeriod
+} from "../domain/calendar";
 import {
   canTransitionLessonStatus,
   isoToLocalDateTime,
@@ -78,8 +90,8 @@ function escapeHtml(value: string): string {
 
 function navigation(role: Role): string {
   const links = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/students", "Students"], ["/learn/admin/lessons", "Lessons"]]
-    : [["/learn/student", "Dashboard"], ["/learn/student/lessons", "My lessons"]];
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/students", "Students"], ["/learn/admin/lessons", "Lessons"]]
+    : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"]];
   return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
 }
 
@@ -104,6 +116,47 @@ function statusLabel(status: LessonStatus): string {
 function formatLessonTime(lesson: Lesson): string {
   const formatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: lesson.timezone });
   return `${formatter.format(new Date(lesson.start_at))} - ${formatter.format(new Date(lesson.end_at))} (${lesson.timezone})`;
+}
+
+function formatCalendarLessonTime(lesson: Lesson): string {
+  const formatter = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: lesson.timezone });
+  return `${formatter.format(new Date(lesson.start_at))} - ${formatter.format(new Date(lesson.end_at))} (${lesson.timezone})`;
+}
+
+function calendarQuery(periodDate: string): string {
+  return `?week=${encodeURIComponent(periodDate)}`;
+}
+
+function calendarLessonCard(lesson: Lesson, basePath: string, showStudent: boolean): string {
+  const student = showStudent ? `<strong>${escapeHtml(lesson.student_name ?? "Student")}</strong>` : "";
+  const label = `${showStudent ? `${lesson.student_name ?? "Student"}, ` : ""}${formatCalendarLessonTime(lesson)}, ${statusLabel(lesson.status)}`;
+  return `<a class="calendar-lesson status-${lesson.status}" href="${basePath}/${encodeURIComponent(lesson.id)}" aria-label="${escapeHtml(label)}">${student}<span>${escapeHtml(formatCalendarLessonTime(lesson))}</span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`;
+}
+
+function calendarView(
+  period: CalendarPeriod,
+  lessons: Lesson[],
+  role: Role
+): string {
+  const basePath = role === "ADMIN" ? "/learn/admin/lessons" : "/learn/student/lessons";
+  const showStudent = role === "ADMIN";
+  const lessonGroups = new Map<string, Lesson[]>();
+  for (const date of period.dates) lessonGroups.set(date, []);
+  for (const lesson of lessons) {
+    const date = lessonCalendarDate(lesson.start_at, period.timezone);
+    lessonGroups.get(date)?.push(lesson);
+  }
+  const days = period.dates.map((date) => {
+    const dayLessons = lessonGroups.get(date) ?? [];
+    const createLink = role === "ADMIN"
+      ? `<a class="calendar-add" href="/learn/admin/lessons/new?date=${encodeURIComponent(date)}&startAt=${encodeURIComponent(`${date}T09:00`)}&endAt=${encodeURIComponent(`${date}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}">Add lesson</a>`
+      : "";
+    return `<section class="calendar-day" aria-labelledby="calendar-day-${date}"><div class="calendar-day-heading"><h2 id="calendar-day-${date}">${escapeHtml(calendarDateLabel(date, period.timezone))}</h2>${createLink}</div><div class="calendar-lessons">${dayLessons.length ? dayLessons.map((lesson) => calendarLessonCard(lesson, basePath, showStudent)).join("") : `<p class="calendar-empty">No lessons</p>`}</div></section>`;
+  }).join("");
+  const previous = calendarQuery(previousCalendarWeek(period));
+  const next = calendarQuery(nextCalendarWeek(period));
+  const today = calendarQuery(calendarPeriod(null, period.timezone).startDate);
+  return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div class="calendar-toolbar"><div class="calendar-navigation" aria-label="Calendar navigation"><a class="button secondary" href="${previous}">Previous</a><a class="button secondary" href="${today}">Today</a><a class="button secondary" href="${next}">Next</a></div><p class="calendar-period" aria-live="polite">${escapeHtml(calendarPeriodLabel(period))}</p></div><p class="calendar-help">Week shown in ${escapeHtml(period.timezone)}. Each lesson time is displayed in its stored lesson timezone. Status is shown by text and badge.</p><div class="calendar-week">${days}</div></section>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -138,12 +191,15 @@ function lessonForm(
   students: Student[],
   error?: string,
   lesson?: Lesson,
-  selectedStudent?: string
+  selectedStudent?: string,
+  selectedStart?: string,
+  selectedEnd?: string,
+  selectedTimezone?: string
 ): string {
   const studentId = lesson?.student_id ?? selectedStudent ?? "";
-  const timezone = lesson?.timezone ?? "Europe/London";
-  const start = lesson ? isoToLocalDateTime(lesson.start_at, timezone) : "";
-  const end = lesson ? isoToLocalDateTime(lesson.end_at, timezone) : "";
+  const timezone = lesson?.timezone ?? selectedTimezone ?? "Europe/London";
+  const start = lesson ? isoToLocalDateTime(lesson.start_at, timezone) : selectedStart ?? "";
+  const end = lesson ? isoToLocalDateTime(lesson.end_at, timezone) : selectedEnd ?? "";
   return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>${lesson ? "Edit lesson" : "Create lesson"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<label>Student<select name="studentId" required><option value="">Choose a student</option>${students.filter((student) => student.status === "ACTIVE").map((student) => `<option value="${escapeHtml(student.id)}"${student.id === studentId ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("External lesson URL (HTTPS)", "externalUrl", lesson?.external_url ?? "", "url")}<label>Notes<textarea name="notes" rows="7" maxlength="10000">${escapeHtml(lesson?.notes ?? "")}</textarea></label><input type="hidden" name="status" value="${escapeHtml(lesson?.status ?? "scheduled")}"><p class="help">Times are entered in the selected timezone and stored as UTC instants. Status changes are separate and explicit.</p><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></form></section>`;
 }
 
@@ -197,7 +253,7 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
 }
 
 function adminDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
+  return appPage(user, csrfToken, "Admin dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Admin dashboard</h1><p class="lede">Manage students and lessons from one private workspace.</p><div class="quick-links"><a class="card" href="/learn/admin/calendar"><h2>Calendar</h2><p>See the current tutoring week, open lessons and create a lesson from a day.</p></a><a class="card" href="/learn/admin/students"><h2>Students</h2><p>View, create, edit and deactivate student records.</p></a><a class="card" href="/learn/admin/lessons"><h2>Lessons</h2><p>Create lessons, manage notes and update lifecycle status.</p></a></div>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -205,6 +261,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   const url = new URL(request.url);
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken);
+  if (route === "admin-calendar") {
+    const period = calendarPeriod(url.searchParams.get("week"));
+    const lessons = await listLessonsInRange(db, period.startAt, period.endAt);
+    return appPage(active.user, csrfToken, "Calendar", `<div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1><p class="lede">Plan the tutoring week from the existing lesson records.</p></div>${buttonLink(`/learn/admin/lessons/new?date=${encodeURIComponent(period.startDate)}&startAt=${encodeURIComponent(`${period.startDate}T09:00`)}&endAt=${encodeURIComponent(`${period.startDate}T10:00`)}&timezone=${encodeURIComponent(period.timezone)}`, "Create lesson")}</div>${calendarView(period, lessons, "ADMIN")}`);
+  }
   if (route === "admin-students") {
     return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
   }
@@ -258,7 +319,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-lesson-form") {
     const students = await listStudents(db);
-    if (request.method === "GET") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, undefined, undefined, url.searchParams.get("student") ?? undefined));
+    if (request.method === "GET") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, undefined, undefined, url.searchParams.get("student") ?? undefined, url.searchParams.get("startAt") ?? undefined, url.searchParams.get("endAt") ?? undefined, url.searchParams.get("timezone") ?? undefined));
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
@@ -305,7 +366,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
 }
 
 function studentDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>My lessons</h2><p>View upcoming, completed and cancelled lessons assigned to your account.</p>${buttonLink("/learn/student/lessons", "View my lessons")}</section>`);
+  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>Calendar</h2><p>View your lessons by week and open a lesson for its details.</p>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
 }
 
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -313,6 +374,11 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   const csrfToken = active.csrfToken;
   const pathname = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
+  if (route === "student-calendar") {
+    const period = calendarPeriod(new URL(request.url).searchParams.get("week"));
+    const lessons = await listLessonsForUserInRange(db, active.user.id, period.startAt, period.endAt);
+    return appPage(active.user, csrfToken, "My calendar", `<div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1><p class="lede">Only lessons linked to your Learn account are shown.</p></div></div>${calendarView(period, lessons, "STUDENT")}`);
+  }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);
     const now = Date.now();

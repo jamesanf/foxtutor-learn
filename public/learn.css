@@ -61,6 +61,25 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .quick-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .quick-links .card { margin-top: 0; text-decoration: none; }
 .quick-links .card:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgb(16 42 67 / 12%); }
+.calendar-shell { margin-top: 28px; }
+.calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 20px; border: 1px solid #c3d0dc; border-radius: 12px 12px 0 0; background: var(--surface); }
+.calendar-navigation { display: flex; flex-wrap: wrap; gap: 8px; }
+.calendar-navigation .button { margin-top: 0; }
+.calendar-period { margin: 0; color: var(--foreground); font-weight: 700; text-align: right; }
+.calendar-help { margin: 0; padding: 12px 20px; border-right: 1px solid #c3d0dc; border-bottom: 1px solid #c3d0dc; border-left: 1px solid #c3d0dc; color: var(--muted); background: #f7fafc; font-size: .9rem; }
+.calendar-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; margin-top: 1px; border: 1px solid #c3d0dc; border-top: 0; border-radius: 0 0 12px 12px; overflow: hidden; background: var(--line); }
+.calendar-day { min-height: 220px; background: var(--surface); }
+.calendar-day-heading { display: flex; align-items: start; justify-content: space-between; gap: 8px; min-height: 66px; padding: 12px; background: #e8f0f5; }
+.calendar-day-heading h2 { font-size: .95rem; }
+.calendar-add { color: var(--action); font-size: .78rem; font-weight: 650; text-align: right; text-decoration: underline; text-underline-offset: 3px; }
+.calendar-lessons { display: grid; align-content: start; gap: 8px; padding: 10px; }
+.calendar-lesson { display: grid; gap: 4px; padding: 10px; border: 1px solid #b8c7d6; border-left: 4px solid var(--action); border-radius: 8px; color: var(--foreground); background: #fff; text-decoration: none; }
+.calendar-lesson:hover, .calendar-lesson:focus-visible { border-color: var(--primary); background: #f7fcfd; }
+.calendar-lesson.status-completed { border-left-color: #0369a1; }
+.calendar-lesson.status-cancelled { border-left-color: #b91c1c; background: #fffafa; }
+.calendar-lesson > span:not(.status) { color: var(--muted); font-size: .78rem; }
+.calendar-lesson .status { justify-self: start; }
+.calendar-empty { margin: 0; color: var(--muted); font-size: .85rem; }
 .table-wrap { margin-top: 24px; overflow: hidden; border: 1px solid #c3d0dc; border-radius: 10px; background: var(--surface); box-shadow: 0 1px 3px rgb(16 42 67 / 5%); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 13px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
@@ -98,6 +117,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .button:hover { background: var(--action-hover); }
 .button:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+@media (max-width: 900px) {
+  .calendar-week { grid-template-columns: 1fr; gap: 10px; border: 0; overflow: visible; background: transparent; }
+  .calendar-day { min-height: 0; border: 1px solid #c3d0dc; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 2px rgb(16 42 67 / 7%); }
+  .calendar-day-heading { min-height: 0; }
+}
 @media (max-width: 700px) {
   .topbar { align-items: flex-start; flex-direction: column; }
   .identity { width: 100%; justify-content: space-between; text-align: left; }
@@ -110,6 +134,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .page-heading { align-items: flex-start; flex-direction: column; }
   .quick-links, .detail-grid { grid-template-columns: 1fr; }
   .full-width { grid-column: auto; }
+  .calendar-toolbar { align-items: flex-start; flex-direction: column; }
+  .calendar-period { text-align: left; }
   .table-wrap { overflow: visible; border: 0; background: transparent; }
   table, tbody, tr, td { display: block; }
   thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }

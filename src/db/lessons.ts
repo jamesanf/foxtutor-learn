@@ -24,6 +24,19 @@ export async function listLessons(db: D1Database): Promise<Lesson[]> {
   return result.results;
 }
 
+export async function listLessonsInRange(db: D1Database, startAt: string, endAt: string): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${lessonColumns}, s.name AS student_name
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       WHERE l.start_at < ? AND l.end_at > ?
+       ORDER BY l.start_at ASC, l.id ASC`
+    )
+    .bind(endAt, startAt)
+    .all<Lesson>();
+  return result.results;
+}
+
 export async function listLessonsForUser(db: D1Database, userId: string): Promise<Lesson[]> {
   const result = await db
     .prepare(
@@ -34,6 +47,26 @@ export async function listLessonsForUser(db: D1Database, userId: string): Promis
        ORDER BY l.start_at ASC`
     )
     .bind(userId)
+    .all<Lesson>();
+  return result.results;
+}
+
+export async function listLessonsForUserInRange(
+  db: D1Database,
+  userId: string,
+  startAt: string,
+  endAt: string
+): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${studentLessonColumns}
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       JOIN users u ON u.id = s.learn_user_id
+       WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
+         AND l.start_at < ? AND l.end_at > ?
+       ORDER BY l.start_at ASC, l.id ASC`
+    )
+    .bind(userId, endAt, startAt)
     .all<Lesson>();
   return result.results;
 }

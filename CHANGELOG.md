@@ -2,6 +2,29 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+## Phase 2.3 — Calendar and scheduling UX
+
+### 2026-09-12 — Local calendar implementation and query model
+
+**Status:** local implementation ready; production and authenticated acceptance pending
+
+**Implementation:**
+
+- Added a reusable Monday-to-Sunday calendar-period helper with Europe/London display boundaries and existing UTC/IANA conversion functions.
+- Added admin and student date-range lesson queries ordered by UTC start and ID; student queries retain the existing linked-user, active-record and role predicates and omit private notes/student names.
+- Added server-rendered admin and student week calendar routes with previous, today and next navigation, clear period headings, empty-day states and explicit scheduled/completed/cancelled labels.
+- Linked calendar lesson cards to the canonical lesson detail route and calendar day actions to the existing lesson creation form with prefilled date, time and timezone values.
+- Added tablet/mobile stacked-day layout while preserving the established FoxTutor branding, focus styles, noindex shell and server-rendered architecture.
+- Added unit coverage for date-range selection, timezone boundaries, lesson ordering, student ownership predicates, privacy columns and empty query results.
+
+**Tests:** `npm test` (9 files, 23 tests); `npm run build`; `npm run check`; `npm run test:browser`; `git diff --check`.
+
+**Deployment:** not performed. The production Worker remains `85129275-02b5-40be-8626-db554aa6903f`; no production D1 migration was required.
+
+**Known limitations:** authenticated Chromium acceptance, production overlap/timezone/privacy verification, public regression after deployment, controlled fixture cleanup and the `phase-2.3-complete` tag are not claimed.
+
+**Next step:** review and deploy the local calendar implementation through the bounded Phase 2.3 acceptance passes without starting recurrence, availability, notifications, resources or billing.
+
 ## Phase 0 — Initial project constitution
 
 ### 2026-09-12 — Initial architecture and agent-control baseline

@@ -4,12 +4,26 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 2.1 complete after Phase 2.2 acceptance, visual hardening and operational closure
+**Phase:** Phase 2.3 calendar and scheduling UX implementation in progress; production acceptance not yet claimed
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. Pass 1 now uses the established FoxTutor deep cyan top bar, a grounded application background, stronger surface/table/form contrast and explicit responsive navigation states. Production D1 now contains `foxlearningltd@gmail.com` as `ADMIN` and `jamesanf@gmail.com` as `STUDENT`.
+**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. The local Phase 2.3 implementation adds server-side week range queries, role-scoped calendar routes, responsive week views, status-aware lesson cards, navigation and links into the existing lesson create/detail/edit flows. No production deployment or authenticated Phase 2.3 acceptance is claimed in this pass.
 
-The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`.
+The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
+
+### Phase 2.3 operating state
+
+**Master implementation pass — local implementation (2026-09-12):** added a reusable week-period/range helper using the existing UTC/IANA conversion functions; added admin and student range queries with server-side student ownership enforcement and student-safe columns; added `/learn/admin/calendar` and `/learn/student/calendar`; added previous/today/next navigation, empty-day states, explicit scheduled/completed/cancelled labels, lesson links to canonical routes, and day-prefilled links into the existing lesson creation form. The responsive representation stacks days at tablet/mobile widths rather than shrinking a dense seven-column grid.
+
+**Tests:** `npm test` (9 files, 23 tests); `npm run build`; `npm run check`; `npm run test:browser`; `git diff --check` all pass locally.
+
+**Production status:** not deployed in this pass. The deployed Worker remains `85129275-02b5-40be-8626-db554aa6903f`; authenticated admin/student Chromium acceptance, production overlap/timezone/privacy verification, public regression after deployment, controlled fixture cleanup and the Phase 2.3 tag remain outstanding.
+
+**Current acceptance gates:** local calendar query/type/privacy contracts PASS; production calendar, authenticated ownership/privacy, responsive browser inspection, keyboard/contrast evidence, deployment verification, cleanup, README/CHANGELOG completion and Git/tag closure remain pending.
+
+**Remaining work:** run bounded production passes with controlled fixtures, verify the existing lesson create/edit and overlap/lifecycle paths from calendar links, exercise authenticated desktop/tablet/mobile and keyboard behavior, deploy only after review, update this operating state after each pass, and close only with all Phase 2.3 gates evidenced.
+
+**Next pass:** authenticated/local integration review of the admin calendar and existing lesson-flow handoff, followed by the student privacy and production acceptance passes.
 
 ### Phase 2.2 operating state
 
@@ -37,7 +51,7 @@ The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gm
 
 **Pass 5 — final regression, cleanup and closure (2026-09-12):** COMPLETE. Re-ran the full automated suite, production smoke, public endpoint regression and authenticated post-cleanup admin/student checks. Verified Europe/London and America/New_York display under an overridden browser timezone, overlap rejection and non-overlap acceptance, scheduled/completed/cancelled lifecycle behavior, invalid transition rejection and student lifecycle immutability. Deactivated/cancelled fixtures through the authenticated admin mechanisms, then removed the exact controlled fixture IDs with a guarded production cleanup; no real identity or unrelated record was touched. Final D1 state contains only `foxlearningltd@gmail.com` (`ADMIN`, `ACTIVE`) and `jamesanf@gmail.com` (`STUDENT`, `ACTIVE`), with migrations `0001_foundation.sql` and `0002_students_lessons.sql`.
 
-**Final acceptance gates:** all Phase 2.1/2.2 acceptance gates PASS, including desktop/tablet/mobile responsive inspection, authenticated production regression, public regression, controlled fixture cleanup, README/CHANGELOG, clean Git tree and verified production deployment. No calendar, availability, recurrence, notifications, resources or billing work was started.
+**Final acceptance gates:** all Phase 2.1/2.2 acceptance gates PASS, including desktop/tablet/mobile responsive inspection, authenticated production regression, public regression, controlled fixture cleanup, README/CHANGELOG, clean Git tree and verified production deployment. Phase 2.3 remains open pending its own production and authenticated acceptance gates. No recurrence, availability automation, notifications, resources or billing work was started.
 
 ## Architecture
 
@@ -101,7 +115,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 0 | Constitution and repository foundation | Bootstrap inherited |
 | 1 | Private `/learn`, Google/Access auth, roles, anti-indexing | Complete and tagged `phase-1-complete` |
 | 2.1 | Students, lessons, ownership and lifecycle | Complete and tagged `phase-2.1-complete` |
-| 2 | Calendar and later scheduling features | Deferred |
+| 2.3 | Calendar and scheduling UX around lessons | In progress; local implementation pending production acceptance |
 | 3 | R2 resources and document pipeline | Deferred |
 | 4 | Mail notifications and reports | Deferred |
 | 5 | Cancellation automation | Deferred |
@@ -118,4 +132,4 @@ There is no public registration and no application password subsystem. Only Acce
 - Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2.1 is intentionally limited to students, lessons, ownership, lifecycle, notes, HTTPS lesson URLs, timezone-safe storage and overlap-aware scheduling.
-- Phase 2.1 acceptance is closed; later calendar, availability, recurrence, notifications, resources, billing and reporting phases remain deferred.
+- Phase 2.1 acceptance is closed. Phase 2.3 calendar and scheduling UX is implemented locally but not production-accepted. Availability automation, recurrence, notifications, resources, billing and reporting remain deferred.
