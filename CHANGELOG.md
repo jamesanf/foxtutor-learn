@@ -297,3 +297,24 @@ tagging and pushing Phase 1 completion.
 **Deployment:** migration `0002_students_lessons.sql` was applied to the existing production `foxtutor-learn` D1 and final Worker version `3a81dca9-539e-4e42-8c6a-1bc058902fe2` was deployed. Public routes, Access configuration, Fox Mail and public-site infrastructure were not changed.
 
 **Known limitations:** no calendar UI, recurring lessons, availability, notifications, resources, billing or reporting; authenticated Phase 2.1 acceptance still requires the controlled existing identities.
+
+## Phase 2.2 — Production acceptance, visual hardening and operational closure
+
+### 2026-09-12 — Pass 1 visual hierarchy correction
+
+**Status:** deployed; authenticated production acceptance remains pending
+
+**Implementation:**
+
+- Applied the established public FoxTutor action blue (`#0e7490`) to the Learn top bar and browser theme color while preserving the existing FoxTutor logo.
+- Increased contrast between the application background, navigation, content surfaces, cards, tables, forms, controls and status badges.
+- Added explicit active navigation styling, including a mobile-safe active indicator, through the existing Learn asset script.
+- Preserved reduced-motion, keyboard-focus, noindex and private response behavior; no data, authorization or lesson lifecycle logic changed.
+
+**Tests:** `npm test`, `npm run build`, `npm run check`, `npm run test:browser`, `npm run test:production`, `git diff --check`, live public-site status checks.
+
+**Deployment:** Worker version `85129275-02b5-40be-8626-db554aa6903f` deployed successfully. `/learn` remains behind the existing Cloudflare Access redirect. Public homepage, `/about`, `/robots.txt` and `/sitemap.xml` remained available and unchanged; Learn remains absent from the public sitemap.
+
+**Known limitations:** authenticated Chromium visual/CRUD inspection, student privacy/isolation, controlled fixture cleanup and final Phase 2.1 closure remain for subsequent bounded passes. Headless Chrome capture was attempted locally but did not complete reliably in this environment.
+
+**Next pass:** Pass 2 — authenticated admin production acceptance with `foxlearningltd@gmail.com`.

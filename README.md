@@ -4,12 +4,24 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** 2.1 student and lesson management deployed; authenticated production acceptance pending
+**Phase:** 2.2 Pass 1 visual hardening deployed; authenticated production acceptance pending
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. Production D1 now contains `foxlearningltd@gmail.com` as `ADMIN` and `jamesanf@gmail.com` as `STUDENT`.
+**Latest state:** `foxtutor-learn` Worker, production D1, exact Learn routes, Google-backed Access app/policy, branded shell, role model, session foundation, tests and public regression evidence are deployed. Pass 1 now uses the established FoxTutor deep cyan top bar, a grounded application background, stronger surface/table/form contrast and explicit responsive navigation states. Production D1 now contains `foxlearningltd@gmail.com` as `ADMIN` and `jamesanf@gmail.com` as `STUDENT`.
 
-The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains those active admin/student records. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `3a81dca9-539e-4e42-8c6a-1bc058902fe2` is deployed; authenticated production acceptance remains pending.
+The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains those active admin/student records. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed; authenticated production acceptance remains pending.
+
+### Phase 2.2 operating state
+
+**Pass 1 — visual hierarchy correction (2026-09-12):** replaced the pale header with the public FoxTutor action blue (`#0e7490`), preserved the existing logo, improved header identity/logout contrast, grounded the page background, differentiated navigation/content/table/form surfaces, strengthened status and focus visibility, and added active navigation state plus the matching blue browser theme color. No data, authorization or lifecycle logic changed.
+
+**Tests run:** `npm test`; `npm run build`; `npm run check`; `npm run test:browser`; `npm run test:production`; `git diff --check`; live public-site status checks. Chrome was available but headless capture did not complete reliably in this environment; authenticated Chromium acceptance remains the next human-assisted pass.
+
+**Deployment status:** deployed to production as Worker version `85129275-02b5-40be-8626-db554aa6903f`. `/learn` continues to redirect to Cloudflare Access. Public homepage, `/about`, `/robots.txt` and `/sitemap.xml` remain unchanged and Learn remains absent from the public sitemap.
+
+**Acceptance gates:** FoxTutor visual identity PASS; blue top bar PASS; page hierarchy/contrast implementation PASS; production deployment PASS; public regression PASS. Authenticated admin CRUD, student privacy/isolation, responsive authenticated inspection, controlled fixture cleanup and final closure gates remain pending.
+
+**Next pass:** Pass 2 — authenticated admin production acceptance using `foxlearningltd@gmail.com`.
 
 ## Architecture
 
