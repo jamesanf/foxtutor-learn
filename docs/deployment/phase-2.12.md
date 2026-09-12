@@ -6,10 +6,10 @@ Deployment status: **DEPLOYED**
 | Field | Evidence |
 | --- | --- |
 | Worker | `foxtutor-learn` |
-| Worker version | `64be107f-9167-4056-bd23-959569f7a63d` |
-| Deployment timestamp | `2026-09-12T23:06:43.416Z` |
-| Git commit | `d75f40d78ebd15046c8235d69fcd829611293e8c` |
-| Remote commit | `d75f40d78ebd15046c8235d69fcd829611293e8c` |
+| Worker version | `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20` |
+| Deployment timestamp | `2026-09-12T23:07:37.894Z` |
+| Git commit | `167cfc297bb8b745bc530d0cea8c07c5d6cf2313` |
+| Remote commit | `167cfc297bb8b745bc530d0cea8c07c5d6cf2313` at deployment time |
 | Production smoke | PASS — public site unchanged; `/learn` remains Access-protected |
 | Authenticated browser | NOT RUN — no Chromium binary or debug endpoint available |
 | Regeneration flow | Local source/query contracts PASS; production authenticated flow NOT VERIFIED |
@@ -33,4 +33,3 @@ git diff --check
 ```
 
 The real Chromium contract was attempted with `npm run test:browser:visual` and could not start because `127.0.0.1:9222` was unavailable. No completion tag was created because the authenticated production and visual gates remain open.
-

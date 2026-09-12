@@ -74,4 +74,4 @@ Focused browser review covers 1440x900, 1024x768, 820px and 390x844 for navigati
 
 ## Deployment evidence
 
-The release is deployed as Worker `64be107f-9167-4056-bd23-959569f7a63d` from commit `d75f40d78ebd15046c8235d69fcd829611293e8c` at `2026-09-12T23:06:43.416Z`. Public production smoke passes. Authenticated production browser and real-Chromium visual verification are not claimed because this environment has no Chromium binary or `127.0.0.1:9222` debug endpoint. See [`docs/deployment/phase-2.12.md`](../deployment/phase-2.12.md).
+The release is deployed as Worker `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20` from commit `167cfc297bb8b745bc530d0cea8c07c5d6cf2313` at `2026-09-12T23:07:37.894Z`. Public production smoke passes. Authenticated production browser and real-Chromium visual verification are not claimed because this environment has no Chromium binary or `127.0.0.1:9222` debug endpoint. See [`docs/deployment/phase-2.12.md`](../deployment/phase-2.12.md).

@@ -4,7 +4,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-13 — Phase 2.12 final tutoring workflow refinement
 
-**Status:** deployed as Worker `64be107f-9167-4056-bd23-959569f7a63d`; authenticated production acceptance pending
+**Status:** deployed as Worker `9f2b7ebf-a37a-4711-a7b5-d6c233f72d20`; authenticated production acceptance pending
 
 - Replaced the generic admin Lessons navigation destination with the operational `Past Lessons` label while retaining `/learn/admin/lessons` and the existing `lessons` D1 table.
 - Added a server-side historical query for completed, cancelled and elapsed lessons, ordered newest first, without allowing future scheduled lessons into Past Lessons.
