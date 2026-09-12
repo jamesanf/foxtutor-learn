@@ -216,6 +216,12 @@ Phase 1.2 completed the remediation work that is possible with the available cre
 
 The phase remains **blocked, not complete**. Direct REST and Wrangler checks show account/zone/Worker reads work, but remote D1, Workers Route writes, Access writes, R2 access and the required Google/Access configuration are unavailable to the current token. No production D1 migration, live route, Access policy, authenticated browser flow or real mail send was claimed.
 
+## Phase 1.3 execution state — 2026-09-12
+
+Phase 1.3 reconciled all Cloudflare authentication mechanisms exposed to the runtime. `CLOUDFLARE_API_TOKEN` is active but lacks D1, Workers Routes, R2 and Worker deployment permissions. The existing Wrangler OAuth session is active for Worker scripts, D1, Workers Routes and R2 reads; direct resource probes and non-mutating invalid-payload write validations confirmed those capabilities without creating state.
+
+The OAuth-backed inventory is now known: the account has four existing Workers but no `foxtutor-learn` Worker, two unrelated D1 databases but no `foxtutor-learn` database, zero Workers Routes, two R2 buckets, and empty Access application, identity-provider and policy collections. Access application and identity-provider writes return HTTP 403 with `auth.forbidden` error `1010` for the OAuth session. Phase 1 remains **not complete** and has a genuine human blocker limited to an existing Access-write-capable credential or equivalent authenticated mechanism. No production resource, route, Access configuration, DNS record or mail delivery was changed.
+
 ---
 
 ## Phase 2 — Student administration, lessons, calendar, and core domain

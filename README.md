@@ -4,7 +4,7 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** 1.2 remediation completed locally; production completion blocked by Cloudflare control-plane permissions and required Access configuration
+**Phase:** 1.3 capability reconciliation complete; production activation has a genuine Cloudflare Access write blocker
 **Production URL:** `https://foxtutor.org/learn` (route not activated)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
 **Latest local state:** Worker, branded shell, role model, session foundation, fresh local D1 migration, corrected Fox Mail adapter, tests and public regression evidence are implemented
@@ -82,7 +82,8 @@ There is no public registration and no application password subsystem. Only Acce
 
 ## Known limitations
 
-- The current Cloudflare token can read the account, zone, Workers and Access collections and can perform Worker dry-runs, but a real Worker asset upload and direct D1, R2, Workers Route and Access write operations fail with documented permission errors.
-- The production D1 ID, Access Google identity provider/application/policy, scoped route and production mail service-auth configuration therefore remain unconfigured.
-- Authenticated Chromium flows, production noindex checks and real mail delivery cannot be honestly recorded until those controls are completed.
+- `CLOUDFLARE_API_TOKEN` is active but is read-only for the required D1, route, R2 and Worker deployment control-plane operations.
+- The existing Wrangler OAuth session is the usable deployment mechanism for Worker scripts, D1, Workers Routes and R2 reads. It has no effective Zero Trust Access application, identity-provider or policy write permission.
+- The account currently has four other Workers, two unrelated D1 databases, two R2 buckets, no `foxtutor-learn` Worker, no Workers Routes, no `foxtutor-learn` D1 database, and no Access applications, identity providers or policies.
+- The remaining human blocker is exposing an existing credential with Access application, identity-provider and policy write permissions. Production D1 migration, route creation, Access configuration, deployment and authenticated browser evidence remain intentionally pending.
 - Phase 2 domain features are intentionally not included.

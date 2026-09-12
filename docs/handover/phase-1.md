@@ -1,51 +1,48 @@
 # HUMAN HANDOVER REQUIRED
 
-Phase 1.2 is blocked by a genuine Cloudflare control-plane permission boundary, not by a failed local implementation.
+## Phase 1.3 status
 
-## Evidence
+**Status:** genuine human blocker. Production remains unchanged and Phase 1 is not complete.
 
-- Account read: `GET /accounts/aeab9f48fa9716273d02bfb3d530bddc` returned HTTP 200 for account `aeab9f48fa9716273d02bfb3d530bddc`.
-- Zone read: `GET /zones?name=foxtutor.org` returned HTTP 200 for zone `ee87e52066b6c9f3057bcc7c346c6ce2`.
-- Worker list: `GET /accounts/{account}/workers/scripts` returned HTTP 200; the intended `foxtutor-learn` script does not yet exist.
-- Wrangler deploy dry-run: PASS.
-- Wrangler real deploy: HTTP 401, Cloudflare error `10000` at the asset upload-session endpoint.
-- D1 list/create: HTTP 401, Cloudflare error `10000`, including Wrangler `d1 list`.
-- Workers Routes read/write: HTTP 403, Cloudflare error `10000`.
-- Access application read: HTTP 200 with no applications; Access application write: HTTP 403, error `auth.forbidden` (`1010`).
-- Access identity-provider/policy reads: HTTP 200 with empty collections.
-- R2 list/create: HTTP 403, Cloudflare error `10000`.
-- Fox Mail unauthenticated probes: HTTP 302 to its existing Access login; no message was sent.
+Phase 1.3 exhausted the Cloudflare mechanisms exposed to the runtime:
 
-Both Wrangler and direct REST were attempted. The available token is valid for account/zone/Worker reads but does not carry the permissions needed for the missing production resources.
+1. `CLOUDFLARE_API_TOKEN` is active and is the credential used by Wrangler whenever the variable is set. It can read the account, zone, Workers and Access collections, but D1, Workers Routes, R2 and Worker deployment requests are permission-blocked.
+2. The existing Wrangler OAuth session in `~/Library/Preferences/.wrangler/config/default.toml` is usable when `CLOUDFLARE_API_TOKEN` is unset. `npx wrangler whoami` identifies `foxlearningltd@gmail.com` and reports `workers_scripts:write`, `workers_routes:write` and `d1:write` among its scopes. Direct API reads and non-mutating invalid-payload validations confirmed those capabilities.
+3. No `.github` CI configuration, project credential file or second Cloudflare environment variable is available. Wrangler logs/configuration contain no additional usable credential path.
 
-## Single unblock action
+No token values, refresh tokens, cookies or private response bodies are recorded in the repository.
 
-Provide a Cloudflare API token for account `aeab9f48fa9716273d02bfb3d530bddc` with the minimum required account/zone permissions for:
+## Exact missing capability
 
-- D1 database read/edit;
-- Workers Routes read/edit on zone `foxtutor.org`;
-- Zero Trust Access application, identity-provider and policy read/edit;
-- Worker script deployment/edit if the existing token is not retained.
+Zero Trust Access write control-plane access for the Foxlearning account:
 
-The token must be supplied through `CLOUDFLARE_API_TOKEN`; do not paste it into source, documentation or chat.
+- Access application create/edit;
+- Access identity-provider create/edit;
+- Access policy create/edit.
 
-## Resume commands
+The missing capability is required to configure the private `foxtutor.org/learn` perimeter and Google identity. D1, Worker deployment and Workers Routes capability already exists through the OAuth mechanism. R2 is not required for Phase 1.
 
-```sh
-cd /Users/james/Documents/FoxTutorWebsite/learn
-npx wrangler d1 create foxtutor-learn --use-remote --update-config
-npx wrangler d1 migrations apply foxtutor-learn --remote
-npm run deploy
-```
+## Exact operations and results
 
-Then configure Google/Access for only `/learn` and `/learn/*`, provision controlled test identities, configure the Fox Mail machine-auth path, and run:
+Using the OAuth mechanism:
 
-```sh
-npm test
-npm run build
-npm run check
-npm run test:browser
-npm run test:production
-```
+- `POST /accounts/aeab9f48fa9716273d02bfb3d530bddc/access/apps` with `{}`: HTTP 403, `auth.forbidden`, error `1010`.
+- `POST /accounts/aeab9f48fa9716273d02bfb3d530bddc/access/identity_providers` with `{}`: HTTP 403, `auth.forbidden`, error `1010`.
+- Access application, identity-provider and policy reads: HTTP 200, empty collections.
 
-Do not modify, redeploy or add routes to the public-site application. Do not create a completion tag until authenticated admin/student/unknown browser tests, production noindex checks, real local/remote D1 evidence, controlled mail integration evidence and the public regression comparison all pass.
+Using `CLOUDFLARE_API_TOKEN`, the same Access reads return HTTP 200 with empty collections and Access application write returns HTTP 403, `auth.forbidden`, error `1010`. The full capability matrix is in `docs/evidence/phase-1/cloudflare-capability-check.txt`.
+
+## Existing alternatives tested
+
+- Existing Wrangler OAuth session: sufficient for Worker scripts, D1, Workers Routes and R2 reads; insufficient for Access writes.
+- `CLOUDFLARE_API_TOKEN`: insufficient for D1, Worker deployment, Workers Routes, R2 and Access writes.
+- Local Wrangler state, environment variable names, project configuration, repository scripts and CI tree: no additional usable Cloudflare mechanism.
+- Existing Access application, Google identity provider and Access policy: none exists according to the OAuth-backed read inventory.
+
+## Exact human action required
+
+Make an **existing** Cloudflare credential or authenticated mechanism with Access application, identity-provider and policy write permissions available to this runtime, preferably through a documented environment/profile path without placing secrets in source control. If no such existing credential exists, create only the minimum account-scoped credential required for those three Access write capabilities; do not create a replacement for the already-capable Wrangler OAuth mechanism.
+
+After that capability is available, Phase 1.4 can proceed with read-before-write activation: create the `foxtutor-learn` D1 database only if still absent, apply the migration, configure Google/Access only for `/learn` and `/learn/*`, deploy the Worker, create the exact routes, and run the authenticated/browser/public regression gates. Do not create `phase-1-complete` until all required production evidence exists.
+
+No public-site change, DNS change, production Worker deployment, D1 creation, route creation, Access mutation or production mail send was performed in Phase 1.3.

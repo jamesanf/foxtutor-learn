@@ -1,24 +1,103 @@
+FoxTutor Learn Phase 1.3 Cloudflare capability reconciliation
 Captured: 2026-09-12
+Scope: read-only discovery plus non-mutating invalid-payload authorization validation
+Production mutation: none
+
 Account: aeab9f48fa9716273d02bfb3d530bddc
 Zone: foxtutor.org / ee87e52066b6c9f3057bcc7c346c6ce2
 
-Capability | Method | Result | Evidence
-Account read | REST GET /accounts/{account} | PASS | HTTP 200
-Worker read | REST GET /accounts/{account}/workers/scripts | PASS | HTTP 200; existing scripts listed
-Worker deploy dry-run | Wrangler deploy --dry-run | PASS | assets/typecheck dry-run completed
-Worker deploy/write | Wrangler deploy | BLOCKED | HTTP 401, Cloudflare error 10000 at `/accounts/{account}/workers/scripts/foxtutor-learn/assets-upload-session`
-Worker deploy/write | REST PUT /accounts/{account}/workers/scripts/foxtutor-learn with empty body | BLOCKED | HTTP 403, Cloudflare error 10000
-Worker production deployment | Wrangler/REST | NOT SAFE TO CLAIM | no remote D1 binding and route write are available
-Route read | REST GET /zones/{zone}/workers/routes | BLOCKED | HTTP 403, Cloudflare error 10000
-Route write | REST POST /zones/{zone}/workers/routes | BLOCKED | HTTP 403, Cloudflare error 10000
-D1 list/read | Wrangler/REST GET /accounts/{account}/d1/database | BLOCKED | HTTP 401, Cloudflare error 10000
-D1 create | REST POST /accounts/{account}/d1/database with empty validation body | BLOCKED | HTTP 401, Cloudflare error 10000
-D1 migration/write | Wrangler remote migration | BLOCKED | no D1 binding/database exists in `wrangler.jsonc`; remote migration cannot be addressed until D1 create succeeds
-R2 read | REST GET /accounts/{account}/r2/buckets | BLOCKED | HTTP 403, Cloudflare error 10000
-Access read | REST GET /accounts/{account}/access/apps | PASS | HTTP 200; empty result
-Access identity/provider read | REST GET /accounts/{account}/access/identity_providers | PASS | HTTP 200; empty result
-Access policy read | REST GET /accounts/{account}/access/policies | PASS | HTTP 200; empty result
-Access write | REST POST /accounts/{account}/access/apps with empty validation body | BLOCKED | HTTP 403, auth.forbidden error 1010
+Authentication inventory
+------------------------
 
-Wrangler authentication is valid for account/zone/Worker operations and reports account Foxlearningltd@gmail.com's Account. Direct REST was also tested; the failures are permission-specific, not evidence that Cloudflare is unavailable.
-No production Learn resource, route, Access application or D1 database was created by this pass.
+1. Environment API token
+   Mechanism: CLOUDFLARE_API_TOKEN
+   Status: active; GET /user/tokens/verify returned HTTP 200
+   Wrangler evidence: `npx wrangler whoami` explicitly reported that the API token was read from CLOUDFLARE_API_TOKEN
+   Metadata limitation: GET /user/tokens and GET /user/tokens/{token-id} returned HTTP 403, Cloudflare error 9109; token permission metadata is not available through this credential
+   Effective behavior: account, zone, Worker-list and Access reads pass; D1, Routes, R2 and Worker deployment writes are blocked
+
+2. Existing Wrangler OAuth session
+   Mechanism: local Wrangler OAuth profile at ~/Library/Preferences/.wrangler/config/default.toml
+   Activation: `env -u CLOUDFLARE_API_TOKEN npx wrangler whoami`
+   Identity/account: foxlearningltd@gmail.com / Foxlearningltd account / aeab9f48fa9716273d02bfb3d530bddc
+   Relevant reported scopes: account:read, zone:read, workers:write, workers_scripts:write, workers_routes:write, d1:write
+   Effective behavior: account, zone, Worker, D1, Routes and R2 reads pass; non-mutating Worker, D1 and Routes write validations are authorized; Access writes are forbidden
+   Secret handling: token and refresh-token values were not recorded or committed
+
+The active environment API token and the OAuth session are separate mechanisms. Wrangler uses the environment token when CLOUDFLARE_API_TOKEN is set; unsetting it selects the existing OAuth session. No additional Cloudflare environment variable, project credential file, CI configuration or usable Wrangler credential path was found.
+
+Capability matrix
+-----------------
+
+| Capability | Credential/mechanism | Method | Result | HTTP/status/error | Evidence |
+| Account read | CLOUDFLARE_API_TOKEN | GET /accounts/{account} | PASS | 200 | Account returned |
+| Account read | Wrangler OAuth | GET /accounts/{account} | PASS | 200 | Account returned |
+| Zone read | CLOUDFLARE_API_TOKEN | GET /zones?name=foxtutor.org | PASS | 200 | Zone ee87e52066b6c9f3057bcc7c346c6ce2 |
+| Zone read | Wrangler OAuth | GET /zones?name=foxtutor.org | PASS | 200 | Zone ee87e52066b6c9f3057bcc7c346c6ce2 |
+| Worker read | CLOUDFLARE_API_TOKEN | GET /accounts/{account}/workers/scripts | PASS | 200 | Four scripts listed |
+| Worker read | Wrangler OAuth | GET /accounts/{account}/workers/scripts | PASS | 200 | Four scripts listed |
+| Worker deploy capability | CLOUDFLARE_API_TOKEN | Wrangler deploy; REST PUT script | BLOCKED | Wrangler HTTP 401 / REST HTTP 403, error 10000 | Phase 1.2 evidence; no upload |
+| Worker deploy capability | Wrangler OAuth | REST PUT /accounts/{account}/workers/scripts/foxtutor-learn with empty body; Wrangler deploy --dry-run | AUTHORIZED VALIDATION / DRY RUN PASS | PUT HTTP 415, error 10001; dry-run completed | Invalid content type rejected after authorization; no deployment |
+| Worker Routes read | CLOUDFLARE_API_TOKEN | GET /zones/{zone}/workers/routes | BLOCKED | HTTP 403, error 10000 | Permission denied |
+| Worker Routes read | Wrangler OAuth | GET /zones/{zone}/workers/routes | PASS | 200 | Empty route collection |
+| Worker Routes write | CLOUDFLARE_API_TOKEN | REST POST route validation | BLOCKED | HTTP 403, error 10000 | Phase 1.2 evidence; no route created |
+| Worker Routes write | Wrangler OAuth | POST /zones/{zone}/workers/routes with {} | AUTHORIZED VALIDATION | HTTP 400, error 10022 | Missing zone-qualified pattern; no route created |
+| D1 list/read | CLOUDFLARE_API_TOKEN | GET /accounts/{account}/d1/database; Wrangler d1 list | BLOCKED | HTTP 401, error 10000 | Permission denied |
+| D1 list/read | Wrangler OAuth | GET /accounts/{account}/d1/database; Wrangler d1 list --json | PASS | 200 | fox-mail-admin and edinterval-contacts listed |
+| D1 create | CLOUDFLARE_API_TOKEN | POST /accounts/{account}/d1/database with {} | BLOCKED | HTTP 401, error 10000 | Phase 1.2 evidence; no database created |
+| D1 create | Wrangler OAuth | POST /accounts/{account}/d1/database with {} | AUTHORIZED VALIDATION | HTTP 400, error 7400 | Required name rejected; no database created |
+| D1 write/migration | Wrangler OAuth | d1:write scope plus invalid create validation | AUTHORIZED / NOT EXECUTED | 400 validation, no mutation | Remote migration intentionally not run; no Learn DB exists |
+| Access applications read | CLOUDFLARE_API_TOKEN | GET /accounts/{account}/access/apps | PASS | 200 | Empty collection |
+| Access applications read | Wrangler OAuth | GET /accounts/{account}/access/apps | PASS | 200 | Empty collection |
+| Access applications write | CLOUDFLARE_API_TOKEN | POST /accounts/{account}/access/apps with {} | BLOCKED | HTTP 403, auth.forbidden, error 1010 | No application created |
+| Access applications write | Wrangler OAuth | POST /accounts/{account}/access/apps with {} | BLOCKED | HTTP 403, auth.forbidden, error 1010 | No application created |
+| Access policies read | CLOUDFLARE_API_TOKEN | GET /accounts/{account}/access/policies | PASS | 200 | Empty collection |
+| Access policies read | Wrangler OAuth | GET /accounts/{account}/access/policies | PASS | 200 | Empty collection |
+| Access policies write | Wrangler OAuth | No existing application; Access write validation | BLOCKED | Access app write HTTP 403, error 1010 | No policy mutation attempted |
+| Identity provider read | CLOUDFLARE_API_TOKEN | GET /accounts/{account}/access/identity_providers | PASS | 200 | Empty collection |
+| Identity provider read | Wrangler OAuth | GET /accounts/{account}/access/identity_providers | PASS | 200 | Empty collection |
+| Identity provider write | Wrangler OAuth | POST /accounts/{account}/access/identity_providers with {} | BLOCKED | HTTP 403, auth.forbidden, error 1010 | No provider created |
+| R2 read | CLOUDFLARE_API_TOKEN | GET /accounts/{account}/r2/buckets | BLOCKED | HTTP 403, error 10000 | Permission denied |
+| R2 read | Wrangler OAuth | Wrangler r2 bucket list | PASS | command PASS | edinterval-images and fox-mail-attachments listed |
+| R2 write | — | — | NOT REQUIRED FOR PHASE 1 | — | R2 is a Phase 3 resource; no write probe performed |
+
+Write-validation rule
+----------------------
+
+The Worker, D1 and Routes write checks used invalid requests that Cloudflare rejected before any resource could be created or changed. No valid production create, upload, migration, route, Access or policy request was sent.
+
+Resource inventory from the OAuth mechanism
+-------------------------------------------
+
+Workers:
+- EXISTS: edinterval
+- EXISTS: englishtrail-preview
+- EXISTS: fox-mail-admin
+- EXISTS: foxtutor
+- DOES NOT EXIST: foxtutor-learn (GET returned HTTP 404, error 10007)
+
+Workers Routes:
+- DOES NOT EXIST / EMPTY: GET returned HTTP 200 with zero routes
+
+D1:
+- EXISTS: fox-mail-admin
+- EXISTS: edinterval-contacts
+- DOES NOT EXIST: foxtutor-learn was absent from the complete D1 list
+
+Zero Trust Access:
+- DOES NOT EXIST / EMPTY: applications list returned HTTP 200, zero items
+- DOES NOT EXIST / EMPTY: identity providers list returned HTTP 200, zero items
+- DOES NOT EXIST / EMPTY: policies list returned HTTP 200, zero items
+- Google identity provider: DOES NOT EXIST in the returned collection
+
+R2:
+- EXISTS: edinterval-images
+- EXISTS: fox-mail-attachments
+- NOT REQUIRED FOR PHASE 1
+
+Phase 1.3 determination
+-----------------------
+
+Worker deployment, D1 and Workers Routes capabilities are available through the existing Wrangler OAuth mechanism and should be used by Phase 1.4. Access application, identity-provider and policy writes are not available through either discovered mechanism. This is a genuine human blocker limited to exposing an existing Access-write-capable credential or equivalent authenticated mechanism. A new token must not be created if an existing authorized mechanism can be made available.
+
+No production Worker deployment, D1 creation/migration, route mutation, Access mutation, DNS change, public-site change or mail send occurred.

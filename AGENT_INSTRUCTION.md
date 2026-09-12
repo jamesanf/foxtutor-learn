@@ -372,3 +372,9 @@ For Phase 1.1, production must not be marked complete while Cloudflare Access, D
 ## Phase 1.2 current state
 
 The Phase 1.2 remediation pass must preserve the public site and may only mark Phase 1 complete after remote D1, the exact `/learn` route, Cloudflare Access/Google policy, authenticated browser tests, production noindex checks, mail boundary verification and public regression evidence exist. The 2026-09-12 pass completed the local D1/Worker proof and code/documentation remediation, but remains blocked by documented Cloudflare control-plane permissions. See `docs/evidence/phase-1/cloudflare-capability-check.txt` and `docs/handover/phase-1.md`.
+
+## Phase 1.3 current state
+
+The 2026-09-12 capability reconciliation discovered a second existing authentication mechanism: the local Wrangler OAuth session at `~/Library/Preferences/.wrangler/config/default.toml`. With `CLOUDFLARE_API_TOKEN` unset, `npx wrangler whoami` reports the Foxlearningltd account and relevant `workers_scripts:write`, `workers_routes:write` and `d1:write` scopes. Direct OAuth-backed API probes confirmed D1 and route reads, non-mutating Worker/D1/route write validation, and R2 reads. The environment token remains insufficient for those operations.
+
+The OAuth session is not authorized to write Zero Trust Access applications or identity providers (`HTTP 403`, `auth.forbidden`, error `1010`), and Access collections are empty. No production state was changed. Phase 1 remains incomplete and has a genuine human blocker: make an existing Access-write-capable Cloudflare credential available to the runtime, or create the minimum credential only if no such existing credential exists. See `docs/evidence/phase-1/cloudflare-capability-check.txt` and `docs/handover/phase-1.md`.

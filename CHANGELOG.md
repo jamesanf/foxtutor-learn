@@ -92,3 +92,24 @@ Rechecked the public homepage, robots, sitemap, representative content route and
 **Deployment:** no production route or Access policy was changed. No production D1 migration, authenticated browser flow or real mail send was claimed.
 
 **Known limitations:** a token with D1 edit, Workers Routes edit and Zero Trust Access edit permissions is required to activate production safely. See `docs/handover/phase-1.md`.
+
+## Phase 1.3 — Capability reconciliation
+
+### 2026-09-12 — Reconcile all available Cloudflare authentication mechanisms
+
+**Status:** genuine human blocker remains for Zero Trust Access writes; production remains unactivated
+
+**Implementation/evidence:**
+
+- Confirmed the environment exposes one active `CLOUDFLARE_API_TOKEN`; Wrangler uses it when present, and its token metadata listing is not accessible.
+- Discovered and tested the existing local Wrangler OAuth session without changing production state. `npx wrangler whoami` reports the Foxlearningltd account and relevant `workers_scripts:write`, `workers_routes:write` and `d1:write` scopes.
+- Confirmed the OAuth mechanism can read the account, zone, Workers, D1, Workers Routes and R2; non-mutating invalid-payload validations authorize Worker deployment, D1 create and route write requests.
+- Established the resource inventory: four existing Workers but no `foxtutor-learn`; two unrelated D1 databases but no `foxtutor-learn`; zero Workers Routes; two R2 buckets; and empty Access applications, identity providers and policies.
+- Confirmed Access application and identity-provider write validation remains forbidden (`HTTP 403`, `auth.forbidden`, error `1010`) through the existing OAuth mechanism. No alternate environment, CI or project credential path was exposed.
+- Rechecked the public homepage, `robots.txt` and sitemap before and after discovery; stored body hashes remained unchanged.
+
+**Tests/commands:** direct sanitized REST probes using both credential mechanisms; `npx wrangler whoami`; `npx wrangler d1 list --json`; `npx wrangler r2 bucket list`; `env -u CLOUDFLARE_API_TOKEN npx wrangler deploy --dry-run`; local regression suite documented below.
+
+**Deployment:** none. No production Worker, D1, route, Access application/policy, DNS record or mail delivery was changed.
+
+**Handover:** make an existing Cloudflare credential with Zero Trust Access application, identity-provider and policy write permissions available to the runtime. Create a new credential only if no existing authorized mechanism exists. See `docs/evidence/phase-1/cloudflare-capability-check.txt` and `docs/handover/phase-1.md`.
