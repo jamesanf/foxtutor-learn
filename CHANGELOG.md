@@ -2,6 +2,8 @@
 
 ### 2026-09-13 — Student profile manager
 
+- **Status:** deployed as Worker
+  `28a5e1c3-b2ea-4289-88ea-75228a3749ce` from commit `272bf08`.
 - Added secure parent/carer email, billing address, additional support needs,
   class texts, academic system/year and DST preference fields to student
   records.

@@ -8,10 +8,10 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 5.1 deployed; student profile manager release in progress
+**Phase:** Phase 5.1 deployed; student profile manager deployed
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** `08e9ae3`
-**Worker:** `31a62fb3-7c88-4bb8-a073-9cc06d34e1d7`
+**Application/runtime release:** `272bf08`
+**Worker:** `28a5e1c3-b2ea-4289-88ea-75228a3749ce`
 **D1 migrations:** `0001_foundation.sql` through `0014_student_profiles.sql`
 
 The current release includes structured D1 lesson reports, historical student
