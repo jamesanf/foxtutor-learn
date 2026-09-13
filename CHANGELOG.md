@@ -1,5 +1,10 @@
 # Changelog
 
+### 2026-09-13 — Student edit form alignment
+
+- Separated the international-pupil reminder note from the toggle control so
+  the infobox and form actions align cleanly on desktop and mobile.
+
 ### 2026-09-13 — Shared compact pagination
 
 - Replaced the oversized numbered pager used by Learn lists with the compact
