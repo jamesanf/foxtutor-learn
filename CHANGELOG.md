@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-13 — Student profile form usability
+
+- Made only Pupil name and Pupil email mandatory; all other profile fields are
+  optional.
+- Replaced browser-native tooltip popups with styled, keyboard-accessible
+  inline `(i)` help bubbles.
+
 ### 2026-09-13 — Student profile form refinement
 
 - Added a parent/carer name field and relabelled the first name field as

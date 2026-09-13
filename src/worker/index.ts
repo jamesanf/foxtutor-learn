@@ -1125,7 +1125,7 @@ function inputField(label: string, name: string, value: string, type = "text", r
 
 function infoTip(text: string): string {
   const safeText = escapeHtml(text);
-  return `<span class="field-info" tabindex="0" role="img" aria-label="${safeText}" title="${safeText}">i</span>`;
+  return `<span class="field-info" tabindex="0" role="img" aria-label="${safeText}" data-tooltip="${safeText}">i</span>`;
 }
 
 function localStartParts(value: string, timezone: string): { date: string; time: string } {
@@ -1188,7 +1188,7 @@ function parseStudentProfile(form: FormData, now: string): {
   const additionalSupportNeeds = formText(form, "additionalSupportNeeds").trim();
   const classTexts = formText(form, "classTexts").trim();
   const systemValue = formText(form, "academicYearSystem").trim();
-  const academicYearSystem = isStudentAcademicSystem(systemValue) ? systemValue : null;
+  const academicYearSystem = systemValue ? (isStudentAcademicSystem(systemValue) ? systemValue : null) : "PRIVATE";
   const academicYear = academicYearSystem ? validateAcademicYear(academicYearSystem, formText(form, "academicYear")) : null;
   if (!name || !email || parentName.length > 200 || (levelInput && level === null) || (parentInput && !parentEmail) || !academicYearSystem || !academicYear) {
     return { value: null, error: "Enter valid student details, including a valid academic system and academic year." };
