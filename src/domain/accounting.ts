@@ -1,7 +1,7 @@
 import type { BillingConsequence } from "./cancellations";
 
 export type AccountingEventType = "CANCELLATION_ACCOUNTING" | "RESCHEDULE_ACCOUNTING";
-export type AccountingActionType = "NO_ACTION" | "CREATE_INVOICE";
+export type AccountingActionType = "NO_ACTION" | "CREATE_INVOICE" | "UNRESOLVED";
 export type AccountingStatus = "PENDING" | "PROCESSING" | "SUCCEEDED" | "RETRYABLE" | "FAILED" | "UNKNOWN" | "NOT_REQUIRED";
 export type AccountingErrorCode =
   | "AUTHENTICATION"
@@ -26,6 +26,29 @@ export interface AccountingDecision {
   providerStatus: string;
   safeErrorCode: AccountingErrorCode | null;
   safeErrorMessage: string | null;
+}
+
+export const NORMAL_LESSON_PRICE_MINOR_UNITS = 5500n;
+export const NORMAL_LESSON_CURRENCY = "GBP";
+export const NON_VAT_SALES_TAX_RATE = "0";
+
+export function parseMinorUnits(value: string, scale = 2): bigint | null {
+  const normalized = value.trim();
+  const pattern = new RegExp(`^(\\d+)(?:\\.(\\d{1,${scale}}))?$`);
+  const match = pattern.exec(normalized);
+  if (!match) return null;
+  try {
+    return BigInt(`${match[1]}${(match[2] ?? "").padEnd(scale, "0")}`);
+  } catch {
+    return null;
+  }
+}
+
+export function formatMinorUnits(value: bigint, scale = 2): string {
+  const negative = value < 0n;
+  const digits = (negative ? -value : value).toString().padStart(scale + 1, "0");
+  const splitAt = digits.length - scale;
+  return `${negative ? "-" : ""}${digits.slice(0, splitAt)}.${digits.slice(splitAt)}`;
 }
 
 const accountingTransitions: Record<AccountingStatus, readonly AccountingStatus[]> = {
@@ -64,11 +87,11 @@ export function accountingDecisionForBillingConsequence(consequence: BillingCons
       };
     case "ADMIN_CANCELLED":
       return {
-        actionType: "CREATE_INVOICE",
+        actionType: "UNRESOLVED",
         status: "FAILED",
         providerStatus: "NOT_ATTEMPTED",
         safeErrorCode: "BUSINESS_MAPPING_REQUIRED",
-        safeErrorMessage: "Administrative cancellation accounting treatment is not configured."
+        safeErrorMessage: "Administrative cancellation accounting consequence is unresolved."
       };
     case "CANCELLATION_PENDING_DECISION":
       return {

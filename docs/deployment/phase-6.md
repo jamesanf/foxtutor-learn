@@ -6,7 +6,7 @@
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Schedule: `*/5 * * * *`
 - D1: `foxtutor-learn`
-- D1 migration state: through `0017_accounting_operations.sql`; no pending
+- D1 migration state: through `0018_accounting_unresolved_action.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
 - Repository HEAD at executable deployment: `02b75403e2474aec4b693ed86eefa70cc8b8e195`
@@ -28,7 +28,9 @@ runtime deployment.
    state.
 5. Run perimeter smoke and authenticated admin/student checks where credentials
    are available.
-6. Configure sandbox secrets through the approved secret store only.
+6. Configure sandbox secrets through the approved secret store only. The
+   normal lesson payload is fixed at 55.00 GBP with explicit zero tax; do not
+   configure a VAT rate or rely on FreeAgent defaults.
 7. Complete the sandbox acceptance runbook.
 8. Configure production only after sandbox evidence and commercial approval.
 9. Run exactly one approved controlled production accounting event.
@@ -37,5 +39,6 @@ runtime deployment.
 ## Current closure state
 
 The application-side release is technically complete. The current phase is
-not operationally closed because sandbox and production provider acceptance
-have not occurred. Do not create `phase-6-complete` before those steps pass.
+not operationally closed because the `ADMIN_CANCELLED` consequence remains
+undecided and sandbox/production provider acceptance have not occurred. Do
+not create `phase-6-complete` before those steps pass.

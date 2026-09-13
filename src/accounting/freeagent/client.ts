@@ -253,10 +253,9 @@ export class FreeAgentClient {
       itemType: string;
       description: string;
       price: string;
-      salesTaxRate?: string;
-      salesTaxStatus?: "EXEMPT";
-      categoryUrl?: string;
-      currency?: string;
+      salesTaxRate: string;
+      categoryUrl: string;
+      currency: string;
     }
   ): Promise<FreeAgentInvoice> {
     const invoice = {
@@ -267,15 +266,14 @@ export class FreeAgentClient {
       send_new_invoice_emails: false,
       send_reminder_emails: false,
       send_thank_you_emails: false,
-      ...(input.currency ? { currency: input.currency } : {}),
+      currency: input.currency,
       invoice_items: [{
         item_type: input.itemType,
         description: input.description,
         quantity: "1.0",
         price: input.price,
-        ...(input.salesTaxStatus ? { sales_tax_status: input.salesTaxStatus } : {}),
-        ...(input.salesTaxRate ? { sales_tax_rate: input.salesTaxRate } : {}),
-        ...(input.categoryUrl ? { category: input.categoryUrl } : {})
+        sales_tax_rate: input.salesTaxRate,
+        category: input.categoryUrl
       }]
     };
     const result = await this.requestJson<{ invoice?: { url?: string; reference?: string } }>(accessToken, "/v2/invoices", {

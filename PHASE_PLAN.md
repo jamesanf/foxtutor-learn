@@ -789,15 +789,20 @@ Accounting consequences can be passed to FreeAgent reliably without making the t
 
 ### Phase 6 current state
 
-The application-side Phase 6 implementation is complete and hardened. The
-current evidence matrix, architecture, security controls, test boundary,
-deployment distinction, human checklist and acceptance runbook are maintained
-in [`docs/phase-6.md`](docs/phase-6.md).
+The application-side Phase 6 implementation is complete and hardened. Normal
+lesson accounting is fixed at 55.00 GBP with no VAT charged, represented in
+FreeAgent invoice items by an explicit `sales_tax_rate` of `0`. The
+`ADMIN_CANCELLED` accounting consequence remains explicitly unresolved and
+must not be inferred from the normal lesson value. The current evidence
+matrix, architecture, security controls, test boundary, deployment
+distinction, human checklist and acceptance runbook are maintained in
+[`docs/phase-6.md`](docs/phase-6.md).
 
 Phase 6 remains operationally open only because human-owned commercial approval,
-FreeAgent credentials, sandbox provider acceptance and one controlled
-production accounting event are outstanding. No technical TODO is represented
-as a human blocker, no financial mutation has been fabricated, and
+the remaining `ADMIN_CANCELLED` consequence decision, FreeAgent credentials,
+sandbox provider acceptance and one controlled production accounting event are
+outstanding. No technical TODO is represented as a human blocker, no financial
+mutation has been fabricated, and
 `phase-6-complete` must not be created until the external closure evidence is
 recorded.
 

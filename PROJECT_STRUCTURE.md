@@ -62,8 +62,15 @@ This is the current canonical structure. Agents may refine it when implementatio
 - `public/` contains deployable browser assets, not secrets.
 - Learn browser assets are served at `/learn/assets/*`; top-level public-site paths are not Learn routes.
 - `migrations/` is forward-only D1 migration history.
+- The current accounting schema ends at `0018_accounting_unresolved_action.sql`;
+  applied migrations must never be edited in place.
 - `tests/` contains automated checks.
 - `docs/` contains project operating documentation.
+- Current Phase 6 records are consolidated in `docs/phase-6.md`,
+  `docs/architecture/phase-6.md`, `docs/security/phase-6.md`,
+  `docs/testing/phase-6.md`, `docs/deployment/phase-6.md` and
+  `docs/handover/phase-6.md`; historical chronology is retained in
+  `CHANGELOG.md`.
 - `scripts/` contains deterministic project helpers and verification tools.
 - Session task records are kept outside the repository; credentials and production data never belong in project files.
 - Authenticated browser profiles, cookies, access tokens, test downloads, local R2 exports, and other sensitive runtime state must never be committed.

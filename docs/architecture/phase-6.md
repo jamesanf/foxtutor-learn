@@ -20,8 +20,8 @@ responses and error normalization.
 `NO_CHARGE`, `EXCEPTION_WAIVED` and `RESCHEDULED` are durable
 `NOT_REQUIRED` accounting outcomes. `CANCELLATION_PENDING_DECISION` does not
 create a final accounting event. `ADMIN_CANCELLED` creates an explicit
-invoice-producing outbox record in a fail-closed state until the approved
-commercial contract is configured.
+`UNRESOLVED` outbox record in a fail-closed state; it does not choose invoice
+creation or no action.
 
 The event stores the immutable Phase 5 history identity and effective date.
 The event never silently changes classification after creation. Any future
@@ -67,10 +67,14 @@ rejects external request origins and unsafe provider response URLs, validates
 contact and invoice references, redacts authorization headers and stores
 encrypted OAuth material only in D1.
 
-Invoice configuration requires an explicit positive amount, item type,
-category URL, payment terms, supported ISO currency and either an explicit
-sales-tax rate or `EXEMPT`. Missing or malformed values fail before a provider
-request.
+Normal lesson invoice configuration requires exactly `55.00` GBP, an explicit
+item type, category URL and payment terms, and an explicit FreeAgent invoice
+line-item `sales_tax_rate` of `0`. The zero rate represents the
+non-VAT-registered business and prevents FreeAgent contact/company defaults
+from adding VAT. Missing or malformed values fail before a provider request.
+Amounts are parsed and formatted as fixed two-decimal minor units; no
+floating-point arithmetic is used. This follows FreeAgent's invoice sales-tax
+model: <https://dev.freeagent.com/docs/sales_tax>.
 
 ## Non-scope
 

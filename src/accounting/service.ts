@@ -20,7 +20,15 @@ import {
   refreshAccessToken,
   type FreeAgentEnvironment
 } from "./freeagent/client";
-import { nextAccountingRetryAt, type AccountingErrorCode } from "../domain/accounting";
+import {
+  formatMinorUnits,
+  NORMAL_LESSON_CURRENCY,
+  NORMAL_LESSON_PRICE_MINOR_UNITS,
+  NON_VAT_SALES_TAX_RATE,
+  nextAccountingRetryAt,
+  parseMinorUnits,
+  type AccountingErrorCode
+} from "../domain/accounting";
 
 export interface AccountingEnvironment {
   DB?: D1Database;
@@ -51,23 +59,13 @@ export interface AccountingIntegrationStatus {
 
 export interface InvoiceConfiguration {
   amount: string;
+  amountMinorUnits: bigint;
   itemType: string;
   categoryUrl: string;
   paymentTermsInDays: number;
-  currency: string;
-  salesTaxRate?: string;
-  salesTaxStatus?: "EXEMPT";
+  currency: typeof NORMAL_LESSON_CURRENCY;
+  salesTaxRate: typeof NON_VAT_SALES_TAX_RATE;
 }
-
-const supportedCurrencies = new Set([
-  "AED", "AMD", "AOA", "ARS", "AUD", "AWG", "AZN", "BBD", "BDT", "BGN", "BRL", "BWP", "CAD", "CHF",
-  "CLP", "CNY", "COP", "CRC", "CUC", "CUP", "CZK", "DKK", "DOP", "EGP", "EUR", "FJD", "GBP", "GEL",
-  "GHS", "GTQ", "GYD", "HKD", "HNL", "HRK", "HUF", "IDR", "ILS", "INR", "ISK", "JMD", "JPY", "KES",
-  "KRW", "KWD", "KYD", "KZT", "LAK", "LBP", "LKR", "LTL", "LVL", "MAD", "MDL", "MGA", "MUR", "MVR",
-  "MWK", "MXN", "MYR", "MZN", "NAD", "NGN", "NOK", "NPR", "NZD", "OMR", "PEN", "PHP", "PKR", "PLN",
-  "QAR", "RON", "RSD", "RUB", "RWF", "SAR", "SCR", "SEK", "SGD", "THB", "TND", "TRY", "TTD", "TWD",
-  "TZS", "UAH", "UGX", "USD", "UYU", "VEF", "VND", "VUV", "XAF", "XCD", "XOF", "ZAR", "ZMK"
-]);
 
 function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvironment | null {
   if (env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production") return env.FREEAGENT_ENVIRONMENT;
@@ -90,15 +88,19 @@ export function invoiceConfigurationIssue(env: AccountingEnvironment, environmen
   const paymentTermsText = env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?.trim();
   const currency = env.FREEAGENT_INVOICE_CURRENCY?.trim();
   const salesTax = env.FREEAGENT_INVOICE_SALES_TAX_RATE?.trim();
-  if (!amount || !/^\d+(?:\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) return "FreeAgent invoice amount is missing or invalid.";
+  const amountMinorUnits = amount ? parseMinorUnits(amount) : null;
+  if (amountMinorUnits === null || amountMinorUnits <= 0n) return "FreeAgent invoice amount is missing or invalid.";
+  if (amountMinorUnits !== NORMAL_LESSON_PRICE_MINOR_UNITS) return "FreeAgent invoice amount must be 55.00 GBP.";
   if (!itemType) return "FreeAgent invoice item type is missing.";
   if (!categoryUrl) return "FreeAgent invoice category is missing.";
   if (!/^https:\/\/api(?:\.sandbox)?\.freeagent\.com\/v2\/categories\/[^/]+$/.test(categoryUrl)) return "FreeAgent invoice category URL is invalid.";
   if (!paymentTermsText || !/^\d+$/.test(paymentTermsText)) return "FreeAgent invoice payment terms are missing or invalid.";
   const paymentTerms = Number(paymentTermsText);
   if (!Number.isInteger(paymentTerms) || paymentTerms < 0 || paymentTerms > 365) return "FreeAgent invoice payment terms are outside the supported range.";
-  if (!currency || !supportedCurrencies.has(currency)) return "FreeAgent invoice currency is missing or unsupported.";
-  if (!salesTax || (salesTax !== "EXEMPT" && (!/^\d+(?:\.\d{1,2})?$/.test(salesTax) || Number(salesTax) > 100))) return "FreeAgent invoice VAT/tax mapping is missing or invalid.";
+  if (!currency) return "FreeAgent invoice currency is missing.";
+  if (currency !== NORMAL_LESSON_CURRENCY) return "FreeAgent invoice currency must be GBP.";
+  if (!salesTax) return "FreeAgent invoice VAT/tax mapping is missing.";
+  if (salesTax !== NON_VAT_SALES_TAX_RATE) return "FreeAgent invoice VAT/tax mapping must be 0 for the non-VAT-registered business.";
   if (!categoryUrl.startsWith(`https://api${environment === "sandbox" ? ".sandbox" : ""}.freeagent.com/`)) return "FreeAgent invoice category does not match the configured environment.";
   return null;
 }
@@ -106,14 +108,15 @@ export function invoiceConfigurationIssue(env: AccountingEnvironment, environmen
 export function configuredInvoice(env: AccountingEnvironment): InvoiceConfiguration | null {
   const environment = configuredEnvironment(env);
   if (invoiceConfigurationIssue(env, environment)) return null;
-  const salesTax = env.FREEAGENT_INVOICE_SALES_TAX_RATE!.trim();
+  const amountMinorUnits = parseMinorUnits(env.FREEAGENT_INVOICE_AMOUNT!)!;
   return {
-    amount: env.FREEAGENT_INVOICE_AMOUNT!.trim(),
+    amount: formatMinorUnits(amountMinorUnits),
+    amountMinorUnits,
     itemType: env.FREEAGENT_INVOICE_ITEM_TYPE!.trim(),
     categoryUrl: env.FREEAGENT_INVOICE_CATEGORY_URL!.trim(),
     paymentTermsInDays: Number(env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS),
-    currency: env.FREEAGENT_INVOICE_CURRENCY!.trim(),
-    ...(salesTax === "EXEMPT" ? { salesTaxStatus: "EXEMPT" as const } : { salesTaxRate: salesTax })
+    currency: NORMAL_LESSON_CURRENCY,
+    salesTaxRate: NON_VAT_SALES_TAX_RATE
   };
 }
 
@@ -355,11 +358,10 @@ export async function processAccountingOutbox(
       paymentTermsInDays: invoiceConfig.paymentTermsInDays,
       itemType: invoiceConfig.itemType,
       description: `Foxtutor Learn ${claimed.billing_consequence}`,
-      price: invoiceConfig.amount,
+      price: formatMinorUnits(invoiceConfig.amountMinorUnits),
       categoryUrl: invoiceConfig.categoryUrl,
       currency: invoiceConfig.currency,
-      ...(invoiceConfig.salesTaxRate ? { salesTaxRate: invoiceConfig.salesTaxRate } : {}),
-      ...(invoiceConfig.salesTaxStatus ? { salesTaxStatus: invoiceConfig.salesTaxStatus } : {})
+      salesTaxRate: invoiceConfig.salesTaxRate
     }));
     await markAccountingSucceeded(db, id, {
       externalReference: providerReference(invoice.url),

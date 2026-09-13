@@ -25,6 +25,11 @@ only current Phase 6 documents; historical release chronology is preserved in
 - Provider work is asynchronous and isolated behind the FreeAgent adapter.
 - Missing or ambiguous commercial mapping fails closed before provider
   mutation.
+- Normal lesson accounting is fixed at `55.00` GBP with no VAT charged;
+  invoice items explicitly send FreeAgent `sales_tax_rate: "0"`.
+- `ADMIN_CANCELLED` is stored as an unresolved accounting action until the
+  owner approves its consequence; it cannot default to invoice creation or
+  no action.
 - Timeouts, network failures and uncertain mutation outcomes become
   `UNKNOWN`; they require reconciliation rather than blind recreation.
 - Admin retries are CSRF-protected, state-checked and audit-recorded.
@@ -45,14 +50,14 @@ only current Phase 6 documents; historical release chronology is preserved in
 | OAuth state and encrypted tokens | `src/accounting/credentials.ts`, `src/accounting/service.ts` | OAuth exchange/refresh and secret-boundary tests | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Environment/company pinning | `src/accounting/service.ts` | Configuration and company checks | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Contact mapping | `src/accounting/service.ts`, `src/db/accounting.ts` | Admin route, verification, replacement/removal guards | COMPLETE - HUMAN MAPPING REQUIRED |
-| Invoice mapping | `src/accounting/service.ts`, adapter payload | Fail-closed amount/category/currency/tax/date validation | COMPLETE - HUMAN VALUES REQUIRED |
+| Invoice mapping | `src/accounting/service.ts`, adapter payload | Fixed `55.00` GBP, explicit `sales_tax_rate: "0"`, category/payment/date validation | COMPLETE - PROVIDER MAPPING VALUES REQUIRED |
 | Reconciliation | `src/accounting/service.ts`, admin reconcile route | Unknown-state and provider-reference seams | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Manual retry audit | `migrations/0017_accounting_operations.sql`, `src/db/accounting.ts` | Additive actor/state audit path | COMPLETE |
 | Authorization and CSRF | `src/auth/authorization.ts`, `src/worker/index.ts` | Admin/student route classification and CSRF checks | COMPLETE |
 | Operational/accounting separation | D1 foreign keys and deletion guards | Migration and retention design | COMPLETE |
 | Browser/admin console | `src/worker/index.ts`, `public/learn.css` | Browser shell contract and deployed route | COMPLETE - AUTHENTICATED ACCEPTANCE ONLY REMAINS |
 | Production deployment | `docs/deployment/phase-6.md` | Worker, route and D1 verification | COMPLETE |
-| Sandbox mutation | External FreeAgent sandbox | No credentials supplied | BLOCKED - EXTERNAL CREDENTIAL |
+| Sandbox mutation | External FreeAgent sandbox | No credentials supplied; normal lesson values are known | BLOCKED - EXTERNAL CREDENTIAL |
 | Production mutation | External FreeAgent production | No credentials or approval supplied | BLOCKED - EXTERNAL HUMAN GATE |
 
 ## Current deployed distinction
@@ -63,7 +68,8 @@ These values must always be reported separately:
 - **Deployed source commit:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`.
 - **Deployed Worker version:** `cfaa9a46-e64a-4ef0-a672-6a926de205ba`.
 - **D1 state:** production migrations through
-  `0017_accounting_operations.sql`, with no pending migration reported.
+  `0018_accounting_unresolved_action.sql`, with no pending migration reported
+  after deployment of the executable change.
 
 Wrangler reports the deployment source metadata as `Unknown`; the deployed
 source commit is the reviewed executable commit from which the deployment was
@@ -77,14 +83,18 @@ deployed source commit.
 
 Only the following external actions remain:
 
-1. Approve the `ADMIN_CANCELLED` accounting consequence.
-2. Approve amount, payer/contact authority, item/category, VAT/tax, currency
-   and effective-date values.
+1. Decide whether `ADMIN_CANCELLED` produces no accounting action, a
+   55.00 GBP no-VAT invoice, another accounting consequence, or a
+   compensating/credit action.
+2. If `ADMIN_CANCELLED` produces a provider action, approve its payer/contact
+   authority, item/category, payment terms and effective-date policy. The
+   normal lesson amount is already 55.00 GBP and its VAT rate is explicitly 0.
 3. Supply sandbox FreeAgent client credentials and the encryption key through
    the approved secret channel.
 4. Complete sandbox OAuth and verify the pinned company.
-5. Supply and verify the approved sandbox contact and invoice mappings.
-6. Run the approved sandbox event and verify the provider invoice.
+5. Supply and verify the approved sandbox contact and provider mappings.
+6. Run the approved sandbox event only after the `ADMIN_CANCELLED`
+   consequence is decided, then verify the provider object.
 7. Supply production credentials through the approved secret channel.
 8. Verify the production company and repeat the approved mapping checks.
 9. Approve and execute exactly one controlled production accounting event.

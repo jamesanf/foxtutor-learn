@@ -1,5 +1,23 @@
 # Changelog
 
+### 2026-09-14 - Apply approved normal lesson accounting values
+
+- Set the normal lesson accounting model to exactly `55.00` GBP.
+- Represent the owner's non-VAT-registered status with an explicit FreeAgent
+  invoice-item `sales_tax_rate` of `0`; no VAT amount, 20% default or omitted
+  tax field is allowed.
+- Added fixed two-decimal minor-unit parsing/formatting and fail-closed
+  validation for any other amount, currency or tax configuration.
+- Changed `ADMIN_CANCELLED` to an explicit unresolved accounting action. The
+  code does not infer invoice creation, no action, a credit or another
+  consequence.
+- Added migration `0018_accounting_unresolved_action.sql` and provider-
+  independent tests. Deployment follows the required remote migration and
+  executable release verification.
+- **Status:** known normal lesson values are implemented; the
+  `ADMIN_CANCELLED` consequence and external FreeAgent acceptance remain
+  outstanding.
+
 ### 2026-09-13 - Phase 6 final technical completion pass
 
 - Reconciled the Phase 6 implementation against the actual accounting domain,

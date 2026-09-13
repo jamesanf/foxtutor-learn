@@ -13,7 +13,7 @@ replacement, payment system or accounting ledger.
 **Application/runtime release:** Phase 6 accounting boundary hardening
 **Deployed source:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`
 **Worker version:** `cfaa9a46-e64a-4ef0-a672-6a926de205ba`
-**D1 migrations:** `0001_foundation.sql` through `0017_accounting_operations.sql`
+**D1 migrations:** `0001_foundation.sql` through `0018_accounting_unresolved_action.sql`
 
 The deployed source commit and current repository HEAD are tracked separately;
 the deployment record notes that Wrangler did not report source metadata.
@@ -34,6 +34,10 @@ OAuth connection storage, a sandbox/production adapter, bounded Worker
 delivery, admin retry/reconciliation, verified contact mappings, pinned
 company/environment identity, retry audit records and accounting-history
 retention. Unsupported or incomplete commercial configuration fails closed.
+The approved normal lesson value is 55.00 GBP with no VAT charged; invoice
+items must explicitly send FreeAgent `sales_tax_rate` `0` so company or contact
+defaults cannot add VAT. `ADMIN_CANCELLED` remains an explicitly unresolved
+accounting consequence and is not treated as an invoice decision.
 The application-side Phase 6 implementation is complete and hardened. The
 phase remains operationally open only because the remaining external
 commercial/provider acceptance requires human-owned approval/credentials and

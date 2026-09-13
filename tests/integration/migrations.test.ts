@@ -140,4 +140,11 @@ describe("D1 foundation", () => {
     expect(migration).toContain("outbox_id TEXT REFERENCES accounting_outbox(id) ON DELETE SET NULL");
     expect(migration).toContain("request_result IN ('ACCEPTED', 'REJECTED')");
   });
+
+  it("preserves an explicitly unresolved accounting action type", () => {
+    const migration = readFileSync("migrations/0018_accounting_unresolved_action.sql", "utf8");
+    expect(migration).toContain("'UNRESOLVED'");
+    expect(migration).toContain("INSERT INTO accounting_outbox_phase6_unresolved");
+    expect(migration).toContain("ALTER TABLE accounting_outbox_phase6_unresolved RENAME TO accounting_outbox");
+  });
 });

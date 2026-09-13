@@ -27,10 +27,12 @@ authorized by navigation visibility.
 
 ## Financial safety
 
-Missing commercial configuration, invalid currency/tax/date data, missing or
-unverified contact mappings, company/environment drift and unsupported action
-types fail closed. A timeout, network failure or uncertain provider response
-becomes `UNKNOWN` and requires reconciliation.
+Missing commercial configuration, any amount other than 55.00 GBP, any
+currency other than GBP, any VAT/tax value other than explicit zero, invalid
+date data, missing or unverified contact mappings, company/environment drift
+and unsupported or unresolved action types fail closed. A timeout, network
+failure or uncertain provider response becomes `UNKNOWN` and requires
+reconciliation.
 
 Duplicate creation is prevented by deterministic local identity, provider
 reference lookup and durable external-reference uniqueness. A successful

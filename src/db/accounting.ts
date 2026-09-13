@@ -21,7 +21,7 @@ export interface AccountingOutbox {
   lesson_end_at?: string | null;
   lesson_timezone?: string | null;
   billing_consequence: BillingConsequence;
-  action_type: "NO_ACTION" | "CREATE_INVOICE";
+  action_type: "NO_ACTION" | "CREATE_INVOICE" | "UNRESOLVED";
   status: AccountingStatus;
   idempotency_key: string;
   accounting_reference: string;
