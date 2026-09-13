@@ -3,6 +3,7 @@ export interface CalendarFeed {
   owner_user_id: string;
   student_id: string | null;
   token_last4: string;
+  token_ciphertext: string | null;
   created_at: string;
   revoked_at: string | null;
   last_rotated_at: string;
@@ -12,7 +13,7 @@ export interface ResolvedCalendarFeed extends CalendarFeed {
   owner_role: "ADMIN" | "STUDENT";
 }
 
-const feedColumns = "f.id, f.owner_user_id, f.student_id, f.token_last4, f.created_at, f.revoked_at, f.last_rotated_at";
+const feedColumns = "f.id, f.owner_user_id, f.student_id, f.token_last4, f.token_ciphertext, f.created_at, f.revoked_at, f.last_rotated_at";
 
 export async function findActiveCalendarFeedForOwner(
   db: D1Database,
@@ -32,6 +33,7 @@ export async function rotateCalendarFeed(
     studentId: string | null;
     tokenHash: string;
     tokenLast4: string;
+    tokenCiphertext: string;
     now: string;
   }
 ): Promise<void> {
@@ -39,17 +41,17 @@ export async function rotateCalendarFeed(
   if (existing) {
     await db
       .prepare(
-        "UPDATE calendar_feeds SET student_id = ?, token_hash = ?, token_last4 = ?, revoked_at = NULL, last_rotated_at = ? WHERE id = ? AND owner_user_id = ?"
+        "UPDATE calendar_feeds SET student_id = ?, token_hash = ?, token_last4 = ?, token_ciphertext = ?, revoked_at = NULL, last_rotated_at = ? WHERE id = ? AND owner_user_id = ?"
       )
-      .bind(feed.studentId, feed.tokenHash, feed.tokenLast4, feed.now, existing.id, feed.ownerUserId)
+      .bind(feed.studentId, feed.tokenHash, feed.tokenLast4, feed.tokenCiphertext, feed.now, existing.id, feed.ownerUserId)
       .run();
     return;
   }
   await db
     .prepare(
-      "INSERT INTO calendar_feeds(id, owner_user_id, student_id, token_hash, token_last4, created_at, revoked_at, last_rotated_at) VALUES(?, ?, ?, ?, ?, ?, NULL, ?)"
+      "INSERT INTO calendar_feeds(id, owner_user_id, student_id, token_hash, token_last4, token_ciphertext, created_at, revoked_at, last_rotated_at) VALUES(?, ?, ?, ?, ?, ?, ?, NULL, ?)"
     )
-    .bind(feed.id, feed.ownerUserId, feed.studentId, feed.tokenHash, feed.tokenLast4, feed.now, feed.now)
+    .bind(feed.id, feed.ownerUserId, feed.studentId, feed.tokenHash, feed.tokenLast4, feed.tokenCiphertext, feed.now, feed.now)
     .run();
 }
 

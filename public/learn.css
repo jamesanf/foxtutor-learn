@@ -113,19 +113,12 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .subscription-card[open] .subscription-chevron { transform: rotate(225deg) translate(-2px, -2px); }
 .subscription-content { display: grid; gap: 12px; padding: 18px 22px 20px; border-top: 1px solid var(--line); }
 .subscription-panel { display: grid; gap: 12px; }
-.subscription-panel-heading { display: grid; gap: 2px; }
-.subscription-panel-heading strong { color: var(--foreground); font-size: .94rem; }
-.subscription-panel-heading span { color: var(--muted); font-size: .84rem; }
 .subscription-card form { margin: 0; }
 .subscription-card .button { margin-top: 0; }
-.privacy-warning { margin: 0; padding: 9px 11px; border: 1px solid #c3dce5; border-left: 3px solid var(--action); border-radius: var(--radius-sm); color: var(--foreground); background: #f0f9fb; font-size: .82rem; }
 .feed-link { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .feed-link-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
 .feed-link-row input { min-width: 0; margin-top: 0; }
 .feed-link-row .button { cursor: pointer; }
-.subscription-actions { display: flex; align-items: center; gap: 12px; }
-.subscription-action-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
-.form-success { margin: 14px 0 0; padding: 9px 11px; border: 1px solid #bbf7d0; border-radius: 7px; color: #166534 !important; background: #f0fdf4; font-size: .88rem; }
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
 .summary-card { display: grid; gap: 4px; padding: 18px; border: 1px solid #d6dee8; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 1px 3px rgb(16 42 67 / 5%); }
 .summary-card span, .summary-card small { color: var(--muted); font-size: .82rem; }
@@ -189,10 +182,6 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .resource-sort-icon { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.8; }
 .resource-sort .resource-choice-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resource-choice-check { margin-left: auto; color: var(--action); font-weight: 700; }
-.resource-active-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 0 0 var(--space-4); }
-.resource-filter-chip { display: inline-flex; min-height: 30px; align-items: center; gap: 7px; padding: 4px 9px; border: 1px solid #c3dce5; border-radius: 999px; color: var(--foreground); background: #f0f9fb; font-size: .8rem; text-decoration: none; }
-.resource-filter-chip:hover { border-color: var(--action); color: var(--action-hover); }
-.resource-filter-chip > span[aria-hidden="true"] { color: var(--action); font-size: 1rem; line-height: 1; }
 .resource-clear-all { color: var(--action); font-size: .82rem; font-weight: 650; text-underline-offset: 3px; }
 .resource-result-count { margin: var(--space-4) 0 -14px; color: var(--muted); font-size: .88rem; font-weight: 650; }
 .resource-update-error { margin: var(--space-3) 0; }
@@ -238,7 +227,6 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .file-change { width: fit-content; margin-top: 7px; padding: 0; border: 0; color: var(--action); background: transparent; cursor: pointer; font-size: .84rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 .upload-status { min-height: 1.4em; margin: 12px 0 0; color: var(--muted); font-size: .86rem; }
 .resource-success { max-width: 620px; }
-.resource-success .form-success { margin: 0 0 18px; }
 .resource-success .form-actions { justify-content: flex-start; }
 .resource-student-list { display: grid; gap: 12px; margin-top: var(--space-5); }
 .resource-student-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 0; padding: 18px 20px; }
@@ -334,6 +322,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .button:hover { background: var(--action-hover); }
 .button:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.site-notifications { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 100; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
+.site-notification { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px 11px 14px; border: 1px solid #b8c8d5; border-left: 3px solid var(--action); border-radius: var(--radius-sm); color: var(--foreground); background: var(--surface); box-shadow: 0 8px 22px rgb(16 42 67 / 16%); font-size: .86rem; pointer-events: auto; }
+.site-notification-error { border-left-color: var(--danger); }
+.site-notification-close { display: inline-grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; font-size: 1.15rem; line-height: 1; }
+.site-notification-close:hover { color: var(--foreground); background: var(--soft); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 @media (max-width: 700px) {
   .topbar { gap: 12px; padding-inline: 14px 14px; padding-inline-start: 12px; }
@@ -354,8 +347,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .subscription-content { padding: 16px 18px 18px; }
   .feed-link-row { grid-template-columns: 1fr; align-items: stretch; }
   .feed-link-row .button { width: 100%; }
-  .subscription-actions, .subscription-action-row { grid-template-columns: 1fr; display: grid; align-items: stretch; }
-  .subscription-actions form .button, .subscription-action-row form .button { width: 100%; }
   .lesson-form-grid { grid-template-columns: 1fr; }
   .lesson-form-grid .field-wide, .lesson-form-grid .additional-details { grid-column: auto; }
   .dashboard-empty, .section-heading { align-items: flex-start; flex-direction: column; }

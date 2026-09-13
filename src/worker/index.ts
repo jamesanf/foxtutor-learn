@@ -76,7 +76,7 @@ import {
 } from "../domain/validation";
 import { privateHeaders } from "../security/headers";
 import { clearSessionCookies, createSession, csrfTokenMatches, csrfValid, readSession, type ActiveSession } from "../security/session";
-import { feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
+import { decryptFeedToken, encryptFeedToken, feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
 import { feedRange, generateIcs } from "../domain/icalendar";
 import {
   MAX_RESOURCE_SIZE_BYTES,
@@ -96,6 +96,7 @@ export interface Env {
   DB?: D1Database;
   ENVIRONMENT?: string;
   PUBLIC_ORIGIN?: string;
+  CALENDAR_FEED_ENCRYPTION_KEY?: string;
   MAIL_API_URL?: string;
   MAIL_API_TOKEN?: string;
   MAIL_API_FROM?: string;
@@ -144,7 +145,7 @@ function appPage(user: AppUser, csrfToken: string, title: string, content: strin
   const identity = user.role === "ADMIN"
     ? `<span class="header-control identity-role">ADMIN</span>`
     : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
-  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div>`;
+  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
   return htmlDocument(title, body);
 }
 
@@ -162,23 +163,39 @@ function calendarFeedUrl(request: Request, env: Env, token: string): string {
   return `${origin}/calendar/feed/${token}`;
 }
 
-function calendarSubscriptionCard(
+function calendarSubscriptionCard(csrfToken: string, action: string, feed: CalendarFeed | null, feedUrl?: string, open = false): string {
+  const hasLink = Boolean(feedUrl);
+  const link = hasLink
+    ? `<div class="feed-link-row"><label class="sr-only" for="feed-link">Calendar URL</label><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl ?? "")}" data-calendar-feed-link><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy</button></div>`
+    : "";
+  const actionLabel = feed ? "Regenerate calendar link" : "Generate calendar link";
+  return `<details class="card subscription-card" data-calendar-subscription${open ? " open" : ""}><summary><span>Calendar subscription</span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content"><div class="subscription-panel">${link}<form method="post" action="${action}" data-calendar-regenerate>${hiddenCsrf(csrfToken)}<button class="button${hasLink ? " secondary" : ""}" type="submit">${actionLabel}</button></form></div></div></details>`;
+}
+
+function calendarFragmentResponse(subscriptionHtml: string, message: string): Response {
+  const headers = privateHeaders("application/json; charset=utf-8");
+  headers.set("Cache-Control", "no-store");
+  return new Response(JSON.stringify({ subscriptionHtml, message }), { status: 200, headers });
+}
+
+async function currentCalendarFeedUrl(request: Request, env: Env, feed: CalendarFeed | null): Promise<string | undefined> {
+  if (!feed?.token_ciphertext || !env.CALENDAR_FEED_ENCRYPTION_KEY) return undefined;
+  const token = await decryptFeedToken(feed.token_ciphertext, env.CALENDAR_FEED_ENCRYPTION_KEY);
+  return token ? calendarFeedUrl(request, env, token) : undefined;
+}
+
+function calendarPage(
   csrfToken: string,
   action: string,
+  lessons: Lesson[],
+  role: Role,
   feed: CalendarFeed | null,
-  feedUrl: string | undefined,
-  statusMessage?: string
+  feedUrl?: string,
+  open = false
 ): string {
-  const generated = feedUrl
-    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>Use this read-only feed in Apple Calendar, Google Calendar, Outlook, or another iCalendar-compatible app.</span></div><div class="feed-link-row"><label class="sr-only" for="feed-link">Private calendar URL</label><input id="feed-link" class="feed-link" readonly value="${escapeHtml(feedUrl)}"><button class="button secondary copy-link" type="button" data-copy-target="feed-link">Copy</button></div><div class="subscription-action-row"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Regenerate calendar link</button></form><p class="privacy-warning" role="note">Regenerating replaces the existing calendar link.</p></div></div>`
-    : "";
-  const empty = !feedUrl && !feed
-    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>No calendar link has been generated yet.</span></div><div class="subscription-actions"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button" type="submit">Generate calendar link</button></form></div></div>`
-    : "";
-  const existing = !feedUrl && feed
-    ? `<div class="subscription-panel"><div class="subscription-panel-heading"><strong>Private calendar link</strong><span>An active link exists. Regenerate it to reveal a fresh URL.</span></div><div class="subscription-actions"><form method="post" action="${action}">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Regenerate calendar link</button></form><p class="privacy-warning" role="note">Regenerating replaces the existing calendar link.</p></div></div>`
-    : "";
-  return `<details class="card subscription-card"${feedUrl ? " open" : ""}><summary><span>Calendar subscription</span><span class="subscription-chevron" aria-hidden="true"></span></summary><div class="subscription-content">${statusMessage ? `<p class="form-success" role="status">${escapeHtml(statusMessage)}</p>` : ""}${generated}${empty}${existing}</div></details>`;
+  const title = role === "ADMIN" ? "Calendar" : "Calendar";
+  const addLesson = role === "ADMIN" ? buttonLink("/learn/admin/lessons/new", "Add lesson") : "";
+  return `<div class="calendar-page"><div class="page-heading"><div><h1>${title}</h1></div>${addLesson}</div>${calendarView(lessons, role)}${calendarSubscriptionCard(csrfToken, action, feed, feedUrl, open)}</div>`;
 }
 
 function statusLabel(status: LessonStatus): string {
@@ -273,8 +290,8 @@ function lessonPagination(page: number, pageSize: number, total: number, path: s
   return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? paginationPageNumbers(page, pageCount, path, pageSize) : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="${label.toLowerCase().replaceAll(" ", "-")}-page-size">Show per page</label><select id="${label.toLowerCase().replaceAll(" ", "-")}-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${LESSON_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
-function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; eyebrow: string; title: string; subtitle: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
-  return `<div class="page-heading"><div><p class="eyebrow">${escapeHtml(options.eyebrow)}</p><h1>${escapeHtml(options.title)}</h1><p class="lede">${escapeHtml(options.subtitle)}</p></div>${options.emptyAction ? buttonLink("/learn/admin/lessons/new", "Add lesson") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
+function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; title: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
+  return `<div class="page-heading"><h1>${escapeHtml(options.title)}</h1>${options.emptyAction ? buttonLink("/learn/admin/lessons/new", "Add lesson") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
 }
 
 function parseResourcePagination(url: URL): { page: number; pageSize: number } {
@@ -430,7 +447,7 @@ function resourceActionButtons(resource: Resource, admin: boolean): string {
 function resourceRows(resources: Resource[], options: { admin?: boolean; csrfToken?: string; filtered?: boolean } = {}): string {
   if (!resources.length) {
     return options.filtered
-      ? `<div class="empty-state compact-empty"><h2>No resources match your search or filters.</h2><a class="button secondary" href="/learn/admin/resources">Clear all</a></div>`
+      ? `<div class="empty-state compact-empty"><h2>No resources match your search or filters.</h2></div>`
       : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Add a document for a student or attach it to a lesson.</p><a class="button" href="/learn/admin/resources/new">Add resource</a></div>`;
   }
 
@@ -463,27 +480,12 @@ function resourceChoice(
   return `<div class="resource-choice${disabled ? " is-disabled" : ""}">${label ? `<span class="resource-choice-label">${escapeHtml(label)}</span>` : ""}<button class="resource-choice-trigger" type="button" data-resource-choice-trigger="${escapeHtml(field)}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${listId}" aria-label="${field === "sort" ? "Sort resources" : `${escapeHtml(label)} filter`}" title="${escapeHtml(visibleLabel)}"${disabled ? " disabled" : ""}>${triggerValue}${resourceChoiceChevronIcon()}</button><div class="resource-choice-menu" id="${listId}" role="listbox" data-resource-choice-menu="${escapeHtml(field)}" hidden>${(field === "student" || field === "lesson") ? `<label class="resource-choice-search"><span class="sr-only">Search ${field === "student" ? "students" : "lessons"}</span><input type="search" placeholder="Search ${field === "student" ? "students" : "lessons"}…" data-resource-choice-search="${escapeHtml(field)}" autocomplete="off"></label>` : ""}${options.map((option) => `<button type="button" role="option" class="resource-choice-option${option.value === currentValue ? " is-selected" : ""}" aria-selected="${option.value === currentValue ? "true" : "false"}" data-resource-filter-option="${escapeHtml(field)}" data-value="${escapeHtml(option.value)}"><span>${escapeHtml(option.label)}</span>${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ""}${field === "sort" && option.value === currentValue ? `<span class="resource-choice-check" aria-hidden="true">✓</span>` : ""}</button>`).join("")}</div></div>`;
 }
 
-function resourceFilterChips(filters: ResourceFilters, students: Student[], lessons: Lesson[]): string {
-  const chips: Array<{ label: string; key: keyof ResourceFilters }> = [];
-  if (filters.studentId) chips.push({ label: students.find((student) => student.id === filters.studentId)?.name ?? "Student", key: "studentId" });
-  if (filters.lessonId) chips.push({ label: lessons.find((lesson) => lesson.id === filters.lessonId) ? bookingDate(lessons.find((lesson) => lesson.id === filters.lessonId) as Lesson) : "Lesson", key: "lessonId" });
-  if (filters.type) chips.push({ label: filters.type === "docx" ? "Word" : filters.type === "text" ? "Text" : filters.type === "image" ? "Image" : "PDF", key: "type" });
-  if (filters.added !== "any") chips.push({ label: filters.added === "today" ? "Today" : `${filters.added} days`, key: "added" });
-  if (!chips.length) return "";
-  return `<div class="resource-active-filters" aria-label="Active filters">${chips.map((chip) => {
-    const next = { ...filters, [chip.key]: chip.key === "added" ? "any" : "" } as ResourceFilters;
-    if (chip.key === "studentId") next.lessonId = "";
-    return `<a class="resource-filter-chip" href="/learn/admin/resources${resourceFilterQuery(next)}">${escapeHtml(chip.label)}<span aria-hidden="true">×</span><span class="sr-only">Remove ${escapeHtml(chip.label)}</span></a>`;
-  }).join("")}<a class="resource-clear-all" href="/learn/admin/resources">Clear all</a></div>`;
-}
-
 function resourceFilterForm(filters: ResourceFilters, students: Student[], lessons: Lesson[]): string {
   const activeStudents = students.filter((student) => student.status === "ACTIVE");
   const studentOptions = [{ value: "", label: "All" }, ...activeStudents.map((student) => ({ value: student.id, label: student.name }))];
   const lessonOptions = filters.studentId
     ? [{ value: "", label: "All" }, ...lessons.filter((lesson) => lesson.student_id === filters.studentId).map((lesson) => ({ value: lesson.id, label: bookingDate(lesson), detail: lesson.student_name ?? "Lesson" }))]
     : [{ value: "", label: "Choose student" }];
-  const filterCount = Number(Boolean(filters.studentId)) + Number(Boolean(filters.lessonId)) + Number(Boolean(filters.type)) + Number(filters.added !== "any");
   const fieldAttributes: Record<string, string> = {
     student: 'name="student"',
     lesson: 'name="lesson"',
@@ -498,7 +500,7 @@ function resourceFilterForm(filters: ResourceFilters, students: Student[], lesso
     { value: "filename-asc", label: "Filename A–Z" },
     { value: "filename-desc", label: "Filename Z–A" }
   ];
-  return `<form class="resource-finder-form" method="get" action="/learn/admin/resources" data-resource-finder><div class="resource-search-wrap"><label class="sr-only" for="resource-search">Find teaching material</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="resource-search" type="search" name="q" value="${escapeHtml(filters.search)}" placeholder="Search files, students or lessons…" autocomplete="off" aria-autocomplete="list" aria-controls="resource-search-suggestions" aria-expanded="false" data-resource-search data-suggestion-url="/learn/admin/resources/search"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button><div id="resource-search-suggestions" class="resource-suggestions" role="listbox" hidden></div></div>${hidden("student", filters.studentId)}${hidden("lesson", filters.lessonId)}${hidden("type", filters.type)}${hidden("added", filters.added === "any" ? "" : filters.added)}${hidden("sort", filters.sort === "newest" ? "" : filters.sort)}<div class="resource-finder-toolbar"><button class="resource-filter-trigger" type="button" data-resource-filter-toggle aria-expanded="false" aria-controls="resource-filter-panel">Filters${filterCount ? ` · ${filterCount}` : ""}</button><div class="resource-sort">${resourceChoice("sort", "", filters.sort, filters.sort, sortOptions)}</div></div><div id="resource-filter-panel" class="resource-filter-panel" data-resource-filter-panel hidden><div class="resource-filter-grid">${resourceChoice("student", "Student", filters.studentId, filters.studentId, studentOptions)}${resourceChoice("lesson", "Lesson", filters.lessonId, filters.lessonId, lessonOptions, !filters.studentId)}${resourceChoice("type", "File type", filters.type, filters.type, [{ value: "", label: "Any" }, { value: "pdf", label: "PDF" }, { value: "docx", label: "Word" }, { value: "text", label: "Text" }, { value: "image", label: "Image" }])}${resourceChoice("added", "Added", filters.added, filters.added, [{ value: "any", label: "Any" }, { value: "today", label: "Today" }, { value: "7", label: "7 days" }, { value: "30", label: "30 days" }])}</div><a class="resource-clear-all" href="/learn/admin/resources">Clear all</a></div>${resourceFilterChips(filters, activeStudents, lessons)}</form>`;
+  return `<form class="resource-finder-form" method="get" action="/learn/admin/resources" data-resource-finder><div class="resource-search-wrap"><label class="sr-only" for="resource-search">Search resources</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="resource-search" type="search" name="q" value="${escapeHtml(filters.search)}" placeholder="Search resources…" autocomplete="off" aria-autocomplete="list" aria-controls="resource-search-suggestions" aria-expanded="false" data-resource-search data-suggestion-url="/learn/admin/resources/search"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button><div id="resource-search-suggestions" class="resource-suggestions" role="listbox" hidden></div></div>${hidden("student", filters.studentId)}${hidden("lesson", filters.lessonId)}${hidden("type", filters.type)}${hidden("added", filters.added === "any" ? "" : filters.added)}${hidden("sort", filters.sort === "newest" ? "" : filters.sort)}<div class="resource-finder-toolbar"><button class="resource-filter-trigger" type="button" data-resource-filter-toggle aria-expanded="false" aria-controls="resource-filter-panel">Filters</button><div class="resource-sort">${resourceChoice("sort", "", filters.sort, filters.sort, sortOptions)}</div></div><div id="resource-filter-panel" class="resource-filter-panel" data-resource-filter-panel hidden><div class="resource-filter-grid">${resourceChoice("student", "Student", filters.studentId, filters.studentId, studentOptions)}${resourceChoice("lesson", "Lesson", filters.lessonId, filters.lessonId, lessonOptions, !filters.studentId)}${resourceChoice("type", "File type", filters.type, filters.type, [{ value: "", label: "Any" }, { value: "pdf", label: "PDF" }, { value: "docx", label: "Word" }, { value: "text", label: "Text" }, { value: "image", label: "Image" }])}${resourceChoice("added", "Added", filters.added, filters.added, [{ value: "any", label: "Any" }, { value: "today", label: "Today" }, { value: "7", label: "7 days" }, { value: "30", label: "30 days" }])}</div><a class="resource-clear-all" href="/learn/admin/resources">Clear all</a></div></form>`;
 }
 
 function resourceSelectionToolbar(): string {
@@ -788,7 +790,7 @@ function resourceSuccessPage(user: AppUser, csrfToken: string, resourceId: strin
     user,
     csrfToken,
     "Resource added",
-    `<section class="card resource-success"><p class="form-success" role="status">Resource added.</p><h1>Resource added</h1><p class="lede">The file is ready to use.</p><div class="form-actions"><a class="button" href="/learn/admin/resources/${encodeURIComponent(resourceId)}">View resource</a><a class="button secondary" href="${returnPath}">${returnLabel}</a></div></section>`
+    `<section class="card resource-success"><div data-notification-message="Resource uploaded" data-notification-type="success" hidden></div><h1>Resource added</h1><p class="lede">The file is ready to use.</p><div class="form-actions"><a class="button" href="/learn/admin/resources/${encodeURIComponent(resourceId)}">View resource</a><a class="button secondary" href="${returnPath}">${returnLabel}</a></div></section>`
   );
 }
 
@@ -904,7 +906,7 @@ async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database):
   const preview = upcoming.length
     ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
     : `<div class="dashboard-empty"><p>No upcoming bookings.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
-  return appPage(user, csrfToken, "Admin dashboard", `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Dashboard</h1><p class="lede">A quick view of what needs attention today.</p></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong><small>${upcoming[0] ? escapeHtml(bookingTime(upcoming[0])) : "No scheduled lessons"}</small></section><section class="summary-card"><span>Upcoming bookings</span><strong>${upcomingCount}</strong><small>Scheduled lessons ahead</small></section><section class="summary-card"><span>Active students</span><strong>${activeStudents}</strong><small>Current student records</small></section></div><section class="card dashboard-section"><div class="section-heading"><div><p class="eyebrow">NEXT UP</p><h2>Upcoming bookings</h2></div><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
+  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong><small>${upcoming[0] ? escapeHtml(bookingTime(upcoming[0])) : "No scheduled lessons"}</small></section><section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section><section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section></div><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -932,10 +934,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const hasFilters = Boolean(filters.search || filters.studentId || filters.lessonId || filters.type || filters.added !== "any");
     const deleted = Number(url.searchParams.get("deleted") ?? 0);
     const failed = Number(url.searchParams.get("failed") ?? 0);
-    const feedback = deleted || failed
-      ? `<p class="${failed ? "form-error" : "form-success"}" role="status">${deleted ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted.` : ""}${deleted && failed ? " " : ""}${failed ? `${failed} resource${failed === 1 ? "" : "s"} need${failed === 1 ? "s" : ""} attention.` : ""}</p>`
+    const notification = deleted || failed
+      ? `<div data-notification-message="${escapeHtml(deleted ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted` : `${failed} resource${failed === 1 ? "" : "s"} could not be deleted`)}" data-notification-type="${failed ? "error" : "success"}" hidden></div>`
       : "";
-    const heading = `<div class="page-heading"><div><h1>Resources</h1><p class="lede">Find teaching material</p></div>${buttonLink("/learn/admin/resources/new", "Add resource")}</div>${feedback}<div data-resource-finder-ui>${resourceFilterForm(filters, students, lessons)}</div><p class="resource-update-error form-error" data-resource-update-error role="alert" hidden>We couldn't update the resource list. Please try again.</p><div data-resource-results aria-live="polite" aria-busy="false">${`<p class="resource-result-count" data-resource-result-count role="status">${total} resource${total === 1 ? "" : "s"}</p>`}${resources.length ? resourceSelectionToolbar() : ""}<form id="resource-bulk-delete-form" method="post" action="/learn/admin/resources/bulk-delete">${hiddenCsrf(csrfToken)}${resourceFilterHiddenInputs(filters, safePage, pageSize)}</form>${resourceRows(resources, { admin: true, csrfToken, filtered: hasFilters })}${resourcePagination(safePage, pageSize, total, "/learn/admin/resources", filters)}</div>`;
+    const heading = `<div class="page-heading"><h1>Resources</h1>${buttonLink("/learn/admin/resources/new", "Add resource")}</div>${notification}<div data-resource-finder-ui>${resourceFilterForm(filters, students, lessons)}</div><p class="resource-update-error form-error" data-resource-update-error role="alert" hidden>We couldn't update the resource list. Please try again.</p><div data-resource-results aria-live="polite" aria-busy="false">${`<p class="resource-result-count" data-resource-result-count role="status">${total} resource${total === 1 ? "" : "s"}</p>`}${resources.length ? resourceSelectionToolbar() : ""}<form id="resource-bulk-delete-form" method="post" action="/learn/admin/resources/bulk-delete">${hiddenCsrf(csrfToken)}${resourceFilterHiddenInputs(filters, safePage, pageSize)}</form>${resourceRows(resources, { admin: true, csrfToken, filtered: hasFilters })}${resourcePagination(safePage, pageSize, total, "/learn/admin/resources", filters)}</div>`;
     return appPage(active.user, csrfToken, "Resources", heading);
   }
   if (route === "admin-resource-form") {
@@ -1013,11 +1015,13 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-calendar") {
     const lessons = await listLessons(db);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
+    const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
+    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/admin/calendar/feed", lessons, "ADMIN", feed, await currentCalendarFeedUrl(request, env, feed)));
   }
   if (route === "admin-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
-    const existingFeed = await findActiveCalendarFeedForOwner(db, active.user.id);
+    if (!env.CALENDAR_FEED_ENCRYPTION_KEY) return messagePage("Calendar unavailable", "The calendar subscription could not be updated. Try again later.", 503);
+    const hadFeed = Boolean(await findActiveCalendarFeedForOwner(db, active.user.id));
     const token = generateFeedToken();
     const now = new Date().toISOString();
     await rotateCalendarFeed(db, {
@@ -1026,10 +1030,14 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       studentId: null,
       tokenHash: await hashFeedToken(token),
       tokenLast4: feedTokenLast4(token),
+      tokenCiphertext: await encryptFeedToken(token, env.CALENDAR_FEED_ENCRYPTION_KEY),
       now
     });
     const lessons = await listLessons(db);
-    return appPage(active.user, csrfToken, "Calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">LESSON SCHEDULE</p><h1>Calendar</h1></div>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div>${calendarView(lessons, "ADMIN")}${calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Calendar link generated.")}</div>`);
+    const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
+    const subscription = calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", feed, calendarFeedUrl(request, env, token), true);
+    if (request.headers.get("X-Calendar-Fragment") === "1") return calendarFragmentResponse(subscription, hadFeed ? "Calendar link regenerated" : "Calendar link generated");
+    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/admin/calendar/feed", lessons, "ADMIN", feed, calendarFeedUrl(request, env, token), true));
   }
   if (route === "admin-bookings") {
     const { page, pageSize } = parseLessonPagination(url);
@@ -1038,7 +1046,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
     const bookings = await listUpcomingLessons(db, now, pageSize, (safePage - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Bookings", lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", eyebrow: "UPCOMING SCHEDULE", title: "Bookings", subtitle: "Upcoming lessons", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" }));
+    return appPage(active.user, csrfToken, "Bookings", lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" }));
   }
   if (route === "admin-lessons") {
     const { page, pageSize } = parseLessonPagination(url);
@@ -1047,10 +1055,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
     const lessons = await listPastLessons(db, now, pageSize, (safePage - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Past Lessons", lessonList(lessons, total, safePage, pageSize, { path: "/learn/admin/lessons", label: "Past Lessons", eyebrow: "LESSON HISTORY", title: "Past Lessons", subtitle: "Lesson history", emptyHeading: "No past lessons", emptyCopy: "Completed and historical lessons will appear here." }));
+    return appPage(active.user, csrfToken, "Past Lessons", lessonList(lessons, total, safePage, pageSize, { path: "/learn/admin/lessons", label: "Past Lessons", title: "Past Lessons", emptyHeading: "No past lessons", emptyCopy: "Completed and historical lessons will appear here." }));
   }
   if (route === "admin-students") {
-    return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><div><p class="eyebrow">STUDENT MANAGEMENT</p><h1>Students</h1></div>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
+    return appPage(active.user, csrfToken, "Students", `<div class="page-heading"><h1>Students</h1>${buttonLink("/learn/admin/students/new", "Create student")}</div>${studentRows(await listStudents(db))}`);
   }
   if (route === "admin-student-form") {
     if (request.method === "GET") return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new"));
@@ -1159,7 +1167,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
 }
 
 function studentDashboard(user: AppUser, csrfToken: string): Response {
-  return appPage(user, csrfToken, "Student dashboard", `<p class="eyebrow">PRIVATE LEARNING PORTAL</p><h1>Student dashboard</h1><p class="lede">Your private lesson schedule is available here.</p><section class="card"><h2>Calendar</h2>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
+  return appPage(user, csrfToken, "Dashboard", `<h1>Dashboard</h1><section class="card"><h2>Calendar</h2>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
 }
 
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -1170,7 +1178,8 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
   if (route === "student-calendar") {
     const lessons = await listLessonsForUser(db, active.user.id);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), undefined)}</div>`);
+    const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
+    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/student/calendar/feed", lessons, "STUDENT", feed, await currentCalendarFeedUrl(request, env, feed)));
   }
   if (route === "student-resources") {
     const search = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
@@ -1183,7 +1192,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
         total: resources.length
       });
     }
-    return appPage(active.user, csrfToken, "Resources", `<div class="student-resource-page"><div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Your teaching material</p></div></div><form class="resource-student-search" method="get" action="/learn/student/resources" data-student-resource-finder><label class="sr-only" for="student-resource-search">Search your resources</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="student-resource-search" type="search" name="q" value="${escapeHtml(search)}" placeholder="Search your resources…" autocomplete="off"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button></form><p class="resource-update-error form-error" data-student-resource-update-error role="alert" hidden>We couldn't update the resource list. Please try again.</p><div data-student-resource-results aria-live="polite" aria-busy="false">${studentResourceResults(resources, search)}</div></div>`);
+    return appPage(active.user, csrfToken, "Resources", `<div class="student-resource-page"><div class="page-heading"><h1>Resources</h1></div><form class="resource-student-search" method="get" action="/learn/student/resources" data-student-resource-finder><label class="sr-only" for="student-resource-search">Search your resources</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="student-resource-search" type="search" name="q" value="${escapeHtml(search)}" placeholder="Search your resources…" autocomplete="off"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button></form><p class="resource-update-error form-error" data-student-resource-update-error role="alert" hidden>We couldn't update the resource list. Please try again.</p><div data-student-resource-results aria-live="polite" aria-busy="false">${studentResourceResults(resources, search)}</div></div>`);
   }
   if (route === "student-resource-download") {
     const id = resourceIdFromPath(url.pathname);
@@ -1196,7 +1205,8 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const student = await findActiveStudentForUser(db, active.user.id);
     if (!student) return messagePage("Calendar unavailable", "Your Learn account is not linked to an active student record.", 409);
-    const existingFeed = await findActiveCalendarFeedForOwner(db, active.user.id);
+    if (!env.CALENDAR_FEED_ENCRYPTION_KEY) return messagePage("Calendar unavailable", "The calendar subscription could not be updated. Try again later.", 503);
+    const hadFeed = Boolean(await findActiveCalendarFeedForOwner(db, active.user.id));
     const token = generateFeedToken();
     const now = new Date().toISOString();
     await rotateCalendarFeed(db, {
@@ -1205,10 +1215,14 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       studentId: student.id,
       tokenHash: await hashFeedToken(token),
       tokenLast4: feedTokenLast4(token),
+      tokenCiphertext: await encryptFeedToken(token, env.CALENDAR_FEED_ENCRYPTION_KEY),
       now
     });
     const lessons = await listLessonsForUser(db, active.user.id);
-    return appPage(active.user, csrfToken, "My calendar", `<div class="calendar-page"><div class="page-heading"><div><p class="eyebrow">STUDENT SCHEDULE</p><h1>My calendar</h1></div></div>${calendarView(lessons, "STUDENT")}${calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", await findActiveCalendarFeedForOwner(db, active.user.id), calendarFeedUrl(request, env, token), existingFeed ? "Calendar link regenerated." : "Calendar link generated.")}</div>`);
+    const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
+    const subscription = calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", feed, calendarFeedUrl(request, env, token), true);
+    if (request.headers.get("X-Calendar-Fragment") === "1") return calendarFragmentResponse(subscription, hadFeed ? "Calendar link regenerated" : "Calendar link generated");
+    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/student/calendar/feed", lessons, "STUDENT", feed, calendarFeedUrl(request, env, token), true));
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);

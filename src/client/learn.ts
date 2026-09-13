@@ -5,6 +5,31 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 (() => {
   document.documentElement.dataset.learnReady = "true";
 
+  type NotificationType = "success" | "error";
+  const showNotification = (message: string, type: NotificationType = "success") => {
+    const container = document.getElementById("site-notifications");
+    if (!container || !message.trim()) return;
+    const notification = document.createElement("div");
+    notification.className = `site-notification site-notification-${type}`;
+    notification.setAttribute("role", type === "error" ? "alert" : "status");
+    const text = document.createElement("span");
+    text.textContent = message;
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "site-notification-close";
+    close.setAttribute("aria-label", "Dismiss notification");
+    close.textContent = "×";
+    const dismiss = () => {
+      window.clearTimeout(timeout);
+      notification.remove();
+    };
+    close.addEventListener("click", dismiss);
+    notification.appendChild(text);
+    notification.appendChild(close);
+    container.appendChild(notification);
+    const timeout = window.setTimeout(dismiss, 3600);
+  };
+
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
   let activeLink: Element | null = null;
   let activeLength = -1;
@@ -19,30 +44,83 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   }
   if (activeLink) activeLink.setAttribute("aria-current", "page");
 
-  document.querySelectorAll(".copy-link").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const targetId = button.getAttribute("data-copy-target");
-      const target = targetId ? document.getElementById(targetId) : null;
-      if (!(target instanceof HTMLInputElement)) return;
-      const original = button.textContent;
-      const showCopied = () => {
-        button.textContent = "Copied";
-        window.setTimeout(() => {
-          button.textContent = original;
-        }, 1600);
-      };
-      if (!navigator.clipboard) {
-        target.focus();
-        target.select();
-        button.textContent = "Select and copy";
-        return;
-      }
-      navigator.clipboard.writeText(target.value).then(showCopied).catch(() => {
-        target.focus();
-        target.select();
-        button.textContent = "Select and copy";
-      });
+  const showPageNotification = () => {
+    document.querySelectorAll<HTMLElement>("[data-notification-message]").forEach((element) => {
+      showNotification(element.dataset.notificationMessage ?? "", element.dataset.notificationType === "error" ? "error" : "success");
     });
+    const url = new URL(window.location.href);
+    const deleted = Number(url.searchParams.get("deleted") ?? 0);
+    const failed = Number(url.searchParams.get("failed") ?? 0);
+    if (deleted || failed) {
+      const message = deleted && failed
+        ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted; ${failed} could not be deleted`
+        : deleted
+          ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted`
+          : `${failed} resource${failed === 1 ? "" : "s"} could not be deleted`;
+      showNotification(message, failed ? "error" : "success");
+      url.searchParams.delete("deleted");
+      url.searchParams.delete("failed");
+      window.history.replaceState({}, "", url);
+    }
+  };
+  showPageNotification();
+
+  document.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".copy-link");
+    if (!button) return;
+    const targetId = button.getAttribute("data-copy-target");
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!(target instanceof HTMLInputElement)) return;
+    const original = button.textContent;
+    const showCopied = () => {
+      button.textContent = "Copied";
+      showNotification("Calendar link copied");
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1600);
+    };
+    if (!navigator.clipboard) {
+      target.focus();
+      target.select();
+      showNotification("Select and copy the calendar link", "error");
+      return;
+    }
+    navigator.clipboard.writeText(target.value).then(showCopied).catch(() => {
+        target.focus();
+        target.select();
+        showNotification("Select and copy the calendar link", "error");
+      });
+  });
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches("[data-calendar-regenerate]")) return;
+    event.preventDefault();
+    const button = form.querySelector<HTMLButtonElement>("button[type='submit']");
+    if (!button) return;
+    button.disabled = true;
+    void (async () => {
+      const body = new URLSearchParams();
+      new FormData(form).forEach((value, key) => {
+        if (typeof value === "string") body.append(key, value);
+      });
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          body,
+          headers: { Accept: "application/json", "X-Calendar-Fragment": "1" }
+        });
+        if (!response.ok) throw new Error("Calendar subscription update failed.");
+        const data = await response.json() as { subscriptionHtml?: string; message?: string };
+        if (!data.subscriptionHtml) throw new Error("Calendar subscription update failed.");
+        form.closest<HTMLElement>("[data-calendar-subscription]")?.replaceWith(document.createRange().createContextualFragment(data.subscriptionHtml));
+        showNotification(data.message ?? "Calendar link regenerated");
+      } catch (error) {
+        showNotification("Calendar link could not be regenerated", "error");
+      } finally {
+        button.disabled = false;
+      }
+    })();
   });
 
   document.querySelectorAll<HTMLElement>(".calendar-host").forEach((element) => {

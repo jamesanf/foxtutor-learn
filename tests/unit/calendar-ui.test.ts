@@ -67,16 +67,20 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain('createElementNS(svgNamespace, "svg")');
     expect(clientSource).toContain("calendar-nav-icon");
     expect(workerSource).toContain("subscription-panel");
-    expect(workerSource).toContain("subscription-action-row");
     expect(cssSource).toContain(".subscription-content { display: grid");
-    expect(cssSource).toContain(".subscription-action-row { display: grid");
-    expect(workerSource).toContain("Apple Calendar");
-    expect(workerSource).toContain("Google Calendar");
-    expect(workerSource).toContain("Outlook");
-    expect(workerSource).toContain("Calendar link generated.");
-    expect(workerSource).toContain("Calendar link regenerated.");
-    expect(workerSource).not.toContain("Regenerate link");
-    expect(workerSource).not.toContain("Generate link");
+    expect(workerSource).toContain("data-calendar-subscription");
+    expect(workerSource).toContain("data-calendar-regenerate");
+    expect(workerSource).toContain("data-calendar-feed-link");
+    expect(workerSource).toContain("Calendar link regenerated");
+    expect(workerSource).not.toContain("Private calendar link");
+    expect(workerSource).not.toContain("An active link exists");
+    expect(workerSource).not.toContain("Regenerating replaces");
+    expect(clientSource).toContain("X-Calendar-Fragment");
+    expect(clientSource).toContain("showNotification");
+    expect(workerSource).toContain('id="site-notifications"');
+    expect(clientSource).toContain("site-notification-close");
+    expect(clientSource).toContain('type === "error"');
+    expect(cssSource).toContain(".site-notifications { position: fixed");
   });
 
   it("keeps event labels concise and renders a single admin bookings destination", () => {
@@ -102,5 +106,15 @@ describe("calendar presentation contract", () => {
     }
     expect(cssSource).toContain(".calendar-host.fc .fc-event-main");
     expect(cssSource).toContain("color: inherit");
+  });
+
+  it("keeps obvious page hierarchy concise", () => {
+    expect(workerSource).toContain("<h1>Dashboard</h1>");
+    expect(workerSource).toContain("<span>Upcoming Bookings</span>");
+    expect(workerSource).toContain("<span>Active Students</span>");
+    expect(workerSource).not.toContain("PRIVATE LEARNING PORTAL");
+    expect(workerSource).not.toContain("LESSON SCHEDULE</p><h1>Calendar");
+    expect(workerSource).not.toContain("UPCOMING SCHEDULE");
+    expect(workerSource).not.toContain("Find teaching material");
   });
 });

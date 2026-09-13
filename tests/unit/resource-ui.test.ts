@@ -62,7 +62,7 @@ describe("resource UX contract", () => {
   });
 
   it("makes search primary and keeps admin refinement controls collapsed and custom", () => {
-    expect(workerSource).toContain("Search files, students or lessons…");
+    expect(workerSource).toContain("Search resources…");
     expect(workerSource).toContain('data-resource-filter-toggle');
     expect(workerSource).toContain('aria-expanded="false"');
     expect(workerSource).toContain('role="listbox"');
@@ -78,6 +78,10 @@ describe("resource UX contract", () => {
     expect(clientSource).toContain("AbortController");
     expect(cssSource).toContain(".resource-filter-panel");
     expect(cssSource).toContain(".resource-suggestions");
+    expect(workerSource).not.toContain("resource-active-filters");
+    expect(workerSource).not.toContain("resource-filter-chip");
+    expect(workerSource).toContain(">Filters</button>");
+    expect(workerSource.match(/resource-clear-all/g)?.length).toBe(1);
   });
 
   it("keeps the student resource surface read-only and own-resource scoped", () => {
@@ -115,6 +119,14 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain("grid-template-columns: repeat(4, minmax(0, 1fr))");
     expect(cssSource).toContain(".resource-sort-icon");
     expect(cssSource).toContain("[data-resource-results].is-loading");
+  });
+
+  it("keeps filter state in the panel without duplicate controls", () => {
+    expect(workerSource).toContain('data-resource-filter-toggle aria-expanded="false"');
+    expect(workerSource).not.toContain("Filters${filterCount");
+    expect(workerSource).not.toContain("resource-active-filters");
+    expect(workerSource).not.toContain("resource-filter-chip");
+    expect(workerSource.match(/resource-clear-all/g)?.length).toBe(1);
   });
 
   it("keeps closed filters compact and geometrically consistent", () => {
