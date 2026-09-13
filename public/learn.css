@@ -323,7 +323,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-form input, .report-form textarea { border-radius: 0; }
 .report-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
 .report-meta > p, .report-meta > .report-level-combobox { min-width: 0; margin: 0; }
-.report-meta > p strong, .report-level-combobox > label { display: block; font-size: .95rem; line-height: 1.4; }
+.report-meta > p strong, .report-level-combobox > label { display: block; margin: 0; font-size: .95rem; line-height: 1.4; }
 .report-level-combobox input { margin-top: 4px; }
 .report-document { max-width: 980px; }
 .report-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
@@ -359,9 +359,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-attachments { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
 .report-attachments .section-heading { margin-bottom: 14px; }
 .report-attachments .section-heading h2 { margin: 0; }
-.report-attachment-form { display: grid; gap: 12px; }
+.report-attachment-form { display: grid; gap: 8px; }
 .report-attachment-form .resource-file-dropzone { min-height: 128px; padding: 20px 16px; border-radius: 0; }
-.report-attachment-form .form-actions { justify-content: flex-start; }
+.report-attachment-form .upload-status { min-height: 0; margin: 0; }
+.report-attachment-form .form-actions { justify-content: flex-start; margin-top: 0; }
 .report-delivery { margin-top: 22px; color: var(--muted); }
 .report-document { break-inside: avoid; }
 @media print {

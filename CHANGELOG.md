@@ -2,6 +2,14 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Report editor final UI refinements
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Removed attachment helper copy and kept the upload action hidden until a file is selected.
+- Corrected the Level metadata alignment and replaced the numbered-list text control with the standard MDI numbered-list icon.
+- List buttons now toggle their own mode off, and the most common level suggestions start with GCSE English and Higher ESOL.
+
 ### 2026-09-13 — Report lists, start-time metadata and lesson attachments
 
 **Status:** deployed; authenticated production acceptance pending

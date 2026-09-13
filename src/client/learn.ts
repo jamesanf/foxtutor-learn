@@ -107,8 +107,9 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     editor.querySelectorAll<HTMLButtonElement>("[data-report-format]").forEach((button) => {
       button.addEventListener("click", () => {
         const format = button.dataset.reportFormat;
-        if (format === "list-bullet" || format === "list-numbered" || format === "list-off") {
-          mode = format === "list-bullet" ? "bullet" : format === "list-numbered" ? "numbered" : "off";
+        if (format === "list-bullet" || format === "list-numbered") {
+          const selectedMode = format === "list-bullet" ? "bullet" : "numbered";
+          mode = mode === selectedMode ? "off" : selectedMode;
           textarea.value = applyListMode(textarea.value, mode);
           updateListButtons(mode);
           textarea.focus();
@@ -825,6 +826,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     const renderSelectedFile = () => {
       const selected = file.files?.[0];
       dropzone.classList.toggle("has-file", Boolean(selected));
+      if (submit?.hasAttribute("data-upload-submit")) submit.hidden = !selected;
       if (!selected) {
         preview.replaceChildren();
         return;
