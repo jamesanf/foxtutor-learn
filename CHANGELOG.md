@@ -21,6 +21,8 @@
 
 ### 2026-09-13 — PDF report typography and footer link
 
+- **Status:** deployed as Worker
+  `632873c1-9e45-4ab1-bae6-ad958a57de5e` from commit `cb18c8c`.
 - Matched the top-right “Lesson Report” title to the FoxTutor Learn header
   title in size, bolding and colour.
 - Increased feedback labels and values to metadata-scale readability,
