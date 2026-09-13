@@ -361,11 +361,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-tool.is-active { color: var(--action); background: #d8ebf0; }
 .report-attachments { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .report-attachments-grid { display: block; }
-.report-attachments-grid.has-files { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.report-attachments-grid.has-files { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .report-attachments .resource-file-dropzone { min-height: 104px; height: 100%; padding: 14px 16px; border-radius: 0; }
 .report-attachments .resource-file-dropzone.has-file { min-height: 92px; padding: 14px 16px; }
 .report-attachments .resource-file-dropzone.has-file > strong, .report-attachments .resource-file-dropzone.has-file > .resource-file-icon { display: block; }
 .report-attachment-list { display: grid; max-height: 152px; min-height: 0; align-content: start; gap: 6px; overflow-y: auto; }
+.report-attachment-list .file-preview { margin-top: 0; }
 .report-attachment-list:empty { display: none; }
 .report-attachment-chip { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); font-size: .82rem; }
 .report-attachment-chip a { min-width: 0; overflow-wrap: anywhere; color: var(--foreground); text-decoration: none; }

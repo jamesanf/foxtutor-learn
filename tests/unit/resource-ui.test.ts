@@ -58,6 +58,8 @@ describe("resource UX contract", () => {
     expect(clientSource).toContain("data-report-resource-delete");
     expect(clientSource).toContain("Removing attachment");
     expect(cssSource).toContain(".report-attachments-grid.has-files");
+    expect(cssSource).toContain("align-items: start");
+    expect(cssSource).toContain(".report-attachment-list .file-preview { margin-top: 0; }");
     expect(cssSource).toContain(".report-attachment-chip");
     expect(clientSource).toContain("Add another file");
     expect(clientSource).toContain("if (reportAttachmentForm) return;");
