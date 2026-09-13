@@ -31,7 +31,7 @@
 
 ## Executed validation
 
-The final pushed application tree at `dac22d3` passed:
+The final pushed application tree at `064d617` passed:
 
 ```text
 npm test                 87 tests across 19 files
@@ -43,8 +43,8 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-application release `dac22d3` is deployed as Worker
-`f5b90e5d-0ad3-4446-86b1-dd95add1dd43`. Production deployment and
+application release `064d617` is deployed as Worker
+`fd195518-ddce-402f-93e4-43043fe41eaf`. Production deployment and
 unauthenticated smoke are confirmed. A production notification regression check
 also confirmed that delivery reloads the linked recipient email rather than
 sending an empty recipient.
