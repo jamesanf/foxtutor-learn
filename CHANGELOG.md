@@ -2,6 +2,9 @@
 
 ### Phase 5.1 — Cancellation, exceptions and rescheduling
 
+- **Status:** deployed as Worker
+  `31a62fb3-7c88-4bb8-a073-9cc06d34e1d7` from commit `08e9ae3`.
+
 - Added server-authoritative `>24h` student cancellation and rescheduling
   eligibility, with the exact 24-hour boundary blocked.
 - Added immediate student cancellation, late cancellation requests, admin

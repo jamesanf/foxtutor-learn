@@ -41,3 +41,9 @@ git diff --check
 
 Production acceptance must use controlled fixtures and remove them after
 verification. No acceptance fixture should remain in production data.
+
+The available environment completed all automated checks, the browser/static
+contract and unauthenticated production perimeter checks. Authenticated
+workflow and real-mail acceptance remain an explicit release gate because the
+production Learn routes are behind Cloudflare Access and no authenticated test
+session was available.

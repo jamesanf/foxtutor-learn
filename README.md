@@ -8,10 +8,10 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 5.1 implementation ready for production deployment
+**Phase:** Phase 5.1 deployed; authenticated workflow acceptance pending
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** pending deployment
-**Worker:** pending deployment
+**Application/runtime release:** `08e9ae3`
+**Worker:** `31a62fb3-7c88-4bb8-a073-9cc06d34e1d7`
 **D1 migrations:** `0001_foundation.sql` through `0011_phase5_notification_types.sql`
 
 The current release includes structured D1 lesson reports, historical student
@@ -112,7 +112,7 @@ working tree.
 | 2 | Students, lessons, ownership, calendar and lifecycle | Complete |
 | 3 | Private lesson resources and R2 storage | Deployed; acceptance recorded in phase documents |
 | 4 | Notifications and structured lesson reports | Complete |
-| 5 | Cancellation and rescheduling automation | In progress |
+| 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |
 
