@@ -18,9 +18,10 @@
   Wrangler returned Worker version
   `cfaa9a46-e64a-4ef0-a672-6a926de205ba`. Production D1 remains through
   `0017_accounting_operations.sql` with no pending migrations.
-- Added the current Phase 6 status/evidence matrix, architecture, security,
-  testing, deployment and exact human acceptance runbook. Historical 6.1-6.3
-  records remain available as release evidence.
+- Consolidated Phase 6 into one current status record with supporting
+  architecture, security, testing, deployment and handover documents.
+  Historical 6.1-6.3 chronology remains in this changelog; redundant copies
+  were removed.
 - **Status:** technically complete; external commercial/provider acceptance
   remains outstanding. `phase-6-complete` was not created.
 

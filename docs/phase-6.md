@@ -10,9 +10,10 @@ credentials, provider-side acceptance and one controlled production
 accounting event. No provider evidence, credential or commercial approval is
 invented here.
 
-This is the single current Phase 6 status record. The phase-specific
-implementation records under `docs/{architecture,testing,deployment,security}/`
-are historical release evidence.
+This is the single current Phase 6 status record. The supporting architecture,
+security, testing, deployment and handover records in this directory are the
+only current Phase 6 documents; historical release chronology is preserved in
+`CHANGELOG.md`.
 
 ## What Phase 6 guarantees
 

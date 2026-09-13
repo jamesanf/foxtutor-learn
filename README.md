@@ -86,8 +86,10 @@ git diff --check
 ```
 
 Use `npm run deploy` only for an authorised production deployment. Apply
-forward-only migrations before deploying code that depends on them. The Phase 5.1 release and acceptance procedure is documented in
-[`docs/deployment/phase-5.1.md`](docs/deployment/phase-5.1.md).
+forward-only migrations before deploying code that depends on them. The
+current Phase 6 deployment state and acceptance boundary are documented in
+[`docs/deployment/phase-6.md`](docs/deployment/phase-6.md) and
+[`docs/handover/phase-6.md`](docs/handover/phase-6.md).
 
 ## Repository map
 
@@ -126,9 +128,9 @@ CHANGELOG.md         Material implementation history
 | `docs/testing/` | Earlier phase validation and acceptance records |
 | `docs/deployment/` | Earlier phase deployment records |
 
-Historical Phase 6.1, 6.2 and 6.3 documents retain evidence for their own
-release. The current Phase 6 documents above are authoritative for the present
-working tree.
+Historical Phase 6.1, 6.2 and 6.3 release chronology is retained in
+`CHANGELOG.md`; the current Phase 6 documents above are the only authoritative
+operational records.
 
 ## Phase map
 

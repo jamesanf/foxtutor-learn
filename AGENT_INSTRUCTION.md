@@ -155,7 +155,9 @@ Do not replace old entries. Append a new entry.
 
 Update the relevant document when a design decision changes.
 
-Use `docs/decisions.md` for important choices that do not belong in a more specific document.
+Use the relevant current architecture document for important choices that do
+not belong in a more specific document. Create a dedicated decision record
+only when a durable decision cannot be represented there.
 
 ## Task execution protocol
 
