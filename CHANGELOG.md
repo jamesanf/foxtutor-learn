@@ -1,5 +1,15 @@
 # Changelog
 
+### 2026-09-13 — Shared legal source and header logo treatment
+
+- Added a white rounded panel around the centered Learn logo so its pale
+  artwork remains legible against the dark header.
+- Replaced the Learn-specific legal supplements with an exact HTML mirror of
+  the public site's canonical Terms & Conditions and Privacy Policy.
+- Added `sync:legal` and `check:legal` tooling plus a scheduled GitHub Actions
+  drift check that compares `foxtutor/src/config/legal.tsx` with
+  `foxtutor-learn/src/legal.ts`.
+
 ### 2026-09-13 — Learn shell branding and portal legal pages
 
 - Replaced the header's `FoxTutor Learn` text with `FoxTutor` and added a

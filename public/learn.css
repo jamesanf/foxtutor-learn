@@ -45,7 +45,7 @@ a, button, input, select, textarea { transition: border-color 150ms ease, backgr
 .brand-logo { display: block; width: 48px; height: 46px; object-fit: contain; }
 .brand-copy { display: block; min-width: 0; }
 .brand-copy strong { display: block; overflow: hidden; font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-.topbar-center-logo { display: inline-flex; align-items: center; justify-content: center; justify-self: center; width: 120px; height: 58px; }
+.topbar-center-logo { display: inline-flex; align-items: center; justify-content: center; justify-self: center; width: 140px; height: 64px; padding: 4px 8px; border: 1px solid #d8e5e8; border-radius: 12px; background: #ffffff; box-shadow: 0 2px 8px rgb(16 42 67 / 14%); }
 .topbar-center-logo img { display: block; width: 120px; height: auto; max-height: 58px; object-fit: contain; }
 .identity { display: flex; min-height: 38px; align-items: center; gap: 18px; color: rgb(255 255 255 / 88%); font-size: .9rem; text-align: right; }
 .topbar > .identity { justify-self: end; }
@@ -537,8 +537,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .brand-logo { width: 38px; height: 38px; }
   .brand-copy { min-width: 0; }
   .brand-copy strong { font-size: .95rem; }
-  .topbar-center-logo { width: 82px; height: 48px; }
-  .topbar-center-logo img { width: 82px; max-height: 48px; }
+  .topbar-center-logo { width: 96px; height: 52px; padding: 3px 6px; }
+  .topbar-center-logo img { width: 84px; max-height: 46px; }
   .identity { flex: 0 0 auto; gap: 10px; font-size: .82rem; text-align: right; }
   .layout { display: block;     .learn-footer-inner { grid-template-columns: 1fr auto; gap: 18px; }
     .learn-footer-logo { grid-column: 2; grid-row: 1 / span 2; }

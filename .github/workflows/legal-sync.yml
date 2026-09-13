@@ -1,0 +1,36 @@
+name: Verify legal policy mirror
+
+on:
+  push:
+    paths:
+      - "src/legal.ts"
+      - "scripts/check-legal-sync.mjs"
+      - ".github/workflows/legal-sync.yml"
+  pull_request:
+    paths:
+      - "src/legal.ts"
+      - "scripts/check-legal-sync.mjs"
+      - ".github/workflows/legal-sync.yml"
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Learn repository
+        uses: actions/checkout@v4
+      - name: Check public repository
+        uses: actions/checkout@v4
+        with:
+          repository: jamesanf/foxtutor
+          path: public-site
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify legal content
+        env:
+          PUBLIC_LEGAL_PATH: ${{ github.workspace }}/public-site/src/config/legal.tsx
+        run: node scripts/check-legal-sync.mjs

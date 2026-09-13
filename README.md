@@ -43,9 +43,8 @@ other accounting actions remain outside this release.
 - Lesson files use the existing D1 metadata and private R2 resource pipeline.
 - Phase 6 FreeAgent integration is deferred.
 - The authenticated shell uses the Learn logo, shared FoxTutor footer, and
-  Learn-specific terms and privacy pages. These pages supplement the public
-  site policies and describe portal-only student, lesson, resource,
-  notification and security data.
+  legal pages generated as an exact mirror of the public site's canonical
+  terms and privacy source.
 
 ## Local development
 
@@ -66,6 +65,7 @@ Production credentials and mail secrets are not stored in the repository.
 npm test
 npm run build
 npm run check
+npm run check:legal
 npm run test:browser
 npm run test:production
 git diff --check

@@ -1,46 +1,117 @@
+// Generated mirror of foxtutor/src/config/legal.tsx. Keep the public-site
+// document as the canonical source and run `npm run check:legal` when it changes.
 export const learnTermsContent = `
-<p class="legal-notice"><strong>Learn-specific supplement.</strong> These terms apply to the private FoxTutor Learn portal and supplement the public FoxTutor terms. If a provision concerns use of the Learn portal, this supplement applies to that use.</p>
-<h2>1. Portal access and accounts</h2>
-<p>Fox Learning Ltd. provides Learn as a private portal for authorised administrators, pupils and their parent or carer. Access is personal, must not be shared, and may be suspended or withdrawn when an account is no longer authorised.</p>
-<h2>2. Lessons and bookings</h2>
-<p>Lesson times, duration, timezone, joining links and status shown in Learn are the current operational record. A standard lesson is 55 minutes unless otherwise agreed. A joining link is private and must not be shared.</p>
-<h2>3. Cancellation and rescheduling</h2>
-<p>A pupil may normally cancel more than 24 hours before the stored lesson start time. Within 24 hours, normal pupil cancellation is disabled and the pupil may request a different time for tutor review. Tutor and administrator decisions remain authoritative. Billing consequences are classified by the service rules; Learn does not itself provide payment or accounting services.</p>
-<h2>4. Resources and reports</h2>
-<p>Resources, lesson reports and feedback are provided for the enrolled pupil's private educational use. They must not be copied, redistributed, published or used to provide services to another person without written permission.</p>
-<h2>5. Acceptable use</h2>
-<p>You must not attempt to access another person's records, bypass access controls, upload unlawful or malicious content, interfere with the service, or use Learn for any purpose unrelated to the tutoring service.</p>
-<h2>6. Intellectual property</h2>
-<p>Teaching materials, reports, templates, branding and software remain the property of Fox Learning Ltd. The limited personal-use permission above does not transfer ownership.</p>
-<h2>7. Safeguarding</h2>
-<p>We may record and share information where reasonably necessary to protect a pupil or another person, investigate a safeguarding concern, or comply with a legal duty. This can include contacting a parent, carer, emergency contact or relevant authority.</p>
-<h2>8. Availability and liability</h2>
-<p>We will take reasonable steps to keep Learn available and accurate, but the portal may be unavailable for maintenance, security work or events outside our control. Nothing in these terms limits liability that cannot lawfully be limited.</p>
-<h2>9. Privacy</h2>
-<p>Learn processes account, pupil, lesson, resource, report, notification and security information as described in the Learn privacy policy. The public-site privacy policy remains relevant to public-site interactions.</p>
-<h2>10. Governing law</h2>
-<p>These terms are governed by the laws of England and Wales, and the courts of England and Wales have exclusive jurisdiction, subject to any mandatory rights that apply to you.</p>
-<p class="legal-updated">Last reviewed: 13 September 2026</p>
+<div>
+        <h2>1. Definitions and Parties</h2>
+        <p>These Terms and Conditions constitute a legally binding agreement between <strong>Fox Learning Ltd.</strong> ("The Company", "We", "Us") and the student or the student's parent/guardian ("The Client", "You"). By booking a tutoring session, you agree to these terms.</p>
+      </div>
+
+      <div>
+        <h2>2. Provision of Services</h2>
+        <p>The Company agrees to provide online educational tutoring ("Services"). While We strive to provide the highest quality of instruction and support, The Company makes no guarantees regarding specific exam grades or academic outcomes.</p>
+        <ul>
+          <li><strong>Lesson Duration:</strong> A standard tutoring session is 55 minutes in length.</li>
+          <li><strong>Included Services:</strong> The price paid includes the price of the time of the lesson, unless agreed otherwise.</li>
+          <li><strong>Additional Marking:</strong> Marking outside of class time will be subject to additional cost and must be discussed and agreed upon in advance.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>3. Payment Terms</h2>
+        <ul>
+          <li><strong>Invoicing:</strong> Invoices are generated automatically on a weekly basis in advance of upcoming sessions.</li>
+          <li><strong>Terms:</strong> All invoices must be settled in full at least 7 days in advance of the scheduled session to secure the booking.</li>
+          <li><strong>Late Payments & System Cancellations:</strong> Failure to pay within the stipulated timeframe may result in the immediate suspension of future sessions until the outstanding balance is cleared. Furthermore, The Company reserves the right to automatically cancel sessions and withhold classroom access/materials if the relevant invoice remains unpaid 24 hours before the scheduled start time.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>4. Cancellations, Rescheduling, and Missed Lessons</h2>
+        <ul>
+          <li><strong>24-Hour Notice:</strong> We require a minimum of 24 hours' written notice (via email) to cancel or reschedule a session without penalty. Where a session is cancelled or rescheduled with more than 24 hours' notice, any advance payment made will be applied as a credit toward the next scheduled session.</li>
+          <li><strong>Persistent Cancellations:</strong> While we aim to be flexible, if cancellations or rescheduling requests occur persistently (even when outside the 24-hour notice window), We reserve the right to terminate the tutoring agreement or re-allocate the weekly slot to another student on our waiting list in the interests of fairness to all parties.</li>
+          <li><strong>Late Cancellations:</strong> Sessions cancelled or rescheduled with less than 24 hours' notice will be billed at the full standard rate.</li>
+          <li><strong>Missed Lessons (No-Shows):</strong> If a student fails to attend a scheduled session, the tutor will wait in the online meeting room for 15 minutes. If the student has not arrived or made contact within this time, the session is considered abandoned and will be billed at the full rate.</li>
+          <li><strong>Tutor Absence:</strong> In the unlikely event that The Company must cancel a session due to illness or emergency, We will provide as much notice as possible and offer a rescheduled slot or a full credit for that session.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>5. Intellectual Property and Conduct</h2>
+        <ul>
+          <li><strong>Ownership & Access:</strong> All teaching materials, essay frameworks, proprietary formulas, and resources provided during the sessions remain the exclusive intellectual property of Fox Learning Ltd. Access to these proprietary materials and the online classroom link is strictly contingent upon a cleared account balance for the upcoming session.</li>
+          <li><strong>Prohibition of Recording:</strong> To protect proprietary teaching methods and student privacy, the audio or visual recording of any tutoring session by The Client or Student is strictly prohibited.</li>
+          <li><strong>Usage Restrictions:</strong> Resources shared during tuition are for the personal, private use of the enrolled Student only. They may not be copied, distributed, sold, or shared with third parties without express written permission from The Company.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>6. Academic Outcomes and Limitation of Liability</h2>
+        <ul>
+          <li><strong>No Guarantee of Grades:</strong> Fox Learning Ltd. provides premium educational support, structure, and guidance. However, academic success depends significantly on the student's independent effort, attendance, and performance under exam conditions. Therefore, We make no guarantees or promises regarding specific grades, exam results, or school/university admissions.</li>
+          <li><strong>Limitation of Liability:</strong> To the maximum extent permitted by English law, Fox Learning Ltd. accepts no liability for any direct or indirect losses, claims, or damages arising from a student's academic outcomes, exam performance, or failure to achieve desired grades.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>7. Academic Honesty and Malpractice</h2>
+        <p>Fox Learning Ltd. operates with strict adherence to UK exam board regulations (e.g., AQA, SQA, Edexcel). We do not condone, assist with, or tolerate plagiarism, the unauthorized use of AI for assessed coursework, or any form of academic malpractice. If We reasonably suspect a student is engaging in cheating on official coursework or assessments, We reserve the right to terminate this agreement immediately without refund. Where professionally or legally required, We also reserve the right to report such malpractice to the relevant school or examination board.</p>
+      </div>
+
+      <div>
+        <h2>8. Safeguarding and Child Protection</h2>
+        <p>Fox Learning Ltd. is committed to the welfare and safety of all students. As a fully qualified teacher, The Tutor adheres to statutory UK safeguarding frameworks. If, during the course of our Services, We develop a reasonable concern that a student is at risk of significant harm, abuse, or neglect, We reserve the right—and hold the professional duty—to report these concerns to the appropriate local authorities or emergency services. Where appropriate and safe to do so, We will inform the parent/guardian, but We reserve the right to make referrals without prior consent if doing so is necessary to protect the child.</p>
+      </div>
+
+      <div>
+        <h2>9. Termination</h2>
+        <p>Either party may terminate this agreement at any time by providing written notice. Termination does not waive the requirement to pay for any sessions already delivered, or any scheduled sessions that fall within the 24-hour non-refundable window at the time notice is given. Any advance payments held for scheduled sessions outside of this 24-hour window will be refunded upon termination.</p>
+      </div>
+
+      <div>
+        <h2>10. Governing Law and Jurisdiction</h2>
+        <p>This agreement, and any dispute or claim arising out of or in connection with it, shall be governed by and construed in accordance with the laws of England and Wales. Both parties irrevocably agree that the courts of England and Wales shall have exclusive jurisdiction to settle any dispute or claim arising under this agreement.</p>
+      </div>
 `;
 
 export const learnPrivacyContent = `
-<p class="legal-notice"><strong>Learn-specific supplement.</strong> This privacy policy applies to the private FoxTutor Learn portal and supplements the public FoxTutor privacy policy. It explains the additional information stored to operate lessons, pupil records, resources, reports and notifications. Where this portal-specific processing is concerned, this policy controls.</p>
-<h2>1. Controller</h2>
-<p>The data controller is <strong>Fox Learning Ltd.</strong> For privacy questions or rights requests, contact <a href="mailto:hello@foxtutor.org">hello@foxtutor.org</a>.</p>
-<h2>2. Information stored in Learn</h2>
-<ul><li>Account identity, email address, display name, role and access status.</li><li>Pupil name, parent or carer name and email, billing address, academic level and year, class texts, additional support needs and international clock-change preference.</li><li>Lesson dates, times, timezone, joining links, notes, status, cancellation and rescheduling history.</li><li>Lesson reports, educational feedback and private resources, including file metadata and securely stored files.</li><li>Notification content, delivery status, schedule, provider reference and failure information.</li><li>Session, CSRF, calendar-feed and audit information needed for security, access control and accountability.</li></ul>
-<h2>3. Why we use it</h2>
-<ul><li>To create and manage pupil accounts, bookings and lesson access.</li><li>To deliver resources, reports, reminders and operational email.</li><li>To manage cancellations, rescheduling, attendance history and billing-consequence classification.</li><li>To protect the portal, investigate misuse, maintain records and meet legal obligations.</li></ul>
-<p>Our main lawful bases are performance of the tutoring contract, legitimate interests in operating and securing the service, and legal obligations. Where information about additional support needs is provided, please share only what is necessary for safe and effective tutoring; we will handle it with appropriate care and access controls.</p>
-<h2>4. Sharing and processors</h2>
-<p>Information is shared only where necessary to operate Learn. This can include Cloudflare services hosting the Worker, D1 database and private R2 storage, the authenticated access provider, and Fox Mail for outbound email. We do not sell pupil or parent information. Learn's Phase 5 billing classification does not send data to FreeAgent or another accounting integration.</p>
-<h2>5. Retention</h2>
-<p>We retain records for as long as needed to provide the service, maintain educational and operational history, resolve disputes, protect the service and meet legal, safeguarding and accounting obligations. Security sessions and temporary tokens expire or are revoked according to the service controls. Files follow the Learn resource retention rules.</p>
-<h2>6. Children and safeguarding</h2>
-<p>Learn is commonly used for pupils under 18. We expect parent or carer involvement where appropriate and apply role-based access to keep pupil information within the tutoring relationship. We may process or share relevant information when necessary to protect a pupil or another person or to meet a safeguarding duty.</p>
-<h2>7. Security</h2>
-<p>Learn uses authenticated access, role and ownership checks, server-side sessions, CSRF protection, encrypted transport, private storage and no-index controls. No internet service can guarantee absolute security, so please report suspected unauthorised access promptly.</p>
-<h2>8. Your rights</h2>
-<p>Subject to legal exceptions, you may request access, correction, deletion, restriction or portability, and may object to certain processing. A parent or carer may make a request for a child where legally authorised. Contact <a href="mailto:hello@foxtutor.org">hello@foxtutor.org</a>; you may also complain to the UK Information Commissioner's Office.</p>
-<p class="legal-updated">Last reviewed: 13 September 2026</p>
+<div>
+        <h2>1. Data Controller</h2>
+        <p>For the purposes of the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018, the Data Controller is <strong>Fox Learning Ltd.</strong></p>
+      </div>
+
+      <div>
+        <h2>2. Data We Collect</h2>
+        <p>To provide our Services effectively, we collect the following personal data:</p>
+        <ul>
+          <li>Parent/Guardian name, billing address, and email address.</li>
+          <li>Student's first name, year group, exam board, and academic working grades.</li>
+          <li>Payment and billing history.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>3. Lawful Basis and How We Use Your Data</h2>
+        <p>We process your data primarily on the basis of <strong>Contractual Necessity</strong> (to deliver the tutoring services you have purchased) and <strong>Legitimate Interests</strong> (to manage our business operations). We use your data to:</p>
+        <ul>
+          <li>Deliver tailored educational support.</li>
+          <li>Communicate regarding scheduling, student progress, and homework.</li>
+          <li>Process payments and maintain accurate financial records.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>4. Data Protection and Sharing</h2>
+        <p>We do not sell, rent, or trade your personal information to third parties. Your data is kept securely and is only accessed by authorized personnel of Fox Learning Ltd. for the direct purposes of delivering the Services. We may share necessary data with secure third-party processors (e.g., accounting software, payment gateways) strictly for operational purposes.</p>
+      </div>
+
+      <div>
+        <h2>5. Data Retention</h2>
+        <p>We retain your personal information only for as long as you are actively using our Services. For tax and accounting purposes, HMRC requires us to keep basic billing and invoicing records for a minimum of 6 years, after which they will be securely destroyed.</p>
+      </div>
+
+      <div>
+        <h2>6. Your Rights</h2>
+        <p>Under the UK GDPR, you have the right to request access to the personal data we hold about you, request corrections to inaccurate data, or request the deletion of your data (subject to our legal accounting obligations). To exercise these rights, please contact us via email at hello@foxtutor.org.</p>
+      </div>
 `;
