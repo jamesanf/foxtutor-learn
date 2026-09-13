@@ -81,12 +81,13 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain("site-notification-close");
     expect(clientSource).toContain('type === "error"');
     expect(clientSource).toContain("container.replaceChildren()");
-    expect(cssSource).toContain(".site-notifications { position: fixed; top: 50%; left: 50%");
+    expect(cssSource).toContain(".site-notifications { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%");
+    expect(cssSource).toContain("transform: translateX(-50%)");
     expect(cssSource).toContain("border-radius: 999px");
-    expect(cssSource).toContain("background: var(--action)");
+    expect(cssSource).toContain("background: color-mix(in srgb, var(--action) 90%, transparent)");
     expect(cssSource).toContain("box-shadow: none");
     expect(cssSource).not.toContain(".site-notification-error");
-    expect(cssSource).not.toContain("bottom: max(16px");
+    expect(cssSource).not.toContain("top: 50%; left: 50%");
   });
 
   it("keeps event labels concise and renders a single admin bookings destination", () => {
