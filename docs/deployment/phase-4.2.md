@@ -28,8 +28,8 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migration `0008_structured_lesson_reports.sql` was applied to the production
 database on `2026-09-13`. The final deployed source commit is
-`3f20caeb2eaa127480ed2028b6119b5f5872a4b0`, deployed as Worker version
-`fde00c6e-5296-46bb-a8b9-c1511065392c` at `2026-09-13T13:10:38Z`. The Worker
+`e48fc98fc054823ae3387a06dc7b6237c368d016`, deployed as Worker version
+`289e3b10-a2e6-49c0-a035-714df13c18c9` at `2026-09-13T13:11:28Z`. The Worker
 reports 100% traffic on that version.
 
 Automated validation and unauthenticated production smoke checks pass. Formal
