@@ -8,6 +8,7 @@ import {
   listDueReminderLessons,
   markNotificationOutcome,
   markNotificationSent,
+  resetNotificationForRetry,
   type Notification,
   type NotificationInsert
 } from "../db/notifications";
@@ -102,6 +103,9 @@ export async function createAndDeliverNotification(
 ): Promise<Notification> {
   const notification = await createNotification(db, draft, now);
   if (notification.status === "SENT") return notification;
+  if (notification.status === "FAILED" || notification.status === "UNKNOWN") {
+    await resetNotificationForRetry(db, notification.id, now);
+  }
   await deliverNotification(db, env, notification.id, now, fetcher);
   return (await findNotificationByIdempotencyKey(db, notification.idempotency_key)) ?? notification;
 }

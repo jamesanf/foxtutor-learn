@@ -123,6 +123,12 @@ export async function markNotificationOutcome(
   await db.prepare("UPDATE notifications SET status = ?, error_category = ?, error_message = ?, next_attempt_at = ?, updated_at = ? WHERE id = ?").bind(status, category, message.slice(0, 200), nextAttemptAt, now, id).run();
 }
 
+export async function resetNotificationForRetry(db: D1Database, id: string, now: string): Promise<void> {
+  await db.prepare(
+    "UPDATE notifications SET status = 'PENDING', next_attempt_at = ?, updated_at = ? WHERE id = ? AND status IN ('FAILED', 'UNKNOWN')"
+  ).bind(now, now, id).run();
+}
+
 export async function listNotifications(db: D1Database, status?: NotificationStatus, limit = 50, offset = 0): Promise<Notification[]> {
   const clause = status ? "WHERE n.status = ?" : "";
   const bindings: (string | number)[] = status ? [status, limit, offset] : [limit, offset];

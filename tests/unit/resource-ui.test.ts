@@ -43,14 +43,16 @@ describe("resource UX contract", () => {
 
   it("submits report attachments through the report action without a second upload page", () => {
     expect(workerSource).toContain('enctype="multipart/form-data" data-report-attachment-form');
-    expect(workerSource).toContain('name="attachment"');
-    expect(workerSource).toContain("const attachment = form.get(\"attachment\")");
-    expect(workerSource).toContain("attachment instanceof File");
-    expect(workerSource).toContain("if (wantsSend && attachment instanceof File && attachment.size > 0)");
+    expect(workerSource).toContain('name="attachments"');
+    expect(workerSource).toContain('form.getAll("attachments")');
+    expect(workerSource).toContain("attachments.length > 5");
+    expect(workerSource).toContain("if (wantsSend)");
+    expect(workerSource).toContain('multiple accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"');
     expect(workerSource).toContain("resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true)");
     expect(workerSource).toContain("if (uploadResponse.status !== 204)");
     expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
     expect(clientSource).toContain('".resource-upload-form, [data-report-attachment-form]"');
+    expect(clientSource).toContain("Add another file");
     expect(clientSource).toContain("if (reportAttachmentForm) return;");
   });
 

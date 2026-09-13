@@ -72,4 +72,25 @@ describe("mail boundary", () => {
     );
     expect(result).toMatchObject({ kind: "failed", category: "PROVIDER_UNAVAILABLE", unknown: true, retryable: true });
   });
+
+  it("retains the provider error code for actionable delivery diagnostics", async () => {
+    const result = await sendMailDetailed(
+      {
+        ENVIRONMENT: "production",
+        MAIL_API_URL: "https://mail.foxtutor.org",
+        MAIL_API_TOKEN: "test-token",
+        MAIL_API_FROM: "hello@foxtutor.org"
+      },
+      { to: "student@example.com", subject: "Report", text: "Report", idempotencyKey: "notification-test-message-3" },
+      async () => new Response(JSON.stringify({ ok: false, error: "identity_not_allowed" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+    expect(result).toMatchObject({
+      kind: "failed",
+      category: "PROVIDER_VALIDATION",
+      safeMessage: "Mail provider rejected the request (400: identity_not_allowed)"
+    });
+  });
 });

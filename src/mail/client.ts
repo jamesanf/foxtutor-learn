@@ -98,6 +98,13 @@ export async function sendMailDetailed(
       throw error;
     }
     if (!response.ok) {
+      let providerError: string | null = null;
+      try {
+        const body = await response.clone().json() as Record<string, unknown>;
+        providerError = typeof body.error === "string" ? body.error : null;
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+      }
       const category = response.status === 429
         ? "PROVIDER_RATE_LIMIT"
         : response.status >= 500
@@ -105,7 +112,8 @@ export async function sendMailDetailed(
           : response.status === 401 || response.status === 403
             ? "PROVIDER_AUTH"
             : "PROVIDER_VALIDATION";
-      return failure(category, `Mail provider rejected the request (${response.status})`, response.status === 429 || response.status >= 500, false, response.status);
+      const detail = providerError ? `: ${providerError}` : "";
+      return failure(category, `Mail provider rejected the request (${response.status}${detail})`, response.status === 429 || response.status >= 500, false, response.status);
     }
     let reference: string | null = null;
     const contentType = response.headers.get("content-type") ?? "";

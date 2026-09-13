@@ -804,6 +804,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     const status = form.querySelector<HTMLElement>("[data-upload-status]");
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
     const reportAttachmentForm = form.hasAttribute("data-report-attachment-form");
+    let selectedReportFiles: File[] = [];
     const lesson = lessonElement instanceof HTMLSelectElement ? lessonElement : null;
 
     if (student instanceof HTMLSelectElement && lesson) {
@@ -836,28 +837,53 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
+    const assignFiles = (files: File[]): boolean => {
+      if (typeof DataTransfer === "undefined") return false;
+      const transfer = new DataTransfer();
+      for (const selected of files) transfer.items.add(selected);
+      file.files = transfer.files;
+      return true;
+    };
     const renderSelectedFile = () => {
-      const selected = file.files?.[0];
+      const selectedFiles = reportAttachmentForm ? selectedReportFiles : Array.from(file.files ?? []).slice(0, 1);
+      const selected = selectedFiles[0];
       form.classList.toggle("has-file", Boolean(selected));
       dropzone.classList.toggle("has-file", Boolean(selected));
       if (submit?.hasAttribute("data-upload-submit")) submit.hidden = !selected;
-      if (!selected) {
+      if (!selectedFiles.length) {
         preview.replaceChildren();
         return;
       }
-      const name = document.createElement("strong");
-      name.textContent = selected.name;
-      const details = document.createElement("span");
-      details.textContent = `${formatFileType(selected)} · ${formatFileSize(selected.size)}`;
-      const change = document.createElement("button");
-      change.type = "button";
-      change.className = "file-change";
-      change.textContent = "Change file";
-      change.addEventListener("click", (event) => {
+      const items = selectedFiles.map((selectedFile, index) => {
+        const item = document.createElement("span");
+        item.className = "file-preview-item";
+        const details = document.createElement("span");
+        details.textContent = `${selectedFile.name} · ${formatFileType(selectedFile)} · ${formatFileSize(selectedFile.size)}`;
+        item.appendChild(details);
+        if (reportAttachmentForm) {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "file-change";
+          remove.textContent = "Remove";
+          remove.addEventListener("click", (event) => {
+            event.stopPropagation();
+            selectedReportFiles = selectedReportFiles.filter((_, fileIndex) => fileIndex !== index);
+            assignFiles(selectedReportFiles);
+            renderSelectedFile();
+          });
+          item.appendChild(remove);
+        }
+        return item;
+      });
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "file-change";
+      add.textContent = reportAttachmentForm ? `Add another file (${selectedFiles.length}/5)` : "Change file";
+      add.addEventListener("click", (event) => {
         event.stopPropagation();
         file.click();
       });
-      preview.replaceChildren(name, details, change);
+      preview.replaceChildren(...items, add);
     };
     const openPicker = () => file.click();
 
@@ -878,14 +904,30 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     dropzone.addEventListener("drop", (event) => {
       event.preventDefault();
       dropzone.classList.remove("is-dragging");
-      const dropped = event.dataTransfer?.files?.[0];
-      if (!dropped || typeof DataTransfer === "undefined") return;
-      const transfer = new DataTransfer();
-      transfer.items.add(dropped);
-      file.files = transfer.files;
+      const dropped = Array.from(event.dataTransfer?.files ?? []);
+      if (!dropped.length || typeof DataTransfer === "undefined") return;
+      if (reportAttachmentForm) {
+        const existing = new Set(selectedReportFiles.map((selectedFile) => `${selectedFile.name}:${selectedFile.size}:${selectedFile.lastModified}`));
+        selectedReportFiles = [...selectedReportFiles, ...dropped.filter((droppedFile) => !existing.has(`${droppedFile.name}:${droppedFile.size}:${droppedFile.lastModified}`))].slice(0, 5);
+        assignFiles(selectedReportFiles);
+        if (dropped.length + selectedReportFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
+        renderSelectedFile();
+        return;
+      }
+      assignFiles(dropped.slice(0, 1));
       file.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    file.addEventListener("change", renderSelectedFile);
+    file.addEventListener("change", () => {
+      if (reportAttachmentForm) {
+        const existing = new Set(selectedReportFiles.map((selectedFile) => `${selectedFile.name}:${selectedFile.size}:${selectedFile.lastModified}`));
+        const incoming = Array.from(file.files ?? []);
+        const additions = incoming.filter((incomingFile) => !existing.has(`${incomingFile.name}:${incomingFile.size}:${incomingFile.lastModified}`));
+        selectedReportFiles = [...selectedReportFiles, ...additions].slice(0, 5);
+        if (additions.length + selectedReportFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
+        assignFiles(selectedReportFiles);
+      }
+      renderSelectedFile();
+    });
     form.addEventListener("submit", () => {
       if (reportAttachmentForm) return;
       if (submit) {
