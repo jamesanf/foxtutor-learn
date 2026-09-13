@@ -45,16 +45,16 @@ describe("notification domain", () => {
       level: "ESOL N5/H",
       thisLessonsFocus: "<script>alert(1)</script>",
       nextLessonsFocus: "Read & practise",
-      writingPractice: "",
-      homeLearningTask: "",
-      notes: "",
-      evenBetterIf: "",
+      writingPractice: "Write three sentences.",
+      homeLearningTask: "Complete the worksheet.",
+      notes: "Good progress.",
+      evenBetterIf: "Use more precise vocabulary.",
       resources: [{ filename: "A <worksheet>.pdf", path: "/learn/student/resources/resource-1/download" }]
     }, "https://foxtutor.org/learn");
     expect(rendered.html).not.toContain("<script>");
     expect(rendered.html).toContain("&lt;script&gt;");
     expect(rendered.html).toContain("A &lt;worksheet&gt;.pdf");
-    for (const label of ["This Lesson's Focus", "Next Lesson's Focus", "Writing Practice", "Home Learning Task", "Notes", "Even Better If"]) {
+    for (const label of ["This Lesson&#39;s Focus", "Next Lesson&#39;s Focus", "Writing Practice", "Home Learning Task", "Notes", "Even Better If"]) {
       expect(rendered.html).toContain(label);
     }
     expect(rendered.html).toContain("/learn/student/lessons/lesson-1/report");
