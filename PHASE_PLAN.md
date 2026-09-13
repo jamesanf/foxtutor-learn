@@ -508,6 +508,17 @@ The hard per-file limit remains 25 MiB and a single configured 25 MiB active-res
 
 Local implementation gates are covered by the resource policy, migration, authorization and UI contracts. Commit `6bd0dca674608c11be4363ec3ee94522e397ca0b` is pushed to `origin/main` and deployed as Worker `foxtutor-learn` version `43cceb60-905e-4034-bc26-ad03dd9c811d` at `2026-09-13T00:23:40Z`; public smoke and the Cloudflare Access boundary pass. Authenticated production browser acceptance, controlled fixture cleanup, screenshots and any Phase 3 completion tag remain open.
 
+### Phase 3.8 current state — 2026-09-13
+
+The final UI/source pass normalizes the shared header identity centerline and gives Previous/Next and numbered pagination controls one compact, focus-visible control family. The existing server-rendered HTML, TypeScript no-reload interaction model, History API state, request cancellation, authorization and resource data model remain unchanged.
+
+The final product-scope decisions are:
+
+- **PDF compression — DEFERRED TO FUTURE PHASE.** No verified private asynchronous processing boundary is available in the current Worker-only repository.
+- **Retention housekeeping — DEFERRED TO FUTURE PHASE.** `retention_until` remains a review horizon; automatic deletion is not part of Phase 3.
+
+The closure matrix is therefore reconciled for those two scope items, but Phase 3 is not closed: populated second-page production evidence, genuine cross-student direct-object evidence, final authenticated Chromium screenshots and exact final deployment verification still require a persistent authenticated browser session. No `phase-3-complete` tag is permitted until those gates pass.
+
 ### Objective
 
 Make the lesson the student's permanent learning record while preventing the application from becoming a general-purpose file drive.
@@ -525,12 +536,11 @@ Make the lesson the student's permanent learning record while preventing the app
 - Short-lived authenticated download mechanism.
 - Upload state machine: pending, processing, ready, failed, deleted.
 - PDF inspection.
-- Automatic PDF compression for oversized PDFs.
-- Original oversized object removed after successful processing unless explicit admin retention is required.
+- PDF compression decision recorded; implementation is deferred to a future phase.
 - Clear user-facing compression/upload progress.
 - Reject unsupported formats safely.
 - Retention metadata, default at least 12 months for lesson resources.
-- Automated retention housekeeping.
+- Retention housekeeping decision recorded; automated deletion is deferred to a future phase.
 - Admin storage browser by student → lesson → file.
 - File sizes, dates, types, and delete actions.
 - Student deletion flow removes operational files while preserving external accounting records that are legally required elsewhere.

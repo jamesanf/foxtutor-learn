@@ -45,12 +45,12 @@ a, button, input, select, textarea { transition: border-color 150ms ease, backgr
 .brand-logo { display: block; width: 48px; height: 46px; object-fit: contain; }
 .brand-copy { display: block; min-width: 0; }
 .brand-copy strong { display: block; overflow: hidden; font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-.identity { display: flex; align-items: center; gap: 18px; color: rgb(255 255 255 / 88%); font-size: .9rem; text-align: right; }
-.identity form { display: flex; align-items: center; margin: 0; }
-.identity-role { color: white; font-size: .78rem; font-weight: 700; letter-spacing: .08em; line-height: 1.25; }
+.identity { display: flex; min-height: 38px; align-items: center; gap: 18px; color: rgb(255 255 255 / 88%); font-size: .9rem; text-align: right; }
+.identity form { display: flex; align-items: center; min-height: 38px; margin: 0; }
+.identity-role { display: inline-flex; min-height: 38px; align-items: center; color: white; font-size: .78rem; font-weight: 700; letter-spacing: .08em; line-height: 1; }
 .identity-name { display: grid; gap: 1px; }
 .identity-name small { color: white; font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
-.link-button { display: inline-flex; align-items: center; border: 0; padding: 0; color: white; background: transparent; line-height: 1.25; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link-button { display: inline-flex; min-height: 38px; align-items: center; border: 0; padding: 0; color: white; background: transparent; line-height: 1; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .link-button:hover { color: #cffafe; }
 .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 76px); }
 nav { padding: 28px 16px; border-right: 1px solid var(--line); background: var(--nav); }
@@ -274,9 +274,12 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .result-range { color: var(--muted); font-size: .86rem; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
 .pagination-pages { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
-.pagination-link { min-width: 34px; padding: 7px 9px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--action); text-align: center; text-decoration: none; font-size: .86rem; font-weight: 650; }
+.pagination-link { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--action); text-align: center; text-decoration: none; font-size: .86rem; font-weight: 650; line-height: 1.2; }
+.pagination-nav-link { padding: 8px 10px; }
+.pagination-page-link { min-width: 34px; padding: 8px 9px; }
 .pagination-link:hover, .pagination-link.is-current { border-color: var(--action); color: white; background: var(--action); }
 .pagination-link.is-disabled { color: #94a3b8; background: var(--soft); cursor: not-allowed; }
+.pagination-link:focus-visible { border-color: var(--primary); outline: 3px solid var(--primary); outline-offset: 3px; }
 .pagination-ellipsis { display: inline-flex; min-width: 20px; align-items: center; justify-content: center; color: var(--muted); }
 .page-size-form { display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--muted); font-size: .86rem; }
 .page-size-form label { margin: 0; color: var(--muted); font-weight: 500; }
@@ -374,7 +377,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .resource-success .form-actions .button { width: 100%; }
   .resource-student-item { align-items: flex-start; flex-direction: column; }
   .resource-student-item .resource-actions { width: 100%; justify-content: flex-start; }
-  .pagination { align-items: stretch; flex-wrap: wrap; }
+  .pagination { align-items: center; flex-wrap: wrap; }
   .pagination-pages { order: -1; width: 100%; }
   .table-wrap { overflow: visible; border: 0; background: transparent; }
   .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; }

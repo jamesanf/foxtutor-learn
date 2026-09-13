@@ -257,8 +257,8 @@ function paginationPageNumbers(page: number, pageCount: number, path: string, pa
   for (const number of numbers) {
     if (number - previous > 1) output.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
     output.push(number === page
-      ? `<span class="pagination-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link" href="${path}?page=${number}&size=${pageSize}">${number}</a>`);
+      ? `<span class="pagination-link pagination-page-link is-current" aria-current="page">${number}</span>`
+      : `<a class="pagination-link pagination-page-link" href="${path}?page=${number}&size=${pageSize}">${number}</a>`);
     previous = number;
   }
   return output.join("");
@@ -269,7 +269,7 @@ function lessonPagination(page: number, pageSize: number, total: number, path: s
   const first = total ? (page - 1) * pageSize + 1 : 0;
   const last = total ? Math.min(page * pageSize, total) : 0;
   const link = (nextPage: number, text: string, disabled: boolean) =>
-    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link" href="${path}?page=${nextPage}&size=${pageSize}">${text}</a>`;
+    disabled ? `<span class="pagination-link pagination-nav-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link pagination-nav-link" href="${path}?page=${nextPage}&size=${pageSize}">${text}</a>`;
   return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? paginationPageNumbers(page, pageCount, path, pageSize) : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="${label.toLowerCase().replaceAll(" ", "-")}-page-size">Show per page</label><select id="${label.toLowerCase().replaceAll(" ", "-")}-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${LESSON_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
@@ -511,7 +511,7 @@ function resourcePagination(page: number, pageSize: number, total: number, path:
   const last = total ? Math.min(page * pageSize, total) : 0;
   const baseQuery = resourceFilterQuery(filters);
   const link = (nextPage: number, text: string, disabled: boolean) =>
-    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${nextPage}&size=${pageSize}">${text}</a>`;
+    disabled ? `<span class="pagination-link pagination-nav-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link pagination-nav-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${nextPage}&size=${pageSize}">${text}</a>`;
   const numbers = pageCount <= 7
     ? Array.from({ length: pageCount }, (_, index) => index + 1)
     : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
@@ -520,8 +520,8 @@ function resourcePagination(page: number, pageSize: number, total: number, path:
   for (const number of numbers) {
     if (number - previous > 1) pageLinks.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
     pageLinks.push(number === page
-      ? `<span class="pagination-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${number}&size=${pageSize}">${number}</a>`);
+      ? `<span class="pagination-link pagination-page-link is-current" aria-current="page">${number}</span>`
+      : `<a class="pagination-link pagination-page-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${number}&size=${pageSize}">${number}</a>`);
     previous = number;
   }
   return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label>${Array.from(new URLSearchParams(baseQuery).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("")}<select id="resources-page-size" class="page-size-select" name="size">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;

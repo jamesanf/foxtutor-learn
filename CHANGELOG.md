@@ -2,6 +2,17 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 3.8 final UI/source pass
+
+**Status:** local source pass complete; authenticated production closure pending because no persistent Chromium session is available in the current environment
+
+- Normalized the `ADMIN` and `Log out` controls around one shared header flex centerline without positional alignment hacks.
+- Added compact Previous/Next and numbered pagination control variants with shared geometry, visible focus states and non-stretched mobile alignment.
+- Added regression contracts for the header structure, alignment CSS, pagination control family and forbidden positional hacks.
+- Reconciled PDF compression as **DEFERRED TO FUTURE PHASE** because no verified private asynchronous processing boundary exists in the current Worker-only architecture.
+- Reconciled retention housekeeping as **DEFERRED TO FUTURE PHASE** because `retention_until` remains a review horizon and no accepted scheduled D1/R2 cleanup mechanism exists in Phase 3.
+- Populated second-page production pagination, controlled cross-student direct-object isolation, final screenshots and completion tagging remain unclaimed until a persistent authenticated Chromium session is available.
+
 ### 2026-09-13 — Phase 3.3 resource manager refinement
 
 **Status:** deployed as Worker `43cceb60-905e-4034-bc26-ad03dd9c811d` from commit `6bd0dca674608c11be4363ec3ee94522e397ca0b`; authenticated production acceptance pending

@@ -92,8 +92,13 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain('<strong>FoxTutor Learn</strong>');
     expect(workerSource).toContain('class="identity-role">ADMIN</span>');
     expect(workerSource).toContain(">Log out</button>");
+    expect(workerSource).toContain('<div class="identity">${identity}<form');
     expect(workerSource).not.toContain('<strong>James Fox</strong>');
     expect(workerSource).not.toContain("FoxTutor Learn Admin");
+    expect(cssSource).toContain(".identity { display: flex; min-height: 38px; align-items: center");
+    expect(cssSource).toContain(".identity-role { display: inline-flex; min-height: 38px; align-items: center");
+    expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center");
+    expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
   });
 
   it("defines an in-place resource application boundary", () => {
@@ -126,5 +131,15 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain("white-space: nowrap");
     expect(cssSource).toContain(".resource-choice-chevron-icon");
     expect(cssSource).toContain(".identity form { display: flex; align-items: center");
+  });
+
+  it("uses one compact pagination control family", () => {
+    expect(workerSource).toContain("pagination-nav-link");
+    expect(workerSource).toContain("pagination-page-link");
+    expect(cssSource).toContain(".pagination-link { display: inline-flex; min-height: 38px; align-items: center");
+    expect(cssSource).toContain(".pagination-nav-link { padding: 8px 10px; }");
+    expect(cssSource).toContain(".pagination-page-link { min-width: 34px; padding: 8px 9px; }");
+    expect(cssSource).toContain(".pagination { align-items: center; flex-wrap: wrap; }");
+    expect(cssSource).toContain(".pagination-link:focus-visible");
   });
 });
