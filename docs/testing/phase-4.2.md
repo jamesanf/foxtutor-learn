@@ -14,6 +14,24 @@
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
 
+## Executed validation
+
+The final pushed tree passed:
+
+```text
+npm test                 75 tests across 18 files
+npm run build            PASS
+npm run check            PASS
+npm run test:browser     PASS (static shell contract)
+npm run test:production  PASS (public/unauthenticated smoke)
+git diff --check         PASS
+```
+
+Production D1 reports no migrations pending after applying `0008`. Production
+deployment and unauthenticated smoke are confirmed, but the acceptance matrix
+below still requires authenticated browser, Fox Mail, PDF visual and
+no-storage evidence before closure.
+
 ## Required acceptance matrix
 
 | Capability | Required evidence |

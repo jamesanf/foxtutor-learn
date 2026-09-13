@@ -24,9 +24,17 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 9. Create `phase-4-complete` only when the worktree is clean and all evidence
    passes.
 
-## Current status
+## Release result
 
-Migration and deployment have not been claimed by this source-only pass.
-Worker version, deployment time, production mail acceptance, browser evidence,
-PDF visual inspection and completion tag remain to be recorded after the
-controlled production release.
+Migration `0008_structured_lesson_reports.sql` was applied to the production
+database on `2026-09-13`. The final pushed source commit is
+`641ec6e822c568bb6cd1498a724c0be671caab6b`, and the Worker was deployed from
+that tree as version `14361364-1aef-4313-8bfd-aa946bcdb47c` at
+`2026-09-13T13:06:35Z`. A second deployment was used to ensure the pushed
+commit is the active release; the Worker reports 100% traffic on that version.
+
+Automated validation and unauthenticated production smoke checks pass. Formal
+Phase 4 closure remains open because controlled authenticated admin/student
+browser evidence, visual PDF inspection, real Fox Mail acceptance, and the
+three-download D1/R2 no-storage check have not been completed in this
+environment. Therefore no `phase-4-complete` tag has been created.

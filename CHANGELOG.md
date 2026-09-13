@@ -4,13 +4,13 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-13 — Phase 4.2 structured lesson reports
 
-**Status:** local implementation complete; production deployment and authenticated acceptance pending
+**Status:** deployed; authenticated production acceptance pending
 
 - Added forward-only migration `0008_structured_lesson_reports.sql` with nullable student levels, historical report header snapshots and the exact six-field Tutorial Feedback model.
 - Reconciled the 4.1 fields explicitly: `summary` to This Lesson's Focus, `homework` to Home Learning Task and `additional_notes` to Notes.
 - Added shared report projections for server-rendered HTML, Fox Mail and on-demand Worker-generated PDF output. PDFs use private/no-store responses and are never stored in R2 or D1.
 - Added admin level editing, structured draft/send workflow, immutable sent report views, student-owned report HTML/PDF routes and report actions in admin/student lesson history.
-- Added route, migration, projection and PDF regression coverage. Phase 4 remains open until controlled production mail, browser, deployment and cleanup evidence is available.
+- Added route, migration, projection and PDF regression coverage. Migration `0008` is applied and Worker version `14361364-1aef-4313-8bfd-aa946bcdb47c` is deployed from commit `641ec6e822c568bb6cd1498a724c0be671caab6b`; Phase 4 remains open until controlled production mail, browser, PDF visual and no-storage evidence is available.
 
 ### 2026-09-13 — Phase 4.1 notifications, reminders and lesson reporting
 

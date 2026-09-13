@@ -635,9 +635,11 @@ immutable in the normal workflow, visible to the owning student from Previous
 Lessons, and available through the same authorized HTML/PDF route for admins.
 The PDF is generated on demand in the Worker from the persisted D1 projection;
 no PDF is written to R2 or D1. Student level is canonical on `students.level`
-and duplicated only as a report snapshot. Production mail/browser acceptance
-and deployment evidence must still be recorded before Phase 4 is formally
-closed.
+and duplicated only as a report snapshot. Migration `0008` is applied to
+production and the final pushed commit is deployed as Worker
+`14361364-1aef-4313-8bfd-aa946bcdb47c`. Automated checks and unauthenticated
+production smoke pass; authenticated mail/browser/PDF acceptance remains
+required before Phase 4 is formally closed.
 
 ### Must achieve
 
