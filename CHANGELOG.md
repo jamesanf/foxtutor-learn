@@ -2,6 +2,8 @@
 
 ### 2026-09-13 — Brevo deliverability consistency
 
+- **Status:** deployed as Worker
+  `bdf3becb-e3e4-4bdb-86b2-d1c31d13fc38` from commit `38dc23d`.
 - Configured production notification delivery with
   `MAIL_API_REPLY_TO=james@foxtutor.org`, matching the support address shown
   in report emails and providing a direct reply path.
