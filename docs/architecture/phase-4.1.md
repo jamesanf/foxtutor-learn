@@ -68,10 +68,11 @@ the same outbox so the operational log explains why an expected message was
 not sent.
 
 The `notification_settings` table is the forward-looking control plane for the
-outbox. Admins can enable or suppress future event types, adjust reminder lead
-time or delivery delay, prepend a subject prefix, and append a short message
-note. Settings are applied when a future row is created; historical rows keep
-their original rendered subject and body.
+outbox. Admins can enable or suppress future event types and adjust reminder
+lead time or delivery delay. Email wording remains owned by the notification
+templates; the admin console provides an authenticated rendered preview rather
+than an ad hoc message editor. Settings are applied when a future row is
+created; historical rows keep their original rendered subject and body.
 
 The database unique constraint on `idempotency_key` is the final duplicate
 protection. Provider delivery uses `notification:<notification-id>` and never

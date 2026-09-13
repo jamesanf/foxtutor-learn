@@ -1045,15 +1045,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         filterToggle.setAttribute("aria-expanded", "false");
       }
     }));
-    document.querySelectorAll<HTMLButtonElement>("[data-notification-preview]").forEach((button) => {
-      const panel = button.parentElement?.querySelector<HTMLElement>("[data-notification-preview-panel]");
-      if (!panel) return;
-      button.addEventListener("click", () => {
-        panel.hidden = !panel.hidden;
-        button.setAttribute("aria-expanded", String(!panel.hidden));
-        button.textContent = panel.hidden ? "Preview current email" : "Hide preview";
-      });
-    });
   };
   setupNotificationConsole();
 

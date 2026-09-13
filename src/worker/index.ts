@@ -284,7 +284,7 @@ function notificationEventLabel(eventType: string): string {
   return eventType.split("_").map((part) => part.charAt(0) + part.slice(1).toLowerCase()).join(" ");
 }
 
-function notificationPreview(eventType: NotificationType, origin: string): { subject: string; text: string } {
+function notificationPreview(eventType: NotificationType, origin: string): { subject: string; text: string; html: string } {
   const lesson = {
     studentName: "Alex Taylor",
     startAt: "2026-09-15T19:00:00.000Z",
@@ -319,19 +319,16 @@ function notificationPreview(eventType: NotificationType, origin: string): { sub
             ...(eventType === "CANCELLATION_APPROVED" ? { decision: "approved" } : {}),
             ...(eventType === "CANCELLATION_REJECTED" ? { decision: "rejected" } : {})
           }, origin);
-  return { subject: content.subject, text: content.text };
+  return { subject: content.subject, text: content.text, html: content.html };
 }
 
 function notificationControls(settings: NotificationSetting[], csrfToken: string, origin: string): string {
-  const rows = settings.map((setting, index) => {
+  const rows = settings.map((setting) => {
     const reminder = setting.event_type === "LESSON_REMINDER";
     const timingLabel = reminder ? "Minutes before lesson" : "Delivery delay (minutes)";
-    const timingHelp = reminder ? "How long before the lesson the reminder is sent." : "Use 0 for immediate delivery; positive values delay delivery.";
-    const preview = notificationPreview(setting.event_type, origin);
-    const open = index === 0 ? " open" : "";
-    return `<form class="notification-control" method="post" action="/learn/admin/notifications/settings">${hiddenCsrf(csrfToken)}<input type="hidden" name="eventType" value="${escapeHtml(setting.event_type)}"><details${open}><summary><span class="notification-control-summary"><strong>${escapeHtml(notificationEventLabel(setting.event_type))}</strong><span class="status status-${setting.enabled ? "sent" : "suppressed"}">${setting.enabled ? "Enabled" : "Disabled"}</span></span><span class="notification-control-summary-meta">${escapeHtml(reminder ? `${setting.timing_minutes ?? 15} minutes before` : setting.timing_minutes ? `${setting.timing_minutes} minutes after` : "Immediate")}</span></summary><div class="notification-control-body"><div class="notification-current-wording"><div><span class="field-caption">Current subject</span><strong>${escapeHtml(preview.subject)}</strong></div><div><span class="field-caption">Current message</span><pre>${escapeHtml(preview.text)}</pre></div><button type="button" class="button secondary notification-preview-toggle" data-notification-preview aria-expanded="false">Preview current email</button><div class="notification-preview-panel" data-notification-preview-panel hidden><p class="field-caption">Preview</p><p><strong>${escapeHtml(preview.subject)}</strong></p><pre>${escapeHtml(preview.text)}</pre></div></div><div class="notification-control-fields"><label>${escapeHtml(timingLabel)}<input type="number" name="timingMinutes" min="${reminder ? "1" : "-10080"}" max="10080" step="1" value="${setting.timing_minutes ?? ""}" placeholder="${reminder ? "15" : "0"}"><span class="field-help">${escapeHtml(timingHelp)}</span></label><label>Subject prefix<input type="text" name="subjectPrefix" maxlength="120" value="${escapeHtml(setting.subject_prefix)}" placeholder="Optional prefix before the current subject"></label><label class="notification-note-field">Additional message<textarea name="bodyNote" rows="2" maxlength="1000" placeholder="Optional note appended after the current message">${escapeHtml(setting.body_note)}</textarea></label></div><label class="toggle-control"><input type="checkbox" name="enabled" value="1"${setting.enabled ? " checked" : ""}> Send this notification</label><div class="form-actions"><button class="button secondary" type="submit">Save changes</button></div></div></details></form>`;
+    return `<form class="notification-setting-row" method="post" action="/learn/admin/notifications/settings">${hiddenCsrf(csrfToken)}<input type="hidden" name="eventType" value="${escapeHtml(setting.event_type)}"><div class="notification-setting-name"><strong>${escapeHtml(notificationEventLabel(setting.event_type))}</strong></div><label class="toggle-control"><input type="checkbox" name="enabled" value="1"${setting.enabled ? " checked" : ""}><span>${setting.enabled ? "Enabled" : "Disabled"}</span></label><label class="notification-timing">${escapeHtml(timingLabel)}<input type="number" name="timingMinutes" min="${reminder ? "1" : "-10080"}" max="10080" step="1" value="${setting.timing_minutes ?? 0}"></label><a class="button secondary notification-preview-link" href="/learn/admin/notifications/preview/${encodeURIComponent(setting.event_type)}" target="_blank" rel="noopener">Preview</a><button class="button secondary notification-save" type="submit">Save</button></form>`;
   }).join("");
-  return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Open a notification to see the exact current wording before changing its timing or message.</p></div></div>${rows}</section>`;
+  return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Enable or disable future notifications and adjust when scheduled messages are sent.</p></div></div><div class="notification-settings-list"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></section>`;
 }
 
 function notificationList(
@@ -1419,6 +1416,16 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
   if (route === "admin-notifications") {
+    const previewMatch = url.pathname.match(/^\/learn\/admin\/notifications\/preview\/([^/]+)$/);
+    if (previewMatch) {
+      const eventType = decodeURIComponent(previewMatch[1] ?? "");
+      if (!isNotificationType(eventType) || request.method !== "GET") return messagePage("Preview unavailable", "That notification preview does not exist.", 404);
+      const preview = notificationPreview(eventType, canonicalLearnOrigin(env.PUBLIC_ORIGIN));
+      const headers = privateHeaders("text/html; charset=utf-8");
+      headers.set("Cache-Control", "private, no-store");
+      headers.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'");
+      return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(notificationEventLabel(eventType))} preview · FoxTutor</title></head><body>${preview.html}</body></html>`, { status: 200, headers });
+    }
     if (url.pathname === "/learn/admin/notifications/settings") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
       const form = await parseForm(request);
