@@ -46,6 +46,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   }
   if (activeLink) activeLink.setAttribute("aria-current", "page");
 
+  const reportSavedFromRedirect = pathname.endsWith("/report") && new URL(window.location.href).searchParams.get("saved") === "1";
   const showPageNotification = () => {
     document.querySelectorAll<HTMLElement>("[data-notification-message]").forEach((element) => {
       showNotification(element.dataset.notificationMessage ?? "", element.dataset.notificationType === "error" ? "error" : "success");
@@ -53,7 +54,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     const url = new URL(window.location.href);
     const deleted = Number(url.searchParams.get("deleted") ?? 0);
     const failed = Number(url.searchParams.get("failed") ?? 0);
-    const cleanReportDelivery = pathname.endsWith("/report") && url.searchParams.has("delivery");
+    const cleanReportState = pathname.endsWith("/report") && (url.searchParams.has("delivery") || url.searchParams.has("saved"));
     if (deleted || failed) {
       const message = deleted && failed
         ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted; ${failed} could not be deleted`
@@ -64,13 +65,43 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       url.searchParams.delete("deleted");
       url.searchParams.delete("failed");
     }
-    if (cleanReportDelivery) {
+    if (cleanReportState) {
       url.searchParams.delete("delivery");
       url.searchParams.delete("reason");
+      url.searchParams.delete("saved");
     }
-    if (deleted || failed || cleanReportDelivery) window.history.replaceState({}, "", url);
+    if (deleted || failed || cleanReportState) window.history.replaceState({}, "", url);
   };
   showPageNotification();
+
+  const reportForm = document.querySelector<HTMLFormElement>("[data-report-attachment-form]");
+  const reportSaveButton = reportForm?.querySelector<HTMLButtonElement>("[data-report-save-draft]");
+  const markReportSaved = () => {
+    if (!reportSaveButton) return;
+    reportSaveButton.textContent = "Saved";
+    reportSaveButton.disabled = true;
+    reportSaveButton.classList.add("is-saved");
+    reportSaveButton.dataset.saved = "true";
+  };
+  const markReportDirty = () => {
+    if (!reportSaveButton) return;
+    reportSaveButton.textContent = "Save draft";
+    reportSaveButton.disabled = false;
+    reportSaveButton.classList.remove("is-saved");
+    delete reportSaveButton.dataset.saved;
+  };
+  if (reportForm && reportSaveButton) {
+    if (reportSavedFromRedirect) markReportSaved();
+    reportForm.addEventListener("input", markReportDirty);
+    reportForm.addEventListener("change", markReportDirty);
+    reportForm.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-report-format], [data-level-option]")) markReportDirty();
+    });
+    reportForm.addEventListener("submit", (event) => {
+      if ((event as SubmitEvent).submitter === reportSaveButton) markReportSaved();
+    });
+  }
 
   const reportEditors = document.querySelectorAll<HTMLElement>("[data-report-editor]");
   reportEditors.forEach((editor) => {
@@ -886,6 +917,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
             selectedReportFiles = selectedReportFiles.filter((_, fileIndex) => fileIndex !== index);
             assignFiles(selectedReportFiles);
             renderSelectedFile();
+            markReportDirty();
           });
           item.appendChild(remove);
         }
@@ -923,6 +955,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           if (!response.ok) throw new Error("Attachment removal failed");
           chip.remove();
           updateAttachmentLayout();
+          if (reportAttachmentForm) markReportDirty();
           if (status) status.textContent = "";
         } catch {
           remove.disabled = false;
@@ -958,6 +991,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         assignFiles(selectedReportFiles);
         if (nextFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
         renderSelectedFile();
+        markReportDirty();
         return;
       }
       assignFiles(dropped.slice(0, 1));
@@ -974,6 +1008,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         assignFiles(selectedReportFiles);
       }
       renderSelectedFile();
+      if (reportAttachmentForm) markReportDirty();
     });
     form.addEventListener("submit", () => {
       if (reportAttachmentForm) return;

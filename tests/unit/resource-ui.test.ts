@@ -69,9 +69,24 @@ describe("resource UX contract", () => {
   });
 
   it("cleans report delivery query details from the visible URL", () => {
-    expect(clientSource).toContain('const cleanReportDelivery = pathname.endsWith("/report") && url.searchParams.has("delivery")');
+    expect(clientSource).toContain('const cleanReportState = pathname.endsWith("/report") && (url.searchParams.has("delivery") || url.searchParams.has("saved"))');
     expect(clientSource).toContain('url.searchParams.delete("reason")');
+    expect(clientSource).toContain('url.searchParams.delete("saved")');
     expect(clientSource).toContain('window.history.replaceState({}, "", url)');
+  });
+
+  it("groups report actions and tracks saved drafts until the form changes", () => {
+    expect(workerSource).toContain('data-report-save-draft');
+    expect(workerSource).toContain('if (!wantsSend) return redirect(`${url.pathname}?saved=1`);');
+    expect(workerSource).toContain('<div class="report-submit-actions">');
+    expect(clientSource).toContain('const reportSavedFromRedirect = pathname.endsWith("/report")');
+    expect(clientSource).toContain('reportSaveButton.textContent = "Saved"');
+    expect(clientSource).toContain('reportSaveButton.textContent = "Save draft"');
+    expect(clientSource).toContain('reportForm.addEventListener("input", markReportDirty)');
+    expect(clientSource).toContain('reportForm.addEventListener("change", markReportDirty)');
+    expect(cssSource).toContain(".report-form-actions { justify-content: space-between");
+    expect(cssSource).toContain(".report-submit-actions { display: flex");
+    expect(cssSource).toContain(".report-save-draft.is-saved");
   });
 
   it("provides server-side filtering, page-scoped selection and deliberate actions", () => {

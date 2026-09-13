@@ -376,7 +376,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-attachment-remove, .report-attachment-chip > button { display: inline-grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 1.1rem; line-height: 1; }
 .report-attachment-remove:hover, .report-attachment-chip > button:hover { color: var(--danger); background: #fef2f2; }
 .report-attachments .upload-status { min-height: 0; margin: 0; }
-.report-form-actions { margin-top: 18px; }
+.report-form-actions { justify-content: space-between; margin-top: 18px; }
+.report-submit-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.report-save-draft.is-saved, .report-save-draft.is-saved:hover { border-color: #cbd5e1; color: #64748b; background: #e2e8f0; cursor: default; }
 .report-delivery { margin-top: 22px; color: var(--muted); }
 .report-document { break-inside: avoid; }
 @media print {
@@ -438,6 +440,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .resource-file-dropzone { min-height: 156px; padding: 24px 16px; }
   .resource-success .form-actions { align-items: stretch; flex-direction: column; }
   .resource-success .form-actions .button { width: 100%; }
+  .report-form-actions { align-items: stretch; }
+  .report-submit-actions { justify-content: flex-end; }
   .resource-student-item { align-items: flex-start; flex-direction: column; }
   .resource-student-item .resource-actions { width: 100%; justify-content: flex-start; }
   .pagination { flex-wrap: wrap; }
