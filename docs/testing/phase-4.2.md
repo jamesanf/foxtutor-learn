@@ -24,10 +24,10 @@
 
 ## Executed validation
 
-The final pushed tree passed:
+The final pushed application tree passed:
 
 ```text
-npm test                 81 tests across 19 files
+npm test                 85 tests across 19 files
 npm run build            PASS
 npm run check            PASS
 npm run test:browser     PASS (static shell contract)
@@ -36,11 +36,12 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-current source commit `5a795be` is deployed as Worker
-`5194a769-d6cd-4edb-83c4-9e911ddbff6d`. Production deployment and
-unauthenticated smoke are confirmed, but the acceptance matrix below still
-requires authenticated browser, Fox Mail, PDF visual and no-storage evidence
-before closure.
+application source commit `34223ff` is deployed as Worker
+`ceaaeb0f-eb36-4936-8238-7401a04edd05`. Production deployment and
+unauthenticated smoke are confirmed. A production notification regression
+check also confirmed that delivery reloads the linked recipient email rather
+than sending an empty recipient. Authenticated browser, successful Fox Mail,
+PDF visual and no-storage evidence are still required before closure.
 
 ## Required acceptance matrix
 
@@ -73,6 +74,6 @@ npm run test:production
 git diff --check
 ```
 
-The current source pass does not claim authenticated production mail,
+The current source pass does not claim successful authenticated production mail,
 Chromium screenshots, real-recipient delivery, PDF visual inspection or
 post-deployment acceptance.

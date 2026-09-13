@@ -7,10 +7,10 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 **Phase:** Phase 4.2 implementation deployed; formal Phase 4 closure pending authenticated acceptance
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Current source:** `5a795be` on `main` and `origin/main`
-**Current Worker:** `5194a769-d6cd-4edb-83c4-9e911ddbff6d`
+**Current source:** `34223ff` on `main` and `origin/main` (deployed application release)
+**Current Worker:** `ceaaeb0f-eb36-4936-8238-7401a04edd05`
 **Production migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no remote migrations are pending
-**Latest state:** Phase 4.2 is deployed with start-time report eligibility, automatic completion after lesson end, structured D1 reports, historical student-level snapshots, an opt-in International flag, idempotent UK clock-change reminders and the existing Fox Mail notification boundary. The report editor includes default bullet mode, numbered-list toggling, bold/highlight markers, compact auto-growing fields and lesson attachments submitted with the report action through the existing D1/R2 resource pipeline. Automated and unauthenticated production smoke checks pass; authenticated browser, real Fox Mail, visual PDF and no-storage acceptance remain open.
+**Latest state:** Phase 4.2 is deployed with start-time report eligibility, automatic completion after lesson end, structured D1 reports, historical student-level snapshots, an opt-in International flag, idempotent UK clock-change reminders and the existing Fox Mail notification boundary. The report editor includes default bullet mode, numbered-list toggling, bold/highlight markers, compact auto-growing fields, up to five lesson attachments submitted with Send report, and saved-draft state/actions. Automated and unauthenticated production smoke checks pass. A real report delivery attempt reached Fox Mail and exposed a Learn recipient-resolution bug, which is now fixed; successful authenticated Fox Mail delivery, visual PDF and no-storage acceptance remain open.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -209,7 +209,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
 | 3.2 | Contextual Add Resource UX, dropzone selection and category removal from application code | Local implementation; production acceptance pending |
-| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `5194a769-d6cd-4edb-83c4-9e911ddbff6d` from `5a795be`; authenticated/Fox Mail/PDF acceptance pending |
+| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `ceaaeb0f-eb36-4936-8238-7401a04edd05` from `34223ff`; authenticated/Fox Mail/PDF acceptance pending |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |
@@ -221,7 +221,7 @@ There is no public registration and no application password subsystem. Only Acce
 ## Known limitations
 
 - Authenticated Chromium evidence was captured with separate clean profiles; no passwords or browser credentials were requested or recorded. The unknown identity was denied at the final Cloudflare Access perimeter before reaching Learn.
-- Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
+- Fox Mail authentication is configured well enough for the production API to return structured validation errors. The first authenticated report attempt failed because Learn reloaded notifications without joining the recipient email, sending an empty recipient; this was fixed in `34223ff` and deployed as Worker `ceaaeb0f-eb36-4936-8238-7401a04edd05`. A successful real-recipient send still needs to be re-tested.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2.1 is intentionally limited to students, lessons, ownership, lifecycle, notes, HTTPS lesson URLs, timezone-safe storage and overlap-aware scheduling.
-- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Historical phase records retain their contemporaneous wording; the current authoritative state is the status block above and the latest phase documents. Phase 3 resource infrastructure remains deployed and is included in the `phase-3-complete` release. Phase 4.2 is deployed with migrations `0008_structured_lesson_reports.sql` and `0009_international_students.sql`; authenticated production mail/browser acceptance, PDF visual inspection and no-storage evidence remain pending.
+- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Historical phase records retain their contemporaneous wording; the current authoritative state is the status block above and the latest phase documents. Phase 3 resource infrastructure remains deployed and is included in the `phase-3-complete` release. Phase 4.2 is deployed with migrations `0008_structured_lesson_reports.sql` and `0009_international_students.sql`; the recipient-resolution regression is fixed, while authenticated production mail/browser acceptance, PDF visual inspection and no-storage evidence remain pending.

@@ -28,12 +28,20 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migrations `0008_structured_lesson_reports.sql` and
 `0009_international_students.sql` were applied to the production database on
-`2026-09-13`. The current deployed source commit is `5a795be`, synchronized
-with `origin/main`, and is deployed as Worker version
-`5194a769-d6cd-4edb-83c4-9e911ddbff6d`. A remote migration check reports no
+`2026-09-13`. The current deployed application source commit is `34223ff`,
+synchronized with `origin/main`, and is deployed as Worker version
+`ceaaeb0f-eb36-4936-8238-7401a04edd05`. A remote migration check reports no
 migrations pending. The release includes the report editor refinements,
 start-only report time, compact auto-growing fields and lesson attachments
 submitted with the report action through the existing resource/R2 pipeline.
+
+The first authenticated report-send attempt reached Fox Mail but failed with
+`400 invalid_recipient`. Production D1 inspection confirmed that both the
+student profile email and linked active Learn user email were
+`jamesanf@gmail.com`. The failure was in Learn's notification reload query:
+delivery used `SELECT * FROM notifications`, which omitted the joined
+recipient email and caused an empty `to` value. The query now joins the
+linked user and returns `recipient_email`; the fix is deployed above.
 
 The current local tree has passed the full automated suite, type-check/build,
 Wrangler dry-run, browser shell contract and public production smoke checks.

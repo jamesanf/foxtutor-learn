@@ -36,11 +36,10 @@ The bearer token is Fox Mail's `INTERNAL_API_TOKEN`, not a Cloudflare or Google 
 Fox Mail source confirms that `INTERNAL_API_TOKEN` is the bearer secret owned
 by the Fox Mail Worker. The Learn Worker must receive the same value only as
 the secret binding `MAIL_API_TOKEN`; it must never be committed, logged,
-returned to a browser or pasted into chat. The live endpoint currently
-redirects unauthenticated callers to Cloudflare Access, and Fox Mail's
-production secret inventory currently does not contain `INTERNAL_API_TOKEN`.
-Before a production send can be claimed, the system owner must restore the
-existing Fox Mail internal secret and configure the intended narrowly scoped
-Service Auth path, then bind the corresponding client credentials to Learn
-only if Fox Mail confirms that mechanism. No real recipient message was sent
-during this acceptance preflight.
+returned to a browser or pasted into chat. The live endpoint redirects unauthenticated callers to Cloudflare Access.
+The configured Learn integration has reached Fox Mail in production and
+received structured validation responses. A first authenticated report-send
+attempt was rejected as `invalid_recipient`; Learn production data contained
+the correct recipient, and the root cause was a Learn notification reload
+query that omitted the joined recipient email. That query has been corrected,
+but successful real-recipient delivery still requires a controlled re-test.

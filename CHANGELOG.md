@@ -2,6 +2,15 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Notification recipient resolution fix
+
+**Status:** deployed; successful authenticated Fox Mail acceptance pending
+
+- Fixed report/resource notification delivery to reload the linked Learn user email when claiming a notification.
+- The previous query returned only notification columns, causing the mail adapter to send an empty recipient and Fox Mail to return `400 invalid_recipient`.
+- Confirmed production D1 contains `jamesanf@gmail.com` in both the James Fox student profile and linked active Learn user.
+- Added regression coverage; the fix is committed as `34223ff` and deployed as Worker `ceaaeb0f-eb36-4936-8238-7401a04edd05`.
+
 ### 2026-09-13 — Inline report attachment submission
 
 **Status:** deployed; authenticated production acceptance pending
