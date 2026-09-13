@@ -7,8 +7,8 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 **Phase:** Phase 4.2 implementation deployed; formal Phase 4 closure pending authenticated acceptance
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Current application release:** `ba1ead9` on `main` and `origin/main`
-**Current Worker:** `9bf2f46b-d88c-4100-bb6b-ed80acd40c19`
+**Current application release:** `a4c4084` on `main` and `origin/main`
+**Current Worker:** `2b3bed75-6a0f-4c16-acfb-9c3c941eeed2`
 **Production migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no remote migrations are pending
 **Latest state:** Phase 4.2 is deployed with start-time report eligibility, automatic completion after lesson end, structured D1 reports, historical student-level snapshots, an opt-in International flag, idempotent UK clock-change reminders and the existing Fox Mail notification boundary. The report editor includes default bullet mode, numbered-list toggling, bold/highlight markers, compact auto-growing fields, up to five lesson attachments submitted with Send report, and saved-draft state/actions. The latest release fixes the student report 1101 caused by ambiguous joined report columns, humanises sent timestamps, generates compact one-page PDFs, and uses branded inline-styled report emails. Automated and unauthenticated production smoke checks pass. Controlled authenticated Fox Mail, visual PDF and no-storage acceptance remain open.
 
