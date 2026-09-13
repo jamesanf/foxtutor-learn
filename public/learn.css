@@ -335,10 +335,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .notification-settings-list { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-md); }
 .notification-group { border-top: 1px solid var(--line); }
 .notification-group:first-child { border-top: 0; }
-.notification-group > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; color: var(--foreground); cursor: pointer; list-style: none; }
+.notification-group > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-left: 3px solid transparent; color: var(--foreground); background: #eef7fa; cursor: pointer; list-style: none; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
 .notification-group > summary::-webkit-details-marker { display: none; }
+.notification-group > summary:hover, .notification-group > summary:focus-visible { border-left-color: var(--action); color: #0e7490; background: #d9f1f5; }
 .notification-group > summary::after { color: var(--muted); content: "+"; font-size: 1.15rem; }
 .notification-group[open] > summary { background: var(--soft); }
+.notification-group[open] > summary:hover, .notification-group[open] > summary:focus-visible { background: #d9f1f5; }
 .notification-group[open] > summary::after { content: "−"; }
 .notification-group > summary strong, .notification-group > summary small { display: block; }
 .notification-group > summary small { margin-top: 3px; color: var(--muted); font-size: .8rem; font-weight: 400; }
