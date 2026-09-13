@@ -34,3 +34,7 @@ Single deletion requires an explicit confirmation through the client-enhanced ic
 PDF compression is **DEFERRED WITH DOCUMENTED TECHNICAL REASON**. The current repository has no verified asynchronous, private processing binding or approved confidential-document processor. The implementation therefore keeps lightweight PDF signature/page inspection and the hard 25 MiB per-file limit rather than inventing an external service or blocking a Worker request on heavy CPU work.
 
 Retention housekeeping is **DEFERRED WITH DOCUMENTED OPERATIONAL DECISION**. `retention_until` remains auditable metadata for a minimum 12-month review horizon. No automatic deletion job is enabled because genuine teaching material must not be removed solely due to an elapsed metadata date. Student deactivation remains non-destructive; existing student queries require an active linked student and active user.
+
+## Release evidence
+
+The implementation commit `6bd0dca674608c11be4363ec3ee94522e397ca0b` was pushed to `origin/main` and deployed to the `foxtutor-learn` Worker as version `43cceb60-905e-4034-bc26-ad03dd9c811d` at `2026-09-13T00:23:40Z`. The deployment retained the private D1/R2 bindings and public smoke confirmed that `/learn` remains behind the Cloudflare Access boundary. Authenticated resource-manager acceptance remains intentionally open.

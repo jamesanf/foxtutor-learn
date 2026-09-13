@@ -26,4 +26,6 @@ No new migration is required. The legacy D1 column from `0004_resources.sql` rem
 
 ## Current state
 
-Implementation is local and validated by the repository's automated gates. No production deployment or authenticated acceptance is claimed by this record.
+The exact release commit `6bd0dca674608c11be4363ec3ee94522e397ca0b` is present on local `main` and `origin/main`. It was deployed to Worker `foxtutor-learn` as version `43cceb60-905e-4034-bc26-ad03dd9c811d` at `2026-09-13T00:23:40Z` with message `Phase 3.3 resource manager`. The public production smoke passed after deployment and `/learn` continues to return the Cloudflare Access boundary. The deployment token lacked `All Zones` permission, but the zone-specific `foxtutor.org` routes were updated successfully.
+
+Authenticated production acceptance is not claimed: no authenticated browser session was available, no production fixtures were created, and no screenshots were captured. The final documentation-bearing commit must be pushed and redeployed before the release tree is considered fully reconciled.

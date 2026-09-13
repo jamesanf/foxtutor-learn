@@ -44,4 +44,4 @@ git diff --check
 
 ## Still-open release gates
 
-This document does not claim authenticated production acceptance. Controlled production fixtures, real browser clicks, screenshots at 1440×900, 1024×768, 820×1180 and 390×844, final deployment verification, fixture cleanup and the Phase 3 completion decision remain required.
+The local gates above passed with 53 tests. The deployed public boundary was rechecked after release: `/learn` returned the expected Cloudflare Access `302`, and `npm run test:production` passed. No authenticated Chromium/browser session is available in this environment, so this document does not claim authenticated production acceptance. No production fixtures were created, and no fixture cleanup was required. Real browser clicks, screenshots at 1440×900, 1024×768, 820×1180 and 390×844, authenticated resource-manager verification and the Phase 3 completion decision remain required.

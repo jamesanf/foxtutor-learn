@@ -4,7 +4,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-13 — Phase 3.3 resource manager refinement
 
-**Status:** local implementation complete; deployment and authenticated production acceptance pending
+**Status:** deployed as Worker `43cceb60-905e-4034-bc26-ad03dd9c811d` from commit `6bd0dca674608c11be4363ec3ee94522e397ca0b`; authenticated production acceptance pending
 
 - Added server-side resource filtering for filename/student search, active-student selection, student-dependent lesson selection, derived file type, recent-added windows and a small newest/oldest/filename sort set. Query state is preserved across pagination and page-size changes.
 - Reworked the admin resource manager around a compact selection column, visible-row select-all semantics, selection count toolbar and guarded bulk deletion with server-side ID resolution, exact private R2 deletion and D1 reconciliation reporting.
@@ -12,7 +12,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 - Added explicit Open and Download actions to admin/student detail and student/lesson resource surfaces. Add Resource remains the Phase 3.2 contextual dropzone workflow.
 - Added a single configured 25 MiB per-lesson active-resource allowance enforced server-side before upload. PDF compression remains deferred because this Worker-only repository has no verified asynchronous private processing service; the existing hard 25 MiB per-file limit remains authoritative.
 - Retention remains a recorded 12-month review horizon with no automatic destructive housekeeping. Student deactivation remains non-destructive; inactive students lose student-side resource access through existing ownership predicates.
-- Added resource-manager source contracts and Phase 3.3 architecture/testing/deployment records. Authenticated production fixtures, screenshots, deployment and completion tagging remain pending.
+- Added resource-manager source contracts and Phase 3.3 architecture/testing/deployment records. Public production smoke passed after deployment at `2026-09-13T00:23:40Z`; authenticated production fixtures, screenshots and completion tagging remain pending.
 
 ### 2026-09-13 — Phase 3.2 resource upload UX remediation
 

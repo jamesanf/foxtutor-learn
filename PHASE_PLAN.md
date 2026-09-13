@@ -506,7 +506,7 @@ The admin resource manager now supports server-side filename/student search, act
 
 The hard per-file limit remains 25 MiB and a single configured 25 MiB active-resource allowance is enforced per lesson before upload. PDF compression is **DEFERRED WITH DOCUMENTED TECHNICAL REASON**: this Worker-only repository has no verified Cloudflare-native asynchronous private PDF processor or approved processing credentials, and a synchronous CPU-heavy or external public-document service would violate the privacy and execution-boundary requirements. Retention housekeeping is also deliberately **DEFERRED WITH DOCUMENTED OPERATIONAL DECISION**: `retention_until` records a review horizon, but active learning material is not automatically deleted. Student deactivation remains non-destructive and existing SQL ownership predicates prevent inactive students from accessing resources.
 
-Local implementation gates are covered by the resource policy, migration, authorization and UI contracts. Authenticated production browser acceptance, controlled fixture cleanup, screenshots, deployment of the final commit and any Phase 3 completion tag remain open.
+Local implementation gates are covered by the resource policy, migration, authorization and UI contracts. Commit `6bd0dca674608c11be4363ec3ee94522e397ca0b` is pushed to `origin/main` and deployed as Worker `foxtutor-learn` version `43cceb60-905e-4034-bc26-ad03dd9c811d` at `2026-09-13T00:23:40Z`; public smoke and the Cloudflare Access boundary pass. Authenticated production browser acceptance, controlled fixture cleanup, screenshots and any Phase 3 completion tag remain open.
 
 ### Objective
 
