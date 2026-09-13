@@ -151,6 +151,8 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain('class="topbar-center-logo"');
     expect(workerSource).toContain('/learn/assets/learn_logo-240.webp');
     expect(workerSource).toContain('class="learn-footer"');
+    expect(workerSource).toContain('<div class="learn-footer-logo"><img src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor"');
+    expect(workerSource).not.toContain('/learn/assets/learn_logo-120.webp');
     expect(workerSource).toContain('href="/learn/terms"');
     expect(workerSource).toContain('href="/learn/privacy"');
     expect(workerSource).toContain('class="header-control identity-role">ADMIN</span>');

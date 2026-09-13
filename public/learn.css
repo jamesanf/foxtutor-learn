@@ -72,7 +72,7 @@ nav a[aria-current="page"] { color: #0b4f6c; background: var(--surface); box-sha
 .learn-footer-copy p, .learn-footer-copy small { margin: 0; color: #b8c7d6; }
 .learn-footer-name { color: white; font-size: 1.05rem; font-weight: 700; text-decoration: none; }
 .learn-footer-logo { display: flex; justify-content: center; }
-.learn-footer-logo img { display: block; width: 96px; height: auto; }
+.learn-footer-logo img { display: block; width: 48px; height: 46px; object-fit: contain; }
 .learn-footer-links { justify-items: end; font-size: .88rem; }
 .learn-footer-links a { color: #e0f2fe; text-underline-offset: 3px; }
 .learn-footer-links span { display: none; }
