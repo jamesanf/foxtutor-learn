@@ -141,7 +141,10 @@ function navigation(role: Role): string {
 }
 
 function appPage(user: AppUser, csrfToken: string, title: string, content: string): Response {
-  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>James Fox</strong><small>FoxTutor Learn</small></span></a><div class="identity"><span>${escapeHtml(user.display_name)}<small>${user.role}</small></span><form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div>`;
+  const identity = user.role === "ADMIN"
+    ? `<span class="identity-role">ADMIN</span>`
+    : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
+  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div>`;
   return htmlDocument(title, body);
 }
 
@@ -389,6 +392,10 @@ function resourceSearchIcon(): string {
   return `<svg class="resource-search-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>`;
 }
 
+function resourceSortIcon(): string {
+  return `<svg class="resource-sort-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16"></path><path d="M7 12h10"></path><path d="M10 18h4"></path></svg>`;
+}
+
 function resourceSuggestionsResponse(suggestions: Awaited<ReturnType<typeof listResourceSuggestions>>): Response {
   const headers = privateHeaders("application/json; charset=utf-8");
   headers.set("Cache-Control", "no-store");
@@ -445,7 +452,11 @@ function resourceChoice(
 ): string {
   const current = options.find((option) => option.value === currentValue) ?? options[0];
   const listId = `resource-${field}-options`;
-  return `<div class="resource-choice${disabled ? " is-disabled" : ""}"><span class="resource-choice-label">${escapeHtml(label)}</span><button class="resource-choice-trigger" type="button" data-resource-choice-trigger="${escapeHtml(field)}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${listId}"${disabled ? " disabled" : ""}>${escapeHtml(current?.label ?? "Choose")}${current?.detail ? `<small>${escapeHtml(current.detail)}</small>` : ""}<span class="resource-choice-chevron" aria-hidden="true"></span></button><div class="resource-choice-menu" id="${listId}" role="listbox" data-resource-choice-menu="${escapeHtml(field)}" hidden>${(field === "student" || field === "lesson") ? `<label class="resource-choice-search"><span class="sr-only">Search ${field === "student" ? "students" : "lessons"}</span><input type="search" placeholder="Search ${field === "student" ? "students" : "lessons"}…" data-resource-choice-search="${escapeHtml(field)}" autocomplete="off"></label>` : ""}${options.map((option) => `<button type="button" role="option" class="resource-choice-option${option.value === currentValue ? " is-selected" : ""}" aria-selected="${option.value === currentValue ? "true" : "false"}" data-resource-filter-option="${escapeHtml(field)}" data-value="${escapeHtml(option.value)}"><span>${escapeHtml(option.label)}</span>${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ""}</button>`).join("")}</div></div>`;
+  const visibleLabel = current?.label ?? "Choose";
+  const triggerValue = field === "sort"
+    ? `${resourceSortIcon()}<span class="resource-choice-value">${escapeHtml(visibleLabel)}</span>`
+    : `${escapeHtml(visibleLabel)}${current?.detail ? `<small>${escapeHtml(current.detail)}</small>` : ""}`;
+  return `<div class="resource-choice${disabled ? " is-disabled" : ""}">${label ? `<span class="resource-choice-label">${escapeHtml(label)}</span>` : ""}<button class="resource-choice-trigger" type="button" data-resource-choice-trigger="${escapeHtml(field)}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${listId}" aria-label="${field === "sort" ? "Sort resources" : `${escapeHtml(label)} filter`}"${disabled ? " disabled" : ""}>${triggerValue}<span class="resource-choice-chevron" aria-hidden="true"></span></button><div class="resource-choice-menu" id="${listId}" role="listbox" data-resource-choice-menu="${escapeHtml(field)}" hidden>${(field === "student" || field === "lesson") ? `<label class="resource-choice-search"><span class="sr-only">Search ${field === "student" ? "students" : "lessons"}</span><input type="search" placeholder="Search ${field === "student" ? "students" : "lessons"}…" data-resource-choice-search="${escapeHtml(field)}" autocomplete="off"></label>` : ""}${options.map((option) => `<button type="button" role="option" class="resource-choice-option${option.value === currentValue ? " is-selected" : ""}" aria-selected="${option.value === currentValue ? "true" : "false"}" data-resource-filter-option="${escapeHtml(field)}" data-value="${escapeHtml(option.value)}"><span>${escapeHtml(option.label)}</span>${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ""}${field === "sort" && option.value === currentValue ? `<span class="resource-choice-check" aria-hidden="true">✓</span>` : ""}</button>`).join("")}</div></div>`;
 }
 
 function resourceFilterChips(filters: ResourceFilters, students: Student[], lessons: Lesson[]): string {
@@ -483,7 +494,7 @@ function resourceFilterForm(filters: ResourceFilters, students: Student[], lesso
     { value: "filename-asc", label: "Filename A–Z" },
     { value: "filename-desc", label: "Filename Z–A" }
   ];
-  return `<form class="resource-finder-form" method="get" action="/learn/admin/resources" data-resource-finder><div class="resource-search-wrap"><label class="sr-only" for="resource-search">Find teaching material</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="resource-search" type="search" name="q" value="${escapeHtml(filters.search)}" placeholder="Search files, students or lessons…" autocomplete="off" aria-autocomplete="list" aria-controls="resource-search-suggestions" aria-expanded="false" data-resource-search data-suggestion-url="/learn/admin/resources/search"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button><div id="resource-search-suggestions" class="resource-suggestions" role="listbox" hidden></div></div>${hidden("student", filters.studentId)}${hidden("lesson", filters.lessonId)}${hidden("type", filters.type)}${hidden("added", filters.added === "any" ? "" : filters.added)}${hidden("sort", filters.sort === "newest" ? "" : filters.sort)}<div class="resource-finder-toolbar"><button class="resource-filter-trigger" type="button" data-resource-filter-toggle aria-expanded="false" aria-controls="resource-filter-panel">Filters${filterCount ? ` · ${filterCount}` : ""}</button><div class="resource-sort">${resourceChoice("sort", "Sort", filters.sort, filters.sort, sortOptions)}</div></div><div id="resource-filter-panel" class="resource-filter-panel" data-resource-filter-panel hidden><div class="resource-filter-grid">${resourceChoice("student", "Student", filters.studentId, filters.studentId, studentOptions)}${resourceChoice("lesson", "Lesson", filters.lessonId, filters.lessonId, lessonOptions, !filters.studentId)}${resourceChoice("type", "File type", filters.type, filters.type, [{ value: "", label: "Any type" }, { value: "pdf", label: "PDF" }, { value: "docx", label: "Word document" }, { value: "text", label: "Text" }, { value: "image", label: "Image" }])}${resourceChoice("added", "Added", filters.added, filters.added, [{ value: "any", label: "Any time" }, { value: "today", label: "Today" }, { value: "7", label: "Last 7 days" }, { value: "30", label: "Last 30 days" }])}</div><a class="resource-clear-all" href="/learn/admin/resources">Clear all</a></div></form>${resourceFilterChips(filters, activeStudents, lessons)}`;
+  return `<form class="resource-finder-form" method="get" action="/learn/admin/resources" data-resource-finder><div class="resource-search-wrap"><label class="sr-only" for="resource-search">Find teaching material</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="resource-search" type="search" name="q" value="${escapeHtml(filters.search)}" placeholder="Search files, students or lessons…" autocomplete="off" aria-autocomplete="list" aria-controls="resource-search-suggestions" aria-expanded="false" data-resource-search data-suggestion-url="/learn/admin/resources/search"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button><div id="resource-search-suggestions" class="resource-suggestions" role="listbox" hidden></div></div>${hidden("student", filters.studentId)}${hidden("lesson", filters.lessonId)}${hidden("type", filters.type)}${hidden("added", filters.added === "any" ? "" : filters.added)}${hidden("sort", filters.sort === "newest" ? "" : filters.sort)}<div class="resource-finder-toolbar"><button class="resource-filter-trigger" type="button" data-resource-filter-toggle aria-expanded="false" aria-controls="resource-filter-panel">Filters${filterCount ? ` · ${filterCount}` : ""}</button><div class="resource-sort">${resourceChoice("sort", "", filters.sort, filters.sort, sortOptions)}</div></div><div id="resource-filter-panel" class="resource-filter-panel" data-resource-filter-panel hidden><div class="resource-filter-grid">${resourceChoice("student", "Student", filters.studentId, filters.studentId, studentOptions)}${resourceChoice("lesson", "Lesson", filters.lessonId, filters.lessonId, lessonOptions, !filters.studentId)}${resourceChoice("type", "File type", filters.type, filters.type, [{ value: "", label: "Any type" }, { value: "pdf", label: "PDF" }, { value: "docx", label: "Word document" }, { value: "text", label: "Text" }, { value: "image", label: "Image" }])}${resourceChoice("added", "Added", filters.added, filters.added, [{ value: "any", label: "Any time" }, { value: "today", label: "Today" }, { value: "7", label: "Last 7 days" }, { value: "30", label: "Last 30 days" }])}</div><a class="resource-clear-all" href="/learn/admin/resources">Clear all</a></div></form>${resourceFilterChips(filters, activeStudents, lessons)}`;
 }
 
 function resourceSelectionToolbar(): string {
@@ -509,7 +520,49 @@ function resourcePagination(page: number, pageSize: number, total: number, path:
       : `<a class="pagination-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${number}&size=${pageSize}">${number}</a>`);
     previous = number;
   }
-  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label>${Array.from(new URLSearchParams(baseQuery).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("")}<select id="resources-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label>${Array.from(new URLSearchParams(baseQuery).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("")}<select id="resources-page-size" class="page-size-select" name="size">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+}
+
+type ResourceFragment = {
+  finderHtml: string;
+  resultsHtml: string;
+  url: string;
+  total: number;
+};
+
+async function adminResourceFragment(db: D1Database, url: URL, csrfToken: string): Promise<ResourceFragment> {
+  const { page, pageSize } = parseResourcePagination(url);
+  const filters = parseResourceFilters(url);
+  const students = await listActiveStudentsForResourceFilter(db, filters.studentId);
+  const lessons = await listLessonsForResourceFilter(db, filters.studentId, filters.lessonId);
+  const options = resourceListOptions(filters, page, pageSize);
+  const total = await countResources(db, options);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const resources = await listResources(db, { ...options, offset: (safePage - 1) * pageSize });
+  const hasFilters = Boolean(filters.search || filters.studentId || filters.lessonId || filters.type || filters.added !== "any");
+  const resultHtml = `<p class="resource-result-count" data-resource-result-count role="status">${total} resource${total === 1 ? "" : "s"}</p>${resources.length ? resourceSelectionToolbar() : ""}<form id="resource-bulk-delete-form" method="post" action="/learn/admin/resources/bulk-delete">${hiddenCsrf(csrfToken)}${resourceFilterHiddenInputs(filters, safePage, pageSize)}</form>${resourceRows(resources, { admin: true, csrfToken, filtered: hasFilters })}${resourcePagination(safePage, pageSize, total, "/learn/admin/resources", filters)}`;
+  return {
+    finderHtml: `${resourceFilterForm(filters, students, lessons)}`,
+    resultsHtml: resultHtml,
+    url: `/learn/admin/resources${resourceFilterQuery(filters, safePage, pageSize)}`,
+    total
+  };
+}
+
+function resourceFragmentResponse(fragment: ResourceFragment): Response {
+  const headers = privateHeaders("application/json; charset=utf-8");
+  headers.set("Cache-Control", "no-store");
+  return new Response(JSON.stringify(fragment), { status: 200, headers });
+}
+
+function studentResourceResults(resources: Resource[], search: string): string {
+  if (!resources.length) {
+    return search
+      ? `<div class="empty-state compact-empty"><h2>No resources match your search.</h2><a class="button secondary" href="/learn/student/resources">Clear search</a></div>`
+      : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Your tutor's worksheets, notes, and other shared material will appear here.</p></div>`;
+  }
+  return `<p class="resource-result-count" data-resource-result-count role="status">${resources.length} resource${resources.length === 1 ? "" : "s"}</p><div class="resource-student-list">${resources.map((resource) => `<article class="card resource-student-item"><div><h2>${escapeHtml(resource.original_filename)}</h2><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}${resource.lesson_start_at ? ` · ${escapeHtml(resourceLessonDate(resource.lesson_start_at))}` : ""}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>`;
 }
 
 type ResourceUploadContext =
@@ -860,6 +913,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     return resourceSuggestionsResponse(await listResourceSuggestions(db, url.searchParams.get("q") ?? "", 5, url.searchParams.get("student") ?? undefined));
   }
   if (route === "admin-resources") {
+    if (request.method === "GET" && request.headers.get("X-Resource-Fragment") === "1") {
+      return resourceFragmentResponse(await adminResourceFragment(db, url, csrfToken));
+    }
     const { page, pageSize } = parseResourcePagination(url);
     const filters = parseResourceFilters(url);
     const students = await listActiveStudentsForResourceFilter(db, filters.studentId);
@@ -875,8 +931,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const feedback = deleted || failed
       ? `<p class="${failed ? "form-error" : "form-success"}" role="status">${deleted ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted.` : ""}${deleted && failed ? " " : ""}${failed ? `${failed} resource${failed === 1 ? "" : "s"} need${failed === 1 ? "s" : ""} attention.` : ""}</p>`
       : "";
-    const heading = `<div class="page-heading"><div><h1>Resources</h1><p class="lede">Find teaching material</p></div>${buttonLink("/learn/admin/resources/new", "Add resource")}</div>${feedback}${resourceFilterForm(filters, students, lessons)}<p class="resource-result-count">${total} resource${total === 1 ? "" : "s"}</p>${resources.length ? resourceSelectionToolbar() : ""}<form id="resource-bulk-delete-form" method="post" action="/learn/admin/resources/bulk-delete">${hiddenCsrf(csrfToken)}${resourceFilterHiddenInputs(filters, safePage, pageSize)}</form>`;
-    return appPage(active.user, csrfToken, "Resources", `${heading}${resourceRows(resources, { admin: true, csrfToken, filtered: hasFilters })}${resourcePagination(safePage, pageSize, total, "/learn/admin/resources", filters)}`);
+    const heading = `<div class="page-heading"><div><h1>Resources</h1><p class="lede">Find teaching material</p></div>${buttonLink("/learn/admin/resources/new", "Add resource")}</div>${feedback}<div data-resource-finder-ui>${resourceFilterForm(filters, students, lessons)}</div><p class="resource-update-error form-error" data-resource-update-error role="alert" hidden>We couldn't update the resource list. Please try again.</p><div data-resource-results aria-live="polite" aria-busy="false">${`<p class="resource-result-count" data-resource-result-count role="status">${total} resource${total === 1 ? "" : "s"}</p>`}${resources.length ? resourceSelectionToolbar() : ""}<form id="resource-bulk-delete-form" method="post" action="/learn/admin/resources/bulk-delete">${hiddenCsrf(csrfToken)}${resourceFilterHiddenInputs(filters, safePage, pageSize)}</form>${resourceRows(resources, { admin: true, csrfToken, filtered: hasFilters })}${resourcePagination(safePage, pageSize, total, "/learn/admin/resources", filters)}</div>`;
+    return appPage(active.user, csrfToken, "Resources", heading);
   }
   if (route === "admin-resource-form") {
     const students = await listStudents(db);
@@ -1115,10 +1171,15 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   if (route === "student-resources") {
     const search = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
     const resources = await listResourcesForStudent(db, active.user.id, search);
-    const empty = search
-      ? `<div class="empty-state compact-empty"><h2>No resources match your search.</h2><a class="button secondary" href="/learn/student/resources">Clear search</a></div>`
-      : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Your tutor's worksheets, notes, and other shared material will appear here.</p></div>`;
-    return appPage(active.user, csrfToken, "Resources", `<div class="student-resource-page"><div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Your teaching material</p></div></div><form class="resource-student-search" method="get" action="/learn/student/resources"><label class="sr-only" for="student-resource-search">Search your resources</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="student-resource-search" type="search" name="q" value="${escapeHtml(search)}" placeholder="Search your resources…" autocomplete="off"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button></form>${resources.length ? `<p class="resource-result-count">${resources.length} resource${resources.length === 1 ? "" : "s"}</p><div class="resource-student-list">${resources.map((resource) => `<article class="card resource-student-item"><div><h2>${escapeHtml(resource.original_filename)}</h2><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}${resource.lesson_start_at ? ` · ${escapeHtml(resourceLessonDate(resource.lesson_start_at))}` : ""}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : empty}</div>`);
+    if (request.method === "GET" && request.headers.get("X-Resource-Fragment") === "1") {
+      return resourceFragmentResponse({
+        finderHtml: "",
+        resultsHtml: studentResourceResults(resources, search),
+        url: `/learn/student/resources${search ? `?q=${encodeURIComponent(search)}` : ""}`,
+        total: resources.length
+      });
+    }
+    return appPage(active.user, csrfToken, "Resources", `<div class="student-resource-page"><div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Your teaching material</p></div></div><form class="resource-student-search" method="get" action="/learn/student/resources" data-student-resource-finder><label class="sr-only" for="student-resource-search">Search your resources</label><span class="resource-search-icon" aria-hidden="true">${resourceSearchIcon()}</span><input id="student-resource-search" type="search" name="q" value="${escapeHtml(search)}" placeholder="Search your resources…" autocomplete="off"><button class="resource-search-submit" type="submit" aria-label="Search">${resourceSearchIcon()}</button></form><p class="resource-update-error form-error" data-student-resource-update-error role="alert" hidden>We couldn't update the resource list. Please try again.</p><div data-student-resource-results aria-live="polite" aria-busy="false">${studentResourceResults(resources, search)}</div></div>`);
   }
   if (route === "student-resource-download") {
     const id = resourceIdFromPath(url.pathname);

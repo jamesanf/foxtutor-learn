@@ -152,11 +152,83 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     updateEndPreview();
   });
 
-  document.querySelectorAll<HTMLFormElement>("[data-resource-finder]").forEach((form) => {
+  type ResourceFilterOption = { id: string; value?: string; label: string; detail?: string };
+  type ResourceFragmentPayload = { finderHtml: string; resultsHtml: string; url: string; total: number };
+  let loadAdminResourceUrl: ((url: URL, updateHistory: boolean) => void) | null = null;
+  let loadStudentResourceUrl: ((url: URL, updateHistory: boolean) => void) | null = null;
+
+  const setupResourceSelection = () => {
+    const toolbar = document.querySelector<HTMLElement>("[data-resource-selection-toolbar]");
+    const selection = Array.from(document.querySelectorAll<HTMLInputElement>("[data-resource-select]"));
+    const selectAll = document.querySelector<HTMLInputElement>("[data-resource-select-all]");
+    const bulkDeleteForm = document.querySelector<HTMLFormElement>("#resource-bulk-delete-form");
+    const update = () => {
+      const selected = selection.filter((checkbox) => checkbox.checked);
+      if (toolbar) {
+        toolbar.hidden = selected.length === 0;
+        const count = toolbar.querySelector("[data-resource-selection-count]");
+        if (count) count.textContent = `${selected.length} resource${selected.length === 1 ? "" : "s"} selected`;
+      }
+      if (selectAll) {
+        selectAll.checked = selected.length > 0 && selected.length === selection.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < selection.length;
+      }
+      for (const checkbox of selection) checkbox.closest("tr")?.classList.toggle("is-selected", checkbox.checked);
+    };
+    selectAll?.addEventListener("change", () => {
+      for (const checkbox of selection) checkbox.checked = selectAll.checked;
+      update();
+    });
+    selection.forEach((checkbox) => checkbox.addEventListener("change", update));
+    bulkDeleteForm?.addEventListener("submit", (event) => {
+      const selected = selection.filter((checkbox) => checkbox.checked);
+      if (!selected.length) {
+        event.preventDefault();
+        return;
+      }
+      if (!confirm(`Delete ${selected.length} resource${selected.length === 1 ? "" : "s"}? These files will be removed from the resource library.`)) event.preventDefault();
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-resource-delete-trigger]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!confirm(button.dataset.resourceDeleteConfirm ?? "Delete this resource?")) return;
+        const formId = button.dataset.resourceDeleteTrigger;
+        const form = formId ? document.getElementById(formId) : null;
+        if (form instanceof HTMLFormElement) form.requestSubmit();
+      });
+    });
+    update();
+  };
+
+  const setupAdminResourceResults = () => {
+    const results = document.querySelector<HTMLElement>("[data-resource-results]");
+    if (!results || results.dataset.resourceResultsBound === "true") return;
+    results.dataset.resourceResultsBound = "true";
+    results.addEventListener("click", (event) => {
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || !loadAdminResourceUrl) return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.pathname !== "/learn/admin/resources") return;
+      event.preventDefault();
+      loadAdminResourceUrl(url, true);
+    });
+    results.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLSelectElement) || !target.matches(".page-size-select") || !loadAdminResourceUrl) return;
+      const url = new URL(window.location.href);
+      url.searchParams.set("size", target.value);
+      url.searchParams.delete("page");
+      loadAdminResourceUrl(url, true);
+    });
+  };
+
+  const setupAdminResourceFinder = (form: HTMLFormElement) => {
+    const wrapper = form.closest<HTMLElement>("[data-resource-finder-ui]");
+    const state = (name: string) => form.querySelector<HTMLInputElement>(`[data-resource-state="${name}"]`);
+    const search = form.querySelector<HTMLInputElement>("[data-resource-search]");
     const panel = form.querySelector<HTMLElement>("[data-resource-filter-panel]");
     const toggle = form.querySelector<HTMLButtonElement>("[data-resource-filter-toggle]");
-    const submit = () => form.submit();
-    const state = (name: string) => form.querySelector<HTMLInputElement>(`[data-resource-state="${name}"]`);
+    let requestController: AbortController | undefined;
+    let requestSequence = 0;
     const closeMenus = (except?: HTMLElement) => {
       form.querySelectorAll<HTMLElement>("[data-resource-choice-menu]").forEach((menu) => {
         if (menu !== except) {
@@ -166,115 +238,202 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         }
       });
     };
-    type FilterOption = { id: string; value?: string; label: string; detail?: string };
-    const bindFilterOption = (option: HTMLButtonElement) => {
-      option.addEventListener("click", () => {
-        const field = option.dataset.resourceFilterOption;
-        const value = option.dataset.value ?? "";
-        if (!field) return;
-        const input = state(field);
-        if (input) input.value = field === "added" && value === "any" ? "" : field === "sort" && value === "newest" ? "" : value;
-        if (field === "student") {
-          const lesson = state("lesson");
-          if (lesson) lesson.value = "";
-        }
-        submit();
-      });
+    const buildUrl = () => {
+      const url = new URL(window.location.href);
+      const searchValue = search?.value.trim() ?? "";
+      searchValue ? url.searchParams.set("q", searchValue) : url.searchParams.delete("q");
+      for (const field of ["student", "lesson", "type", "added", "sort"]) {
+        const value = state(field)?.value ?? "";
+        value ? url.searchParams.set(field, value) : url.searchParams.delete(field);
+      }
+      url.searchParams.delete("page");
+      return url;
     };
+    const load = async (target: URL, updateHistory: boolean) => {
+      const results = document.querySelector<HTMLElement>("[data-resource-results]");
+      if (!results) return;
+      const sequence = ++requestSequence;
+      requestController?.abort();
+      requestController = new AbortController();
+      const panelOpen = Boolean(panel && !panel.hidden);
+      const error = document.querySelector<HTMLElement>("[data-resource-update-error]");
+      results.classList.add("is-loading");
+      results.setAttribute("aria-busy", "true");
+      if (error) error.hidden = true;
+      try {
+        const response = await fetch(target, { headers: { Accept: "application/json", "X-Resource-Fragment": "1" }, signal: requestController.signal });
+        if (!response.ok) throw new Error("Resource request failed.");
+        const data = await response.json() as ResourceFragmentPayload;
+        if (sequence !== requestSequence) return;
+        if (wrapper && data.finderHtml) {
+          wrapper.innerHTML = data.finderHtml;
+          const nextForm = wrapper.querySelector<HTMLFormElement>("[data-resource-finder]");
+          if (nextForm) {
+            setupAdminResourceFinder(nextForm);
+            const nextPanel = nextForm.querySelector<HTMLElement>("[data-resource-filter-panel]");
+            const nextToggle = nextForm.querySelector<HTMLButtonElement>("[data-resource-filter-toggle]");
+            if (nextPanel && nextToggle) {
+              nextPanel.hidden = !panelOpen;
+              nextToggle.setAttribute("aria-expanded", String(panelOpen));
+            }
+          }
+        }
+        results.innerHTML = data.resultsHtml;
+        if (updateHistory) window.history.replaceState({}, "", data.url);
+        results.setAttribute("aria-busy", "false");
+        document.querySelector<HTMLElement>("[data-resource-result-count]")?.setAttribute("aria-label", `${data.total} resources found`);
+        setupResourceSelection();
+      } catch (requestError) {
+        if (requestError instanceof DOMException && requestError.name === "AbortError") return;
+        if (error) error.hidden = false;
+      } finally {
+        if (sequence === requestSequence) {
+          results.classList.remove("is-loading");
+          results.setAttribute("aria-busy", "false");
+        }
+      }
+    };
+    loadAdminResourceUrl = (url, updateHistory) => void load(url, updateHistory);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      closeMenus();
+      void load(buildUrl(), true);
+    });
     toggle?.addEventListener("click", () => {
-      if (!panel) return;
+      if (!panel || !toggle) return;
       panel.hidden = !panel.hidden;
       toggle.setAttribute("aria-expanded", String(!panel.hidden));
       if (!panel.hidden) panel.querySelector<HTMLButtonElement>("[data-resource-choice-trigger]")?.focus();
     });
-    form.querySelectorAll<HTMLButtonElement>("[data-resource-choice-trigger]").forEach((trigger) => {
-      trigger.addEventListener("click", () => {
+    form.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const option = target.closest<HTMLButtonElement>("[data-resource-filter-option]");
+      if (option) {
+        const field = option.dataset.resourceFilterOption;
+        if (!field) return;
+        const value = option.dataset.value ?? "";
+        const input = state(field);
+        if (input) input.value = field === "added" && value === "any" || field === "sort" && value === "newest" ? "" : value;
+        if (field === "student") {
+          const lesson = state("lesson");
+          if (lesson) lesson.value = "";
+        }
+        closeMenus();
+        void load(buildUrl(), true);
+        return;
+      }
+      const trigger = target.closest<HTMLButtonElement>("[data-resource-choice-trigger]");
+      if (trigger && !trigger.disabled) {
         const field = trigger.dataset.resourceChoiceTrigger;
         const menu = field ? form.querySelector<HTMLElement>(`[data-resource-choice-menu="${field}"]`) : null;
-        if (!menu || trigger.disabled) return;
+        if (!menu) return;
         const opening = menu.hidden;
         closeMenus(menu);
         menu.hidden = !opening;
         trigger.setAttribute("aria-expanded", String(!menu.hidden));
         if (opening) menu.querySelector<HTMLInputElement>("[data-resource-choice-search]")?.focus();
-      });
+        return;
+      }
+      const link = target.closest<HTMLAnchorElement>("a[href]");
+      if (link && wrapper && link.closest("[data-resource-finder-ui]")) {
+        const url = new URL(link.href, window.location.href);
+        if (url.pathname === "/learn/admin/resources") {
+          event.preventDefault();
+          void load(url, true);
+        }
+      }
     });
-    form.querySelectorAll<HTMLButtonElement>("[data-resource-filter-option]").forEach(bindFilterOption);
+    form.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement) || !target.matches("[data-resource-filter-option]")) return;
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const menu = target.closest("[data-resource-choice-menu]");
+      if (!menu) return;
+      const options = Array.from(menu.querySelectorAll<HTMLButtonElement>("[data-resource-filter-option]:not([hidden])"));
+      const index = options.indexOf(target);
+      if (index < 0) return;
+      event.preventDefault();
+      options[(index + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length]?.focus();
+    });
     const choiceSearchTimers = new Map<string, number>();
-    form.querySelectorAll<HTMLInputElement>("[data-resource-choice-search]").forEach((search) => {
-      search.addEventListener("input", () => {
-        const query = search.value.trim().toLowerCase();
-        const field = search.dataset.resourceChoiceSearch;
+    form.querySelectorAll<HTMLInputElement>("[data-resource-choice-search]").forEach((choiceSearch) => {
+      choiceSearch.addEventListener("input", () => {
+        const query = choiceSearch.value.trim().toLowerCase();
+        const field = choiceSearch.dataset.resourceChoiceSearch;
         if (!field) return;
         form.querySelectorAll<HTMLElement>(`[data-resource-filter-option="${field}"]`).forEach((option) => {
           option.hidden = Boolean(query) && !option.textContent?.toLowerCase().includes(query);
         });
-        if ((field !== "student" && field !== "lesson") || search.value.trim().length < 2) return;
+        if ((field !== "student" && field !== "lesson") || choiceSearch.value.trim().length < 2) return;
         window.clearTimeout(choiceSearchTimers.get(field));
         choiceSearchTimers.set(field, window.setTimeout(async () => {
-          const queryValue = search.value.trim();
+          const queryValue = choiceSearch.value.trim();
           const studentId = state("student")?.value ?? "";
-          const response = await fetch(`/learn/admin/resources/search?q=${encodeURIComponent(queryValue)}${field === "lesson" && studentId ? `&student=${encodeURIComponent(studentId)}` : ""}`, { headers: { Accept: "application/json" } });
-          if (!response.ok) return;
-          const data = await response.json() as { students?: FilterOption[]; lessons?: FilterOption[] };
-          const items = field === "student" ? data.students ?? [] : data.lessons ?? [];
-          const menu = search.closest<HTMLElement>("[data-resource-choice-menu]");
-          if (!menu) return;
-          menu.querySelectorAll<HTMLElement>("[data-resource-filter-option]").forEach((option) => option.remove());
-          const all = document.createElement("button");
-          all.type = "button";
-          all.role = "option";
-          all.className = "resource-choice-option";
-          all.dataset.resourceFilterOption = field;
-          all.dataset.value = "";
-          all.setAttribute("aria-selected", "false");
-          all.textContent = field === "student" ? "All students" : "All lessons";
-          menu.appendChild(all);
-          bindFilterOption(all);
-          items.forEach((item) => {
-            const option = document.createElement("button");
-            option.type = "button";
-            option.role = "option";
-            option.className = "resource-choice-option";
-            option.dataset.resourceFilterOption = field;
-            option.dataset.value = item.value ?? item.id;
-            option.setAttribute("aria-selected", "false");
-            const label = document.createElement("span");
-            label.textContent = item.label;
-            option.appendChild(label);
-            if (item.detail) {
-              const detail = document.createElement("small");
-              detail.textContent = item.detail;
-              option.appendChild(detail);
-            }
-            menu.appendChild(option);
-            bindFilterOption(option);
-          });
+          const controller = new AbortController();
+          try {
+            const response = await fetch(`/learn/admin/resources/search?q=${encodeURIComponent(queryValue)}${field === "lesson" && studentId ? `&student=${encodeURIComponent(studentId)}` : ""}`, { headers: { Accept: "application/json" }, signal: controller.signal });
+            if (!response.ok) throw new Error("Filter search failed.");
+            const data = await response.json() as { students?: ResourceFilterOption[]; lessons?: ResourceFilterOption[] };
+            const items = field === "student" ? data.students ?? [] : data.lessons ?? [];
+            const menu = choiceSearch.closest<HTMLElement>("[data-resource-choice-menu]");
+            if (!menu) return;
+            menu.querySelectorAll<HTMLElement>("[data-resource-filter-option]").forEach((option) => option.remove());
+            const all = document.createElement("button");
+            all.type = "button";
+            all.role = "option";
+            all.className = "resource-choice-option";
+            all.dataset.resourceFilterOption = field;
+            all.dataset.value = "";
+            all.setAttribute("aria-selected", "false");
+            all.textContent = field === "student" ? "All students" : "All lessons";
+            menu.appendChild(all);
+            items.forEach((item) => {
+              const option = document.createElement("button");
+              option.type = "button";
+              option.role = "option";
+              option.className = "resource-choice-option";
+              option.dataset.resourceFilterOption = field;
+              option.dataset.value = item.value ?? item.id;
+              option.setAttribute("aria-selected", "false");
+              const label = document.createElement("span");
+              label.textContent = item.label;
+              option.appendChild(label);
+              if (item.detail) {
+                const detail = document.createElement("small");
+                detail.textContent = item.detail;
+                option.appendChild(detail);
+              }
+              menu.appendChild(option);
+            });
+          } catch (error) {
+            console.error("Unable to load filter options.", error);
+          }
         }, 180));
       });
-      search.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          const menu = search.closest<HTMLElement>("[data-resource-choice-menu]");
-          const field = menu?.dataset.resourceChoiceMenu;
-          if (menu) closeMenus();
-          form.querySelector<HTMLButtonElement>(`[data-resource-choice-trigger="${field}"]`)?.focus();
-        }
+      choiceSearch.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        const menu = choiceSearch.closest<HTMLElement>("[data-resource-choice-menu]");
+        const field = menu?.dataset.resourceChoiceMenu;
+        closeMenus();
+        form.querySelector<HTMLButtonElement>(`[data-resource-choice-trigger="${field}"]`)?.focus();
       });
     });
-
-    const search = form.querySelector<HTMLInputElement>("[data-resource-search]");
     const suggestions = form.querySelector<HTMLElement>("#resource-search-suggestions");
     if (search && suggestions) {
       type Suggestion = { id: string; label: string; detail: string; kind: "file" | "student" | "lesson"; value?: string };
       let suggestionItems: Suggestion[] = [];
       let activeSuggestion = -1;
       let timer: number | undefined;
-      let controller: AbortController | undefined;
+      let suggestionController: AbortController | undefined;
       const closeSuggestions = () => {
         suggestions.hidden = true;
         search.setAttribute("aria-expanded", "false");
         search.removeAttribute("aria-activedescendant");
         activeSuggestion = -1;
+      };
+      const commitSearch = () => {
+        closeSuggestions();
+        void load(buildUrl(), true);
       };
       const selectSuggestion = (item: Suggestion) => {
         if (item.kind === "student") {
@@ -286,8 +445,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         } else {
           search.value = item.kind === "file" ? item.label : item.label.split(" · ")[0];
         }
-        closeSuggestions();
-        submit();
+        commitSearch();
       };
       const updateActiveSuggestion = () => {
         suggestionItems.forEach((item, index) => {
@@ -339,23 +497,19 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       const loadSuggestions = async () => {
         const query = search.value.trim();
         if (query.length < 2) {
-          controller?.abort();
+          suggestionController?.abort();
           closeSuggestions();
           return;
         }
-        controller?.abort();
-        controller = new AbortController();
+        suggestionController?.abort();
+        suggestionController = new AbortController();
         try {
-          const response = await fetch(`${search.dataset.suggestionUrl}?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" }, signal: controller.signal });
+          const response = await fetch(`${search.dataset.suggestionUrl}?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" }, signal: suggestionController.signal });
           if (!response.ok) throw new Error("Suggestion request failed.");
           const data = await response.json() as { files?: Suggestion[]; students?: Suggestion[]; lessons?: Suggestion[] };
-          renderSuggestions([
-            { label: "Files", items: data.files ?? [] },
-            { label: "Students", items: data.students ?? [] },
-            { label: "Lessons", items: data.lessons ?? [] }
-          ]);
-        } catch (error) {
-          if (error instanceof DOMException && error.name === "AbortError") return;
+          renderSuggestions([{ label: "Files", items: data.files ?? [] }, { label: "Students", items: data.students ?? [] }, { label: "Lessons", items: data.lessons ?? [] }]);
+        } catch (requestError) {
+          if (requestError instanceof DOMException && requestError.name === "AbortError") return;
           closeSuggestions();
         }
       };
@@ -372,9 +526,10 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           event.preventDefault();
           activeSuggestion = Math.max(activeSuggestion - 1, 0);
           updateActiveSuggestion();
-        } else if (event.key === "Enter" && activeSuggestion >= 0 && !suggestions.hidden) {
+        } else if (event.key === "Enter") {
           event.preventDefault();
-          selectSuggestion(suggestionItems[activeSuggestion]);
+          if (activeSuggestion >= 0 && !suggestions.hidden) selectSuggestion(suggestionItems[activeSuggestion]);
+          else commitSearch();
         } else if (event.key === "Escape" && !suggestions.hidden) {
           event.preventDefault();
           closeSuggestions();
@@ -384,47 +539,68 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         if (!form.contains(event.target as Node)) closeSuggestions();
       });
     }
-  });
-
-  const resourceSelectionToolbar = document.querySelector<HTMLElement>("[data-resource-selection-toolbar]");
-  const resourceSelection = Array.from(document.querySelectorAll<HTMLInputElement>("[data-resource-select]"));
-  const selectAll = document.querySelector<HTMLInputElement>("[data-resource-select-all]");
-  const bulkDeleteForm = document.querySelector<HTMLFormElement>("#resource-bulk-delete-form");
-  const updateResourceSelection = () => {
-    const selected = resourceSelection.filter((checkbox) => checkbox.checked);
-    if (resourceSelectionToolbar) {
-      resourceSelectionToolbar.hidden = selected.length === 0;
-      const count = resourceSelectionToolbar.querySelector("[data-resource-selection-count]");
-      if (count) count.textContent = `${selected.length} resource${selected.length === 1 ? "" : "s"} selected`;
-    }
-    if (selectAll) {
-      selectAll.checked = selected.length > 0 && selected.length === resourceSelection.length;
-      selectAll.indeterminate = selected.length > 0 && selected.length < resourceSelection.length;
-    }
-    for (const checkbox of resourceSelection) {
-      checkbox.closest("tr")?.classList.toggle("is-selected", checkbox.checked);
-    }
   };
-  selectAll?.addEventListener("change", () => {
-    for (const checkbox of resourceSelection) checkbox.checked = selectAll.checked;
-    updateResourceSelection();
-  });
-  resourceSelection.forEach((checkbox) => checkbox.addEventListener("change", updateResourceSelection));
-  bulkDeleteForm?.addEventListener("submit", (event) => {
-    const selected = resourceSelection.filter((checkbox) => checkbox.checked);
-    if (!selected.length) {
+
+  const setupStudentResourceFinder = (form: HTMLFormElement) => {
+    const results = document.querySelector<HTMLElement>("[data-student-resource-results]");
+    const search = form.querySelector<HTMLInputElement>("input[name='q']");
+    if (!results || !search) return;
+    let controller: AbortController | undefined;
+    let sequence = 0;
+    const load = async (target: URL, updateHistory: boolean) => {
+      const current = ++sequence;
+      controller?.abort();
+      controller = new AbortController();
+      search.value = target.searchParams.get("q") ?? "";
+      results.classList.add("is-loading");
+      results.setAttribute("aria-busy", "true");
+      try {
+        const response = await fetch(target, { headers: { Accept: "application/json", "X-Resource-Fragment": "1" }, signal: controller.signal });
+        if (!response.ok) throw new Error("Student resource request failed.");
+        const data = await response.json() as ResourceFragmentPayload;
+        if (current !== sequence) return;
+        results.innerHTML = data.resultsHtml;
+        if (updateHistory) window.history.replaceState({}, "", data.url);
+      } catch (requestError) {
+        if (requestError instanceof DOMException && requestError.name === "AbortError") return;
+        const error = document.querySelector<HTMLElement>("[data-student-resource-update-error]");
+        if (error) error.hidden = false;
+      } finally {
+        if (current === sequence) {
+          results.classList.remove("is-loading");
+          results.setAttribute("aria-busy", "false");
+        }
+      }
+    };
+    const buildUrl = () => {
+      const url = new URL(window.location.href);
+      const value = search.value.trim();
+      value ? url.searchParams.set("q", value) : url.searchParams.delete("q");
+      return url;
+    };
+    loadStudentResourceUrl = (url, updateHistory) => void load(url, updateHistory);
+    form.addEventListener("submit", (event) => {
       event.preventDefault();
-      return;
-    }
-    if (!confirm(`Delete ${selected.length} resource${selected.length === 1 ? "" : "s"}? These files will be removed from the resource library.`)) event.preventDefault();
-  });
-  document.querySelectorAll<HTMLButtonElement>("[data-resource-delete-trigger]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (!confirm(button.dataset.resourceDeleteConfirm ?? "Delete this resource?")) return;
-      const formId = button.dataset.resourceDeleteTrigger;
-      const form = formId ? document.getElementById(formId) : null;
-      if (form instanceof HTMLFormElement) form.submit();
+      document.querySelector<HTMLElement>("[data-student-resource-update-error]")?.setAttribute("hidden", "");
+      void load(buildUrl(), true);
     });
+    results.addEventListener("click", (event) => {
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || !loadStudentResourceUrl) return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.pathname !== "/learn/student/resources") return;
+      event.preventDefault();
+      loadStudentResourceUrl(url, true);
+    });
+  };
+
+  document.querySelectorAll<HTMLFormElement>("[data-resource-finder]").forEach(setupAdminResourceFinder);
+  document.querySelectorAll<HTMLFormElement>("[data-student-resource-finder]").forEach(setupStudentResourceFinder);
+  setupAdminResourceResults();
+  setupResourceSelection();
+  window.addEventListener("popstate", () => {
+    if (loadAdminResourceUrl && document.querySelector("[data-resource-finder]")) loadAdminResourceUrl(new URL(window.location.href), false);
+    else if (loadStudentResourceUrl && document.querySelector("[data-student-resource-finder]")) loadStudentResourceUrl(new URL(window.location.href), false);
   });
 
   document.querySelectorAll<HTMLFormElement>(".resource-upload-form").forEach((form) => {

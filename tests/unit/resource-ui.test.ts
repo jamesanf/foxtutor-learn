@@ -87,4 +87,25 @@ describe("resource UX contract", () => {
     expect(workerSource).not.toContain('action="/learn/student/resources/bulk-delete"');
     expect(workerSource).not.toContain('data-resource-selection-toolbar"');
   });
+
+  it("uses a minimal, non-duplicated product header", () => {
+    expect(workerSource).toContain('<strong>FoxTutor Learn</strong>');
+    expect(workerSource).toContain('class="identity-role">ADMIN</span>');
+    expect(workerSource).toContain(">Log out</button>");
+    expect(workerSource).not.toContain('<strong>James Fox</strong>');
+    expect(workerSource).not.toContain("FoxTutor Learn Admin");
+  });
+
+  it("defines an in-place resource application boundary", () => {
+    expect(workerSource).toContain('data-resource-finder-ui');
+    expect(workerSource).toContain('data-resource-results');
+    expect(workerSource).toContain('X-Resource-Fragment');
+    expect(clientSource).toContain("history.replaceState");
+    expect(clientSource).toContain('window.addEventListener("popstate"');
+    expect(clientSource).toContain("AbortController");
+    expect(clientSource).not.toContain("form.submit()");
+    expect(cssSource).toContain("grid-template-columns: repeat(4, minmax(0, 1fr))");
+    expect(cssSource).toContain(".resource-sort-icon");
+    expect(cssSource).toContain("[data-resource-results].is-loading");
+  });
 });
