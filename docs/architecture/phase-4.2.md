@@ -107,7 +107,8 @@ feedback labels use the same compact scale as the metadata labels while body
 text retains its readable size. The footer contains a right-aligned clickable
 “View this report on FoxTutor Learn” URI link. PDFs do not use a separate R2
 object or display a page counter for the single-page document. The HTML report
-document title and downloaded filename use `YY/MM/DD - FoxTutor Lesson Report`.
+document title uses `YY/MM/DD - FoxTutor Lesson Report`; downloaded filenames
+use `YY-MM-DD FoxTutor Lesson Report.pdf`.
 
 ## Email presentation
 

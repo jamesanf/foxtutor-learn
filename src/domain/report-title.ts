@@ -10,6 +10,6 @@ export function reportDocumentTitleFromIsoDate(value: string): string {
 export function reportPdfFilenameFromIsoDate(value: string): string {
   const match = DATE_PATTERN.exec(value);
   return match
-    ? `${match[1].slice(-2)}-${match[2]}-${match[3]} - FoxTutor Lesson Report.pdf`
+    ? `${match[1].slice(-2)}-${match[2]}-${match[3]} FoxTutor Lesson Report.pdf`
     : "FoxTutor Lesson Report.pdf";
 }

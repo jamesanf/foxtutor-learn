@@ -63,8 +63,8 @@ single-page counter, omit empty feedback sections, repack the remaining
 feedback grid, and include a right-aligned clickable report link in the footer.
 The latest URL/title pass adds compact base64url lesson route keys, retains
 backward compatibility for existing UUID links, and uses
-`YY/MM/DD - FoxTutor Lesson Report` for the HTML document title and downloaded
-PDF filename.
+`YY/MM/DD - FoxTutor Lesson Report` for the HTML document title and
+`YY-MM-DD FoxTutor Lesson Report.pdf` for downloaded PDFs.
 
 The first authenticated report-send attempt reached Fox Mail but failed with
 `400 invalid_recipient`. Production D1 inspection confirmed that both the

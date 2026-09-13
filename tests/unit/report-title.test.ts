@@ -4,7 +4,7 @@ import { reportDocumentTitleFromIsoDate, reportPdfFilenameFromIsoDate } from "..
 describe("lesson report document titles", () => {
   it("formats the report date-first title and filename", () => {
     expect(reportDocumentTitleFromIsoDate("2026-09-13")).toBe("26/09/13 - FoxTutor Lesson Report");
-    expect(reportPdfFilenameFromIsoDate("2026-09-13")).toBe("26-09-13 - FoxTutor Lesson Report.pdf");
+    expect(reportPdfFilenameFromIsoDate("2026-09-13")).toBe("26-09-13 FoxTutor Lesson Report.pdf");
   });
 
   it("uses safe fallbacks for incomplete dates", () => {

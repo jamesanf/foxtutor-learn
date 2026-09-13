@@ -651,8 +651,9 @@ production. The current deployed runtime commit is `b7e9a1a`, deployed as
 Worker `1601099f-35d8-4803-9846-4c95b58af122`; no remote migrations are
 pending.
 Generated lesson/report links use compact base64url route keys while existing
-UUID links remain compatible. Report HTML titles and downloaded PDF filenames
-use `YY/MM/DD - FoxTutor Lesson Report`. Automated checks and unauthenticated
+UUID links remain compatible. Report HTML titles use
+`YY/MM/DD - FoxTutor Lesson Report`, and downloaded PDFs use
+`YY-MM-DD FoxTutor Lesson Report.pdf`. Automated checks and unauthenticated
 production smoke pass; authenticated mail/browser/PDF/no-storage acceptance
 remains required before Phase 4 is formally closed.
 

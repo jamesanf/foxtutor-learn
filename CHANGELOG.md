@@ -1,5 +1,11 @@
 # Changelog
 
+### 2026-09-13 — Simplified lesson report PDF filenames
+
+- **Status:** pending deployment from the current working tree.
+- Removed the separator hyphen before `FoxTutor Lesson Report` in downloaded
+  filenames: `26-09-13 FoxTutor Lesson Report.pdf`.
+
 ### 2026-09-13 — Lesson report titles and compact lesson URLs
 
 - **Status:** deployed as Worker
