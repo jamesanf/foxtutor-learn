@@ -10,8 +10,11 @@
   feedback fields.
 - Email templates use the exact template labels, escaped values and the
   authenticated report link.
-- Rich report formatting is escaped and projected for bold, bullets and yellow
-  highlights; Writing Practice is not rendered.
+- Rich report formatting is escaped and projected for bold, bullets, numbered
+  lists and yellow highlights; Writing Practice is not rendered.
+- The report editor defaults to bullet mode, supports list-mode toggling,
+  compact auto-growing fields and uses the existing resource upload route for
+  lesson-associated attachments.
 - PDF tests verify `%PDF-1.4`, the header, Tutorial Feedback labels and
   deterministic report data.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
@@ -24,7 +27,7 @@
 The final pushed tree passed:
 
 ```text
-npm test                 79 tests across 19 files
+npm test                 80 tests across 19 files
 npm run build            PASS
 npm run check            PASS
 npm run test:browser     PASS (static shell contract)
@@ -32,10 +35,12 @@ npm run test:production  PASS (public/unauthenticated smoke)
 git diff --check         PASS
 ```
 
-Production D1 reports no migrations pending after applying `0009`. Production
-deployment and unauthenticated smoke are confirmed, but the acceptance matrix
-below still requires authenticated browser, Fox Mail, PDF visual and
-no-storage evidence before closure.
+Production D1 reports no migrations pending after applying `0009`. The
+current source commit `46bbde1` is deployed as Worker
+`68f36aa2-51a8-449e-b761-ac142b691bb2`. Production deployment and
+unauthenticated smoke are confirmed, but the acceptance matrix below still
+requires authenticated browser, Fox Mail, PDF visual and no-storage evidence
+before closure.
 
 ## Required acceptance matrix
 
@@ -50,6 +55,7 @@ no-storage evidence before closure.
 | Automatic lifecycle | Scheduled lessons become completed after their end time; report entry is available from lesson start |
 | International preference | Admin can opt a student in/out; default is off |
 | DST warning | One 09:00 UK-time reminder on each UK clock-change date, with idempotent delivery |
+| Lesson attachments | Report workflow uses the existing resource/R2 pipeline and attaches files to the relevant lesson |
 | Student isolation | Student A cannot open Student B HTML or PDF |
 | PDF | Genuine two-page visual output, no R2/D1 PDF storage |
 | Long content | No clipping, overlap or truncation in HTML/email/PDF |

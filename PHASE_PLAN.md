@@ -626,21 +626,32 @@ rescheduling remain Phase 5.
 Structured reports now follow the supplied template rather than the generic
 4.1 summary/homework model. Migrations `0008_structured_lesson_reports.sql`
 and `0009_international_students.sql`
-adds nullable `students.level`, report-time header snapshots and the six
+add nullable `students.level`, report-time header snapshots and the six
 Tutorial Feedback fields. Existing 4.1 content is reconciled as
 `summary -> This Lesson's Focus`, `homework -> Home Learning Task` and
 `additional_notes -> Notes`.
 
-Admins can save/send one report per completed lesson. Sent reports are
-immutable in the normal workflow, visible to the owning student from Previous
-Lessons, and available through the same authorized HTML/PDF route for admins.
-The PDF is generated on demand in the Worker from the persisted D1 projection;
-no PDF is written to R2 or D1. Student level is canonical on `students.level`
-and duplicated only as a report snapshot. Migration `0008` is applied to
-production and the final pushed commit is deployed as Worker
-`2135c248-bc26-4024-8fbe-d31a54951bc6`. Automated checks and unauthenticated
-production smoke pass; authenticated mail/browser/PDF acceptance remains
-required before Phase 4 is formally closed.
+Admins can save/send one report per lesson once its UK start time has passed.
+Scheduled lessons are automatically caught up to `completed` after their end
+time; student visibility still requires both a completed lesson and a sent
+report. Sent reports are immutable in the normal workflow, visible to the
+owning student from Previous Lessons, and available through the same
+authorized HTML/PDF route for admins.
+
+The report editor uses compact auto-growing fields, default bullet mode,
+numbered-list toggling, bold/highlight markers, custom level suggestions and
+an existing resource-pipeline attachment dropzone. Lesson attachments are
+stored by the existing D1/R2 resource flow and appear in the relevant lesson
+for the student. The PDF is generated on demand in the Worker from the
+persisted D1 projection; no PDF is written to R2 or D1. Student level is
+canonical on `students.level` and duplicated only as a report snapshot.
+
+Migrations through `0009_international_students.sql` are applied to
+production. The current pushed commit is `46bbde1`, deployed as Worker
+`68f36aa2-51a8-449e-b761-ac142b691bb2`; no remote migrations are pending.
+Automated checks and unauthenticated production smoke pass; authenticated
+mail/browser/PDF/no-storage acceptance remains required before Phase 4 is
+formally closed.
 
 ### Must achieve
 

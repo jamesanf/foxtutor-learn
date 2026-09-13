@@ -1,5 +1,8 @@
 # Phase 4.1 notification security
 
+> This is the historical Phase 4.1 security baseline. Current report and
+> attachment controls are documented in [`phase-4.2.md`](phase-4.2.md).
+
 - Fox Mail is the only transport boundary. Learn sends server-to-server
   requests using `MAIL_API_TOKEN` and optional Access Service Auth headers;
   secrets never reach templates, browsers, D1 notification rows or logs.

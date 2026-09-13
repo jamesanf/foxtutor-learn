@@ -23,21 +23,25 @@ reconciled by migration `0008_structured_lesson_reports.sql`:
 `additional_notes -> notes`.
 
 The report form uses a custom type-and-suggest level control with the current
-student level as its initial value. Saving a draft or sending a report writes
-the selected level back to `students.level`; arbitrary new levels are allowed.
-Feedback fields support bold (`**text**`), bullet lines (`- item`) and yellow
-highlight (`==text==`) through a contextual toolbar that appears while a field
-is focused. Notes are optional and collapsed by default.
+student level as its initial value. The most common suggestions currently lead
+with GCSE English and Higher ESOL; arbitrary new levels are allowed. Saving a
+draft or sending a report writes the selected level back to `students.level`.
+Feedback fields start in bullet mode and support toggling between plain text,
+bullets and numbered lists, plus bold (`**text**`) and yellow highlight
+(`==text==`) through a contextual toolbar that appears while a field is
+focused. Notes are optional and collapsed by default. Fields start compactly
+and grow automatically as content is entered.
 
 ## Snapshots and lifecycle
 
-`students.level` is the nullable canonical current level. `students.international`
-is an opt-in communication preference and is not used for authorization. A
-report snapshots
+`students.level` is the nullable canonical current level.
+`students.international` is an opt-in communication preference and is not used
+for authorization. A report snapshots
 the pupil name, level, lesson local date, lesson start/end instants and IANA
 timezone when its row is first created. Drafts can be edited; a sent report is
-not editable through the normal route. Only completed lessons are reportable,
-and one report is allowed per lesson.
+not editable through the normal route. Report entry becomes available after
+the lesson start time, while student visibility remains gated by completion
+and sent status. One report is allowed per lesson.
 
 Save Draft persists structured content without student visibility or a report
 notification. Once a lesson's UK start time has passed and it is not
@@ -47,6 +51,12 @@ focus, persists the final content, creates the deterministic
 `lesson-report:<report-id>` notification, and changes the report to `SENT`
 only when the existing provider acceptance path marks the notification `SENT`.
 Failed/unknown mail retains the draft and the notification state.
+
+The report workflow includes a contextual drag-and-drop attachment form. It
+submits to `/learn/admin/resources/new` with the lesson and student context,
+uses the existing multipart validation, D1 metadata and R2 storage pipeline,
+and therefore makes the file appear in the existing admin and student lesson
+resource views without a second attachment system.
 
 The scheduled Worker sends one idempotent `DST_WARNING` notification at 09:00
 UK time on the last Sunday in March and October to active students with the
@@ -65,8 +75,9 @@ drafts or admin controls.
 ## PDF
 
 `src/reports/pdf.ts` is a small Worker-compatible deterministic renderer. It
-creates the two-page branded header/Tutorial Feedback structure with a stable
-core font, borders, footer and page numbering. The endpoint regenerates the
+creates the branded header/Tutorial Feedback structure with a stable core
+font, borders, footer and page numbering. The report metadata displays the
+lesson start time only. The endpoint regenerates the
 PDF from the persisted report, uses `Content-Type: application/pdf`,
 `Content-Disposition: attachment`, `private, no-store`, `nosniff` and the
 same authorization predicates as the HTML route. It never writes an R2 object

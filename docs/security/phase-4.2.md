@@ -10,9 +10,13 @@
   draft reports return a generic 404.
 - PDF responses are private/no-store, `nosniff`, non-indexable and generated
   from authoritative D1 data. No PDF bytes are stored in R2 or D1.
-- Report body text is escaped in HTML/email and is not logged. Email contains
-  the student-visible projection and an authenticated report URL, not private
-  lesson notes, internal IDs or storage keys.
+- Report body text and lightweight formatting markers are escaped and rendered
+  safely in HTML/email/PDF projections; report content is not logged. Email
+  contains the student-visible projection and an authenticated report URL,
+  not private lesson notes, internal IDs or storage keys.
+- Lesson attachments reuse the existing server-authorized resource route. The
+  browser supplies context only; the Worker validates the student/lesson
+  relationship before writing D1 metadata or the private R2 object.
 - Mail failures retain the D1 report draft and durable notification state;
   unknown provider outcomes reuse the existing notification/provider
   idempotency identity.

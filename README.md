@@ -4,10 +4,13 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 4.2 structured lesson reports deployed; authenticated production acceptance pending
+**Phase:** Phase 4.2 implementation deployed; formal Phase 4 closure pending authenticated acceptance
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Latest state:** Phase 3.1 established the private `resources` D1 metadata model, dedicated private R2 buckets, server-authorized upload/download/delete flows, student resource lists and lesson resource sections. Phase 3.2 removes category from the application model, adds contextual lesson/student entry points, redesigns Add Resource around an accessible dropzone and adds compact list/detail metadata without changing resource infrastructure. Phase 3.3 adds server-side resource filtering, bookmarkable pagination state, page-scoped selection, guarded bulk deletion, compact accessible icon actions, explicit Open/Download/Details actions and new-tab Open behavior. Phase 3.8 normalizes the header control centerline, gives pagination a compact shared control family and adds source/browser contracts for both structures. Phase 4.2 is deployed with a dashboard report queue, start-time report eligibility, automatic completion after lesson end, structured D1 reports, student-level snapshots, an opt-in international flag and idempotent UK clock-change reminders. Automated and unauthenticated production smoke checks pass; authenticated browser, real Fox Mail and visual/no-storage acceptance remain open.
+**Current source:** `46bbde1` on `main` and `origin/main`
+**Current Worker:** `68f36aa2-51a8-449e-b761-ac142b691bb2`
+**Production migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no remote migrations are pending
+**Latest state:** Phase 4.2 is deployed with start-time report eligibility, automatic completion after lesson end, structured D1 reports, historical student-level snapshots, an opt-in International flag, idempotent UK clock-change reminders and the existing Fox Mail notification boundary. The report editor includes default bullet mode, numbered-list toggling, bold/highlight markers, compact auto-growing fields and lesson attachments routed through the existing D1/R2 resource pipeline. Automated and unauthenticated production smoke checks pass; authenticated browser, real Fox Mail, visual PDF and no-storage acceptance remain open.
 
 The final Access policy permits only `foxlearningltd@gmail.com` and `jamesanf@gmail.com`; the production D1 contains only those active admin/student records after controlled fixture cleanup. Phase 1 is closed and tagged `phase-1-complete`. Phase 2.1 adds forward-only student/lesson tables and server-rendered CRUD flows while preserving the existing Access, session, role, noindex, public-site and Fox Mail boundaries. Migration `0002_students_lessons.sql` is applied to production and Worker version `85129275-02b5-40be-8626-db554aa6903f` is deployed. Phase 2.1 acceptance is complete and tagged `phase-2.1-complete`. Phase 2.3 uses the existing lessons domain without a new migration or calendar database model.
 
@@ -156,6 +159,14 @@ docs/                 Architecture, security, deployment, API and evidence
 | `docs/testing/phase-2.5.md` | Production calendar acceptance matrix and evidence |
 | `docs/testing/phase-2.6.md` | Final subscription UX, regression and historical sign-off record |
 | `docs/testing/phase-2.7.md` | Month-first calendar replacement and final Phase 2.7 acceptance matrix |
+| `docs/architecture/phase-4.1.md` | Historical notification/report architecture baseline |
+| `docs/architecture/phase-4.2.md` | Structured report, level, reminder and attachment architecture |
+| `docs/security/phase-4.1.md` | Historical notification security baseline |
+| `docs/security/phase-4.2.md` | Structured report and attachment security controls |
+| `docs/testing/phase-4.1.md` | Historical notification/report test matrix |
+| `docs/testing/phase-4.2.md` | Current Phase 4.2 test and closure matrix |
+| `docs/deployment/phase-4.1.md` | Historical Phase 4.1 deployment record |
+| `docs/deployment/phase-4.2.md` | Current Phase 4.2 deployment and closure record |
 | `docs/architecture/phase-3.1.md` | Resource storage, metadata, authorization, retention and failure model |
 | `docs/security/phase-3.1.md` | Resource upload, download, deletion and private-storage controls |
 | `docs/testing/phase-3.1.md` | Resource acceptance matrix and remaining authenticated gates |
@@ -198,7 +209,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
 | 3.2 | Contextual Add Resource UX, dropzone selection and category removal from application code | Local implementation; production acceptance pending |
-| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `2135c248-bc26-4024-8fbe-d31a54951bc6`; authenticated/Fox Mail acceptance pending |
+| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `68f36aa2-51a8-449e-b761-ac142b691bb2` from `46bbde1`; authenticated/Fox Mail/PDF acceptance pending |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |
@@ -213,4 +224,4 @@ There is no public registration and no application password subsystem. Only Acce
 - Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2.1 is intentionally limited to students, lessons, ownership, lifecycle, notes, HTTPS lesson URLs, timezone-safe storage and overlap-aware scheduling.
-- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Phase 2.12 is functionally deployed, but its authenticated production, visual and formal release gates remain open. Phase 3 resource infrastructure remains deployed. Phase 4.2 is deployed with migrations `0008_structured_lesson_reports.sql` and `0009_international_students.sql`; authenticated production mail/browser acceptance, PDF visual inspection and no-storage evidence remain pending.
+- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Historical phase records retain their contemporaneous wording; the current authoritative state is the status block above and the latest phase documents. Phase 3 resource infrastructure remains deployed and is included in the `phase-3-complete` release. Phase 4.2 is deployed with migrations `0008_structured_lesson_reports.sql` and `0009_international_students.sql`; authenticated production mail/browser acceptance, PDF visual inspection and no-storage evidence remain pending.

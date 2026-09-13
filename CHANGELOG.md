@@ -2,6 +2,15 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 4 documentation reconciliation
+
+**Status:** documentation synchronized; Phase 4 closure still pending
+
+- Updated the README, master phase plan and Phase 4.2 architecture, deployment, security and testing records to match commit `46bbde1`, Worker `68f36aa2-51a8-449e-b761-ac142b691bb2` and migrations through `0009`.
+- Recorded the current report editor, lesson attachment, start-time eligibility and auto-completion behavior.
+- Marked Phase 4.1 documents as historical baselines without rewriting their release evidence.
+- Reconfirmed the current automated suite, browser shell contract, production smoke result and remaining authenticated/Fox Mail/PDF/no-storage closure gates.
+
 ### 2026-09-13 — Final report spacing and attachment copy
 
 **Status:** deployed; authenticated production acceptance pending

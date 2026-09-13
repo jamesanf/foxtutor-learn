@@ -1,5 +1,9 @@
 # Phase 4.1 deployment record
 
+> This is the historical Phase 4.1 release record. The current production
+> deployment and Phase 4 closure gates are tracked in
+> [`phase-4.2.md`](phase-4.2.md).
+
 ## Intended deployment sequence
 
 1. Apply forward-only migrations `0006_lesson_reports.sql` and

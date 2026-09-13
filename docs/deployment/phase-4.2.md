@@ -28,13 +28,17 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migrations `0008_structured_lesson_reports.sql` and
 `0009_international_students.sql` were applied to the production database on
-`2026-09-13`. The final deployed source commit is
-`71688dfb8f05baa112bdde68de154f5d7521d40b`, deployed as Worker version
-`2135c248-bc26-4024-8fbe-d31a54951bc6` at `2026-09-13T13:22:32Z`. The Worker
-reports 100% traffic on that version.
+`2026-09-13`. The current deployed source commit is `46bbde1`, synchronized
+with `origin/main`, and is deployed as Worker version
+`68f36aa2-51a8-449e-b761-ac142b691bb2`. A remote migration check reports no
+migrations pending. The release includes the report editor refinements,
+start-only report time, compact auto-growing fields and lesson attachments
+through the existing resource/R2 pipeline.
 
-Automated validation and unauthenticated production smoke checks pass. Formal
-Phase 4 closure remains open because controlled authenticated admin/student
-browser evidence, visual PDF inspection, real Fox Mail acceptance, and the
-three-download D1/R2 no-storage check have not been completed in this
-environment. Therefore no `phase-4-complete` tag has been created.
+The current local tree has passed the full automated suite, type-check/build,
+Wrangler dry-run, browser shell contract and public production smoke checks.
+Formal Phase 4 closure remains open because controlled authenticated
+admin/student browser evidence, visual PDF inspection, real Fox Mail
+acceptance, and the three-download D1/R2 no-storage check have not been
+completed in this environment. Therefore no `phase-4-complete` tag has been
+created.

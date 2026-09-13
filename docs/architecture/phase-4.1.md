@@ -1,5 +1,9 @@
 # Phase 4.1 notification and reporting architecture
 
+> This is the historical Phase 4.1 baseline. The current structured report,
+> lifecycle, level and attachment model is documented in
+> [`phase-4.2.md`](phase-4.2.md).
+
 ## Scope
 
 Phase 4.1 adds routine operational email without changing the public FoxTutor

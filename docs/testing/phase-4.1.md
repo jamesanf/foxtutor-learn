@@ -1,5 +1,8 @@
 # Phase 4.1 testing and acceptance
 
+> This is the historical Phase 4.1 test record. The current Phase 4.2
+> acceptance matrix is maintained in [`phase-4.2.md`](phase-4.2.md).
+
 ## Automated coverage
 
 The current suite covers:
