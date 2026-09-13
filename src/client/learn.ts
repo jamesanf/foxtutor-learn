@@ -385,7 +385,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
             all.dataset.resourceFilterOption = field;
             all.dataset.value = "";
             all.setAttribute("aria-selected", "false");
-            all.textContent = field === "student" ? "All students" : "All lessons";
+            all.textContent = field === "student" || field === "lesson" ? "All" : "";
             menu.appendChild(all);
             items.forEach((item) => {
               const option = document.createElement("button");

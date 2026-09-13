@@ -108,4 +108,23 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".resource-sort-icon");
     expect(cssSource).toContain("[data-resource-results].is-loading");
   });
+
+  it("keeps closed filters compact and geometrically consistent", () => {
+    expect(workerSource).toContain('{ value: "", label: "All" }');
+    expect(workerSource).toContain('{ value: "", label: "Choose student" }');
+    expect(workerSource).toContain('{ value: "", label: "Any" }');
+    expect(workerSource).toContain('{ value: "7", label: "7 days" }');
+    expect(workerSource).not.toContain("All students");
+    expect(workerSource).not.toContain("Select a student first");
+    expect(workerSource).not.toContain("Any type");
+    expect(workerSource).not.toContain("Any time");
+    expect(workerSource).not.toContain("Last ${filters.added} days");
+    expect(clientSource).not.toContain("All students");
+    expect(clientSource).not.toContain("All lessons");
+    expect(cssSource).toContain("height: 42px; min-height: 42px");
+    expect(cssSource).toContain("height: 38px; min-height: 38px");
+    expect(cssSource).toContain("white-space: nowrap");
+    expect(cssSource).toContain(".resource-choice-chevron-icon");
+    expect(cssSource).toContain(".identity form { display: flex; align-items: center");
+  });
 });
