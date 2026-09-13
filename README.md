@@ -10,15 +10,16 @@ replacement or accounting system.
 
 **Phase:** Phase 4.2 deployed; formal Phase 4 closure remains pending authenticated acceptance
 **Production URL:** <https://foxtutor.org/learn>
-**Application release:** `cb18c8c` on `main` and `origin/main`
-**Worker:** `632873c1-9e45-4ab1-bae6-ad958a57de5e`
+**Application release:** `059358e` on `main` and `origin/main`
+**Worker:** `b559bc57-d16c-46ad-aa69-47064851a6a2`
 **D1 migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no migration is pending
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
 admin report resend, humanised delivery timestamps, reactive report
-save/send/resend actions, branded inline-styled email, empty-section omission,
-one-page PDFs with a FoxTutor logo mark, and idempotent notification delivery.
+save/send/resend actions, branded inline-styled email, empty-section omission, one-page PDFs with a
+FoxTutor logo mark and adaptive feedback layout, and idempotent notification
+delivery.
 Production notifications also use `james@foxtutor.org` as their reply address
 for consistent recipient engagement. Brevo-controlled tracking and
 unsubscribe headers remain outside Learn's control.

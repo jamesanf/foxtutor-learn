@@ -28,9 +28,9 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migrations `0008_structured_lesson_reports.sql` and
 `0009_international_students.sql` were applied to the production database on
-`2026-09-13`. The current deployed application release is `cb18c8c`, synchronized with
+`2026-09-13`. The current deployed application release is `059358e`, synchronized with
 `origin/main`, and is deployed as Worker version
-`632873c1-9e45-4ab1-bae6-ad958a57de5e`. A remote migration check reports no
+`b559bc57-d16c-46ad-aa69-47064851a6a2`. A remote migration check reports no
 migrations pending. The release includes the report editor refinements,
 start-only report time, compact auto-growing fields and lesson attachments
 submitted with the report action through the existing resource/R2 pipeline.
@@ -59,7 +59,8 @@ removes duplicate pupil/footer content, adds the support contact and copyright
 footer, and uses a FoxTutor Learn text link. Generated PDFs remain
 single-page, use matching header title typography and readable feedback text,
 include the supplied transparent FoxTutor logo with a PDF soft mask, omit the
-single-page counter and include a clickable report link in the footer.
+single-page counter, omit empty feedback sections, repack the remaining
+feedback grid, and include a right-aligned clickable report link in the footer.
 
 The first authenticated report-send attempt reached Fox Mail but failed with
 `400 invalid_recipient`. Production D1 inspection confirmed that both the

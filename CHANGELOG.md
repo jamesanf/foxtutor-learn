@@ -2,7 +2,8 @@
 
 ### 2026-09-13 — PDF report spacing and conditional layout
 
-- **Status:** pending deployment from the current working tree.
+- **Status:** deployed as Worker
+  `b559bc57-d16c-46ad-aa69-47064851a6a2` from commit `059358e`.
 - Added breathing room after the PDF header title, removed the redundant
   “Tutorial Feedback” heading and returned feedback labels to the compact
   metadata scale without changing report body text sizing.
