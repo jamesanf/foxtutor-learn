@@ -10,8 +10,11 @@ payments or direct debits.
 ## Current state
 
 - Local build, type-check and existing tests pass.
-- Migration `0016_accounting_outbox.sql` is forward-only and has not been
-  enabled with live FreeAgent credentials.
+- Source commit: `3251e3b2d3049d59c642b35df851f0fe924c0262`.
+- Production Worker version: `2915300b-35ad-44b2-895d-bbc4d6c49454`.
+- Migration `0016_accounting_outbox.sql` is applied in production D1; no
+  migrations are pending.
+- No FreeAgent secret or token is configured in the deployed Worker.
 - No FreeAgent secret or token is committed.
 - Sandbox and production acceptance are pending.
 - `phase-6-complete` must not be tagged until the external acceptance matrix
