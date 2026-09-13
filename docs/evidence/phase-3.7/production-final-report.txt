@@ -21,6 +21,7 @@ Production acceptance:
 - Real authenticated uploads and private R2 objects: pass
 - D1/R2 deletion lifecycle: pass
 - Search, filters, sort, clear and no-reload fragment behavior: pass
+- Browser Back/Forward reconstruction after the history fix: pass
 - Responsive screenshots and filter geometry: pass
 - Student own-resource UX and admin authorization denial: pass
 - Populated pagination transition: not claimed because production had one non-fixture
@@ -32,5 +33,11 @@ Mandatory open operational items remain:
 - Retention housekeeping: DEFERRED WITH DOCUMENTED OPERATIONAL DECISION
 
 The Phase 3 completion tag must not be created while those mandatory Phase 3 items remain
-unresolved. The final status is therefore PASSED WITH DOCUMENTED OPEN ITEM, subject to the
-post-fix exact-commit deployment and retest recorded in the final handoff.
+unresolved. Final source commit for the deployed fix: a58ac19
+Final remote commit at this checkpoint: a58ac19
+Final Worker version for that commit: 817546c8-11b5-4952-b232-15efcd6ae6f0
+Deployment time: 2026-09-13T01:44:35Z
+
+The final status is therefore PASSED WITH DOCUMENTED OPEN ITEM. The Phase 3 completion tag
+must not be created while PDF compression and retention housekeeping remain mandatory open
+items.

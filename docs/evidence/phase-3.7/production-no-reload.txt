@@ -10,6 +10,12 @@ Fix applied:
 - popstate-driven loads continue without adding a new history entry.
 - The existing AbortController/request-sequence protection remains unchanged.
 
-The fix was validated locally and is scheduled for production validation on the exact final
-deployed commit. The pre-fix behavior is retained here as the production defect evidence
-that justified the surgical change.
+Post-fix production validation on Worker 817546c8-11b5-4952-b232-15efcd6ae6f0:
+- Search, filter and clear each retained one document navigation entry.
+- Search, filter and clear each updated the URL and result fragment in place.
+- Back reconstructed the prior filtered URL and selected control value.
+- Forward reconstructed the later URL and selected control value.
+- The header remained mounted and the navigation entry count remained one.
+
+The pre-fix behavior is retained above as the production defect evidence that justified the
+surgical change.
