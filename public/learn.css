@@ -362,7 +362,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-attachment-form { display: grid; gap: 8px; }
 .report-attachment-form .resource-file-dropzone { min-height: 128px; padding: 20px 16px; border-radius: 0; }
 .report-attachment-form .upload-status { min-height: 0; margin: 0; }
-.report-attachment-form .form-actions { justify-content: flex-start; margin-top: 0; }
+.report-attachment-form .form-actions { display: none; justify-content: flex-start; margin: 0; }
+.report-attachment-form.has-file { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.report-attachment-form.has-file .form-actions { display: flex; grid-column: 2; grid-row: 1; }
+.report-attachment-form.has-file .upload-status { grid-column: 1 / -1; }
 .report-delivery { margin-top: 22px; color: var(--muted); }
 .report-document { break-inside: avoid; }
 @media print {

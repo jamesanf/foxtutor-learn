@@ -2,6 +2,12 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Inline lesson attachment upload action
+
+**Status:** deployed; authenticated production acceptance pending
+
+- The report attachment upload action remains hidden until a file is selected, then appears to the right of the dropzone while the dropzone shrinks to fit.
+
 ### 2026-09-13 — Report editor final UI refinements
 
 **Status:** deployed; authenticated production acceptance pending
