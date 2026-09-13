@@ -798,7 +798,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   document.querySelectorAll<HTMLFormElement>(".resource-upload-form, [data-report-attachment-form]").forEach((form) => {
     const student = form.elements.namedItem("studentId");
     const lessonElement = form.querySelector("[data-resource-lesson-select]");
-    const file = form.elements.namedItem("file") ?? form.elements.namedItem("attachment");
+    const file = form.elements.namedItem("file") ?? form.elements.namedItem("attachment") ?? form.elements.namedItem("attachments");
     const preview = form.querySelector("[data-file-preview]");
     const dropzone = form.querySelector<HTMLElement>("[data-file-dropzone]");
     const status = form.querySelector<HTMLElement>("[data-upload-status]");

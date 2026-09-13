@@ -52,6 +52,7 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain("if (uploadResponse.status !== 204)");
     expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
     expect(clientSource).toContain('".resource-upload-form, [data-report-attachment-form]"');
+    expect(clientSource).toContain('form.elements.namedItem("attachments")');
     expect(clientSource).toContain("Add another file");
     expect(clientSource).toContain("if (reportAttachmentForm) return;");
   });
