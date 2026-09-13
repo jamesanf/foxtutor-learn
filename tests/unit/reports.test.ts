@@ -3,7 +3,7 @@ import { generateLessonReportPdf } from "../../src/reports/pdf";
 import { renderRichTextHtml, richTextToPlainText } from "../../src/reports/rich-text";
 import { reportViewModel } from "../../src/reports/view";
 import type { LessonReport } from "../../src/db/reports";
-import { findSentLessonReportForStudent } from "../../src/db/reports";
+import { findSentLessonReportForStudent, markLessonReportSent } from "../../src/db/reports";
 
 const report: LessonReport = {
   id: "report-1",
@@ -50,6 +50,26 @@ describe("structured lesson reports", () => {
     await expect(findSentLessonReportForStudent(db, "lesson-1", "student-user-1")).resolves.toEqual(report);
     expect(query).toContain("SELECT r.id, r.lesson_id");
     expect(query).toContain("r.status = 'SENT'");
+  });
+
+  it("refreshes sent_at when a draft or already-sent report is delivered", async () => {
+    let query = "";
+    const statement = {
+      bind() {
+        return statement;
+      },
+      run() {
+        return Promise.resolve({ success: true });
+      }
+    };
+    const db = {
+      prepare(sql: string) {
+        query = sql;
+        return statement;
+      }
+    } as unknown as D1Database;
+    await markLessonReportSent(db, "report-1", "2026-09-13T15:30:00.000Z");
+    expect(query).toContain("status IN ('DRAFT', 'SENT')");
   });
 
   it("projects persisted snapshot data consistently", () => {

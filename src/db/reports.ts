@@ -94,7 +94,7 @@ export async function upsertLessonReport(
 }
 
 export async function markLessonReportSent(db: D1Database, id: string, now: string): Promise<void> {
-  await db.prepare("UPDATE lesson_reports SET status = 'SENT', sent_at = ?, updated_at = ? WHERE id = ? AND status = 'DRAFT'").bind(now, now, id).run();
+  await db.prepare("UPDATE lesson_reports SET status = 'SENT', sent_at = ?, updated_at = ? WHERE id = ? AND status IN ('DRAFT', 'SENT')").bind(now, now, id).run();
 }
 
 export async function findSentLessonReportForStudent(db: D1Database, lessonId: string, userId: string): Promise<LessonReport | null> {

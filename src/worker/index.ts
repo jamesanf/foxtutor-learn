@@ -119,6 +119,50 @@ export interface Env {
   RESOURCES_BUCKET?: R2Bucket;
 }
 
+type ReportRecipient = NonNullable<Awaited<ReturnType<typeof findActiveStudentRecipient>>>;
+
+async function emitLessonReportNotification(
+  env: Env,
+  lesson: Lesson,
+  report: LessonReport,
+  student: ReportRecipient,
+  resources: Resource[],
+  eventId: string,
+  now: string,
+  origin: string
+): Promise<Awaited<ReturnType<typeof emitNotification>>> {
+  if (!student.learn_user_id || !student.learn_user_email) return null;
+  const content = renderEmail("LESSON_REPORT", {
+    studentName: student.name,
+    startAt: report.lesson_start_at,
+    endAt: report.lesson_end_at,
+    timezone: report.lesson_timezone,
+    lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
+    reportPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}/report`,
+    externalUrl: lesson.external_url,
+    pupilName: report.pupil_name,
+    level: report.level,
+    thisLessonsFocus: report.this_lessons_focus,
+    nextLessonsFocus: report.next_lessons_focus,
+    homeLearningTask: report.home_learning_task,
+    notes: report.notes,
+    evenBetterIf: report.even_better_if,
+    resources: resources.filter((resource) => resource.status === "available" && !resource.deleted_at).map((resource) => ({
+      filename: resource.original_filename,
+      path: `/learn/student/resources/${encodeURIComponent(resource.id)}/download`
+    }))
+  }, origin);
+  return emitNotification(env, {
+    type: "LESSON_REPORT",
+    eventId,
+    recipientUserId: student.learn_user_id,
+    studentId: student.id,
+    lessonId: lesson.id,
+    reportId: report.id,
+    content
+  }, now);
+}
+
 function htmlDocument(title: string, body: string): Response {
   const headers = privateHeaders("text/html; charset=utf-8");
   return new Response(
@@ -326,9 +370,12 @@ function reportField(label: string, value: string): string {
   return `<section class="report-field"><h2>${escapeHtml(label)}</h2>${renderRichTextHtml(value)}</section>`;
 }
 
-function reportDocument(report: LessonReport, admin: boolean): string {
+function reportDocument(report: LessonReport, admin: boolean, csrfToken?: string, notice?: string): string {
   const view = reportViewModel(report);
-  return `<section class="card report-document"><div class="report-heading"><div><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Time</strong><br>${escapeHtml(view.lessonTime)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p></div><div class="report-feedback">${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<p class="report-delivery"><strong>${report.status === "SENT" ? "Sent" : "Draft"}</strong>${report.sent_at ? ` · ${escapeHtml(reportSentAt(report.sent_at, report.lesson_timezone))}` : ""}</p>` : ""}</section>`;
+  const resend = admin && csrfToken && report.status === "SENT"
+    ? `<form class="report-resend-form" method="post" action="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit" name="action" value="resend">Resend report</button></form>`
+    : "";
+  return `<section class="card report-document">${notice ? `<p class="form-error" role="alert">${escapeHtml(notice)}</p>` : ""}<div class="report-heading"><div><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Time</strong><br>${escapeHtml(view.lessonTime)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p></div><div class="report-feedback">${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<div class="report-delivery-row"><p class="report-delivery"><strong>${report.status === "SENT" ? "Sent" : "Draft"}</strong>${report.sent_at ? ` · ${escapeHtml(reportSentAt(report.sent_at, report.lesson_timezone))}` : ""}</p>${resend}</div>` : ""}</section>`;
 }
 
 function formatCalendarLessonTime(lesson: Lesson): string {
@@ -1371,7 +1418,16 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (request.method === "GET") {
       const lessonResources = await listResourcesForLesson(db, lesson.id);
       return appPage(active.user, csrfToken, "Lesson report", existing?.status === "SENT"
-        ? reportDocument(existing, true)
+        ? reportDocument(
+          existing,
+          true,
+          csrfToken,
+          url.searchParams.get("delivery") === "failed"
+            ? `Report resend failed${url.searchParams.get("reason") ? `: ${url.searchParams.get("reason")}` : "."}`
+            : url.searchParams.get("delivery") === "unknown"
+              ? "Report resend status is unknown; check Notifications before trying again."
+              : undefined
+        )
         : lessonReportForm(csrfToken, url.pathname, lesson, studentRecord, existing,
           url.searchParams.get("delivery") === "failed"
             ? `Report saved. Email delivery failed${url.searchParams.get("reason") ? `: ${url.searchParams.get("reason")}` : "; you can send it again without retyping the report."}`
@@ -1383,7 +1439,25 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
-    if (existing?.status === "SENT") return appPage(active.user, csrfToken, "Lesson report", reportDocument(existing, true));
+    if (existing?.status === "SENT") {
+      if (formText(form, "action") !== "resend") return appPage(active.user, csrfToken, "Lesson report", reportDocument(existing, true, csrfToken));
+      const student = await findActiveStudentRecipient(db, lesson.student_id);
+      if (!student?.learn_user_id || !student.learn_user_email) return messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
+      const notification = await emitLessonReportNotification(
+        env,
+        lesson,
+        existing,
+        student,
+        await listResourcesForLesson(db, lesson.id),
+        `${existing.id}:resend:${crypto.randomUUID()}`,
+        new Date().toISOString(),
+        canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin)
+      );
+      if (notification?.status === "SENT") return redirect(url.pathname);
+      if (notification?.status === "UNKNOWN") return redirect(`${url.pathname}?delivery=unknown`);
+      const reason = notification?.error_message ? `&reason=${encodeURIComponent(notification.error_message)}` : "";
+      return redirect(`${url.pathname}?delivery=failed${reason}`);
+    }
     const level = formText(form, "level").trim();
     const thisLessonsFocus = formText(form, "thisLessonsFocus").trim();
     const nextLessonsFocus = formText(form, "nextLessonsFocus").trim();
@@ -1469,35 +1543,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!student?.learn_user_id || !student.learn_user_email) return messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
     const resources = await listResourcesForLesson(db, lesson.id);
     const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin);
-    const content = renderEmail("LESSON_REPORT", {
-      studentName: student.name,
-      startAt: savedReport.lesson_start_at,
-      endAt: savedReport.lesson_end_at,
-      timezone: savedReport.lesson_timezone,
-      lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
-      reportPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}/report`,
-      externalUrl: lesson.external_url,
-      pupilName: savedReport.pupil_name,
-      level: savedReport.level,
-      thisLessonsFocus: savedReport.this_lessons_focus,
-      nextLessonsFocus: savedReport.next_lessons_focus,
-      homeLearningTask: savedReport.home_learning_task,
-      notes: savedReport.notes,
-      evenBetterIf: savedReport.even_better_if,
-      resources: resources.filter((resource) => resource.status === "available" && !resource.deleted_at).map((resource) => ({
-        filename: resource.original_filename,
-        path: `/learn/student/resources/${encodeURIComponent(resource.id)}/download`
-      }))
-    }, origin);
-    const notification = await emitNotification(env, {
-      type: "LESSON_REPORT",
-      eventId: reportId,
-      recipientUserId: student.learn_user_id,
-      studentId: student.id,
-      lessonId: lesson.id,
-      reportId,
-      content
-    }, now);
+    const notification = await emitLessonReportNotification(env, lesson, savedReport, student, resources, reportId, now, origin);
     if (notification?.status === "SENT") return redirect(url.pathname);
     if (notification?.status === "UNKNOWN") return redirect(`${url.pathname}?delivery=unknown`);
     const reason = notification?.error_message ? `&reason=${encodeURIComponent(notification.error_message)}` : "";
