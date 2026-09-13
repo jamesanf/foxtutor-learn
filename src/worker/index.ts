@@ -5,6 +5,7 @@ import { findActiveUser } from "../db/users";
 import {
   deactivateStudent,
   findStudent,
+  findActiveStudentRecipient,
   findStudentAccount,
   findActiveStudentForUser,
   findStudentLinkedToUser,
@@ -57,6 +58,12 @@ import {
   rotateCalendarFeed,
   type CalendarFeed
 } from "../db/calendar-feeds";
+import { findLessonReport, upsertLessonReport } from "../db/reports";
+import { listNotifications, notificationCounts } from "../db/notifications";
+import { createAndDeliverNotification, runReminderScheduler } from "../notifications/service";
+import { canonicalLearnOrigin } from "../notifications/links";
+import { renderEmail } from "../notifications/templates";
+import { eventIdempotencyKey, hasMaterialLessonChange, reminderDueAt } from "../domain/notifications";
 import {
   CALENDAR_TIMEZONE,
   currentCalendarDate
@@ -136,7 +143,7 @@ function escapeHtml(value: string): string {
 
 function navigation(role: Role): string {
   const links = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/resources", "Resources"], ["/learn/admin/students", "Students"]]
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/resources", "Resources"]];
   return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
 }
@@ -156,6 +163,72 @@ function withSessionCookies(response: Response, setCookies: string[] | undefined
 
 function buttonLink(href: string, label: string): string {
   return `<a class="button" href="${href}">${escapeHtml(label)}</a>`;
+}
+
+async function emitNotification(
+  env: Env,
+  draft: Parameters<typeof createAndDeliverNotification>[2],
+  now = new Date().toISOString()
+): Promise<void> {
+  if (!env.DB) return;
+  try {
+    await createAndDeliverNotification(env.DB, env, draft, now);
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 160) : "Notification creation failed";
+    console.error("notification creation failed", { type: draft.type, eventId: draft.eventId, message });
+  }
+}
+
+function lessonMailData(lesson: Lesson): {
+  studentName: string;
+  startAt: string;
+  endAt: string;
+  timezone: string;
+  lessonPath: string;
+  externalUrl: string | null;
+} {
+  return {
+    studentName: lesson.student_name ?? "Student",
+    startAt: lesson.start_at,
+    endAt: lesson.end_at,
+    timezone: lesson.timezone,
+    lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
+    externalUrl: lesson.external_url
+  };
+}
+
+function notificationStatusLabel(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
+function notificationList(
+  rows: Awaited<ReturnType<typeof listNotifications>>,
+  counts: Awaited<ReturnType<typeof notificationCounts>>,
+  selectedStatus?: string
+): string {
+  const filters = ["", "PENDING", "UNKNOWN", "FAILED", "SENT"].map((status) => {
+    const label = status ? notificationStatusLabel(status) : "All";
+    const href = status ? `/learn/admin/notifications?status=${status}` : "/learn/admin/notifications";
+    return `<a class="button${selectedStatus === status || (!selectedStatus && !status) ? "" : " secondary"}" href="${href}">${label}</a>`;
+  }).join(" ");
+  const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section></div>`;
+  const body = rows.length
+    ? `<div class="table-wrap"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Created</th><th>Provider</th><th>Failure</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Event">${escapeHtml(row.event_type.replaceAll("_", " "))}</td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${encodeURIComponent(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Created">${escapeHtml(row.created_at)}</td><td data-label="Provider">${escapeHtml(row.provider_reference ?? "—")}</td><td data-label="Failure">${escapeHtml(row.error_category ?? "—")}</td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
+  return `${summary}<section class="card"><div class="section-heading"><h2>Delivery</h2><div class="form-actions">${filters}</div></div>${body}</section>`;
+}
+
+function lessonReportForm(
+  csrfToken: string,
+  action: string,
+  lesson: Lesson,
+  summary: string,
+  homework: string,
+  additionalNotes: string,
+  error?: string,
+  sent = false
+): string {
+  return `<section class="card form-card"><p class="eyebrow">LESSON REPORT</p><h1>${sent ? "Lesson report sent" : "Lesson report"}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}${sent ? `<p>Nothing else is required for this report.</p><a class="button" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Back to lesson</a>` : `<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<label>Summary<textarea name="summary" rows="7" maxlength="12000" required>${escapeHtml(summary)}</textarea></label><label>Homework / follow-up<textarea name="homework" rows="5" maxlength="12000">${escapeHtml(homework)}</textarea></label><label>Additional notes for student<textarea name="additionalNotes" rows="5" maxlength="12000">${escapeHtml(additionalNotes)}</textarea></label><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Cancel</a><button class="button secondary" type="submit" name="action" value="save">Save draft</button><button class="button" type="submit" name="action" value="send">Send lesson report</button></div></form>`}</section>`;
 }
 
 function calendarFeedUrl(request: Request, env: Env, token: string): string {
@@ -722,7 +795,7 @@ function studentIdFromPath(pathname: string): string | null {
 }
 
 function lessonIdFromPath(pathname: string): string | null {
-  const match = /^\/learn\/(?:admin\/lessons|student\/lessons)\/([^/]+)(?:\/(?:edit|status))?$/.exec(pathname.replace(/\/+$/, ""));
+  const match = /^\/learn\/(?:admin\/lessons|student\/lessons)\/([^/]+)(?:\/(?:edit|status|report))?$/.exec(pathname.replace(/\/+$/, ""));
   return match ? decodePathSegment(match[1]) : null;
 }
 
@@ -883,6 +956,29 @@ async function resourceUpload(
     await markResourceFailed(env.DB as D1Database, resourceId, new Date().toISOString());
     return messagePage("Upload incomplete", "The resource was not made available because its metadata could not be committed.", 502);
   }
+  const availableResource = await findResource(env.DB as D1Database, resourceId);
+  const resourceStudent = await findActiveStudentRecipient(env.DB as D1Database, student.id);
+  if (availableResource && resourceStudent?.learn_user_id && resourceStudent.learn_user_email) {
+    const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN, new URL(request.url).origin);
+    const lessonContext = lesson
+      ? `${bookingDate(lesson)} · ${bookingTime(lesson)}`
+      : undefined;
+    const content = renderEmail("RESOURCE_ADDED", {
+      studentName: resourceStudent.name,
+      filename: availableResource.original_filename,
+      lessonLabel: lessonContext,
+      resourcePath: `/learn/student/resources/${encodeURIComponent(availableResource.id)}/download`
+    }, origin);
+    await emitNotification(env, {
+      type: "RESOURCE_ADDED",
+      eventId: availableResource.id,
+      recipientUserId: resourceStudent.learn_user_id,
+      studentId: resourceStudent.id,
+      lessonId: lesson?.id ?? null,
+      resourceId: availableResource.id,
+      content
+    });
+  }
   return resourceSuccessPage(active.user, active.csrfToken, resourceId, context);
 }
 
@@ -913,6 +1009,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   const url = new URL(request.url);
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
+  if (route === "admin-notifications") {
+    const requested = (url.searchParams.get("status") ?? "").toUpperCase();
+    const status = ["PENDING", "UNKNOWN", "FAILED", "SENT"].includes(requested) ? requested as "PENDING" | "UNKNOWN" | "FAILED" | "SENT" : undefined;
+    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><h1>Notifications</h1></div>${notificationList(await listNotifications(db, status), await notificationCounts(db), status)}`);
+  }
   if (route === "admin-resource-search") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Resource suggestions are read-only.", 405);
     return resourceSuggestionsResponse(await listResourceSuggestions(db, url.searchParams.get("q") ?? "", 5, url.searchParams.get("student") ?? undefined));
@@ -1070,7 +1171,20 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const account = await findStudentAccount(db, email);
     if (!account) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "The login email must belong to an active STUDENT Learn account."));
     if (await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
-    await insertStudent(db, { id: crypto.randomUUID(), name, email, learnUserId: account.id, now: new Date().toISOString() });
+    const now = new Date().toISOString();
+    const studentId = crypto.randomUUID();
+    await insertStudent(db, { id: studentId, name, email, learnUserId: account.id, now });
+    const createdStudent = await findActiveStudentRecipient(db, studentId);
+    if (createdStudent?.learn_user_id && createdStudent.learn_user_email) {
+      const content = renderEmail("STUDENT_INVITED", { studentName: createdStudent.name, origin: canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin) }, canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+      await emitNotification(env, {
+        type: "STUDENT_INVITED",
+        eventId: createdStudent.id,
+        recipientUserId: createdStudent.learn_user_id,
+        studentId: createdStudent.id,
+        content
+      }, now);
+    }
     return redirect("/learn/admin/students");
   }
   if (route === "admin-student" || route === "admin-student-edit" || route === "admin-student-deactivate") {
@@ -1128,8 +1242,87 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const student = await findStudent(db, validation.value.studentId);
     if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "Choose an active student.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt)) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "This student already has a lesson overlapping this time.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
-    await insertLesson(db, { ...validation.value, id: crypto.randomUUID(), now: new Date().toISOString() });
+    const now = new Date().toISOString();
+    const lessonId = crypto.randomUUID();
+    await insertLesson(db, { ...validation.value, id: lessonId, now });
+    const createdLesson = await findLesson(db, lessonId);
+    const recipient = await findActiveStudentRecipient(db, student.id);
+    if (createdLesson && recipient?.learn_user_id && recipient.learn_user_email) {
+      const content = renderEmail("LESSON_CREATED", lessonMailData(createdLesson), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+      await emitNotification(env, {
+        type: "LESSON_CREATED",
+        eventId: createdLesson.id,
+        recipientUserId: recipient.learn_user_id,
+        studentId: recipient.id,
+        lessonId: createdLesson.id,
+        content
+      }, now);
+    }
     return redirect("/learn/admin/lessons");
+  }
+  if (route === "admin-lesson-report") {
+    const id = lessonIdFromPath(url.pathname);
+    if (!id) return messagePage("Not found", "That lesson does not exist.", 404);
+    const lesson = await findLesson(db, id);
+    if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
+    if (lesson.status !== "completed") return messagePage("Report unavailable", "Lesson reports are available for completed lessons.", 409);
+    const existing = await findLessonReport(db, lesson.id);
+    if (request.method === "GET") {
+      return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(csrfToken, url.pathname, lesson, existing?.summary ?? "", existing?.homework ?? "", existing?.additional_notes ?? "", undefined, existing?.status === "SENT"));
+    }
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const form = await parseForm(request);
+    if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
+    if (existing?.status === "SENT") return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(csrfToken, url.pathname, lesson, existing.summary, existing.homework, existing.additional_notes, undefined, true));
+    const summary = formText(form, "summary").trim();
+    const homework = formText(form, "homework").trim();
+    const additionalNotes = formText(form, "additionalNotes").trim();
+    if (!summary || summary.length > 12_000 || homework.length > 12_000 || additionalNotes.length > 12_000) {
+      return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(csrfToken, url.pathname, lesson, summary, homework, additionalNotes, "Enter a summary and keep each report field to 12,000 characters or fewer."));
+    }
+    const reportId = existing?.id ?? crypto.randomUUID();
+    const now = new Date().toISOString();
+    await upsertLessonReport(db, {
+      id: reportId,
+      lesson_id: lesson.id,
+      student_id: lesson.student_id,
+      created_by_user_id: active.user.id,
+      summary,
+      homework,
+      additional_notes: additionalNotes,
+      status: "DRAFT",
+      now
+    });
+    if (formText(form, "action") === "save") return redirect(url.pathname);
+    const student = await findActiveStudentRecipient(db, lesson.student_id);
+    if (!student?.learn_user_id || !student.learn_user_email) return messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
+    const resources = await listResourcesForLesson(db, lesson.id);
+    const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin);
+    const content = renderEmail("LESSON_REPORT", {
+      studentName: student.name,
+      startAt: lesson.start_at,
+      endAt: lesson.end_at,
+      timezone: lesson.timezone,
+      lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
+      externalUrl: lesson.external_url,
+      summary,
+      homework,
+      additionalNotes,
+      resources: resources.filter((resource) => resource.status === "available" && !resource.deleted_at).map((resource) => ({
+        filename: resource.original_filename,
+        path: `/learn/student/resources/${encodeURIComponent(resource.id)}/download`
+      }))
+    }, origin);
+    await emitNotification(env, {
+      type: "LESSON_REPORT",
+      eventId: reportId,
+      recipientUserId: student.learn_user_id,
+      studentId: student.id,
+      lessonId: lesson.id,
+      reportId,
+      content
+    }, now);
+    return redirect(url.pathname);
   }
   if (route === "admin-lesson" || route === "admin-lesson-edit" || route === "admin-lesson-status") {
     const id = lessonIdFromPath(url.pathname);
@@ -1138,14 +1331,31 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
     if (route === "admin-lesson") {
       const resources = await listResourcesForLesson(db, lesson.id);
-      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div>${buttonLink(`${url.pathname}/edit`, "Edit lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${encodeURIComponent(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
+      const report = await findLessonReport(db, lesson.id);
+      const reportAction = lesson.status === "completed" ? buttonLink(`${url.pathname}/report`, report?.status === "SENT" ? "View report" : "Create lesson report") : "";
+      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div><div class="form-actions">${buttonLink(`${url.pathname}/edit`, "Edit lesson")}${reportAction}</div></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p>${report ? `<p><strong>Lesson report</strong><br>${report.status === "SENT" ? `Sent ${escapeHtml(report.sent_at ?? "")}` : "Draft"}</p>` : ""}</section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${encodeURIComponent(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
     }
     if (route === "admin-lesson-status") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
       const form = await parseForm(request);
       const nextStatus = form ? formText(form, "status") : "";
       if (!isLessonStatus(nextStatus) || !canTransitionLessonStatus(lesson.status, nextStatus)) return messagePage("Invalid status change", "That lesson lifecycle transition is not allowed.", 409);
-      await updateLessonStatus(db, lesson.id, nextStatus, new Date().toISOString());
+      const now = new Date().toISOString();
+      await updateLessonStatus(db, lesson.id, nextStatus, now);
+      if (nextStatus === "cancelled" && lesson.status !== "cancelled") {
+        const student = await findActiveStudentRecipient(db, lesson.student_id);
+        if (student?.learn_user_id && student.learn_user_email) {
+          const content = renderEmail("CANCELLATION_PROCESSED", lessonMailData(lesson), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+          await emitNotification(env, {
+            type: "CANCELLATION_PROCESSED",
+            eventId: lesson.id,
+            recipientUserId: student.learn_user_id,
+            studentId: student.id,
+            lessonId: lesson.id,
+            content
+          }, now);
+        }
+      }
       return redirect(`/learn/admin/lessons/${encodeURIComponent(lesson.id)}`);
     }
     const students = await listStudents(db);
@@ -1159,7 +1369,31 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const student = await findStudent(db, validation.value.studentId);
     if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, "Choose an active student.", lesson));
     if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt, lesson.id)) return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, "This student already has a lesson overlapping this time.", lesson));
-    await updateLesson(db, { ...validation.value, id: lesson.id, now: new Date().toISOString() });
+    const changed = hasMaterialLessonChange(lesson, {
+      student_id: validation.value.studentId,
+      start_at: validation.value.startAt,
+      end_at: validation.value.endAt,
+      timezone: validation.value.timezone,
+      external_url: validation.value.externalUrl
+    });
+    const now = new Date().toISOString();
+    await updateLesson(db, { ...validation.value, id: lesson.id, now });
+    if (changed) {
+      const updatedLesson = await findLesson(db, lesson.id);
+      const student = await findActiveStudentRecipient(db, validation.value.studentId);
+      if (updatedLesson && student?.learn_user_id && student.learn_user_email) {
+        const eventId = `${lesson.id}:${lesson.start_at}:${lesson.end_at}:${lesson.timezone}:${lesson.external_url ?? ""}->${updatedLesson.start_at}:${updatedLesson.end_at}:${updatedLesson.timezone}:${updatedLesson.external_url ?? ""}`;
+        const content = renderEmail("LESSON_CHANGED", lessonMailData(updatedLesson), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+        await emitNotification(env, {
+          type: "LESSON_CHANGED",
+          eventId,
+          recipientUserId: student.learn_user_id,
+          studentId: student.id,
+          lessonId: updatedLesson.id,
+          content
+        }, now);
+      }
+    }
     return redirect(`/learn/admin/lessons/${encodeURIComponent(lesson.id)}`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
@@ -1298,5 +1532,9 @@ export default {
     if (feedMatch) return handleCalendarFeed(request, env, feedMatch[1]);
     if (url.pathname === "/learn" || url.pathname.startsWith("/learn/")) return learn(request, env);
     return env.ASSETS.fetch(request);
+  },
+  async scheduled(controller: ScheduledController, env: Env, context: ExecutionContext): Promise<void> {
+    if (!env.DB) return;
+    context.waitUntil(runReminderScheduler(env.DB, env, new Date(controller.scheduledTime).toISOString()));
   }
 };

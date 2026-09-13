@@ -39,6 +39,17 @@ export async function findStudent(db: D1Database, id: string): Promise<Student |
   return db.prepare("SELECT s.id, s.name, s.email, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at FROM students s LEFT JOIN users u ON u.id = s.learn_user_id WHERE s.id = ?").bind(id).first<Student>();
 }
 
+export async function findActiveStudentRecipient(db: D1Database, id: string): Promise<Student | null> {
+  return db
+    .prepare(
+      `SELECT s.id, s.name, s.email, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
+       FROM students s JOIN users u ON u.id = s.learn_user_id
+       WHERE s.id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'`
+    )
+    .bind(id)
+    .first<Student>();
+}
+
 export async function findActiveStudentForUser(db: D1Database, userId: string): Promise<Student | null> {
   return db
     .prepare(

@@ -31,6 +31,8 @@ export type LearnRoute =
   | "admin-lesson"
   | "admin-lesson-edit"
   | "admin-lesson-status"
+  | "admin-lesson-report"
+  | "admin-notifications"
   | "student"
   | "student-calendar"
   | "student-calendar-feed"
@@ -65,7 +67,9 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin/lessons/new") return "admin-lesson-form";
   if (/^\/learn\/admin\/lessons\/[^/]+\/edit$/.test(path)) return "admin-lesson-edit";
   if (/^\/learn\/admin\/lessons\/[^/]+\/status$/.test(path)) return "admin-lesson-status";
+  if (/^\/learn\/admin\/lessons\/[^/]+\/report$/.test(path)) return "admin-lesson-report";
   if (/^\/learn\/admin\/lessons\/[^/]+$/.test(path)) return "admin-lesson";
+  if (path === "/learn/admin/notifications") return "admin-notifications";
   if (path === "/learn/student") return "student";
   if (path === "/learn/student/calendar") return "student-calendar";
   if (path === "/learn/student/calendar/feed") return "student-calendar-feed";

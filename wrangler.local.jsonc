@@ -3,6 +3,9 @@
   "name": "foxtutor-learn-local",
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-09-05",
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
   "assets": {
     "directory": "public",
     "binding": "ASSETS",

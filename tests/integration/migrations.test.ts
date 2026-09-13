@@ -36,4 +36,16 @@ describe("D1 foundation", () => {
     expect(migration).toContain("CHECK (student_id IS NOT NULL OR lesson_id IS NOT NULL)");
     expect(migration).toContain("idx_resources_lesson_created");
   });
+
+  it("adds lesson reports and one durable notification outbox", () => {
+    const reports = readFileSync("migrations/0006_lesson_reports.sql", "utf8");
+    const notifications = readFileSync("migrations/0007_notifications.sql", "utf8");
+    expect(reports).toContain("CREATE TABLE IF NOT EXISTS lesson_reports");
+    expect(reports).toContain("CHECK (status IN ('DRAFT', 'SENT'))");
+    expect(notifications).toContain("CREATE TABLE IF NOT EXISTS notifications");
+    expect(notifications).toContain("idempotency_key TEXT NOT NULL UNIQUE");
+    expect(notifications).toContain("CHECK (status IN ('PENDING', 'SENDING', 'SENT', 'UNKNOWN', 'FAILED'))");
+    expect(notifications).toContain("provider_reference TEXT");
+    expect(notifications).toContain("idx_notifications_status_attempt");
+  });
 });

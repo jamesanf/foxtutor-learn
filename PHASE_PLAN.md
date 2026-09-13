@@ -602,6 +602,25 @@ Teacher can upload lesson slides and homework; student can access them from the 
 
 Remove routine communication work from the tutor by making the platform event-driven around the existing `mail.foxtutor.org` API.
 
+### Phase 4.1 current state — 2026-09-13
+
+The local implementation adds forward-only `0006_lesson_reports.sql` and
+`0007_notifications.sql`, a typed notification contract, durable D1 outbox
+delivery state, typed text/HTML templates, server-side event wiring for
+student invitation, lesson creation/change, available resources and existing
+cancellation transitions, a five-minute scheduled Worker reminder using one
+24-hour policy, an admin delivery view, and an admin-only completed-lesson
+report workflow. Fox Mail remains the only provider boundary and retries
+retain the same provider idempotency key.
+
+The local suite and clean local D1 migration pass. Production deployment,
+authenticated browser acceptance, live scheduler/report fixtures and real
+Fox Mail success/idempotency acceptance remain pending. The existing Fox Mail
+documentation records that its production internal token and non-interactive
+Access Service Auth path must be restored before a real send can be claimed.
+`CANCELLATION_REQUESTED` is contract-ready but dormant; cancellation rules and
+rescheduling remain Phase 5.
+
 ### Must achieve
 
 - Define one small, stable internal notification contract.

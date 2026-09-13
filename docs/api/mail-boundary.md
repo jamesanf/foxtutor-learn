@@ -24,6 +24,13 @@ The Phase 1 adapter payload is:
 }
 ```
 
+Phase 4 notification delivery may additionally include an escaped `html`
+field. The plain-text `text` field remains required. Learn passes one stable
+`Idempotency-Key` for the logical notification, including timeout recovery; it
+does not create a new provider key for each HTTP attempt. A successful Fox
+Mail response may include a provider/message reference, which Learn stores as
+operational metadata.
+
 The bearer token is Fox Mail's `INTERNAL_API_TOKEN`, not a Cloudflare or Google credential. Optional `CF-Access-Client-Id` and `CF-Access-Client-Secret` headers support a separately configured Cloudflare Access Service Auth policy. The token is never sent to the browser or logged. Requests time out after eight seconds, and non-production environments use an explicit mock response when no token is configured.
 
 Fox Mail source confirms that `INTERNAL_API_TOKEN` is the bearer secret owned

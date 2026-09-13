@@ -23,6 +23,8 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   ├── domain/
 │   ├── security/
 │   ├── mail/
+│   ├── notifications/
+│   └── reports/
 │   └── client/
 ├── public/
 │   ├── learn.css

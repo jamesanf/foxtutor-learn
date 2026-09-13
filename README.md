@@ -4,7 +4,7 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 
 ## Current status
 
-**Phase:** Phase 3.8 final UI/source pass; authenticated production closure pending
+**Phase:** Phase 4.1 notification/reporting implementation; production mail acceptance pending
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
 **Latest state:** Phase 3.1 established the private `resources` D1 metadata model, dedicated private R2 buckets, server-authorized upload/download/delete flows, student resource lists and lesson resource sections. Phase 3.2 removes category from the application model, adds contextual lesson/student entry points, redesigns Add Resource around an accessible dropzone and adds compact list/detail metadata without changing resource infrastructure. Phase 3.3 adds server-side resource filtering, bookmarkable pagination state, page-scoped selection, guarded bulk deletion, compact accessible icon actions, explicit Open/Download/Details actions and new-tab Open behavior. Phase 3.8 normalizes the header control centerline, gives pagination a compact shared control family and adds source/browser contracts for both structures. PDF compression and automated retention housekeeping are explicitly deferred to future operational work; authenticated production pagination, isolation and visual acceptance remain pending because this environment has no Chromium session.
@@ -198,7 +198,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
 | 3.2 | Contextual Add Resource UX, dropzone selection and category removal from application code | Local implementation; production acceptance pending |
-| 4 | Mail notifications and reports | Deferred |
+| 4 | Mail notifications and reports | Phase 4.1 implemented locally; production Fox Mail acceptance pending |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |
@@ -213,4 +213,4 @@ There is no public registration and no application password subsystem. Only Acce
 - Fox Mail requires its `INTERNAL_API_TOKEN` plus a non-interactive Access Service Auth path before Learn can claim production delivery/idempotency evidence.
 - No real student data was added; the only active D1 users are the controlled admin and student identities.
 - Phase 2.1 is intentionally limited to students, lessons, ownership, lifecycle, notes, HTTPS lesson URLs, timezone-safe storage and overlap-aware scheduling.
-- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Phase 2.12 is functionally deployed, but its authenticated production, visual and formal release gates remain open. Phase 3.1 has established the first resource architecture; asynchronous PDF compression, OCR, notifications, billing and reporting remain deferred.
+- Phase 2.3 calendar UX and Phase 2.4 feed infrastructure remain deployed and production-accepted. Phase 2.12 is functionally deployed, but its authenticated production, visual and formal release gates remain open. Phase 3 resource infrastructure remains deployed. Phase 4.1 now contains the D1 notification outbox, Fox Mail adapter integration, event templates, 24-hour reminder scheduler and completed-lesson reporting workflow; production mail acceptance remains blocked by the documented Fox Mail internal-secret/service-auth prerequisite.

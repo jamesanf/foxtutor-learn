@@ -286,6 +286,9 @@ tr:last-child td { border-bottom: 0; }
 .status-completed { color: #075985; background: #e0f2fe; }
 .status-cancelled { color: #991b1b; background: #fee2e2; }
 .status-inactive { color: #92400e; background: #fef3c7; }
+.status-sent { color: #166534; background: #dcfce7; }
+.status-pending, .status-sending { color: #92400e; background: #fef3c7; }
+.status-failed, .status-unknown { color: #991b1b; background: #fee2e2; }
 .muted, .help { color: var(--muted); }
 .form-card { max-width: 820px; margin-top: 0; }
 label { display: block; margin: 18px 0; color: #243b53; font-weight: 650; }

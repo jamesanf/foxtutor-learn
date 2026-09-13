@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sendMail } from "../../src/mail/client";
+import { sendMail, sendMailDetailed } from "../../src/mail/client";
 
 describe("mail boundary", () => {
   it("uses a mock-safe path outside production", async () => {
@@ -36,5 +36,40 @@ describe("mail boundary", () => {
       subject: "test",
       text: "test"
     });
+  });
+
+  it("captures provider references and sends the typed HTML payload", async () => {
+    const calls: Request[] = [];
+    const result = await sendMailDetailed(
+      {
+        ENVIRONMENT: "production",
+        MAIL_API_URL: "https://mail.foxtutor.org",
+        MAIL_API_TOKEN: "test-token",
+        MAIL_API_FROM: "hello@foxtutor.org"
+      },
+      { to: "student@example.com", subject: "Report", text: "Report", html: "<p>Report</p>", idempotencyKey: "notification-test-message-1" },
+      async (input, init) => {
+        calls.push(new Request(input, init));
+        return new Response(JSON.stringify({ id: "provider-1" }), { status: 202, headers: { "Content-Type": "application/json" } });
+      }
+    );
+    expect(result).toEqual({ kind: "accepted", providerStatus: 202, providerReference: "provider-1" });
+    await expect(calls[0].json()).resolves.toMatchObject({ html: "<p>Report</p>", to: ["student@example.com"] });
+  });
+
+  it("classifies a request timeout as unknown rather than a permanent failure", async () => {
+    const result = await sendMailDetailed(
+      {
+        ENVIRONMENT: "production",
+        MAIL_API_URL: "https://mail.foxtutor.org",
+        MAIL_API_TOKEN: "test-token",
+        MAIL_API_FROM: "hello@foxtutor.org"
+      },
+      { to: "student@example.com", subject: "Reminder", text: "Reminder", idempotencyKey: "notification-test-message-2" },
+      async () => {
+        throw new Error("network timeout");
+      }
+    );
+    expect(result).toMatchObject({ kind: "failed", category: "PROVIDER_UNAVAILABLE", unknown: true, retryable: true });
   });
 });

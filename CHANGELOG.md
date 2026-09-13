@@ -2,6 +2,28 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 4.1 notifications, reminders and lesson reporting
+
+**Status:** local implementation complete; production Fox Mail acceptance pending
+
+- Added forward-only D1 lesson-report and notification outbox migrations with
+  durable event identity, recipient/business references, delivery state,
+  bounded retry metadata and provider-reference capture.
+- Added the small typed notification contract and reusable escaped text/HTML
+  templates for invitation, lesson created/changed, reminder, resource,
+  cancellation and lesson report messages. Fox Mail remains the only provider.
+- Wired successful server-side student, lesson, resource and existing
+  cancellation mutations to idempotent notifications. Added a five-minute
+  Worker schedule with one documented 24-hour reminder policy and safe
+  `UNKNOWN` timeout semantics.
+- Added admin notification delivery visibility and an admin-only completed
+  lesson report workflow with draft/sent persistence and authenticated
+  resource/lesson links.
+- Added migration, route, template, material-change, canonical-link and mail
+  integration regression coverage. Production deployment and real mail
+  acceptance remain blocked by the documented Fox Mail production secret and
+  service-auth prerequisite; no Phase 4 completion tag is claimed.
+
 ### 2026-09-13 — Phase 3.8 final UI/source pass
 
 **Status:** local source pass complete; authenticated production closure pending because no persistent Chromium session is available in the current environment
