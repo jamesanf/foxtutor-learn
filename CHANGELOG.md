@@ -11,6 +11,12 @@
   tracking, return-path, unsubscribe and classification headers remain
   provider-managed.
 
+### 2026-09-13 — Transparent PDF logo
+
+- Replaced the JPEG PDF logo embedding with the supplied transparent logo and
+  a PDF soft mask so the mark sits cleanly on the blue header bar.
+- Added regression coverage for the soft mask and current-year PDF footer.
+
 ### 2026-09-13 — Report email and PDF branding refinement
 
 - Simplified the report email header to FoxTutor and Lesson Report, removed

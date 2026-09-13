@@ -95,8 +95,8 @@ or D1 blob.
 The renderer uses a dynamically dated `© <current year> Fox Learning Ltd. All
 rights reserved.` footer matching the supplied template. Long text is wrapped within the
 feedback cells and the renderer reduces the line scale when needed to retain
-the one-page format. The supplied FoxTutor logo asset is embedded in the
-top-left header as a JPEG XObject loaded from the Worker asset bundle; PDFs do
+the one-page format. The supplied transparent FoxTutor logo asset is embedded
+in the top-left header with a PDF soft mask loaded from Worker assets; PDFs do
 not use a separate R2 object.
 
 ## Email presentation

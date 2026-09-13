@@ -1129,8 +1129,18 @@ function reportPdfFilename(report: LessonReport): string {
 
 async function downloadLessonReportPdf(request: Request, env: Env, report: LessonReport): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") return messagePage("Method not allowed", "Report downloads are read-only.", 405);
-  const logoResponse = await env.ASSETS.fetch(new Request(new URL("/foxlearninglogo-240.jpg", request.url)));
-  const logo = logoResponse.ok ? new Uint8Array(await logoResponse.arrayBuffer()) : undefined;
+  const [logoRgbResponse, logoAlphaResponse] = await Promise.all([
+    env.ASSETS.fetch(new Request(new URL("/foxlearninglogo-240.rgb.deflate", request.url))),
+    env.ASSETS.fetch(new Request(new URL("/foxlearninglogo-240.alpha.deflate", request.url)))
+  ]);
+  const logo = logoRgbResponse.ok && logoAlphaResponse.ok
+    ? {
+        width: 240,
+        height: 230,
+        rgb: new Uint8Array(await logoRgbResponse.arrayBuffer()),
+        alpha: new Uint8Array(await logoAlphaResponse.arrayBuffer())
+      }
+    : undefined;
   const pdf = generateLessonReportPdf(reportViewModel(report), logo);
   const headers = privateHeaders("application/pdf");
   headers.set("Content-Disposition", `attachment; filename="${reportPdfFilename(report)}"`);

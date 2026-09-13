@@ -92,9 +92,18 @@ describe("structured lesson reports", () => {
     expect(text).toContain("Brian");
     expect(text).toContain("ESOL N5/H");
     expect((text.match(/\/Type \/Page\b/g) ?? []).length).toBe(1);
-    const brandedPdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel(report), Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])));
+    const brandedPdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel(report), {
+      width: 2,
+      height: 2,
+      rgb: Uint8Array.from([0x78, 0x9c, 0x63, 0x60, 0x64, 0x62, 0x06, 0x00, 0x00, 0x0b, 0x00, 0x05]),
+      alpha: Uint8Array.from([0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0x00, 0x00, 0x00, 0x04, 0x00, 0x01])
+    }));
     expect(brandedPdf).toContain("/Subtype /Image");
+    expect(brandedPdf).toContain("/ColorSpace /DeviceGray");
+    expect(brandedPdf).toContain("/SMask");
+    expect(brandedPdf).toContain("/Filter /FlateDecode");
     expect(brandedPdf).toContain("/Im1 Do");
+    expect(brandedPdf).toContain(`${new Date().getFullYear()} Fox Learning Ltd. All rights reserved.`);
   });
 
   it("renders numbered and bulleted report content safely", () => {

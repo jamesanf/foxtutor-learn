@@ -57,7 +57,8 @@ redirect fallback, including a disabled spinner state and site notification.
 Report email uses a spacious metadata panel, omits empty feedback sections,
 removes duplicate pupil/footer content, adds the support contact and copyright
 footer, and uses a FoxTutor Learn text link. Generated PDFs remain
-single-page and now include the supplied FoxTutor logo asset in the header.
+single-page and now include the supplied transparent FoxTutor logo with a
+PDF soft mask in the header.
 
 The first authenticated report-send attempt reached Fox Mail but failed with
 `400 invalid_recipient`. Production D1 inspection confirmed that both the

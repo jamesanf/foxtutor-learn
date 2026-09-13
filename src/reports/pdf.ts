@@ -7,6 +7,13 @@ const BLUE = "0.055 0.455 0.565";
 const INK = "0.09 0.13 0.2";
 const LINE = "0.72 0.78 0.83";
 
+export interface PdfLogo {
+  width: number;
+  height: number;
+  rgb: Uint8Array;
+  alpha: Uint8Array;
+}
+
 function pdfSafe(value: string): string {
   return value
     .replace(/[^\x20-\xFF]/g, (character) => character === "–" ? "-" : "?")
@@ -149,16 +156,18 @@ function singlePage(report: StudentLessonReportViewModel, hasLogo: boolean): str
   return commands;
 }
 
-function buildDocument(pages: string[], logoJpeg?: Uint8Array): ArrayBuffer {
+function buildDocument(pages: string[], logo?: PdfLogo): ArrayBuffer {
   const objects: string[] = [];
   const pageObjectNumbers: number[] = [];
   objects.push("<< /Type /Catalog /Pages 2 0 R >>");
   objects.push("<< /Type /Pages /Kids [] /Count 0 >>");
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
-  const logoObjectNumber = logoJpeg ? objects.length + 1 : undefined;
-  if (logoJpeg) {
-    objects.push(`<< /Type /XObject /Subtype /Image /Width 240 /Height 230 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoJpeg.byteLength} >>\nstream\n${binaryString(logoJpeg)}\nendstream`);
+  const logoObjectNumber = logo ? objects.length + 1 : undefined;
+  const logoAlphaObjectNumber = logo ? objects.length + 2 : undefined;
+  if (logo && logoAlphaObjectNumber) {
+    objects.push(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /SMask ${logoAlphaObjectNumber} 0 R /Length ${logo.rgb.byteLength} >>\nstream\n${binaryString(logo.rgb)}\nendstream`);
+    objects.push(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length ${logo.alpha.byteLength} >>\nstream\n${binaryString(logo.alpha)}\nendstream`);
   }
   for (const page of pages) {
     const stream = `${page}\n`;
@@ -186,6 +195,6 @@ function buildDocument(pages: string[], logoJpeg?: Uint8Array): ArrayBuffer {
   return result;
 }
 
-export function generateLessonReportPdf(report: StudentLessonReportViewModel, logoJpeg?: Uint8Array): ArrayBuffer {
-  return buildDocument([singlePage(report, Boolean(logoJpeg)).join("\n")], logoJpeg);
+export function generateLessonReportPdf(report: StudentLessonReportViewModel, logo?: PdfLogo): ArrayBuffer {
+  return buildDocument([singlePage(report, Boolean(logo)).join("\n")], logo);
 }

@@ -89,7 +89,6 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
     path === "/learn/assets/learn.js" ||
     path === "/learn/assets/foxlearninglogo-120.webp" ||
     path === "/learn/assets/foxlearninglogo-240.webp" ||
-    path === "/learn/assets/foxlearninglogo-240.jpg" ||
     path === "/learn/assets/fonts/geist-latin-wght-normal.woff2" ||
     path === "/learn/assets/my-favicon/favicon.ico" ||
     path === "/learn/assets/my-favicon/favicon-96x96.png" ||
