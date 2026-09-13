@@ -63,6 +63,8 @@ describe("notification domain", () => {
     expect(rendered.html).not.toContain("Writing Practice");
     expect(rendered.html).toContain("/learn/student/lessons/lesson-1/report");
     expect(rendered.html).not.toContain("Summary");
+    expect(rendered.html).not.toContain("<!doctype");
+    expect(rendered.html).not.toContain("style=");
   });
 
   it("builds a minimal invitation with the Learn entry link", () => {

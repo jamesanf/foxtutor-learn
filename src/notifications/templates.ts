@@ -74,7 +74,7 @@ function lessonTime(data: LessonEmailData): string {
 }
 
 function frame(title: string, text: string, body: string): string {
-  return `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#172033"><main style="max-width:620px;margin:0 auto;padding:24px"><p style="color:#0e7490;font-weight:700">FoxTutor Learn</p><h1>${escapeHtml(title)}</h1>${body}<p style="margin-top:32px;color:#64748b;font-size:14px">${escapeHtml(text)}</p></main></body></html>`;
+  return `<div><p><strong>FoxTutor Learn</strong></p><h1>${escapeHtml(title)}</h1>${body}<p>${escapeHtml(text)}</p></div>`;
 }
 
 function lessonDetails(data: LessonEmailData, origin: string, includeStudent = false): { text: string; html: string } {
