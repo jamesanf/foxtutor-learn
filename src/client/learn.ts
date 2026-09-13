@@ -1020,17 +1020,19 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   });
 
   const setupNotificationConsole = () => {
-    const groups = Array.from(document.querySelectorAll<HTMLDetailsElement>("[data-notification-group]"));
+    const wrapper = document.querySelector<HTMLElement>("[data-notification-console]");
+    if (!wrapper) return;
+    const groups = Array.from(wrapper.querySelectorAll<HTMLDetailsElement>("[data-notification-group]"));
     groups.forEach((group) => group.addEventListener("toggle", () => {
       if (!group.open) return;
       groups.forEach((candidate) => {
         if (candidate !== group) candidate.removeAttribute("open");
       });
     }));
-    const filterToggle = document.querySelector<HTMLButtonElement>("[data-notification-filter-toggle]");
-    const filterPanel = document.querySelector<HTMLElement>("[data-notification-filter-panel]");
-    const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-notification-row]"));
-    const filterOptions = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-notification-filter]"));
+    const filterToggle = wrapper.querySelector<HTMLButtonElement>("[data-notification-filter-toggle]");
+    const filterPanel = wrapper.querySelector<HTMLElement>("[data-notification-filter-panel]");
+    const rows = Array.from(wrapper.querySelectorAll<HTMLElement>("[data-notification-row]"));
+    const filterOptions = Array.from(wrapper.querySelectorAll<HTMLButtonElement>("[data-notification-filter]"));
     filterToggle?.addEventListener("click", () => {
       if (!filterPanel || !filterToggle) return;
       filterPanel.hidden = !filterPanel.hidden;
@@ -1041,13 +1043,46 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       filterOptions.forEach((candidate) => {
         const active = candidate === option;
         candidate.classList.toggle("is-active", active);
-        candidate.classList.toggle("secondary", !active);
         candidate.setAttribute("aria-pressed", String(active));
       });
       rows.forEach((row) => {
         row.hidden = Boolean(value && row.dataset.notificationStatus !== value);
       });
     }));
+    const loadPage = async (target: URL) => {
+      wrapper.setAttribute("aria-busy", "true");
+      try {
+        const response = await fetch(target, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json", "X-Notification-Fragment": "1" }
+        });
+        if (!response.ok) throw new Error("Notification page could not be loaded.");
+        const payload = await response.json() as { html?: string; url?: string };
+        if (!payload.html) throw new Error("Notification page returned no content.");
+        const replacement = document.createRange().createContextualFragment(payload.html).firstElementChild;
+        if (!(replacement instanceof HTMLElement)) throw new Error("Notification page returned invalid content.");
+        wrapper.replaceWith(replacement);
+        window.history.pushState({}, "", payload.url ?? target.toString());
+        setupNotificationConsole();
+      } catch (error) {
+        wrapper.removeAttribute("aria-busy");
+        showNotification(error instanceof Error ? error.message : "Notification page could not be loaded.", "error");
+      }
+    };
+    wrapper.addEventListener("click", (event) => {
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.notification-page-link[href]");
+      if (!anchor || anchor.getAttribute("aria-disabled") === "true") return;
+      event.preventDefault();
+      void loadPage(new URL(anchor.href, window.location.href));
+    });
+    const pageSize = wrapper.querySelector(".notification-page-size");
+    if (pageSize instanceof HTMLSelectElement) pageSize.addEventListener("change", () => {
+      const select = pageSize;
+      const target = new URL(window.location.href);
+      target.searchParams.set("size", select.value);
+      target.searchParams.set("page", "1");
+      void loadPage(target);
+    });
   };
   setupNotificationConsole();
 

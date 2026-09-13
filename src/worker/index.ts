@@ -62,7 +62,7 @@ import {
   type CalendarFeed
 } from "../db/calendar-feeds";
 import { findLessonReport, findSentLessonReportForStudent, upsertLessonReport, type LessonReport } from "../db/reports";
-import { findNotificationById, listNotifications, notificationCounts, updateNotificationSchedule } from "../db/notifications";
+import { countNotifications, findNotificationById, listNotifications, notificationCounts, updateNotificationSchedule } from "../db/notifications";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
 import {
   cancelLesson,
@@ -284,6 +284,18 @@ function notificationEventLabel(eventType: string): string {
   return eventType.split("_").map((part) => part.charAt(0) + part.slice(1).toLowerCase()).join(" ");
 }
 
+function notificationTimestamp(value: string | null): string {
+  if (!value) return "Immediate";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: CALENDAR_TIMEZONE
+  }).format(new Date(value));
+}
+
 function notificationPreview(eventType: NotificationType, origin: string): { subject: string; text: string; html: string } {
   const lesson = {
     studentName: "Alex Taylor",
@@ -335,9 +347,9 @@ function notificationControls(settings: NotificationSetting[], csrfToken: string
     const timingLabel = reminder ? "Minutes before lesson" : "Delivery delay (minutes)";
     return `<form class="notification-setting-row" method="post" action="/learn/admin/notifications/settings">${hiddenCsrf(csrfToken)}<input type="hidden" name="eventType" value="${escapeHtml(setting.event_type)}"><div class="notification-setting-name"><strong>${escapeHtml(notificationEventLabel(setting.event_type))}</strong></div><label class="toggle-control"><input type="checkbox" name="enabled" value="1"${setting.enabled ? " checked" : ""}><span>${setting.enabled ? "Enabled" : "Disabled"}</span></label><label class="notification-timing">${escapeHtml(timingLabel)}<input type="number" name="timingMinutes" min="${reminder ? "1" : "-10080"}" max="10080" step="1" value="${setting.timing_minutes ?? 0}"></label><a class="button secondary notification-preview-link" href="/learn/admin/notifications/preview/${encodeURIComponent(setting.event_type)}" target="_blank" rel="noopener">Preview</a><button class="button secondary notification-save" type="submit">Save</button></form>`;
   };
-  const groupMarkup = groups.map((group, index) => {
+  const groupMarkup = groups.map((group) => {
     const rows = group.types.map((type) => settingByType.get(type)).filter((setting): setting is NotificationSetting => Boolean(setting)).map(rowForSetting).join("");
-    return `<details class="notification-group" data-notification-group${index === 0 ? " open" : ""}><summary><span><strong>${escapeHtml(group.label)}</strong><small>${escapeHtml(group.description)}</small></span></summary><div class="notification-group-body"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></details>`;
+    return `<details class="notification-group" data-notification-group><summary><span><strong>${escapeHtml(group.label)}</strong><small>${escapeHtml(group.description)}</small></span></summary><div class="notification-group-body"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></details>`;
   }).join("");
   return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Enable or disable future notifications and adjust when scheduled messages are sent.</p></div></div><div class="notification-settings-list">${groupMarkup}</div></section>`;
 }
@@ -350,7 +362,7 @@ function notificationList(
   selectedStatus?: string,
   page = 1,
   pageSize = 12,
-  hasNext = false
+  total = 0
 ): string {
   const filters = ["", "PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT", "SUPPRESSED"].map((status) => {
     const label = status ? notificationStatusLabel(status) : "All";
@@ -359,12 +371,15 @@ function notificationList(
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Suppressed</span><strong>${counts.SUPPRESSED}</strong></section></div>`;
   const body = rows.length
-    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${encodeURIComponent(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(row.scheduled_at ?? "Immediate")}</td><td data-label="Created">${escapeHtml(row.created_at)}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${encodeURIComponent(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(notificationTimestamp(row.scheduled_at))}</td><td data-label="Created">${escapeHtml(notificationTimestamp(row.created_at))}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
   const statusQuery = selectedStatus ? `&status=${encodeURIComponent(selectedStatus)}` : "";
   const sizeOptions = [12, 24, 48].map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("");
-  const pagination = `<div class="list-footer"><span>${page > 1 ? `<a class="button secondary" href="/learn/admin/notifications?page=${page - 1}&size=${pageSize}${statusQuery}">Previous</a>` : ""}</span><label class="page-size-control">Per page <select onchange="this.form.submit()" form="notification-page-size" name="size">${sizeOptions}</select></label><form id="notification-page-size" method="get" action="/learn/admin/notifications"><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}</form><span class="muted">Page ${page}</span><span>${hasNext ? `<a class="button secondary" href="/learn/admin/notifications?page=${page + 1}&size=${pageSize}${statusQuery}">Next</a>` : ""}</span></div>`;
-  return `${summary}${notificationControls(settings, csrfToken)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg>Filter</button></div></div><div class="notification-filter-panel notification-filter-bar" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div>${body}${pagination}</section>`;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const hrefForPage = (nextPage: number): string => `/learn/admin/notifications?page=${nextPage}&size=${pageSize}${statusQuery}`;
+  const pagination = `<footer class="list-footer notification-pagination"><span class="notification-pagination-spacer"></span><nav class="notification-pagination-nav pagination" aria-label="Notification delivery pagination"><a class="pagination-link pagination-nav-link notification-page-link${safePage <= 1 ? " is-disabled" : ""}"${safePage <= 1 ? ' aria-disabled="true"' : ` href="${hrefForPage(safePage - 1)}"`} aria-label="Previous page">‹</a><span class="notification-page-label">Page ${safePage} of ${pageCount}</span><a class="pagination-link pagination-nav-link notification-page-link${safePage >= pageCount ? " is-disabled" : ""}"${safePage >= pageCount ? ' aria-disabled="true"' : ` href="${hrefForPage(safePage + 1)}"`} aria-label="Next page">›</a></nav><form class="page-size-form" method="get" action="/learn/admin/notifications"><label for="notification-page-size">Show per page</label><select id="notification-page-size" class="page-size-select notification-page-size" name="size">${sizeOptions}</select><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}<noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  return `${summary}${notificationControls(settings, csrfToken)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false" aria-label="Filter delivery log" title="Filter delivery log"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg></button></div></div><div class="notification-filter-panel notification-filter-bar" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div>${body}${pagination}</section>`;
 }
 
 function notificationDetail(notification: Awaited<ReturnType<typeof findNotificationById>>, csrfToken: string, error?: string): string {
@@ -373,7 +388,7 @@ function notificationDetail(notification: Awaited<ReturnType<typeof findNotifica
   const scheduleControl = notification.status === "PENDING"
     ? `<form method="post" action="/learn/admin/notifications/${encodeURIComponent(notification.id)}">${hiddenCsrf(csrfToken)}<label>Send at (UK time)<input type="datetime-local" name="scheduledAt" value="${escapeHtml(scheduled)}" required></label>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<div class="form-actions"><button class="button" type="submit">Update schedule</button></div></form>`
     : `<p class="muted">Scheduling is locked because this notification is ${notificationStatusLabel(notification.status).toLowerCase()}.</p>`;
-  return `<section class="card notification-detail"><div class="page-heading"><div><h1>${escapeHtml(notification.event_type.replaceAll("_", " "))}</h1><p class="lede">${escapeHtml(notificationStatusLabel(notification.status))} · ${escapeHtml(notification.recipient_email ?? "Unknown")}</p></div><a class="button secondary" href="/learn/admin/notifications">Back to notifications</a></div><dl class="detail-grid"><div><dt>Created</dt><dd>${escapeHtml(notification.created_at)}</dd></div><div><dt>Scheduled</dt><dd>${escapeHtml(notification.scheduled_at ?? "Immediate")}</dd></div><div><dt>Attempts</dt><dd>${notification.attempt_count}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(notification.provider_reference ?? "—")}</dd></div></dl><h2>Subject</h2><p>${escapeHtml(notification.subject)}</p><h2>Plain-text content</h2><pre class="notification-content">${escapeHtml(notification.text_body)}</pre><h2>HTML content</h2><pre class="notification-content">${escapeHtml(notification.html_body)}</pre><h2>Schedule</h2>${scheduleControl}</section>`;
+  return `<section class="card notification-detail"><div class="page-heading"><div><h1>${escapeHtml(notification.event_type.replaceAll("_", " "))}</h1><p class="lede">${escapeHtml(notificationStatusLabel(notification.status))} · ${escapeHtml(notification.recipient_email ?? "Unknown")}</p></div><div class="form-actions"><a class="button secondary" href="/learn/admin/notifications/${encodeURIComponent(notification.id)}/preview" target="_blank" rel="noopener">Preview email</a><a class="button secondary" href="/learn/admin/notifications">Back to notifications</a></div></div><dl class="detail-grid"><div><dt>Created</dt><dd>${escapeHtml(notificationTimestamp(notification.created_at))}</dd></div><div><dt>Scheduled</dt><dd>${escapeHtml(notificationTimestamp(notification.scheduled_at))}</dd></div><div><dt>Attempts</dt><dd>${notification.attempt_count}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(notification.provider_reference ?? "—")}</dd></div></dl><h2>Subject</h2><p>${escapeHtml(notification.subject)}</p><h2>Plain-text content</h2><pre class="notification-content">${escapeHtml(notification.text_body)}</pre><h2>HTML content</h2><pre class="notification-content">${escapeHtml(notification.html_body)}</pre><h2>Schedule</h2>${scheduleControl}</section>`;
 }
 
 function lessonReportForm(
@@ -1473,14 +1488,33 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
     const requestedSize = Number.parseInt(url.searchParams.get("size") ?? "12", 10);
     const pageSize = [12, 24, 48].includes(requestedSize) ? requestedSize : 12;
-    const listedRows = await listNotifications(db, status, pageSize + 1, (page - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor outbound email, inspect its content, and control future delivery.</p></div></div>${notificationList(listedRows.slice(0, pageSize), await notificationCounts(db), await listNotificationSettings(db), csrfToken, status, page, pageSize, listedRows.length > pageSize)}`);
+    const [listedRows, counts, settings, total] = await Promise.all([
+      listNotifications(db, status, pageSize, (page - 1) * pageSize),
+      notificationCounts(db),
+      listNotificationSettings(db),
+      countNotifications(db, status)
+    ]);
+    const notificationHtml = `<div data-notification-console>${notificationList(listedRows, counts, settings, csrfToken, status, page, pageSize, total)}</div>`;
+    if (request.method === "GET" && request.headers.get("X-Notification-Fragment") === "1") {
+      const headers = privateHeaders("application/json; charset=utf-8");
+      headers.set("Cache-Control", "no-store");
+      return new Response(JSON.stringify({ html: notificationHtml, url: url.toString() }), { status: 200, headers });
+    }
+    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor outbound email, inspect its content, and control future delivery.</p></div></div>${notificationHtml}`);
   }
   if (route === "admin-notification") {
-    const id = notificationIdFromPath(url.pathname);
+    const previewMatch = /^\/learn\/admin\/notifications\/([^/]+)\/preview$/.exec(url.pathname.replace(/\/+$/, ""));
+    const id = previewMatch ? decodePathSegment(previewMatch[1]) : notificationIdFromPath(url.pathname);
     if (!id) return messagePage("Not found", "That notification does not exist.", 404);
     const notification = await findNotificationById(db, id);
     if (!notification) return messagePage("Not found", "That notification does not exist.", 404);
+    if (previewMatch) {
+      if (request.method !== "GET") return messagePage("Preview unavailable", "Notification previews are read-only.", 405);
+      const headers = privateHeaders("text/html; charset=utf-8");
+      headers.set("Cache-Control", "private, no-store");
+      headers.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'");
+      return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(notification.subject)} · FoxTutor</title></head><body>${notification.html_body}</body></html>`, { status: 200, headers });
+    }
     if (request.method === "GET") return appPage(active.user, csrfToken, "Notification", notificationDetail(notification, csrfToken));
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     if (notification.status !== "PENDING") return messagePage("Schedule unavailable", "Only pending notifications can be rescheduled.", 409);

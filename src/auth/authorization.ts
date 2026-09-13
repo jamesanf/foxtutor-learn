@@ -83,6 +83,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/lessons\/[^/]+\/report$/.test(path)) return "admin-lesson-report";
   if (/^\/learn\/admin\/lessons\/[^/]+$/.test(path)) return "admin-lesson";
   if (path === "/learn/admin/notifications" || path === "/learn/admin/notifications/settings" || path.startsWith("/learn/admin/notifications/preview/")) return "admin-notifications";
+  if (/^\/learn\/admin\/notifications\/[^/]+\/preview$/.test(path)) return "admin-notification";
   if (/^\/learn\/admin\/notifications\/[^/]+$/.test(path)) return "admin-notification";
   if (path === "/learn/admin/reschedules") return "admin-reschedules";
   if (/^\/learn\/admin\/reschedules\/[^/]+\/approve$/.test(path)) return "admin-reschedule-approve";

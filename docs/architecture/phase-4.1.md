@@ -112,5 +112,11 @@ exists. Admin notification and report routes use the existing session, role and
 CSRF controls. All Learn links use the configured canonical origin and remain
 behind the existing Access/session authorization boundary.
 
+The notification console keeps the delivery log paginated and supports
+authenticated, rendered HTML previews for both notification templates and
+individual historical outbox rows. Delivery timestamps shown in the console
+are formatted in the configured UK calendar timezone; stored UTC values remain
+the source of truth.
+
 HTML template values are escaped; private lesson notes, tokens, IDs and
 provider credentials are not included in student messages.

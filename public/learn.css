@@ -362,15 +362,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .toggle-control input:checked::after { transform: translateX(16px); }
 .notification-log-heading { align-items: start; }
 .notification-filter { position: relative; flex: 0 0 auto; }
-.notification-filter-toggle { min-width: 98px; }
+.notification-filter-toggle { width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 7px; }
 .notification-filter-icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .notification-filter-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 5; width: min(420px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 12px 28px rgb(16 42 67 / 16%); }
 .notification-filter-bar { position: static; width: auto; margin: 0 0 16px; padding: 10px 0 0; border: 0; box-shadow: none; }
 .notification-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
 .notification-filter-grid .button { width: 100%; min-height: 30px; margin: 0; padding: 5px 9px; border-color: #b8dce5; color: #155e75; background: #e8f7fa; font-size: .76rem; }
 .notification-filter-grid .button:hover { border-color: #7cc7d5; background: #d9f1f5; }
-.notification-filter-option.is-active { border-color: var(--action); color: white; background: var(--action); }
+.notification-filter-grid .button:focus, .notification-filter-grid .button:active { border-color: #7cc7d5; color: #155e75; background: #d9f1f5; }
+.notification-filter-option.is-active, .notification-filter-option.is-active:hover, .notification-filter-option.is-active:focus, .notification-filter-option.is-active:active { border-color: var(--action); color: white; background: var(--action); }
 .notification-filter-toggle, .notification-filter-option, .notification-preview-link, .notification-save { min-height: 32px; padding: 6px 10px; font-size: .78rem; }
+.notification-filter-toggle { padding: 7px; }
+.notification-pagination { grid-template-columns: 1fr auto 1fr; }
+.notification-pagination .pagination { justify-content: center; }
+.notification-page-label { min-width: 96px; color: var(--muted); text-align: center; font-size: .86rem; }
+.notification-pagination-spacer { min-width: 1px; }
 .page-size-control { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--muted); font-size: .86rem; font-weight: 500; }
 .page-size-control select { width: auto; min-width: 68px; margin: 0; padding: 7px 25px 7px 9px; }
 .secondary { border-color: var(--line); color: var(--foreground); background: var(--soft); }

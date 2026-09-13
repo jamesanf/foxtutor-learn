@@ -183,6 +183,13 @@ export async function listNotifications(db: D1Database, status?: NotificationSta
   return result.results;
 }
 
+export async function countNotifications(db: D1Database, status?: NotificationStatus): Promise<number> {
+  const result = status
+    ? await db.prepare("SELECT COUNT(*) AS count FROM notifications WHERE status = ?").bind(status).first<{ count: number | string }>()
+    : await db.prepare("SELECT COUNT(*) AS count FROM notifications").first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
 export async function notificationCounts(db: D1Database): Promise<Record<NotificationStatus, number>> {
   const result = await db.prepare("SELECT status, COUNT(*) AS count FROM notifications GROUP BY status").all<{ status: NotificationStatus; count: number | string }>();
   const counts: Record<NotificationStatus, number> = { PENDING: 0, SENDING: 0, SENT: 0, UNKNOWN: 0, FAILED: 0, SUPPRESSED: 0 };
