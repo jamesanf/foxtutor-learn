@@ -8,6 +8,12 @@
   the server and an undo link in student cancellation emails.
 - Simplified cancelled lesson pages and emails, hid cancelled lessons from
   the student lesson list, and aligned lesson table columns.
+- Changed lesson reminders to a 15-minute lead and removed the misleading
+  fixed "tomorrow" wording.
+- Expanded the admin notification console with delivery pagination, content
+  inspection and pending schedule adjustment.
+- Limited student reschedule requests to hourly starts between 09:00 and
+  21:00, within seven days of the original lesson date.
 - Added per-message `FoxTutor` sender-name support through Fox Mail while
   retaining `hello@foxtutor.org`.
 

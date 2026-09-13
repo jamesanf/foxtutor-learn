@@ -62,7 +62,7 @@ import {
   type CalendarFeed
 } from "../db/calendar-feeds";
 import { findLessonReport, findSentLessonReportForStudent, upsertLessonReport, type LessonReport } from "../db/reports";
-import { listNotifications, notificationCounts } from "../db/notifications";
+import { findNotificationById, listNotifications, notificationCounts, updateNotificationSchedule } from "../db/notifications";
 import {
   cancelLesson,
   listLessonHistory,
@@ -282,18 +282,30 @@ function notificationStatusLabel(status: string): string {
 function notificationList(
   rows: Awaited<ReturnType<typeof listNotifications>>,
   counts: Awaited<ReturnType<typeof notificationCounts>>,
-  selectedStatus?: string
+  selectedStatus?: string,
+  page = 1
 ): string {
-  const filters = ["", "PENDING", "UNKNOWN", "FAILED", "SENT"].map((status) => {
+  const filters = ["", "PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT"].map((status) => {
     const label = status ? notificationStatusLabel(status) : "All";
     const href = status ? `/learn/admin/notifications?status=${status}` : "/learn/admin/notifications";
     return `<a class="button${selectedStatus === status || (!selectedStatus && !status) ? "" : " secondary"}" href="${href}">${label}</a>`;
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section></div>`;
   const body = rows.length
-    ? `<div class="table-wrap"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Created</th><th>Provider</th><th>Failure</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Event">${escapeHtml(row.event_type.replaceAll("_", " "))}</td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Created">${escapeHtml(row.created_at)}</td><td data-label="Provider">${escapeHtml(row.provider_reference ?? "—")}</td><td data-label="Failure">${escapeHtml(row.error_category ?? "—")}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Scheduled</th><th>Created</th><th>Provider</th><th>Failure</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Event"><a href="/learn/admin/notifications/${encodeURIComponent(row.id)}">${escapeHtml(row.event_type.replaceAll("_", " "))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(row.scheduled_at ?? "Immediate")}</td><td data-label="Created">${escapeHtml(row.created_at)}</td><td data-label="Provider">${escapeHtml(row.provider_reference ?? "—")}</td><td data-label="Failure">${escapeHtml(row.error_category ?? "—")}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
-  return `${summary}<section class="card"><div class="section-heading"><h2>Delivery</h2><div class="form-actions">${filters}</div></div>${body}</section>`;
+  const statusQuery = selectedStatus ? `&status=${encodeURIComponent(selectedStatus)}` : "";
+  const pagination = `<div class="list-footer"><span>${page > 1 ? `<a class="button secondary" href="/learn/admin/notifications?page=${page - 1}${statusQuery}">Previous</a>` : ""}</span><span class="muted">Page ${page}</span><span>${rows.length === 50 ? `<a class="button secondary" href="/learn/admin/notifications?page=${page + 1}${statusQuery}">Next</a>` : ""}</span></div>`;
+  return `${summary}<section class="card"><div class="section-heading"><h2>Delivery</h2><div class="form-actions">${filters}</div></div>${body}${pagination}</section>`;
+}
+
+function notificationDetail(notification: Awaited<ReturnType<typeof findNotificationById>>, csrfToken: string, error?: string): string {
+  if (!notification) return `<section class="card empty-state compact-empty"><h2>Notification not found</h2></section>`;
+  const scheduled = notification.scheduled_at ? isoToLocalDateTime(notification.scheduled_at, CALENDAR_TIMEZONE) : "";
+  const scheduleControl = notification.status === "PENDING"
+    ? `<form method="post" action="/learn/admin/notifications/${encodeURIComponent(notification.id)}">${hiddenCsrf(csrfToken)}<label>Send at (UK time)<input type="datetime-local" name="scheduledAt" value="${escapeHtml(scheduled)}" required></label>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<div class="form-actions"><button class="button" type="submit">Update schedule</button></div></form>`
+    : `<p class="muted">Scheduling is locked because this notification is ${notificationStatusLabel(notification.status).toLowerCase()}.</p>`;
+  return `<section class="card notification-detail"><div class="page-heading"><div><h1>${escapeHtml(notification.event_type.replaceAll("_", " "))}</h1><p class="lede">${escapeHtml(notificationStatusLabel(notification.status))} · ${escapeHtml(notification.recipient_email ?? "Unknown")}</p></div><a class="button secondary" href="/learn/admin/notifications">Back to notifications</a></div><dl class="detail-grid"><div><dt>Created</dt><dd>${escapeHtml(notification.created_at)}</dd></div><div><dt>Scheduled</dt><dd>${escapeHtml(notification.scheduled_at ?? "Immediate")}</dd></div><div><dt>Attempts</dt><dd>${notification.attempt_count}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(notification.provider_reference ?? "—")}</dd></div></dl><h2>Subject</h2><p>${escapeHtml(notification.subject)}</p><h2>Plain-text content</h2><pre class="notification-content">${escapeHtml(notification.text_body)}</pre><h2>HTML content</h2><pre class="notification-content">${escapeHtml(notification.html_body)}</pre><h2>Schedule</h2>${scheduleControl}</section>`;
 }
 
 function lessonReportForm(
@@ -936,7 +948,7 @@ function studentLessonActions(lesson: Lesson, csrfToken: string, pending: Resche
   } else if (pending) {
     actions.push(`<span class="status status-pending">Reschedule request pending</span>`);
   } else {
-    actions.push(`<span class="button secondary disabled-action" aria-disabled="true">Cancel lesson</span>`);
+    actions.push(`<span class="button secondary disabled-action" aria-disabled="true" tabindex="0" title="Lessons cannot be cancelled within 24 hours.">Cancel lesson</span>`);
     actions.push(buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/reschedule`, "Request reschedule"));
   }
   return `<div class="form-actions lesson-actions">${actions.join("")}</div>`;
@@ -950,10 +962,43 @@ function undoCancellationConfirmation(csrfToken: string, lesson: Lesson): string
   return `<section class="card form-card"><p class="eyebrow">CANCELLATION</p><h1>Restore this lesson?</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This will put the lesson back on your schedule.</p><form method="post" action="/learn/student/lessons/${lessonRouteId(lesson.id)}/undo-cancellation" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/lessons/${lessonRouteId(lesson.id)}">Keep cancelled</a><button class="button" type="submit">Restore lesson</button></form></section>`;
 }
 
-function rescheduleForm(csrfToken: string, lesson: Lesson, action: string, error?: string, requestMode = false): string {
+function studentRescheduleWindow(lesson: Lesson): { minDate: string; maxDate: string } {
+  const minDate = isoToLocalDateTime(lesson.start_at, lesson.timezone).slice(0, 10);
+  const base = new Date(`${minDate}T12:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + 7);
+  return { minDate, maxDate: base.toISOString().slice(0, 10) };
+}
+
+function studentRescheduleFormFields(lesson: Lesson): string {
+  const { minDate, maxDate } = studentRescheduleWindow(lesson);
+  const hours = Array.from({ length: 13 }, (_, index) => index + 9)
+    .map((hour) => `<option value="${String(hour).padStart(2, "0")}:00">${hour}:00</option>`)
+    .join("");
+  return `<label>Date<input type="date" name="requestDate" min="${minDate}" max="${maxDate}" value="${minDate}" required><span class="field-help">Choose a date within one week of the original lesson.</span></label><label>Start time<select name="requestHour" required>${hours}</select><span class="field-help">Hourly starts from 09:00 to 21:00.</span></label>`;
+}
+
+function studentRequestedRescheduleTime(form: FormData, lesson: Lesson): { start: string | null; end: string | null; error?: string } {
+  const date = formText(form, "requestDate").trim();
+  const hour = formText(form, "requestHour").trim();
+  const { minDate, maxDate } = studentRescheduleWindow(lesson);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < minDate || date > maxDate) {
+    return { start: null, end: null, error: "Choose a date within one week of the original lesson." };
+  }
+  if (!/^(?:09|1[0-9]|20|21):00$/.test(hour)) return { start: null, end: null, error: "Choose an hourly start time between 09:00 and 21:00." };
+  const start = localDateTimeToIso(`${date}T${hour}`, lesson.timezone);
+  if (!start.value) return { start: null, end: null, error: start.error ?? "Choose a valid start time." };
+  const end = new Date(Date.parse(start.value) + STANDARD_LESSON_DURATION_MINUTES * 60_000).toISOString();
+  return { start: start.value, end };
+}
+
+function rescheduleForm(csrfToken: string, lesson: Lesson, action: string, error?: string, requestMode = false, studentMode = false): string {
   const start = isoToLocalDateTime(lesson.start_at, lesson.timezone);
   const end = isoToLocalDateTime(lesson.end_at, lesson.timezone);
-  return `<section class="card form-card"><p class="eyebrow">RESCHEDULE</p><h1>${requestMode ? "Request a new time" : "Choose a new time"}</h1><p class="lede">Current: ${escapeHtml(formatLessonTime(lesson))}</p>${requestMode ? "<p>This lesson is within 24 hours, so your tutor will review the new time before it is changed.</p>" : ""}${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<label>Start<input type="datetime-local" name="startAt" value="${escapeHtml(start)}" required></label><label>End<input type="datetime-local" name="endAt" value="${escapeHtml(end)}" required></label><input type="hidden" name="timezone" value="${escapeHtml(lesson.timezone)}"><div class="form-actions"><a class="button secondary" href="/learn/${action.includes("/admin/") ? "admin" : "student"}/lessons/${lessonRouteId(lesson.id)}">Keep current time</a><button class="button" type="submit">${requestMode ? "Submit request" : "Confirm reschedule"}</button></div></form></section>`;
+  const fields = studentMode
+    ? studentRescheduleFormFields(lesson)
+    : `${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}<input type="hidden" name="timezone" value="${escapeHtml(lesson.timezone)}">`;
+  const note = requestMode ? "<p>Your tutor will review the requested time before the lesson is changed.</p>" : "";
+  return `<section class="card form-card"><h1>${studentMode ? "Choose a new lesson time" : "Reschedule lesson"}</h1>${note}${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${fields}<div class="form-actions"><a class="button secondary" href="/learn/${action.includes("/admin/") ? "admin" : "student"}/lessons/${lessonRouteId(lesson.id)}">Keep current time</a><button class="button" type="submit">${requestMode ? "Submit request" : "Confirm reschedule"}</button></div></form></section>`;
 }
 
 function rescheduleQueue(requests: RescheduleRequest[], csrfToken: string): string {
@@ -1049,6 +1094,11 @@ function lessonIdFromPath(pathname: string): string | null {
 
 function rescheduleRequestIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/admin\/reschedules\/([^/]+)\/(?:approve|reject)$/.exec(pathname.replace(/\/+$/, ""));
+  return match ? decodePathSegment(match[1]) : null;
+}
+
+function notificationIdFromPath(pathname: string): string | null {
+  const match = /^\/learn\/admin\/notifications\/([^/]+)$/.exec(pathname.replace(/\/+$/, ""));
   return match ? decodePathSegment(match[1]) : null;
 }
 
@@ -1310,8 +1360,27 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
   if (route === "admin-notifications") {
     const requested = (url.searchParams.get("status") ?? "").toUpperCase();
-    const status = ["PENDING", "UNKNOWN", "FAILED", "SENT"].includes(requested) ? requested as "PENDING" | "UNKNOWN" | "FAILED" | "SENT" : undefined;
-    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><h1>Notifications</h1></div>${notificationList(await listNotifications(db, status), await notificationCounts(db), status)}`);
+    const status = ["PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT"].includes(requested) ? requested as "PENDING" | "SENDING" | "UNKNOWN" | "FAILED" | "SENT" : undefined;
+    const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor every outbound email, inspect its content, and review scheduled delivery.</p></div></div>${notificationList(await listNotifications(db, status, 50, (page - 1) * 50), await notificationCounts(db), status, page)}`);
+  }
+  if (route === "admin-notification") {
+    const id = notificationIdFromPath(url.pathname);
+    if (!id) return messagePage("Not found", "That notification does not exist.", 404);
+    const notification = await findNotificationById(db, id);
+    if (!notification) return messagePage("Not found", "That notification does not exist.", 404);
+    if (request.method === "GET") return appPage(active.user, csrfToken, "Notification", notificationDetail(notification, csrfToken));
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    if (notification.status !== "PENDING") return messagePage("Schedule unavailable", "Only pending notifications can be rescheduled.", 409);
+    const form = await parseForm(request);
+    if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
+    const scheduled = localDateTimeToIso(formText(form, "scheduledAt"), CALENDAR_TIMEZONE);
+    if (!scheduled.value || Date.parse(scheduled.value) <= Date.now()) {
+      return appPage(active.user, csrfToken, "Notification", notificationDetail(notification, csrfToken, scheduled.error ?? "Choose a future delivery time."));
+    }
+    const changed = await updateNotificationSchedule(db, id, scheduled.value, new Date().toISOString());
+    if (!changed) return messagePage("Schedule unavailable", "The notification is no longer pending.", 409);
+    return redirect(`/learn/admin/notifications/${encodeURIComponent(id)}`);
   }
   if (route === "admin-reschedules") {
     return appPage(active.user, csrfToken, "Reschedule requests", `<div class="page-heading"><h1>Reschedule requests</h1></div>${rescheduleQueue(await listPendingRescheduleRequests(db), csrfToken)}`);
@@ -2145,8 +2214,8 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const pending = await findPendingRescheduleRequestForLesson(db, lesson.id);
     if (request.method === "GET") {
       if (lesson.status !== "scheduled" || Date.parse(lesson.start_at) <= Date.parse(now)) return messagePage("Reschedule unavailable", "Only future scheduled lessons can be rescheduled.", 409);
-      if (pending) return appPage(active.user, csrfToken, "Reschedule request", `<section class="card form-card"><p class="eyebrow">RESCHEDULE</p><h1>Reschedule request pending</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>Your tutor will review the requested time.</p></section>`);
-      return appPage(active.user, csrfToken, "Reschedule lesson", rescheduleForm(csrfToken, lesson, url.pathname, undefined, !canStudentReschedule(lesson, now)));
+      if (pending) return appPage(active.user, csrfToken, "Reschedule request", `<section class="card form-card"><h1>Reschedule request pending</h1><p>Your tutor will review the requested time.</p></section>`);
+      return appPage(active.user, csrfToken, "Reschedule lesson", rescheduleForm(csrfToken, lesson, url.pathname, undefined, !canStudentReschedule(lesson, now), true));
     }
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const currentLesson = await findLessonForUser(db, id, active.user.id);
@@ -2156,15 +2225,16 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (await findPendingRescheduleRequestForLesson(db, currentLesson.id)) return redirect(`/learn/student/lessons/${lessonRouteId(currentLesson.id)}`);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
-    const timezone = formText(form, "timezone").trim();
-    const start = localDateTimeToIso(formText(form, "startAt"), timezone);
-    const end = localDateTimeToIso(formText(form, "endAt"), timezone);
+    const timezone = currentLesson.timezone;
+    const studentTime = studentRequestedRescheduleTime(form, currentLesson);
+    const start = studentTime.start ? { value: studentTime.start, error: undefined } : { value: null, error: studentTime.error };
+    const end = studentTime.end ? { value: studentTime.end, error: undefined } : { value: null, error: studentTime.error };
     let error: string | null = null;
     if (!start.value) error = start.error ?? "Enter a valid start time.";
     else if (!end.value) error = end.error ?? "Enter a valid end time.";
     else if (end.value <= start.value) error = "The end time must be after the start time.";
     else if (Date.parse(start.value) <= Date.now()) error = "Choose a future time.";
-    if (error || !start.value || !end.value) return appPage(active.user, csrfToken, "Reschedule lesson", rescheduleForm(csrfToken, currentLesson, url.pathname, error ?? "Enter a valid new time."));
+    if (error || !start.value || !end.value) return appPage(active.user, csrfToken, "Reschedule lesson", rescheduleForm(csrfToken, currentLesson, url.pathname, error ?? "Choose a valid new time.", !canStudentReschedule(currentLesson, currentNow), true));
     const startAt = start.value;
     const endAt = end.value;
     if (startAt === currentLesson.start_at && endAt === currentLesson.end_at && timezone === currentLesson.timezone) return redirect(`/learn/student/lessons/${lessonRouteId(currentLesson.id)}`);

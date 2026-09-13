@@ -316,7 +316,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .additional-details label { margin-top: 0; }
 .form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-top: var(--space-4); }
 .form-actions .button { margin-top: 0; }
-.disabled-action { border-color: #cbd5e1; color: #64748b; background: #e2e8f0; cursor: not-allowed; pointer-events: none; }
+.disabled-action { border-color: #cbd5e1; color: #64748b; background: #e2e8f0; cursor: not-allowed; }
+.notification-content { max-height: 28rem; margin: 0; padding: 16px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--foreground); background: #f8fafc; white-space: pre-wrap; overflow-wrap: anywhere; font: .82rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.notification-detail h2 { margin-top: var(--space-5); }
+.notification-detail dt { color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; }
+.notification-detail dd { margin: 4px 0 0; }
 .secondary { border-color: var(--line); color: var(--foreground); background: var(--soft); }
 .secondary:hover { background: #dce7ef; }
 .danger { background: var(--danger); }

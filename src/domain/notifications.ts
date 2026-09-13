@@ -16,8 +16,8 @@ export const NOTIFICATION_TYPES = [
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 export type NotificationStatus = "PENDING" | "SENDING" | "SENT" | "UNKNOWN" | "FAILED";
 
-export const REMINDER_INTERVAL_MINUTES = 24 * 60;
-export const REMINDER_LOOKAHEAD_MINUTES = REMINDER_INTERVAL_MINUTES;
+export const REMINDER_INTERVAL_MINUTES = 15;
+export const REMINDER_LOOKAHEAD_MINUTES = 7 * 24 * 60;
 export const REMINDER_BATCH_SIZE = 25;
 export const MAX_NOTIFICATION_ATTEMPTS = 3;
 
@@ -33,8 +33,8 @@ export function reminderDueAt(startAt: string, intervalMinutes = REMINDER_INTERV
 
 export function reminderIdempotencyKey(lessonId: string, startAt?: string): string {
   return startAt
-    ? `lesson-reminder:${lessonId}:${startAt}:24h`
-    : `lesson-reminder:${lessonId}:24h`;
+    ? `lesson-reminder:${lessonId}:${startAt}:15m`
+    : `lesson-reminder:${lessonId}:15m`;
 }
 
 export function eventIdempotencyKey(type: NotificationType, eventId: string): string {

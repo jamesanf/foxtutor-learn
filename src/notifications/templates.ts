@@ -16,6 +16,7 @@ export interface LessonEmailData {
   timezone: string;
   lessonPath: string;
   externalUrl?: string | null;
+  reminderLeadMinutes?: number;
 }
 
 export interface ResourceEmailData {
@@ -104,8 +105,8 @@ function lessonDetails(data: LessonEmailData, origin: string, includeStudent = f
   const time = lessonTime(data);
   const link = learnLink(origin, data.lessonPath);
   const join = data.externalUrl ? `\nLesson destination: ${data.externalUrl}` : "";
-  const text = `${includeStudent ? `${data.studentName}\n\n` : ""}${date}\n${time} (${data.timezone})\nOpen lesson: ${link}${join}`;
-  const html = `${includeStudent ? `<p>${escapeHtml(data.studentName)}</p>` : ""}<p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)} (${escapeHtml(data.timezone)})</p><p><a href="${escapeHtml(link)}">Open lesson</a></p>${data.externalUrl ? `<p>Lesson destination: <a href="${escapeHtml(data.externalUrl)}">${escapeHtml(data.externalUrl)}</a></p>` : ""}`;
+  const text = `${includeStudent ? `${data.studentName}\n\n` : ""}${date}\n${time}\nOpen lesson: ${link}${join}`;
+  const html = `${includeStudent ? `<p>${escapeHtml(data.studentName)}</p>` : ""}<p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${escapeHtml(link)}">Open lesson</a></p>${data.externalUrl ? `<p>Lesson destination: <a href="${escapeHtml(data.externalUrl)}">${escapeHtml(data.externalUrl)}</a></p>` : ""}`;
   return { text, html };
 }
 
@@ -138,10 +139,11 @@ export function renderLessonChanged(data: LessonEmailData, origin: string): Emai
 
 export function renderLessonReminder(data: LessonEmailData, origin: string): EmailContent {
   const details = lessonDetails(data, origin);
+  const lead = data.reminderLeadMinutes === 15 ? "Your lesson starts soon." : "Your lesson is coming up.";
   return {
-    subject: `Lesson reminder — ${lessonTime(data)}`,
-    text: `Your lesson is tomorrow.\n\n${details.text}`,
-    html: frame("Lesson reminder", "FoxTutor Learn", `<p>Your lesson is tomorrow.</p>${details.html}`)
+    subject: `Lesson starting soon — ${lessonTime(data)}`,
+    text: `${lead}\n\n${details.text}`,
+    html: frame("Lesson starting soon", "FoxTutor Learn", `<p>${lead}</p>${details.html}`)
   };
 }
 

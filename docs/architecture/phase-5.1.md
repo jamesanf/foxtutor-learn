@@ -11,8 +11,8 @@ The authoritative student timing policy is:
 | Time before lesson start | Student action |
 |---|---|
 | More than 24 hours | Cancel or reschedule directly |
-| Exactly 24 hours | Normal cancellation/rescheduling blocked; exception request is required for cancellation |
-| Less than 24 hours | Normal cancellation/rescheduling blocked; cancellation exception request is available |
+| Exactly 24 hours | Cancellation blocked; reschedule request may be submitted |
+| Less than 24 hours | Cancellation blocked; reschedule request may be submitted |
 | Started, completed or cancelled | No student cancellation/rescheduling action |
 
 The calculation uses the stored UTC `lessons.start_at` instant and server time.
@@ -22,11 +22,14 @@ student identity or actor identity.
 ## State and history
 
 The lesson lifecycle remains `scheduled`, `completed` and `cancelled`.
-Cancellation requests are separate records with `PENDING`, `APPROVED` and
+Legacy cancellation-request records remain for deployed historical compatibility
+but new student cancellation requests are not created. Short-notice
+reschedule requests are separate records with `PENDING`, `APPROVED` and
 `REJECTED` states. Immutable `lesson_history` rows record:
 
 - normal student cancellation;
-- cancellation request submission and decision;
+- student cancellation undo;
+- reschedule request approval and rejection;
 - administrative cancellation;
 - each reschedule, including previous and new UTC times and timezone.
 

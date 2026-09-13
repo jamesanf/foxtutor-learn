@@ -54,6 +54,20 @@ export async function findNotificationById(db: D1Database, id: string): Promise<
   ).bind(id).first<Notification>();
 }
 
+export async function updateNotificationSchedule(
+  db: D1Database,
+  id: string,
+  scheduledAt: string | null,
+  now: string
+): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE notifications
+     SET scheduled_at = ?, next_attempt_at = ?, updated_at = ?
+     WHERE id = ? AND status = 'PENDING'`
+  ).bind(scheduledAt, scheduledAt ?? now, now, id).run();
+  return Boolean(result.meta.changes);
+}
+
 export async function findNotificationByIdempotencyKey(db: D1Database, key: string): Promise<Notification | null> {
   return db.prepare(
     "SELECT n.*, u.email AS recipient_email FROM notifications n JOIN users u ON u.id = n.recipient_user_id WHERE n.idempotency_key = ?"
@@ -155,7 +169,7 @@ export async function notificationCounts(db: D1Database): Promise<Record<Notific
   return counts;
 }
 
-export async function listDueReminderLessons(db: D1Database, now: string, limit: number): Promise<Array<{
+export async function listDueReminderLessons(db: D1Database, now: string, limit: number, lookaheadMinutes = 15): Promise<Array<{
   id: string;
   student_id: string;
   student_name: string;
@@ -166,7 +180,7 @@ export async function listDueReminderLessons(db: D1Database, now: string, limit:
   timezone: string;
   external_url: string | null;
 }>> {
-  const upper = new Date(Date.parse(now) + 24 * 60 * 60 * 1000).toISOString();
+  const upper = new Date(Date.parse(now) + lookaheadMinutes * 60_000).toISOString();
   const result = await db.prepare(
     `SELECT l.id, l.student_id, s.name AS student_name, u.id AS recipient_user_id, u.email AS recipient_email,
             l.start_at, l.end_at, l.timezone, l.external_url

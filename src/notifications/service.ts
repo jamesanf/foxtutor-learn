@@ -17,6 +17,7 @@ import {
   MAX_NOTIFICATION_ATTEMPTS,
   reminderDueAt,
   reminderIdempotencyKey,
+  REMINDER_LOOKAHEAD_MINUTES,
   type NotificationType
 } from "../domain/notifications";
 import { renderEmail, type EmailContent } from "./templates";
@@ -119,7 +120,7 @@ export async function runReminderScheduler(
   now = new Date().toISOString(),
   fetcher: typeof fetch = fetch
 ): Promise<number> {
-  const dueLessons = await listDueReminderLessons(db, now, 25);
+  const dueLessons = await listDueReminderLessons(db, now, 25, REMINDER_LOOKAHEAD_MINUTES);
   let processed = 0;
   const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN);
   for (const lesson of dueLessons) {
@@ -135,12 +136,13 @@ export async function runReminderScheduler(
       endAt: lesson.end_at,
       timezone: lesson.timezone,
       lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
-      externalUrl: lesson.external_url
+      externalUrl: lesson.external_url,
+      reminderLeadMinutes: 15
     }, origin);
     const notification = await insertNotification(db, {
       id: crypto.randomUUID(),
       eventType: "LESSON_REMINDER",
-      eventId: `${lesson.id}:24h`,
+      eventId: `${lesson.id}:15m`,
       recipientUserId: lesson.recipient_user_id,
       studentId: lesson.student_id,
       lessonId: lesson.id,
@@ -150,9 +152,9 @@ export async function runReminderScheduler(
       htmlBody: content.html,
       createdAt: now,
       scheduledAt,
-      nextAttemptAt: now
+      nextAttemptAt: scheduledAt
     });
-    if (notification.status !== "SENT") {
+    if (notification.status !== "SENT" && Date.parse(scheduledAt) <= Date.parse(now)) {
       await deliverNotification(db, env, notification.id, now, fetcher);
       processed++;
     }

@@ -7,7 +7,7 @@ import {
   reminderIdempotencyKey
 } from "../../src/domain/notifications";
 import { learnLink } from "../../src/notifications/links";
-import { renderCancellationProcessed, renderDstWarning, renderEmail, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
+import { renderCancellationProcessed, renderDstWarning, renderEmail, renderLessonReminder, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
 import { findNotificationById } from "../../src/db/notifications";
 
 function mockNotificationDb(firstResult: unknown): D1Database {
@@ -44,12 +44,27 @@ describe("notification domain", () => {
     expect(isNotificationType("DST_WARNING")).toBe(true);
     expect(isNotificationType("ARBITRARY_EMAIL")).toBe(false);
     expect(eventIdempotencyKey("LESSON_CREATED", "lesson-1")).toBe("lesson-created:lesson-1");
-    expect(reminderIdempotencyKey("lesson-1")).toBe("lesson-reminder:lesson-1:24h");
+    expect(reminderIdempotencyKey("lesson-1")).toBe("lesson-reminder:lesson-1:15m");
   });
 
   it("calculates the configured reminder interval from the stored UTC instant", () => {
-    expect(reminderDueAt("2026-09-14T13:00:00.000Z")).toBe("2026-09-13T13:00:00.000Z");
+    expect(reminderDueAt("2026-09-14T13:00:00.000Z")).toBe("2026-09-14T12:45:00.000Z");
     expect(reminderDueAt("not-a-date")).toBeNull();
+  });
+
+  it("describes a reminder as imminent rather than tomorrow", async () => {
+    const rendered = renderLessonReminder({
+      studentName: "Jamie",
+      startAt: "2026-09-13T19:00:00.000Z",
+      endAt: "2026-09-13T19:55:00.000Z",
+      timezone: "Europe/London",
+      lessonPath: "/learn/student/lessons/lesson-1",
+      externalUrl: null,
+      reminderLeadMinutes: 15
+    }, "https://foxtutor.org/learn");
+    expect(rendered.text).toContain("Your lesson starts soon.");
+    expect(rendered.text).not.toContain("tomorrow");
+    expect(rendered.text).not.toContain("Europe/London");
   });
 
   it("only treats student-visible lesson fields as material", () => {

@@ -30,7 +30,7 @@ student-facing content must not be mixed into private lesson notes.
 | Active student record created | `STUDENT_INVITED` | Linked active STUDENT user | `student:<id>` | Welcome |
 | Scheduled lesson committed | `LESSON_CREATED` | Lesson's linked student | `lesson-created:<lesson-id>` | Lesson booked |
 | Student-visible lesson fields changed | `LESSON_CHANGED` | New linked student | Stable old/new lesson-value event | Lesson updated |
-| Lesson is within reminder window | `LESSON_REMINDER` | Lesson's linked student | `lesson-reminder:<lesson-id>:24h` | Reminder |
+| Lesson is within reminder window | `LESSON_REMINDER` | Lesson's linked student | `lesson-reminder:<lesson-id>:15m` | Reminder |
 | Resource reaches `available` | `RESOURCE_ADDED` | Resource's linked student | `resource-added:<resource-id>` | New resource |
 | Existing status transition to cancelled | `CANCELLATION_PROCESSED` | Lesson's linked student | `cancellation-processed:<lesson-id>` | Lesson cancelled |
 | Completed lesson report send | `LESSON_REPORT` | Lesson's linked student | `lesson-report:<report-id>` | Lesson report |
@@ -69,10 +69,10 @@ generates a new key for an attempt.
 
 ## Reminders
 
-The initial product policy is one reminder, 24 hours before a scheduled lesson.
+The current product policy is one reminder, 15 minutes before a scheduled lesson.
 Cloudflare invokes the Worker every five minutes. The scheduler queries only
-active, linked students and upcoming scheduled lessons inside the 24-hour
-window, creates the deterministic reminder row with an indexed unique key, and
+active, linked students and upcoming scheduled lessons inside a seven-day
+pipeline window, creates the deterministic reminder row with an indexed unique key, and
 delivers it. Cancelled, completed, elapsed and inactive-student lessons are
 excluded. A missed scheduler run does not send a stale reminder after the
 lesson has started.
