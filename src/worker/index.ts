@@ -265,7 +265,7 @@ function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, 
   return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
-function paginationPageNumbers(page: number, pageCount: number, path: string, pageSize: number): string {
+function paginationPageNumbers(page: number, pageCount: number, hrefForPage: (page: number) => string): string {
   const numbers = pageCount <= 7
     ? Array.from({ length: pageCount }, (_, index) => index + 1)
     : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
@@ -275,19 +275,31 @@ function paginationPageNumbers(page: number, pageCount: number, path: string, pa
     if (number - previous > 1) output.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
     output.push(number === page
       ? `<span class="pagination-link pagination-page-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link pagination-page-link" href="${path}?page=${number}&size=${pageSize}">${number}</a>`);
+      : `<a class="pagination-link pagination-page-link" href="${hrefForPage(number)}">${number}</a>`);
     previous = number;
   }
   return output.join("");
+}
+
+function paginationControls(
+  page: number,
+  pageCount: number,
+  label: string,
+  hrefForPage: (page: number) => string
+): string {
+  const link = (nextPage: number, text: string, disabled: boolean) =>
+    disabled
+      ? `<span class="pagination-link pagination-nav-link is-disabled" aria-disabled="true">${text}</span>`
+      : `<a class="pagination-link pagination-nav-link" href="${hrefForPage(nextPage)}">${text}</a>`;
+  return `<nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? paginationPageNumbers(page, pageCount, hrefForPage) : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav>`;
 }
 
 function lessonPagination(page: number, pageSize: number, total: number, path: string, label: string): string {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const first = total ? (page - 1) * pageSize + 1 : 0;
   const last = total ? Math.min(page * pageSize, total) : 0;
-  const link = (nextPage: number, text: string, disabled: boolean) =>
-    disabled ? `<span class="pagination-link pagination-nav-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link pagination-nav-link" href="${path}?page=${nextPage}&size=${pageSize}">${text}</a>`;
-  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? paginationPageNumbers(page, pageCount, path, pageSize) : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="${label.toLowerCase().replaceAll(" ", "-")}-page-size">Show per page</label><select id="${label.toLowerCase().replaceAll(" ", "-")}-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${LESSON_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  const hrefForPage = (nextPage: number) => `${path}?page=${nextPage}&size=${pageSize}`;
+  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div>${paginationControls(page, pageCount, label, hrefForPage)}<form class="page-size-form" method="get" action="${path}"><label for="${label.toLowerCase().replaceAll(" ", "-")}-page-size">Show per page</label><select id="${label.toLowerCase().replaceAll(" ", "-")}-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${LESSON_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
 function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; title: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
@@ -512,21 +524,8 @@ function resourcePagination(page: number, pageSize: number, total: number, path:
   const first = total ? (page - 1) * pageSize + 1 : 0;
   const last = total ? Math.min(page * pageSize, total) : 0;
   const baseQuery = resourceFilterQuery(filters);
-  const link = (nextPage: number, text: string, disabled: boolean) =>
-    disabled ? `<span class="pagination-link pagination-nav-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link pagination-nav-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${nextPage}&size=${pageSize}">${text}</a>`;
-  const numbers = pageCount <= 7
-    ? Array.from({ length: pageCount }, (_, index) => index + 1)
-    : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
-  const pageLinks: string[] = [];
-  let previous = 0;
-  for (const number of numbers) {
-    if (number - previous > 1) pageLinks.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
-    pageLinks.push(number === page
-      ? `<span class="pagination-link pagination-page-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link pagination-page-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${number}&size=${pageSize}">${number}</a>`);
-    previous = number;
-  }
-  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label>${Array.from(new URLSearchParams(baseQuery).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("")}<select id="resources-page-size" class="page-size-select" name="size">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  const hrefForPage = (nextPage: number) => `${path}${baseQuery}${baseQuery ? "&" : "?"}page=${nextPage}&size=${pageSize}`;
+  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div>${paginationControls(page, pageCount, "Resources", hrefForPage)}<form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label>${Array.from(new URLSearchParams(baseQuery).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("")}<select id="resources-page-size" class="page-size-select" name="size">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
 type ResourceFragment = {
@@ -906,7 +905,7 @@ async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database):
   const preview = upcoming.length
     ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
     : `<div class="dashboard-empty"><p>No upcoming bookings.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
-  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong><small>${upcoming[0] ? escapeHtml(bookingTime(upcoming[0])) : "No scheduled lessons"}</small></section><section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section><section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section></div><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
+  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</section><section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section><section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section></div><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {

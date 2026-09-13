@@ -80,7 +80,13 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('id="site-notifications"');
     expect(clientSource).toContain("site-notification-close");
     expect(clientSource).toContain('type === "error"');
-    expect(cssSource).toContain(".site-notifications { position: fixed");
+    expect(clientSource).toContain("container.replaceChildren()");
+    expect(cssSource).toContain(".site-notifications { position: fixed; top: 50%; left: 50%");
+    expect(cssSource).toContain("border-radius: 999px");
+    expect(cssSource).toContain("background: var(--action)");
+    expect(cssSource).toContain("box-shadow: none");
+    expect(cssSource).not.toContain(".site-notification-error");
+    expect(cssSource).not.toContain("bottom: max(16px");
   });
 
   it("keeps event labels concise and renders a single admin bookings destination", () => {
@@ -112,6 +118,11 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain("<h1>Dashboard</h1>");
     expect(workerSource).toContain("<span>Upcoming Bookings</span>");
     expect(workerSource).toContain("<span>Active Students</span>");
+    expect(workerSource).toContain("<span>Next Lesson</span>");
+    expect(workerSource).toContain('<strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>');
+    expect(workerSource).toContain('<section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section>');
+    expect(workerSource).toContain('<section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section>');
+    expect(workerSource).not.toContain("No scheduled lessons");
     expect(workerSource).not.toContain("PRIVATE LEARNING PORTAL");
     expect(workerSource).not.toContain("LESSON SCHEDULE</p><h1>Calendar");
     expect(workerSource).not.toContain("UPCOMING SCHEDULE");

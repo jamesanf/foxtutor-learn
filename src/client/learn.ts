@@ -9,9 +9,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   const showNotification = (message: string, type: NotificationType = "success") => {
     const container = document.getElementById("site-notifications");
     if (!container || !message.trim()) return;
+    container.replaceChildren();
     const notification = document.createElement("div");
-    notification.className = `site-notification site-notification-${type}`;
+    notification.className = "site-notification";
     notification.setAttribute("role", type === "error" ? "alert" : "status");
+    notification.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
     const text = document.createElement("span");
     text.textContent = message;
     const close = document.createElement("button");

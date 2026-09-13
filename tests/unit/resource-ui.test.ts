@@ -151,10 +151,15 @@ describe("resource UX contract", () => {
   it("uses one compact pagination control family", () => {
     expect(workerSource).toContain("pagination-nav-link");
     expect(workerSource).toContain("pagination-page-link");
-    expect(cssSource).toContain(".pagination-link { display: inline-flex; min-height: 38px; align-items: center");
-    expect(cssSource).toContain(".pagination-nav-link { padding: 8px 10px; }");
-    expect(cssSource).toContain(".pagination-page-link { min-width: 34px; padding: 8px 9px; }");
-    expect(cssSource).toContain(".pagination { align-items: center; flex-wrap: wrap; }");
+    expect(workerSource).toContain("function paginationControls(");
+    expect(workerSource.match(/<nav class="pagination"/g)?.length).toBe(1);
+    expect(cssSource).toContain(".pagination-link { display: inline-flex; min-height: 34px; align-items: center");
+    expect(cssSource).toContain(".pagination-nav-link { padding: 5px 9px; }");
+    expect(cssSource).toContain(".pagination-page-link { min-width: 30px; padding: 5px 7px; }");
+    expect(cssSource).toContain(".pagination { display: flex; align-items: center; justify-content: center; gap: 4px");
     expect(cssSource).toContain(".pagination-link:focus-visible");
+    expect(cssSource).toContain(".pagination-link.is-disabled");
+    expect(cssSource).toContain(".pagination-pages { display: inline-flex");
+    expect(cssSource).toContain(".pagination { flex-wrap: wrap; }");
   });
 });
