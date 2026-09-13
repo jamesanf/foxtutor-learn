@@ -100,4 +100,14 @@ describe("D1 foundation", () => {
     expect(migration).toContain("body_note");
     expect(migration).toContain("LESSON_REMINDER");
   });
+
+  it("adds the student profile and academic-year fields forward-only", () => {
+    const migration = readFileSync("migrations/0014_student_profiles.sql", "utf8");
+    expect(migration).toContain("parent_email TEXT NOT NULL DEFAULT ''");
+    expect(migration).toContain("billing_address TEXT NOT NULL DEFAULT ''");
+    expect(migration).toContain("additional_support_needs TEXT NOT NULL DEFAULT ''");
+    expect(migration).toContain("academic_year_system");
+    expect(migration).toContain("academic_year_anchor_date");
+    expect(migration).toContain("class_texts TEXT NOT NULL DEFAULT ''");
+  });
 });

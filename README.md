@@ -8,11 +8,11 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 5.1 deployed; authenticated workflow acceptance pending
+**Phase:** Phase 5.1 deployed; student profile manager release in progress
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** `08e9ae3`
 **Worker:** `31a62fb3-7c88-4bb8-a073-9cc06d34e1d7`
-**D1 migrations:** `0001_foundation.sql` through `0013_notification_controls.sql`
+**D1 migrations:** `0001_foundation.sql` through `0014_student_profiles.sql`
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -92,6 +92,7 @@ CHANGELOG.md         Material implementation history
 | `PROJECT_STRUCTURE.md` | Filesystem and separation-of-concerns rules |
 | `CHANGELOG.md` | Material implementation history |
 | `docs/architecture/phase-5.1.md` | Cancellation, exception, rescheduling and billing boundary |
+| `docs/architecture/student-profiles.md` | Student profile fields and academic-year progression |
 | `docs/testing/phase-5.1.md` | Phase 5.1 tests and acceptance matrix |
 | `docs/deployment/phase-5.1.md` | Phase 5.1 release and deployment record |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |

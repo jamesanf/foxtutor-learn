@@ -24,8 +24,10 @@ import {
   countActiveStudents,
   countPastLessons,
   countUpcomingLessons,
+  countLessonsForStudentRecord,
   listStartedLessonsNeedingReports,
   listLessons,
+  listLessonsForStudentRecord,
   listLessonsForResourceFilter,
   listPastLessons,
   listUpcomingLessons,
@@ -39,6 +41,7 @@ import {
 } from "../db/lessons";
 import {
   countResources,
+  countResourcesForStudentRecord,
   activeResourceBytesForLesson,
   deleteResourceMetadata,
   findResource,
@@ -97,6 +100,12 @@ import {
   CALENDAR_TIMEZONE,
   currentCalendarDate
 } from "../domain/calendar";
+import {
+  academicYearOptions,
+  isStudentAcademicSystem,
+  validateAcademicYear,
+  type StudentAcademicSystem
+} from "../domain/student-profile";
 import {
   canTransitionLessonStatus,
   deriveLessonEnd,
@@ -588,6 +597,14 @@ function parseLessonPagination(url: URL): { page: number; pageSize: number } {
   return { page, pageSize };
 }
 
+function parseStudentSectionPagination(url: URL, pageParam: string, sizeParam: string): { page: number; pageSize: number } {
+  const requestedSize = Number(url.searchParams.get(sizeParam));
+  const pageSize = [12, 24, 48].includes(requestedSize) ? requestedSize : 12;
+  const requestedPage = Number(url.searchParams.get(pageParam));
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  return { page, pageSize };
+}
+
 function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, emptyAction?: string): string {
   if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? `<a class="button" href="/learn/admin/lessons/new">${escapeHtml(emptyAction)}</a>` : ""}</div>`;
   return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
@@ -632,6 +649,14 @@ function lessonPagination(page: number, pageSize: number, total: number, path: s
 
 function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; title: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
   return `<div class="page-heading"><h1>${escapeHtml(options.title)}</h1>${options.emptyAction ? buttonLink("/learn/admin/lessons/new", "Add lesson") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
+}
+
+function studentSectionPagination(page: number, pageSize: number, total: number, path: string, label: string, pageParam: string, sizeParam: string): string {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const hrefForPage = (nextPage: number) => `${path}?${pageParam}=${nextPage}&${sizeParam}=${pageSize}`;
+  const sizes = [12, 24, 48];
+  return `<footer class="list-footer student-section-pagination"><span class="result-range">${total ? `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, total)} of ${total}` : "0 results"}</span>${paginationControls(safePage, pageCount, label, hrefForPage)}<form class="page-size-form" method="get" action="${path}"><label for="${pageParam}-size">Show per page</label><select id="${pageParam}-size" class="page-size-select" name="${sizeParam}" onchange="this.form.submit()">${sizes.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="${pageParam}" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
 function parseResourcePagination(url: URL): { page: number; pageSize: number } {
@@ -1050,11 +1075,11 @@ function studentLessonActions(lesson: Lesson, csrfToken: string, pending: Resche
 }
 
 function cancellationConfirmation(csrfToken: string, lesson: Lesson): string {
-  return `<section class="card form-card"><p class="eyebrow">CANCELLATION</p><h1>Cancel this lesson?</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>The lesson will be cancelled immediately.</p><form method="post" action="/learn/student/lessons/${lessonRouteId(lesson.id)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/lessons/${lessonRouteId(lesson.id)}">Keep lesson</a><button class="button danger" type="submit">Cancel lesson</button></form></section>`;
+  return `<section class="card form-card"><h1>Cancel this lesson?</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>The lesson will be cancelled immediately.</p><form method="post" action="/learn/student/lessons/${lessonRouteId(lesson.id)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/lessons/${lessonRouteId(lesson.id)}">Keep lesson</a><button class="button danger" type="submit">Cancel lesson</button></form></section>`;
 }
 
 function undoCancellationConfirmation(csrfToken: string, lesson: Lesson): string {
-  return `<section class="card form-card"><p class="eyebrow">CANCELLATION</p><h1>Restore this lesson?</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This will put the lesson back on your schedule.</p><form method="post" action="/learn/student/lessons/${lessonRouteId(lesson.id)}/undo-cancellation" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/lessons/${lessonRouteId(lesson.id)}">Keep cancelled</a><button class="button" type="submit">Restore lesson</button></form></section>`;
+  return `<section class="card form-card"><h1>Restore this lesson?</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This will put the lesson back on your schedule.</p><form method="post" action="/learn/student/lessons/${lessonRouteId(lesson.id)}/undo-cancellation" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/lessons/${lessonRouteId(lesson.id)}">Keep cancelled</a><button class="button" type="submit">Restore lesson</button></form></section>`;
 }
 
 function studentRescheduleWindow(lesson: Lesson): { minDate: string; maxDate: string } {
@@ -1128,7 +1153,70 @@ function derivedEndLabel(startTime: string): string {
 
 function studentForm(csrfToken: string, action: string, student?: Student, error?: string): string {
   const international = student?.international ? " checked" : "";
-  return `<section class="card form-card"><p class="eyebrow">STUDENT RECORD</p><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}${inputField("Login email", "email", student?.email ?? "", "email", true)}${inputField("Level", "level", student?.level ?? "", "text") }<label class="checkbox-field"><input type="checkbox" name="international" value="1"${international}> International student</label><p class="help">This email is used for contact and Learn login. Level is optional until it is needed for a lesson report. International students receive a UK clock-change reminder on the morning the clocks change.</p><button class="button" type="submit">Save student</button> <a class="button secondary" href="/learn/admin/students">Cancel</a></form></section>`;
+  const system = student?.academic_year_system ?? "";
+  const academicYear = student?.academic_year ?? "";
+  const academicOptions = [
+    ["ENGLISH", "English", ["Y5", "Y6", "Y7", "Y8", "Y9", "Y10", "Y11", "Y12", "Y13"]],
+    ["SCOTTISH", "Scottish", ["P6", "P7", "S1", "S2", "S3", "S4", "S5", "S6"]],
+    ["MATURE", "Mature", ["Mature"]],
+    ["PRIVATE", "Private", ["Private"]],
+    ["INTERNATIONAL", "International", ["International"]]
+  ] as const;
+  const academicSystemOptions = `<option value="">Choose a system</option>${academicOptions.map(([value, label]) => `<option value="${value}"${value === system ? " selected" : ""}>${label}</option>`).join("")}`;
+  const academicYearOptionsMarkup = academicOptions.flatMap(([systemValue, , values]) => values.map((value) => `<option value="${value}" data-academic-system="${systemValue}"${value === academicYear ? " selected" : ""}>${value}</option>`)).join("");
+  const levelSuggestions = ["KS2", "KS3", "GCSE", "N5", "Higher", "A Level", "University", "ESOL", "EAL"];
+  return `<section class="card form-card"><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}" data-student-profile-form>${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}<label>Pupil email<input type="email" name="email" value="${escapeHtml(student?.email ?? "")}" required aria-describedby="pupil-email-help"><span id="pupil-email-help" class="info-box">This is the email address the pupil uses to log in to Learn.</span></label><label>Parent or carer email<input type="email" name="parentEmail" value="${escapeHtml(student?.parent_email ?? "")}" autocomplete="email"></label><label>Billing address<textarea name="billingAddress" rows="3" maxlength="2000">${escapeHtml(student?.billing_address ?? "")}</textarea></label><label>Level<input list="student-level-options" name="level" value="${escapeHtml(student?.level ?? "")}" maxlength="120"><datalist id="student-level-options">${levelSuggestions.map((value) => `<option value="${value}"></option>`).join("")}</datalist><span class="field-help">Used by lesson reports and updated there when a report records a different level.</span></label><div class="student-academic-grid"><label>Academic system<select name="academicYearSystem" data-academic-system>${academicSystemOptions}</select></label><label>Academic year<select name="academicYear" data-academic-year>${academicYearOptionsMarkup}</select><span class="field-help">English and Scottish years advance automatically each 15 August.</span></label></div><label>Class texts<textarea name="classTexts" rows="3" maxlength="5000" placeholder="For example: Macbeth; Of Mice and Men">${escapeHtml(student?.class_texts ?? "")}</textarea><span class="field-help">Optional texts to remember for GCSE, A Level, N5 or Higher students.</span></label><label>Additional support needs<textarea name="additionalSupportNeeds" rows="3" maxlength="5000">${escapeHtml(student?.additional_support_needs ?? "")}</textarea></label><label class="toggle-control student-dst-toggle"><input type="checkbox" name="international" value="1"${international}><span>International pupil</span><span class="info-box">Enables the UK clock-change reminder for this pupil. It does not select the academic system.</span></label><div class="form-actions"><a class="button secondary" href="/learn/admin/students">Cancel</a><button class="button" type="submit">Save student</button></div></form></section>`;
+}
+
+function parseStudentProfile(form: FormData, now: string): {
+  value: {
+    name: string;
+    email: string;
+    level: string | null;
+    parentEmail: string;
+    billingAddress: string;
+    additionalSupportNeeds: string;
+    academicYearSystem: StudentAcademicSystem;
+    academicYear: string;
+    academicYearAnchorDate: string | null;
+    classTexts: string;
+    international: boolean;
+  } | null;
+  error?: string;
+} {
+  const name = validName(formText(form, "name"));
+  const email = validEmail(formText(form, "email"));
+  const levelInput = formText(form, "level").trim();
+  const level = validLevel(levelInput);
+  const parentInput = formText(form, "parentEmail").trim();
+  const parentEmail = parentInput ? validEmail(parentInput) ?? "" : "";
+  const billingAddress = formText(form, "billingAddress").trim();
+  const additionalSupportNeeds = formText(form, "additionalSupportNeeds").trim();
+  const classTexts = formText(form, "classTexts").trim();
+  const systemValue = formText(form, "academicYearSystem").trim();
+  const academicYearSystem = isStudentAcademicSystem(systemValue) ? systemValue : null;
+  const academicYear = academicYearSystem ? validateAcademicYear(academicYearSystem, formText(form, "academicYear")) : null;
+  if (!name || !email || (levelInput && level === null) || (parentInput && !parentEmail) || !academicYearSystem || !academicYear) {
+    return { value: null, error: "Enter valid student details, including a valid academic system and academic year." };
+  }
+  if (billingAddress.length > 2000 || additionalSupportNeeds.length > 5000 || classTexts.length > 5000) {
+    return { value: null, error: "Billing address, support needs, and class texts must be within their character limits." };
+  }
+  return {
+    value: {
+      name,
+      email,
+      level,
+      parentEmail,
+      billingAddress,
+      additionalSupportNeeds,
+      academicYearSystem,
+      academicYear,
+      academicYearAnchorDate: academicYearSystem === "ENGLISH" || academicYearSystem === "SCOTTISH" ? now.slice(0, 10) : null,
+      classTexts,
+      international: form.has("international")
+    }
+  };
 }
 
 function lessonForm(
@@ -1151,9 +1239,9 @@ function lessonForm(
   if (!lesson) {
     const selected = localStartParts(start, "Europe/London");
     const preview = derivedEndLabel(selected.time);
-    return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Create lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start time<input type="time" name="startTime" value="${escapeHtml(selected.time)}" step="900" lang="en-GB" required aria-describedby="start-time-help"><span id="start-time-help" class="field-help">15-minute intervals · 24-hour time</span></label><div class="derived-time" aria-live="polite"><span>Duration / end time</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes · Ends <output data-end-preview>${escapeHtml(preview)}</output></strong></div><div class="timezone-context"><span>Timezone</span><strong>Europe/London</strong></div><label class="field-wide">Lesson link<input type="url" name="externalUrl" value="" placeholder="https://"></label><details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons">Cancel</a><button class="button" type="submit">Create lesson</button></div></form></section>`;
+    return `<section class="card form-card"><h1>Create lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start time<input type="time" name="startTime" value="${escapeHtml(selected.time)}" step="900" lang="en-GB" required aria-describedby="start-time-help"><span id="start-time-help" class="field-help">15-minute intervals · 24-hour time</span></label><div class="derived-time" aria-live="polite"><span>Duration / end time</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes · Ends <output data-end-preview>${escapeHtml(preview)}</output></strong></div><div class="timezone-context"><span>Timezone</span><strong>Europe/London</strong></div><label class="field-wide">Lesson link<input type="url" name="externalUrl" value="" placeholder="https://"></label><details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons">Cancel</a><button class="button" type="submit">Create lesson</button></div></form></section>`;
   }
-  return `<section class="card form-card"><p class="eyebrow">LESSON RECORD</p><h1>Edit lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("Lesson link", "externalUrl", lesson.external_url ?? "", "url")}<label class="field-wide">Notes<textarea name="notes" rows="4" maxlength="10000">${escapeHtml(lesson.notes)}</textarea></label></div><input type="hidden" name="status" value="${escapeHtml(lesson.status)}"><div class="form-actions"><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
+  return `<section class="card form-card"><h1>Edit lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("Lesson link", "externalUrl", lesson.external_url ?? "", "url")}<label class="field-wide">Notes<textarea name="notes" rows="4" maxlength="10000">${escapeHtml(lesson.notes)}</textarea></label></div><input type="hidden" name="status" value="${escapeHtml(lesson.status)}"><div class="form-actions"><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
 }
 
 async function parseForm(request: Request): Promise<FormData | null> {
@@ -1794,17 +1882,14 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
-    const name = validName(formText(form, "name"));
-    const email = validEmail(formText(form, "email"));
-    const level = validLevel(formText(form, "level"));
-    const international = form.has("international");
-    if (!name || !email || (formText(form, "level").trim() && level === null)) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "Enter valid student details; Level must be 120 characters or fewer."));
-    const account = await findStudentAccount(db, email);
+    const now = new Date().toISOString();
+    const profile = parseStudentProfile(form, now);
+    if (!profile.value) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, profile.error));
+    const account = await findStudentAccount(db, profile.value.email);
     if (!account) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "The login email must belong to an active STUDENT Learn account."));
     if (await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
-    const now = new Date().toISOString();
     const studentId = crypto.randomUUID();
-    await insertStudent(db, { id: studentId, name, email, level, international, learnUserId: account.id, now });
+    await insertStudent(db, { ...profile.value, id: studentId, learnUserId: account.id, now });
     const createdStudent = await findActiveStudentRecipient(db, studentId);
     if (createdStudent?.learn_user_id && createdStudent.learn_user_email) {
       const content = renderEmail("STUDENT_INVITED", { studentName: createdStudent.name, origin: canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin) }, canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
@@ -1824,9 +1909,23 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const student = await findStudent(db, id);
     if (!student) return messagePage("Not found", "That student record does not exist.", 404);
     if (route === "admin-student") {
-      const lessons = (await listLessons(db)).filter((lesson) => lesson.student_id === student.id);
-      const resources = await listResourcesForStudentRecord(db, student.id);
-      return appPage(active.user, csrfToken, "Student", `<p class="eyebrow">STUDENT RECORD</p><div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div>${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Level</strong><br>${escapeHtml(student.level ?? "Not set")}</p><p><strong>International</strong><br>${student.international ? "Yes" : "No"}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p><strong>Created</strong><br>${escapeHtml(student.created_at)}</p><p><strong>Updated</strong><br>${escapeHtml(student.updated_at)}</p></section><div class="page-heading"><h2>Lessons</h2>${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}</div>${lessonTable(lessons, "/learn/admin/lessons", true)}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2><p class="muted">Documents for this student.</p></div>${student.status === "ACTIVE" ? buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource") : ""}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources for this student yet.</p>`}</section>${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
+      const lessonPagination = parseStudentSectionPagination(url, "lessonsPage", "lessonsSize");
+      const resourcePagination = parseStudentSectionPagination(url, "resourcesPage", "resourcesSize");
+      const [lessonTotal, resourceTotal] = await Promise.all([countLessonsForStudentRecord(db, student.id), countResourcesForStudentRecord(db, student.id)]);
+      const lessonPageCount = Math.max(1, Math.ceil(lessonTotal / lessonPagination.pageSize));
+      const resourcePageCount = Math.max(1, Math.ceil(resourceTotal / resourcePagination.pageSize));
+      const safeLessonPage = Math.min(lessonPagination.page, lessonPageCount);
+      const safeResourcePage = Math.min(resourcePagination.page, resourcePageCount);
+      const [lessons, resources] = await Promise.all([
+        listLessonsForStudentRecord(db, student.id, lessonPagination.pageSize, (safeLessonPage - 1) * lessonPagination.pageSize),
+        listResourcesForStudentRecord(db, student.id, resourcePagination.pageSize, (safeResourcePage - 1) * resourcePagination.pageSize)
+      ]);
+      const detailValue = (value: string | null | undefined) => value ? escapeHtml(value).replace(/\n/g, "<br>") : "—";
+      const profileDetails = `<section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Level</strong><br>${escapeHtml(student.level ?? "Not set")}</p><p><strong>Academic system</strong><br>${escapeHtml(student.academic_year_system)}</p><p><strong>Academic year</strong><br>${escapeHtml(student.academic_year)}</p><p><strong>Pupil email</strong><br>${escapeHtml(student.email)}</p><p><strong>Parent or carer email</strong><br>${escapeHtml(student.parent_email || "Not set")}</p><p><strong>International pupil</strong><br>${student.international ? "Yes — DST reminders enabled" : "No"}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p class="full-width"><strong>Billing address</strong><br>${detailValue(student.billing_address)}</p><p class="full-width"><strong>Class texts</strong><br>${detailValue(student.class_texts)}</p><p class="full-width"><strong>Additional support needs</strong><br>${detailValue(student.additional_support_needs)}</p><p><strong>Created</strong><br>${escapeHtml(notificationTimestamp(student.created_at))}</p><p><strong>Updated</strong><br>${escapeHtml(notificationTimestamp(student.updated_at))}</p></section>`;
+      const lessonSection = `<details class="card student-collapsible" open><summary><span><strong>Lessons</strong><small>${lessonTotal} lesson${lessonTotal === 1 ? "" : "s"}</small></span></summary><div class="student-collapsible-body">${lessonTable(lessons, "/learn/admin/lessons", true)}${studentSectionPagination(safeLessonPage, lessonPagination.pageSize, lessonTotal, `/learn/admin/students/${encodeURIComponent(student.id)}`, "Student lessons", "lessonsPage", "lessonsSize")}</div></details>`;
+      const resourceAction = student.status === "ACTIVE" ? `<div class="student-section-action">${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource")}</div>` : "";
+      const resourceSection = `<details class="card student-collapsible" open><summary><span><strong>Resources</strong><small>Documents for this student.</small></span></summary><div class="student-collapsible-body">${resourceAction}${resources.length ? resourceRows(resources, { admin: true, csrfToken }) : `<p class="muted">No resources for this student yet.</p>`}${studentSectionPagination(safeResourcePage, resourcePagination.pageSize, resourceTotal, `/learn/admin/students/${encodeURIComponent(student.id)}`, "Student resources", "resourcesPage", "resourcesSize")}</div></details>`;
+      return appPage(active.user, csrfToken, "Student", `<div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div><div class="form-actions">${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div></div>${profileDetails}${lessonSection}${resourceSection}${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form student-deactivate-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
     }
     if (route === "admin-student-deactivate") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -1837,15 +1936,13 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
-    const name = validName(formText(form, "name"));
-    const email = validEmail(formText(form, "email"));
-    const level = validLevel(formText(form, "level"));
-    const international = form.has("international");
-    if (!name || !email || (formText(form, "level").trim() && level === null)) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "Enter valid student details; Level must be 120 characters or fewer."));
-    const account = await findStudentAccount(db, email);
+    const now = new Date().toISOString();
+    const profile = parseStudentProfile(form, now);
+    if (!profile.value) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, profile.error));
+    const account = await findStudentAccount(db, profile.value.email);
     if (!account) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "The login email must belong to an active STUDENT Learn account."));
     if (account.id !== student.learn_user_id && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
-    await updateStudent(db, { id: student.id, name, email, level, international, learnUserId: account.id, now: new Date().toISOString() });
+    await updateStudent(db, { ...profile.value, id: student.id, learnUserId: account.id, now });
     return redirect(`/learn/admin/students/${encodeURIComponent(student.id)}`);
   }
   if (route === "admin-lesson-form") {
@@ -2119,7 +2216,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
           : report?.status === "DRAFT"
             ? `Draft · <a href="${url.pathname}/report">Edit report</a>`
             : `Not created · <a href="${url.pathname}/report">Create report</a>`;
-      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div><div class="form-actions">${buttonLink(`${url.pathname}/edit`, "Edit lesson")}${rescheduleAction}${reportAction}</div></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.status === "scheduled" && lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">Join lesson</a>` : lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p><p><strong>Lesson report</strong><br>${reportDetails}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form>${lessonHistorySection(history)}<section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>      ${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${lessonRouteId(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
+      return appPage(active.user, csrfToken, "Lesson", `<div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div><div class="form-actions">${buttonLink(`${url.pathname}/edit`, "Edit lesson")}${rescheduleAction}${reportAction}</div></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.status === "scheduled" && lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">Join lesson</a>` : lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p><p><strong>Lesson report</strong><br>${reportDetails}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form>${lessonHistorySection(history)}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2></div>      ${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${lessonRouteId(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
     }
     if (route === "admin-lesson-status") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -2290,7 +2387,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const now = Date.now();
     const upcoming = lessons.filter((lesson) => lesson.status === "scheduled" && new Date(lesson.start_at).getTime() >= now);
     const past = lessons.filter((lesson) => lesson.status !== "cancelled" && (lesson.status === "completed" || new Date(lesson.start_at).getTime() < now));
-    return appPage(active.user, csrfToken, "My lessons", `<p class="eyebrow">STUDENT SCHEDULE</p><h1>My lessons</h1><section class="card"><h2>Upcoming</h2>${lessonTable(upcoming, "/learn/student/lessons", false)}</section><section class="card"><h2>Past</h2>${lessonTable(past, "/learn/student/lessons", false)}</section>`);
+    return appPage(active.user, csrfToken, "My lessons", `<h1>My lessons</h1><section class="card"><h2>Upcoming</h2>${lessonTable(upcoming, "/learn/student/lessons", false)}</section><section class="card"><h2>Past</h2>${lessonTable(past, "/learn/student/lessons", false)}</section>`);
   }
   if (route === "student-lesson-cancel") {
     const id = lessonIdFromPath(url.pathname);
@@ -2466,14 +2563,14 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       && latestCancellation.actor_role === "STUDENT"
       && latestCancellation.initiated_by_user_id === active.user.id;
     if (lesson.status === "cancelled") {
-      return appPage(active.user, csrfToken, "Cancelled lesson", `<section class="card cancellation-result"><p class="eyebrow">MY LESSON</p><h1>Lesson cancelled</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This lesson is no longer scheduled.</p>${studentLessonActions(lesson, csrfToken, pending, canUndo, now)}</section>`);
+      return appPage(active.user, csrfToken, "Cancelled lesson", `<section class="card cancellation-result"><h1>Lesson cancelled</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This lesson is no longer scheduled.</p>${studentLessonActions(lesson, csrfToken, pending, canUndo, now)}</section>`);
     }
     const resources = await listResourcesForLessonForStudent(db, lesson.id, active.user.id);
     const report = await findSentLessonReportForStudent(db, lesson.id, active.user.id);
     const join = lesson.status === "scheduled" && lesson.external_url
       ? `<a class="button" href="${escapeHtml(lesson.external_url)}" rel="noreferrer">Join lesson</a>`
       : "";
-    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><div class="page-heading"><div><h1>${escapeHtml(formatLessonTime(lesson))}</h1></div>${studentLessonActions(lesson, csrfToken, pending, false, now)}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${join || (lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not provided")}</p></section>${report ? `<section class="card"><div class="section-heading"><div><p class="eyebrow">LESSON REPORT</p><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
+    return appPage(active.user, csrfToken, "Lesson", `<div class="page-heading"><div><h1>${escapeHtml(formatLessonTime(lesson))}</h1></div>${studentLessonActions(lesson, csrfToken, pending, false, now)}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${join || (lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not provided")}</p></section>${report ? `<section class="card"><div class="section-heading"><div><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }

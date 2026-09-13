@@ -270,7 +270,7 @@ export async function listResourcesForLesson(db: D1Database, lessonId: string): 
   return result.results;
 }
 
-export async function listResourcesForStudentRecord(db: D1Database, studentId: string): Promise<Resource[]> {
+export async function listResourcesForStudentRecord(db: D1Database, studentId: string, limit = 12, offset = 0): Promise<Resource[]> {
   const result = await db
     .prepare(
       `SELECT ${resourceColumns}
@@ -278,11 +278,17 @@ export async function listResourcesForStudentRecord(db: D1Database, studentId: s
        LEFT JOIN students s ON s.id = r.student_id
        LEFT JOIN lessons l ON l.id = r.lesson_id
        WHERE r.student_id = ? AND r.deleted_at IS NULL
-       ORDER BY r.created_at DESC, r.id DESC`
+       ORDER BY r.created_at DESC, r.id DESC
+       LIMIT ? OFFSET ?`
     )
-    .bind(studentId)
+    .bind(studentId, limit, offset)
     .all<Resource>();
   return result.results;
+}
+
+export async function countResourcesForStudentRecord(db: D1Database, studentId: string): Promise<number> {
+  const result = await db.prepare("SELECT COUNT(*) AS count FROM resources WHERE student_id = ? AND deleted_at IS NULL").bind(studentId).first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
 }
 
 export async function findResource(db: D1Database, id: string): Promise<Resource | null> {

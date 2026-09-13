@@ -1,5 +1,20 @@
 # Changelog
 
+### 2026-09-13 — Student profile manager
+
+- Added secure parent/carer email, billing address, additional support needs,
+  class texts, academic system/year and DST preference fields to student
+  records.
+- Added server-side English and Scottish academic-year progression at the
+  15 August Europe/London boundary, with static Mature, Private and
+  International categories.
+- Reworked student editing with clear login-email guidance, reactive academic
+  year options, collapsible and paginated lesson/resource sections, and a
+  bottom-positioned deactivate action.
+- Removed redundant uppercase page eyebrows from Learn lesson and student
+  surfaces.
+- Added migration `0014_student_profiles.sql` and architecture documentation.
+
 ### 2026-09-13 — Cancellation and reschedule UX refinement
 
 - Removed late cancellation requests; student cancellation is disabled within

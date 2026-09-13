@@ -26,6 +26,26 @@ export async function listLessons(db: D1Database): Promise<Lesson[]> {
   return result.results;
 }
 
+export async function listLessonsForStudentRecord(db: D1Database, studentId: string, limit: number, offset: number): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${lessonColumns}, s.name AS student_name, r.id AS report_id, r.status AS report_status
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
+       WHERE l.student_id = ?
+       ORDER BY l.start_at ASC, l.id ASC
+       LIMIT ? OFFSET ?`
+    )
+    .bind(studentId, limit, offset)
+    .all<Lesson>();
+  return result.results;
+}
+
+export async function countLessonsForStudentRecord(db: D1Database, studentId: string): Promise<number> {
+  const result = await db.prepare("SELECT COUNT(*) AS count FROM lessons WHERE student_id = ?").bind(studentId).first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
 export async function listLessonsForResourceFilter(db: D1Database, studentId: string, selectedId?: string, limit = 20): Promise<Lesson[]> {
   if (!studentId) return [];
   const boundedLimit = Math.max(1, Math.min(limit, 50));
