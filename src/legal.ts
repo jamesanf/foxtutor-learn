@@ -12,11 +12,13 @@ export const learnTermsContent = `
 <p>You must not attempt to access another person's records, bypass access controls, upload unlawful or malicious content, interfere with the service, or use Learn for any purpose unrelated to the tutoring service.</p>
 <h2>6. Intellectual property</h2>
 <p>Teaching materials, reports, templates, branding and software remain the property of Fox Learning Ltd. The limited personal-use permission above does not transfer ownership.</p>
-<h2>7. Availability and liability</h2>
+<h2>7. Safeguarding</h2>
+<p>We may record and share information where reasonably necessary to protect a pupil or another person, investigate a safeguarding concern, or comply with a legal duty. This can include contacting a parent, carer, emergency contact or relevant authority.</p>
+<h2>8. Availability and liability</h2>
 <p>We will take reasonable steps to keep Learn available and accurate, but the portal may be unavailable for maintenance, security work or events outside our control. Nothing in these terms limits liability that cannot lawfully be limited.</p>
-<h2>8. Privacy</h2>
+<h2>9. Privacy</h2>
 <p>Learn processes account, pupil, lesson, resource, report, notification and security information as described in the Learn privacy policy. The public-site privacy policy remains relevant to public-site interactions.</p>
-<h2>9. Governing law</h2>
+<h2>10. Governing law</h2>
 <p>These terms are governed by the laws of England and Wales, and the courts of England and Wales have exclusive jurisdiction, subject to any mandatory rights that apply to you.</p>
 <p class="legal-updated">Last reviewed: 13 September 2026</p>
 `;
@@ -34,9 +36,11 @@ export const learnPrivacyContent = `
 <p>Information is shared only where necessary to operate Learn. This can include Cloudflare services hosting the Worker, D1 database and private R2 storage, the authenticated access provider, and Fox Mail for outbound email. We do not sell pupil or parent information. Learn's Phase 5 billing classification does not send data to FreeAgent or another accounting integration.</p>
 <h2>5. Retention</h2>
 <p>We retain records for as long as needed to provide the service, maintain educational and operational history, resolve disputes, protect the service and meet legal, safeguarding and accounting obligations. Security sessions and temporary tokens expire or are revoked according to the service controls. Files follow the Learn resource retention rules.</p>
-<h2>6. Security</h2>
+<h2>6. Children and safeguarding</h2>
+<p>Learn is commonly used for pupils under 18. We expect parent or carer involvement where appropriate and apply role-based access to keep pupil information within the tutoring relationship. We may process or share relevant information when necessary to protect a pupil or another person or to meet a safeguarding duty.</p>
+<h2>7. Security</h2>
 <p>Learn uses authenticated access, role and ownership checks, server-side sessions, CSRF protection, encrypted transport, private storage and no-index controls. No internet service can guarantee absolute security, so please report suspected unauthorised access promptly.</p>
-<h2>7. Your rights</h2>
+<h2>8. Your rights</h2>
 <p>Subject to legal exceptions, you may request access, correction, deletion, restriction or portability, and may object to certain processing. A parent or carer may make a request for a child where legally authorised. Contact <a href="mailto:hello@foxtutor.org">hello@foxtutor.org</a>; you may also complain to the UK Information Commissioner's Office.</p>
 <p class="legal-updated">Last reviewed: 13 September 2026</p>
 `;
