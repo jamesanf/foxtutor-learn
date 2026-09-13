@@ -1047,10 +1047,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       rows.forEach((row) => {
         row.hidden = Boolean(value && row.dataset.notificationStatus !== value);
       });
-      if (filterPanel && filterToggle) {
-        filterPanel.hidden = true;
-        filterToggle.setAttribute("aria-expanded", "false");
-      }
     }));
   };
   setupNotificationConsole();
