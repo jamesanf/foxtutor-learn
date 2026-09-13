@@ -51,6 +51,8 @@ export type LearnRoute =
   | "student-lesson-report-pdf"
   | "student-resources"
   | "student-resource-download"
+  | "legal-terms"
+  | "legal-privacy"
   | "logout"
   | "asset"
   | "not-found";
@@ -100,10 +102,14 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/student\/lessons\/[^/]+$/.test(path)) return "student-lesson";
   if (path === "/learn/student/resources") return "student-resources";
   if (/^\/learn\/student\/resources\/[^/]+\/download$/.test(path)) return "student-resource-download";
+  if (path === "/learn/terms") return "legal-terms";
+  if (path === "/learn/privacy") return "legal-privacy";
   if (path === "/learn/logout") return "logout";
   if (
     path === "/learn/assets/learn.css" ||
     path === "/learn/assets/learn.js" ||
+    path === "/learn/assets/learn_logo-120.webp" ||
+    path === "/learn/assets/learn_logo-240.webp" ||
     path === "/learn/assets/foxlearninglogo-120.webp" ||
     path === "/learn/assets/foxlearninglogo-240.webp" ||
     path === "/learn/assets/fonts/geist-latin-wght-normal.woff2" ||

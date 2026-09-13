@@ -38,7 +38,10 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1/reschedule")).toBe("student-lesson-reschedule");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1/report")).toBe("student-lesson-report");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1/report.pdf")).toBe("student-lesson-report-pdf");
+    expect(classifyLearnRoute("/learn/terms")).toBe("legal-terms");
+    expect(classifyLearnRoute("/learn/privacy")).toBe("legal-privacy");
     expect(classifyLearnRoute("/learn/assets/learn.css")).toBe("asset");
+    expect(classifyLearnRoute("/learn/assets/learn_logo-240.webp")).toBe("asset");
     expect(classifyLearnRoute("/learn/assets/foxlearninglogo-240.webp")).toBe("asset");
     expect(classifyLearnRoute("/learn/assets/fonts/geist-latin-wght-normal.woff2")).toBe("asset");
     expect(classifyLearnRoute("/learn/assets/my-favicon/site.webmanifest")).toBe("asset");
@@ -55,5 +58,11 @@ describe("Learn route authorization", () => {
     expect(canAccess(student, "student")).toBe(true);
     expect(canAccess(student, "admin")).toBe(false);
     expect(requiredRole("admin")).toBe("ADMIN");
+  });
+  it("allows both authenticated roles to view legal pages", () => {
+    expect(requiredRole("legal-terms")).toBeNull();
+    expect(requiredRole("legal-privacy")).toBeNull();
+    expect(canAccess(admin, "legal-terms")).toBe(true);
+    expect(canAccess(student, "legal-privacy")).toBe(true);
   });
 });

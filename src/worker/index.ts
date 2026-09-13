@@ -123,6 +123,7 @@ import {
 import { privateHeaders } from "../security/headers";
 import { clearSessionCookies, createSession, csrfTokenMatches, csrfValid, readSession, type ActiveSession } from "../security/session";
 import { decryptFeedToken, encryptFeedToken, feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
+import { learnPrivacyContent, learnTermsContent } from "../legal";
 import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
@@ -247,11 +248,19 @@ function navigation(role: Role): string {
   return links.map(([href, label]) => `<a href="${href}">${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
 
+function learnFooter(): string {
+  return `<footer class="learn-footer"><div class="learn-footer-inner"><div class="learn-footer-copy"><a href="/learn" class="learn-footer-name">James Fox</a><p>Bespoke English Tuition</p><small>© 2026 Fox Learning Ltd. All rights reserved.</small></div><div class="learn-footer-logo"><img src="/learn/assets/learn_logo-120.webp" alt="FoxTutor Learn" width="120" height="77" loading="lazy"></div><div class="learn-footer-links"><a href="mailto:hello@foxtutor.org">hello@foxtutor.org</a><span aria-hidden="true"></span><a href="/learn/terms">Terms &amp; Conditions</a><span aria-hidden="true"></span><a href="/learn/privacy">Privacy Policy</a></div></div></footer>`;
+}
+
+function legalPage(title: string, content: string): string {
+  return `<div class="legal-page"><div class="page-heading"><h1>${escapeHtml(title)}</h1></div><article class="card legal-content">${content}</article></div>`;
+}
+
 function appPage(user: AppUser, csrfToken: string, title: string, content: string, exactTitle = false): Response {
   const identity = user.role === "ADMIN"
     ? `<span class="header-control identity-role">ADMIN</span>`
     : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
-  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
+  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor</strong></span></a><a class="topbar-center-logo" href="/learn" aria-label="FoxTutor Learn home"><img src="/learn/assets/learn_logo-240.webp" alt="FoxTutor Learn" width="120" height="77"></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div>${learnFooter()}</div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
   return htmlDocument(title, body, !exactTitle);
 }
 
@@ -2608,6 +2617,8 @@ async function learn(request: Request, env: Env): Promise<Response> {
     return redirect("/learn", clearSessionCookies(env.ENVIRONMENT === "production"));
   }
   if (route === "entry") return redirect(active.user.role === "ADMIN" ? "/learn/admin" : "/learn/student", sessionResult.setCookies);
+  if (route === "legal-terms") return withSessionCookies(appPage(active.user, active.csrfToken, "Terms & Conditions", legalPage("Terms & Conditions", learnTermsContent)), sessionResult.setCookies);
+  if (route === "legal-privacy") return withSessionCookies(appPage(active.user, active.csrfToken, "Privacy Policy", legalPage("Privacy Policy", learnPrivacyContent)), sessionResult.setCookies);
   if (route === "not-found") return messagePage("Not found", "That Learn route does not exist.", 404);
   if (!canAccess(active.user, route)) {
     const expected = requiredRole(route);

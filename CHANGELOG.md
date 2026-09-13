@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-13 — Learn shell branding and portal legal pages
+
+- Replaced the header's `FoxTutor Learn` text with `FoxTutor` and added a
+  centered, responsive Learn logo derived from `public/learn_logo.png`.
+- Added the public site's footer structure to the private Learn shell without
+  modifying the public site.
+- Added authenticated Learn-specific Terms & Conditions and Privacy Policy
+  pages for both administrators and students.
+- Documented portal-only data handling for pupil and parent/carer profiles,
+  lessons, resources, reports, notifications, audit history, sessions and
+  calendar-feed tokens. FreeAgent remains outside Learn.
+
 ### 2026-09-13 — Student profile tooltip styling
 
 - Changed help-bubble cursors from the browser question-mark style to the

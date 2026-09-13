@@ -147,7 +147,12 @@ describe("resource UX contract", () => {
   });
 
   it("uses a minimal, non-duplicated product header", () => {
-    expect(workerSource).toContain('<strong>FoxTutor Learn</strong>');
+    expect(workerSource).toContain('<strong>FoxTutor</strong>');
+    expect(workerSource).toContain('class="topbar-center-logo"');
+    expect(workerSource).toContain('/learn/assets/learn_logo-240.webp');
+    expect(workerSource).toContain('class="learn-footer"');
+    expect(workerSource).toContain('href="/learn/terms"');
+    expect(workerSource).toContain('href="/learn/privacy"');
     expect(workerSource).toContain('class="header-control identity-role">ADMIN</span>');
     expect(workerSource).toContain('class="header-control link-button">Log out</button>');
     expect(workerSource).toContain('<div class="identity">${identity}<form');
@@ -157,8 +162,8 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".header-control { display: inline-flex; min-height: 38px; align-items: center; font-family: inherit; font-size: .78rem; font-weight: 700; line-height: 1");
     expect(cssSource).toContain(".identity-role { display: inline-flex; min-height: 38px; align-items: center");
     expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center; border: 0; padding: 0 0 2px");
-    expect(cssSource).toContain(".topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px clamp(20px, 5vw, 64px) 12px 16px");
-    expect(cssSource).toContain(".topbar { gap: 12px; padding-inline: 14px 14px; padding-inline-start: 12px");
+    expect(cssSource).toContain(".topbar { min-height: 76px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)");
+    expect(cssSource).toContain(".topbar { gap: 8px; padding-inline: 12px");
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
   });
 

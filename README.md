@@ -10,7 +10,7 @@ replacement or accounting system.
 
 **Phase:** Phase 5.1 deployed; student profile manager deployed
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** `272bf08`
+**Application/runtime release:** Learn branding and legal pages (current main)
 **Worker:** `28a5e1c3-b2ea-4289-88ea-75228a3749ce`
 **D1 migrations:** `0001_foundation.sql` through `0015_parent_name.sql`
 
@@ -42,6 +42,10 @@ other accounting actions remain outside this release.
   adapter.
 - Lesson files use the existing D1 metadata and private R2 resource pipeline.
 - Phase 6 FreeAgent integration is deferred.
+- The authenticated shell uses the Learn logo, shared FoxTutor footer, and
+  Learn-specific terms and privacy pages. These pages supplement the public
+  site policies and describe portal-only student, lesson, resource,
+  notification and security data.
 
 ## Local development
 
@@ -95,6 +99,7 @@ CHANGELOG.md         Material implementation history
 | `docs/architecture/student-profiles.md` | Student profile fields and academic-year progression |
 | `docs/testing/phase-5.1.md` | Phase 5.1 tests and acceptance matrix |
 | `docs/deployment/phase-5.1.md` | Phase 5.1 release and deployment record |
+| `docs/architecture/learn-branding-legal.md` | Learn shell branding and portal legal policy boundary |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/architecture/` | Earlier phase architecture records |
