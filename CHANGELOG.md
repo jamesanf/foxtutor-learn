@@ -1,5 +1,11 @@
 # Changelog
 
+### 2026-09-13 — Student profile tooltip styling
+
+- Changed help-bubble cursors from the browser question-mark style to the
+  standard interactive pointer.
+- Restyled tooltip surfaces with the Learn light-blue palette instead of black.
+
 ### 2026-09-13 — Student profile form usability
 
 - Made only Pupil name and Pupil email mandatory; all other profile fields are
