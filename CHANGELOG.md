@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-13 — PDF report spacing and conditional layout
+
+- **Status:** pending deployment from the current working tree.
+- Added breathing room after the PDF header title, removed the redundant
+  “Tutorial Feedback” heading and returned feedback labels to the compact
+  metadata scale without changing report body text sizing.
+- Empty feedback sections are now omitted and the remaining sections repack
+  into a neat two-column layout, with a final single section spanning the
+  content width.
+- Right-aligned the clickable report link in the footer and kept the
+  single-page counter omitted.
+
 ### 2026-09-13 — Brevo deliverability consistency
 
 - **Status:** deployed as Worker

@@ -86,7 +86,6 @@ describe("structured lesson reports", () => {
     const pdf = generateLessonReportPdf(reportViewModel(report));
     const text = new TextDecoder().decode(pdf);
     expect(text.startsWith("%PDF-1.4")).toBe(true);
-    expect(text).toContain("Tutorial Feedback");
     expect(text).toContain("This Lesson's Focus");
     expect(text).toContain("Home Learning Task");
     expect(text).toContain("Brian");
@@ -107,12 +106,63 @@ describe("structured lesson reports", () => {
     expect(brandedPdf).toContain("/Filter /FlateDecode");
     expect(brandedPdf).toContain("/Im1 Do");
     expect(brandedPdf).toContain("Lesson Report");
+    expect(brandedPdf).toContain("/F2 8 Tf");
     expect(brandedPdf).toContain("10.5 Tf");
+    expect(brandedPdf).not.toContain("Tutorial Feedback");
     expect(brandedPdf).toContain("View this report on FoxTutor Learn");
     expect(brandedPdf).toContain("/Subtype /Link");
     expect(brandedPdf).toContain("/S /URI");
+    expect(brandedPdf).toContain("/Rect [431 12 555 30]");
     expect(brandedPdf).not.toContain("Page 1 of 1");
     expect(brandedPdf).toContain(`${new Date().getFullYear()} Fox Learning Ltd. All rights reserved.`);
+  });
+
+  it("omits empty feedback fields and repacks the remaining grid", () => {
+    const sparseReport = {
+      ...report,
+      next_lessons_focus: "",
+      even_better_if: "",
+      notes: "",
+      additional_notes: ""
+    };
+    const sparsePdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel(sparseReport)));
+    expect(sparsePdf).toContain("This Lesson's Focus");
+    expect(sparsePdf).toContain("Home Learning Task");
+    expect(sparsePdf).not.toContain("Next Lesson's Focus");
+    expect(sparsePdf).not.toContain("Even Better If");
+    expect(sparsePdf).not.toContain("Notes");
+
+    const onlyNotesPdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel({
+      ...report,
+      this_lessons_focus: "",
+      next_lessons_focus: "",
+      home_learning_task: "",
+      even_better_if: "",
+      notes: "Only this note remains",
+      summary: "",
+      homework: "",
+      additional_notes: ""
+    })));
+    expect(onlyNotesPdf).toContain("Notes");
+    expect(onlyNotesPdf).not.toContain("This Lesson's Focus");
+    expect(onlyNotesPdf).not.toContain("Home Learning Task");
+
+    const headerOnlyPdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel({
+      ...report,
+      this_lessons_focus: "",
+      next_lessons_focus: "",
+      home_learning_task: "",
+      even_better_if: "",
+      notes: "",
+      summary: "",
+      homework: "",
+      additional_notes: ""
+    })));
+    expect(headerOnlyPdf).not.toContain("This Lesson's Focus");
+    expect(headerOnlyPdf).not.toContain("Next Lesson's Focus");
+    expect(headerOnlyPdf).not.toContain("Home Learning Task");
+    expect(headerOnlyPdf).not.toContain("Even Better If");
+    expect(headerOnlyPdf).not.toContain("Notes");
   });
 
   it("renders numbered and bulleted report content safely", () => {

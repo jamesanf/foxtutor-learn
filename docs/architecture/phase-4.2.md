@@ -84,8 +84,8 @@ drafts or admin controls.
 ## PDF
 
 `src/reports/pdf.ts` is a small Worker-compatible deterministic renderer. It
-creates a compact single-page branded header/Tutorial Feedback structure with
-a stable core font, borders, footer and page numbering. The report metadata
+creates a compact single-page branded header and content grid with a stable
+core font, borders and footer. The report metadata
 displays the lesson start time only. The endpoint regenerates the
 PDF from the persisted report, uses `Content-Type: application/pdf`,
 `Content-Disposition: attachment`, `private, no-store`, `nosniff` and the
@@ -95,12 +95,15 @@ or D1 blob.
 The renderer uses a dynamically dated `© <current year> Fox Learning Ltd. All
 rights reserved.` footer matching the supplied template. Long text is wrapped within the
 feedback cells and the renderer reduces the line scale when needed to retain
-the one-page format. The supplied transparent FoxTutor logo asset is embedded
-in the top-left header with a PDF soft mask loaded from Worker assets. The
-header title uses matching 17-point bold white typography, feedback labels and
-values use readable metadata-scale typography, and the footer contains a
-clickable “View this report on FoxTutor Learn” URI link. PDFs do not use a
-separate R2 object or display a page counter for the single-page document.
+the one-page format. Empty feedback fields are omitted and the remaining cells
+repack into a two-column grid, with a final single field spanning the content
+width. The supplied transparent FoxTutor logo asset is embedded in the
+top-left header with a PDF soft mask loaded from Worker assets. The header
+title uses matching 17-point bold white typography with an inset right edge;
+feedback labels use the same compact scale as the metadata labels while body
+text retains its readable size. The footer contains a right-aligned clickable
+“View this report on FoxTutor Learn” URI link. PDFs do not use a separate R2
+object or display a page counter for the single-page document.
 
 ## Email presentation
 

@@ -15,8 +15,8 @@
 - The report editor defaults to bullet mode, supports list-mode toggling,
   compact auto-growing fields and uses the existing resource upload route for
   lesson-associated attachments.
-- PDF tests verify `%PDF-1.4`, the header, Tutorial Feedback labels,
-  deterministic report data and a single `/Type /Page` object.
+- PDF tests verify `%PDF-1.4`, the branded header, deterministic report data
+  and a single `/Type /Page` object.
 - Student report query coverage verifies that report columns are qualified
   across the lesson/student/user ownership joins, preventing the production
   Cloudflare 1101 caused by ambiguous SQLite column names.
@@ -31,9 +31,10 @@
   metadata is not duplicated, duplicate bullet prefixes are normalised, the
   contact/copyright footer is present and the FoxTutor Learn text link is used.
 - PDF coverage verifies the supplied transparent FoxTutor logo, PDF soft mask,
-  matching header title typography, readable feedback text, clickable report
-  URI footer link, omitted single-page counter and dynamically dated copyright
-  footer.
+  inset header title typography, compact feedback labels, unchanged readable
+  body text, omitted empty feedback fields, grid repacking for sparse reports,
+  right-aligned clickable report URI footer link, omitted single-page counter
+  and dynamically dated copyright footer.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
 - UK clock-change date/time detection and the `DST_WARNING` email projection

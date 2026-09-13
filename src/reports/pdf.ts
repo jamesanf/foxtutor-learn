@@ -7,6 +7,8 @@ const MARGIN = 40;
 const BLUE = "0.055 0.455 0.565";
 const INK = "0.09 0.13 0.2";
 const LINE = "0.72 0.78 0.83";
+const FOOTER_LINK_TEXT = "View this report on FoxTutor Learn";
+const FOOTER_LINK_X = PAGE_WIDTH - MARGIN - Math.ceil(FOOTER_LINK_TEXT.length * 7 * 0.52);
 
 export interface PdfLogo {
   width: number;
@@ -73,7 +75,7 @@ function rect(commands: string[], x: number, y: number, width: number, height: n
 function footer(commands: string[], reportUrl?: string): void {
   commands.push(`${LINE} RG 0.6 w ${MARGIN} 30 m ${PAGE_WIDTH - MARGIN} 30 l S`);
   text(commands, MARGIN, 18, `© ${new Date().getFullYear()} Fox Learning Ltd. All rights reserved.`, 7, "0.35 0.4 0.45");
-  if (reportUrl) text(commands, 378, 18, "View this report on FoxTutor Learn", 7, BLUE);
+  if (reportUrl) text(commands, FOOTER_LINK_X, 18, FOOTER_LINK_TEXT, 7, BLUE);
 }
 
 function reportHeader(commands: string[], report: StudentLessonReportViewModel, hasLogo: boolean): number {
@@ -84,7 +86,7 @@ function reportHeader(commands: string[], report: StudentLessonReportViewModel, 
   commands.push(`${BLUE} rg ${MARGIN} ${top - 42} ${width} 42 re f`);
   if (hasLogo) commands.push(`q 31 0 0 30 ${MARGIN + 12} ${top - 36} cm /Im1 Do Q`);
   text(commands, MARGIN + 50, top - 27, "FoxTutor Learn", 17, "1 1 1", true);
-  text(commands, MARGIN + width - 120, top - 27, "Lesson Report", 17, "1 1 1", true);
+  text(commands, MARGIN + width - 145, top - 27, "Lesson Report", 17, "1 1 1", true);
   rect(commands, MARGIN, top - height, width, height - 42, true);
   for (let index = 1; index < 4; index++) {
     const x = MARGIN + columnWidth * index;
@@ -124,7 +126,7 @@ function feedbackField(
   lineHeight: number
 ): void {
   rect(commands, x, y, width, height, true);
-  text(commands, x + 11, y + height - 23, label, 10.5, BLUE, true);
+  text(commands, x + 11, y + height - 20, label, 8, BLUE, true);
   const value = richTextToPlainText(String(report[key] ?? "")).replace(/^• /gm, "- ");
   const lines = wrap(value, Math.max(28, Math.floor(width / 5.1)));
   lines.forEach((line, index) => text(commands, x + 11, y + height - 45 - index * lineHeight, line, Math.max(10, lineHeight - 2.5)));
@@ -133,31 +135,41 @@ function feedbackField(
 function singlePage(report: StudentLessonReportViewModel, options: PdfOptions): string[] {
   const commands: string[] = ["q"];
   const feedbackTop = reportHeader(commands, report, Boolean(options.logo));
-  text(commands, MARGIN, feedbackTop, "Tutorial Feedback", 13, BLUE, true);
   const gap = 9;
   const halfWidth = (PAGE_WIDTH - 2 * MARGIN - gap) / 2;
   const fullWidth = PAGE_WIDTH - 2 * MARGIN;
-  const widths = [halfWidth, halfWidth, halfWidth, halfWidth, fullWidth];
-  const lineSets = feedbackFields.map(([, key], index) => wrap(String(report[key] ?? ""), Math.max(28, Math.floor(widths[index] / 5.1))));
-  const availableHeight = feedbackTop - 22 - 58;
+  const visibleFields = feedbackFields.filter(([, key]) => richTextToPlainText(String(report[key] ?? "")).trim());
+  const rows = [];
+  for (let index = 0; index < visibleFields.length; index += 2) {
+    const fields = visibleFields.slice(index, index + 2);
+    rows.push(fields);
+  }
+  const lineSets = rows.map((fields) => fields.map(([, key]) => {
+    const width = fields.length === 1 ? fullWidth : halfWidth;
+    return wrap(richTextToPlainText(String(report[key] ?? "")).replace(/^• /gm, "- "), Math.max(28, Math.floor(width / 5.1)));
+  }));
+  const availableHeight = feedbackTop - 58;
   let lineHeight = 13;
-  const calculateHeights = (lineSize: number): [number, number, number] => {
+  const calculateHeights = (lineSize: number): number[] => {
     const height = (lines: string[]) => Math.max(60, lines.length * lineSize + 39);
-    return [Math.max(height(lineSets[0]), height(lineSets[1])), Math.max(height(lineSets[2]), height(lineSets[3])), height(lineSets[4])];
+    return lineSets.map((fields) => Math.max(...fields.map(height), 60));
   };
   while (lineHeight > 10.5) {
     const heights = calculateHeights(lineHeight);
-    if (heights[0] + heights[1] + heights[2] + gap * 2 <= availableHeight) break;
+    if (heights.reduce((total, value) => total + value, 0) + Math.max(0, heights.length - 1) * gap <= availableHeight) break;
     lineHeight -= 0.5;
   }
-  const [rowHeight, secondRowHeight, fullRowHeight] = calculateHeights(lineHeight);
-  const firstRowY = feedbackTop - 22 - rowHeight;
-  const secondRowY = firstRowY - gap - secondRowHeight;
-  feedbackField(commands, report, feedbackFields[0][0], feedbackFields[0][1], MARGIN, firstRowY, halfWidth, rowHeight, lineHeight);
-  feedbackField(commands, report, feedbackFields[1][0], feedbackFields[1][1], MARGIN + halfWidth + gap, firstRowY, halfWidth, rowHeight, lineHeight);
-  feedbackField(commands, report, feedbackFields[2][0], feedbackFields[2][1], MARGIN, secondRowY, halfWidth, secondRowHeight, lineHeight);
-  feedbackField(commands, report, feedbackFields[3][0], feedbackFields[3][1], MARGIN + halfWidth + gap, secondRowY, halfWidth, secondRowHeight, lineHeight);
-  feedbackField(commands, report, feedbackFields[4][0], feedbackFields[4][1], MARGIN, secondRowY - gap - fullRowHeight, fullWidth, fullRowHeight, lineHeight);
+  const heights = calculateHeights(lineHeight);
+  let rowY = rows.length ? feedbackTop - heights[0] : feedbackTop;
+  rows.forEach((fields, rowIndex) => {
+    const rowHeight = heights[rowIndex];
+    const fieldWidth = fields.length === 1 ? fullWidth : halfWidth;
+    fields.forEach(([label, key], fieldIndex) => {
+      const x = fields.length === 1 ? MARGIN : MARGIN + fieldIndex * (halfWidth + gap);
+      feedbackField(commands, report, label, key, x, rowY, fieldWidth, rowHeight, lineHeight);
+    });
+    rowY -= rowHeight + gap;
+  });
   footer(commands, options.reportUrl);
   commands.push("Q");
   return commands;
@@ -178,7 +190,7 @@ function buildDocument(pages: string[], options: PdfOptions): ArrayBuffer {
   }
   const linkObjectNumber = options.reportUrl ? objects.length + 1 : undefined;
   if (options.reportUrl) {
-    objects.push(`<< /Type /Annot /Subtype /Link /Rect [378 12 555 30] /Border [0 0 0] /A << /Type /Action /S /URI /URI (${pdfSafe(options.reportUrl)}) >> >>`);
+    objects.push(`<< /Type /Annot /Subtype /Link /Rect [${FOOTER_LINK_X} 12 ${PAGE_WIDTH - MARGIN} 30] /Border [0 0 0] /A << /Type /Action /S /URI /URI (${pdfSafe(options.reportUrl)}) >> >>`);
   }
   for (const page of pages) {
     const stream = `${page}\n`;
