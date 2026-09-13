@@ -1,0 +1,18 @@
+Phase 3.7 upload/open/download evidence
+Date: 2026-09-13
+
+All uploads used the real authenticated resource form and Chrome file-input assignment.
+The Worker returned the real Resource added success page for each upload.
+
+Verified:
+- PDF A upload succeeded and appeared in the admin list.
+- PDF B upload succeeded and appeared in the admin list.
+- PNG upload succeeded and appeared in the admin list.
+- A lesson-associated PDF upload succeeded and displayed the lesson date/time context.
+- Open action exposed the authenticated download route with target=_blank.
+- Details displayed filename, type, student, lesson, uploaded date and page count.
+- Download created a valid 506-byte PDF for phase-3.7-upload-a.pdf.
+- The student session downloaded its own existing private resource successfully.
+
+Unauthenticated curl access to a private resource download returned the Cloudflare Access
+302 boundary rather than the object.

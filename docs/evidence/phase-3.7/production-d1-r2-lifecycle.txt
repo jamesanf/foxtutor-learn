@@ -1,0 +1,19 @@
+Phase 3.7 D1/R2 lifecycle evidence
+Date: 2026-09-13
+
+Before deletion, remote D1 showed all four controlled fixtures as available with non-null
+student ownership and the expected content types. Remote R2 returned the exact object bytes
+for all four storage keys.
+
+The real UI deletion paths were exercised:
+- Bulk delete removed phase-3.7-upload-a.pdf and phase-3.7-upload-b.pdf.
+- Single delete removed phase-3.7-upload-image.png.
+- Single delete removed phase-3.7-upload-lesson.pdf.
+
+After deletion, remote D1 showed each fixture with:
+- status = deleted
+- deleted_at set
+- original storage_key retained as the tombstone reference
+
+Remote R2 reads for all four exact storage keys returned not found. The D1 tombstones and
+R2 state were therefore internally consistent.

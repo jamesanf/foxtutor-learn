@@ -1,0 +1,15 @@
+Phase 3.7 no-reload and history evidence
+Date: 2026-09-13
+
+Before the fix, live admin acceptance showed search, filter, sort, page-size and clear
+updates retaining one navigation entry but using replaceState. Browser Back/Forward could
+not reconstruct the intermediate finder states.
+
+Fix applied:
+- Admin and student fragment updates now use history.pushState for user-driven updates.
+- popstate-driven loads continue without adding a new history entry.
+- The existing AbortController/request-sequence protection remains unchanged.
+
+The fix was validated locally and is scheduled for production validation on the exact final
+deployed commit. The pre-fix behavior is retained here as the production defect evidence
+that justified the surgical change.

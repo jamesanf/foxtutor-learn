@@ -279,7 +279,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           }
         }
         results.innerHTML = data.resultsHtml;
-        if (updateHistory) window.history.replaceState({}, "", data.url);
+        if (updateHistory) window.history.pushState({}, "", data.url);
         results.setAttribute("aria-busy", "false");
         document.querySelector<HTMLElement>("[data-resource-result-count]")?.setAttribute("aria-label", `${data.total} resources found`);
         setupResourceSelection();
@@ -560,7 +560,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         const data = await response.json() as ResourceFragmentPayload;
         if (current !== sequence) return;
         results.innerHTML = data.resultsHtml;
-        if (updateHistory) window.history.replaceState({}, "", data.url);
+        if (updateHistory) window.history.pushState({}, "", data.url);
       } catch (requestError) {
         if (requestError instanceof DOMException && requestError.name === "AbortError") return;
         const error = document.querySelector<HTMLElement>("[data-student-resource-update-error]");

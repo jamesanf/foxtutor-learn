@@ -1,0 +1,18 @@
+Phase 3.7 authenticated student acceptance
+Date: 2026-09-13
+
+Student account: jamesanf@gmail.com
+
+Verified in the real STUDENT session:
+- /learn/student/resources rendered only the student's own available resource.
+- Student search for "cinema" updated in place with one matching result.
+- Student Open and Download controls were present for the own resource.
+- Admin filters, selection, deletion, bulk deletion, upload and details controls were absent.
+- Direct navigation to /learn/admin returned the application Not authorized page.
+- Direct navigation to an admin resource detail route returned Not authorized.
+- Mobile student resource rendering at 390x844 had no horizontal overflow.
+- Student header rendered FoxTutor Learn, STUDENT and Log out without admin controls.
+
+The production D1 currently has one active student record. A second-student resource was
+therefore not available for a safe cross-student direct-object test; cross-student isolation
+is not claimed beyond the tested server-side student/admin authorization boundary.

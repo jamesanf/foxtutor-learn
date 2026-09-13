@@ -100,7 +100,7 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain('data-resource-finder-ui');
     expect(workerSource).toContain('data-resource-results');
     expect(workerSource).toContain('X-Resource-Fragment');
-    expect(clientSource).toContain("history.replaceState");
+    expect(clientSource).toContain("history.pushState");
     expect(clientSource).toContain('window.addEventListener("popstate"');
     expect(clientSource).toContain("AbortController");
     expect(clientSource).not.toContain("form.submit()");

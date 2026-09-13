@@ -1,0 +1,15 @@
+Phase 3.7 fixture cleanup evidence
+Date: 2026-09-13
+
+Synthetic fixtures created only for this acceptance:
+- phase-3.7-upload-a.pdf
+- phase-3.7-upload-b.pdf
+- phase-3.7-upload-image.png
+- phase-3.7-upload-lesson.pdf
+
+All four were deleted through the authenticated production UI. The final admin list showed
+only the pre-existing cinema_vouchers_0.pdf resource. Remote D1 confirmed four deleted
+tombstones and remote R2 confirmed all four exact objects were absent.
+
+Local fixture files and the test-generated download artifact were removed from local
+temporary/download locations. No fixture remains visible in production.

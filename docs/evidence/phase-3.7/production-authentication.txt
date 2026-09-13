@@ -1,0 +1,18 @@
+Phase 3.7 production authentication evidence
+Date: 2026-09-13
+
+Browser: Google Chrome 152.0.7977.83, dedicated persistent test profile.
+Production URL: https://foxtutor.org/learn
+
+Admin handoff:
+- Cloudflare Access / Google authentication completed in the open Chromium session.
+- Authenticated destination rendered the ADMIN header and /learn/admin.
+- The browser process remained open throughout the admin acceptance.
+
+Student handoff:
+- The dedicated profile cookies were cleared only after admin destructive tests were complete.
+- Cloudflare Access / Google authentication completed again in the same open Chromium session.
+- Authenticated destination rendered the STUDENT header and /learn/student.
+- The browser process remained open throughout the student acceptance.
+
+No credentials, cookies, tokens or browser profile data were written to the repository.

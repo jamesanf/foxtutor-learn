@@ -1,0 +1,36 @@
+Phase 3.7 production pass-out evidence
+Date: 2026-09-13
+
+Baseline:
+- Git commit: 05b8de5848ae8d5268e89ef3a81fa835246c459f
+- Remote commit: 05b8de5848ae8d5268e89ef3a81fa835246c459f
+- Worker version: 7abc41c5-2bce-4ad3-b15a-898125558a9d
+- Branch: main
+- Worktree: clean before evidence capture
+
+Automated validation before the history fix:
+- npm test: pass, 58 tests
+- npm run build: pass
+- npm run check: pass
+- npm run test:browser: pass
+- npm run test:production: pass
+- git diff --check: pass
+
+Production acceptance:
+- Real admin and student Cloudflare Access sessions: pass
+- Real authenticated uploads and private R2 objects: pass
+- D1/R2 deletion lifecycle: pass
+- Search, filters, sort, clear and no-reload fragment behavior: pass
+- Responsive screenshots and filter geometry: pass
+- Student own-resource UX and admin authorization denial: pass
+- Populated pagination transition: not claimed because production had one non-fixture
+  resource after cleanup
+- Cross-student direct-object isolation: not claimed because production had one active student
+
+Mandatory open operational items remain:
+- PDF compression: DEFERRED WITH DOCUMENTED TECHNICAL REASON
+- Retention housekeeping: DEFERRED WITH DOCUMENTED OPERATIONAL DECISION
+
+The Phase 3 completion tag must not be created while those mandatory Phase 3 items remain
+unresolved. The final status is therefore PASSED WITH DOCUMENTED OPEN ITEM, subject to the
+post-fix exact-commit deployment and retest recorded in the final handoff.

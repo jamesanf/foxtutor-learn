@@ -1,0 +1,32 @@
+Phase 3.7 authenticated admin resource acceptance
+Date: 2026-09-13
+
+Admin resource page loaded at /learn/admin/resources with the deployed application.
+The header rendered exactly once as:
+  FoxTutor Learn
+  ADMIN
+  Log out
+
+Controlled uploads appeared in the live resource list with the expected names and types:
+- phase-3.7-upload-a.pdf — PDF
+- phase-3.7-upload-b.pdf — PDF
+- phase-3.7-upload-image.png — PNG
+- phase-3.7-upload-lesson.pdf — PDF linked to the existing James Fox lesson
+
+Observed finder behavior:
+- Filename search for phase-3.7-upload-a.pdf updated the result fragment in place.
+- Student filter selected James Fox and kept the filter panel open.
+- File-type filter selected Image and narrowed the result set.
+- Custom sort popover exposed Newest, Oldest, Filename A-Z and Filename Z-A.
+- Sort selection to Oldest updated the URL and result fragment in place.
+- Page-size selection to 24 updated the URL and result fragment in place.
+- Clear all removed the active query/filter/sort/page-size state in place.
+- Search, filter, sort and page-size changes left the single document navigation entry intact.
+
+Open, Details and Download were exercised against the lesson-linked fixture and phase-3.7-upload-a.pdf.
+The downloaded PDF was 506 bytes, had the expected PDF signature and retained the fixture filename.
+
+Pagination limitation:
+- After cleanup, production contains one non-fixture resource and the supported minimum page size is 12.
+- There were therefore not enough safe resources to move to a second populated page without creating unnecessary production data.
+- The pagination control rendered, but a populated page transition was not claimed.
