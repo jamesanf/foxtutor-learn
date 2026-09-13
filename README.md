@@ -105,13 +105,17 @@ CHANGELOG.md         Material implementation history
 | `docs/deployment/phase-5.1.md` | Phase 5.1 release and deployment record |
 | `docs/architecture/learn-branding-legal.md` | Learn shell branding and portal legal policy boundary |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
+| `docs/architecture/phase-6.1.md` | FreeAgent accounting boundary and contract |
+| `docs/testing/phase-6.1.md` | Accounting integration acceptance matrix |
+| `docs/deployment/phase-6.1.md` | Accounting release and deployment record |
+| `docs/security/phase-6.1.md` | Accounting credential and retention controls |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/architecture/` | Earlier phase architecture records |
 | `docs/testing/` | Earlier phase validation and acceptance records |
 | `docs/deployment/` | Earlier phase deployment records |
 
 Historical documents retain the evidence for their own release. The current
-status above and the latest Phase 5.1 documents are authoritative for this
+status above and the latest Phase 6.1 documents are authoritative for this
 working tree.
 
 ## Phase map
