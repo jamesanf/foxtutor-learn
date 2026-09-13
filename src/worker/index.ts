@@ -1310,15 +1310,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-student-form") {
     if (request.method === "GET") return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new"));
-    if (request.method !== "POST" || !(await csrfValid(request, active))) {
-      return reportActionResponse(request, { ok: false, message: "Request not verified. Refresh the page and try again." }, 403)
-        ?? messagePage("Request not verified", "Refresh the page and try again.", 403);
-    }
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
-    if (!form) {
-      return reportActionResponse(request, { ok: false, message: "The submitted form is invalid or too large." }, 400)
-        ?? messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
-    }
+    if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
     const name = validName(formText(form, "name"));
     const email = validEmail(formText(form, "email"));
     const level = validLevel(formText(form, "level"));
@@ -1449,9 +1443,15 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
               : undefined,
           lessonResources));
     }
-    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    if (request.method !== "POST" || !(await csrfValid(request, active))) {
+      return reportActionResponse(request, { ok: false, message: "Request not verified. Refresh the page and try again." }, 403)
+        ?? messagePage("Request not verified", "Refresh the page and try again.", 403);
+    }
     const form = await parseForm(request);
-    if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
+    if (!form) {
+      return reportActionResponse(request, { ok: false, message: "The submitted form is invalid or too large." }, 400)
+        ?? messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
+    }
     if (existing?.status === "SENT") {
       if (formText(form, "action") !== "resend") {
         return reportActionResponse(request, { ok: false, message: "This report has already been sent." }, 409)

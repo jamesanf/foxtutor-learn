@@ -1046,6 +1046,12 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           credentials: "same-origin",
           headers: { Accept: "application/json", "X-Report-Fragment": "1" }
         });
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.includes("application/json")) {
+          throw new Error(response.status === 403
+            ? "Your session has expired. Refresh the page and try again."
+            : "The report action returned an unexpected response. Refresh the page and try again.");
+        }
         const payload = await response.json() as ReportActionPayload;
         if (!response.ok || !payload.ok) throw new Error(payload.message || "The report action could not be completed.");
         if (payload.reportHtml) {
