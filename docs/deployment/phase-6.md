@@ -9,9 +9,9 @@
 - D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `49c08ec8ed1cc6623404620fa080c1dad64a10c8`
-- Deployed source commit: `49c08ec8ed1cc6623404620fa080c1dad64a10c8`
-- Deployed Worker version: `5e9bc089-8e4d-4f12-9f40-ce5539c6eb4f`
+- Repository HEAD at executable deployment: `339062ffbcf5f618ce7d5bcd037e723eb284f581`
+- Deployed source commit: `339062ffbcf5f618ce7d5bcd037e723eb284f581`
+- Deployed Worker version: `a4ea8b75-319f-4c3d-ac3e-397758552559`
 - Production FreeAgent configuration: absent until human acceptance
 
 Wrangler reported the deployment source metadata as `Unknown`; the deployed

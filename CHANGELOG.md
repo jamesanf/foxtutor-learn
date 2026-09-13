@@ -1,5 +1,25 @@
 # Changelog
 
+### 2026-09-14 - Polish accounting administration UI
+
+- Replaced the accounting sidebar notification icon with a dedicated money
+  icon.
+- Removed the duplicate FreeAgent configuration warning when the detailed
+  error message is already present.
+- Improved contact-mapping table widths, status-pill wrapping and responsive
+  action controls.
+- Made the billing page show safe defaults of `55.00`, `Hours`, `0` payment
+  days and `0` tax when no persisted or environment value exists.
+- Added clear guidance that FreeAgent OAuth client secrets and token
+  encryption keys must be configured through Cloudflare Worker secrets, not
+  entered into the Learn form.
+- Added accounting UI contract tests. The release has 27 test files and 130
+  passing tests.
+- Deployed executable commit
+  `339062ffbcf5f618ce7d5bcd037e723eb284f581` as Worker version
+  `a4ea8b75-319f-4c3d-ac3e-397758552559`. Production D1 remains through
+  `0019_accounting_billing_settings.sql` with no pending migrations.
+
 ### 2026-09-14 - Add admin billing management
 
 - Added persisted `accounting_billing_settings` configuration through
