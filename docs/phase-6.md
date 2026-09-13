@@ -64,9 +64,9 @@ only current Phase 6 documents; historical release chronology is preserved in
 
 These values must always be reported separately:
 
-- **Repository HEAD at executable deployment:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`.
-- **Deployed source commit:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`.
-- **Deployed Worker version:** `cfaa9a46-e64a-4ef0-a672-6a926de205ba`.
+- **Repository HEAD at executable deployment:** `7bdb8bf51d9f14b2557bb68e3364f727c0afcadb`.
+- **Deployed source commit:** `7bdb8bf51d9f14b2557bb68e3364f727c0afcadb`.
+- **Deployed Worker version:** `946d2de3-8bb1-4880-bf16-ea41a47f016a`.
 - **D1 state:** production migrations through
   `0018_accounting_unresolved_action.sql`, with no pending migration reported
   after deployment of the executable change.

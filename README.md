@@ -11,8 +11,8 @@ replacement, payment system or accounting ledger.
 **Phase:** Engineering-complete; Phase 6 remains externally acceptance-blocked
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6 accounting boundary hardening
-**Deployed source:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`
-**Worker version:** `cfaa9a46-e64a-4ef0-a672-6a926de205ba`
+**Deployed source:** `7bdb8bf51d9f14b2557bb68e3364f727c0afcadb`
+**Worker version:** `946d2de3-8bb1-4880-bf16-ea41a47f016a`
 **D1 migrations:** `0001_foundation.sql` through `0018_accounting_unresolved_action.sql`
 
 The deployed source commit and current repository HEAD are tracked separately;

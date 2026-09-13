@@ -12,8 +12,11 @@
   code does not infer invoice creation, no action, a credit or another
   consequence.
 - Added migration `0018_accounting_unresolved_action.sql` and provider-
-  independent tests. Deployment follows the required remote migration and
-  executable release verification.
+  independent tests. The required remote migration and executable release
+  verification were completed below.
+- Applied `0018_accounting_unresolved_action.sql` to production D1 and
+  deployed executable commit `7bdb8bf51d9f14b2557bb68e3364f727c0afcadb` as
+  Worker version `946d2de3-8bb1-4880-bf16-ea41a47f016a`.
 - **Status:** known normal lesson values are implemented; the
   `ADMIN_CANCELLED` consequence and external FreeAgent acceptance remain
   outstanding.
