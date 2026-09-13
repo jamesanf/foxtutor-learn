@@ -11,7 +11,7 @@ replacement or accounting system.
 **Phase:** Phase 6.2 accounting hardening implemented; commercial approval and external FreeAgent acceptance pending
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6.2 accounting operations hardening
-**Worker:** `1386d7d5-3c7a-42bf-89a2-965c0db2c8c1`
+**Worker:** `26463610-92d2-490a-8e0f-c067cf45b846`
 **D1 migrations:** `0001_foundation.sql` through `0017_accounting_operations.sql`
 
 The current release includes structured D1 lesson reports, historical student
