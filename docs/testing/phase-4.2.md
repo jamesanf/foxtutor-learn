@@ -41,11 +41,11 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-previous application source commit `34223ff` is deployed as Worker
-`ceaaeb0f-eb36-4936-8238-7401a04edd05`; the `a0e1344` Worker deployment is
-pending. Production deployment and unauthenticated smoke are confirmed. A
-production notification regression check also confirmed that delivery reloads
-the linked recipient email rather than sending an empty recipient.
+application release `ba1ead9` is deployed as Worker
+`9bf2f46b-d88c-4100-bb6b-ed80acd40c19`. Production deployment and
+unauthenticated smoke are confirmed. A production notification regression check
+also confirmed that delivery reloads the linked recipient email rather than
+sending an empty recipient.
 Authenticated browser, successful Fox Mail, PDF visual and no-storage evidence
 are still required before closure.
 

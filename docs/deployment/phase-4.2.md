@@ -28,15 +28,14 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migrations `0008_structured_lesson_reports.sql` and
 `0009_international_students.sql` were applied to the production database on
-`2026-09-13`. The current deployed application source commit before this release is
-`34223ff`; the pending release commit is `a0e1344`,
-synchronized with `origin/main`, and is deployed as Worker version
-`ceaaeb0f-eb36-4936-8238-7401a04edd05`. A remote migration check reports no
+`2026-09-13`. The current deployed application release is `ba1ead9`, synchronized with
+`origin/main`, and is deployed as Worker version
+`9bf2f46b-d88c-4100-bb6b-ed80acd40c19`. A remote migration check reports no
 migrations pending. The release includes the report editor refinements,
 start-only report time, compact auto-growing fields and lesson attachments
 submitted with the report action through the existing resource/R2 pipeline.
 
-The pending release also qualifies report columns in the student ownership
+The release also qualifies report columns in the student ownership
 query, fixing the ambiguous-column path behind the student report 1101;
 humanises sent timestamps, keeps ordinary reports on one PDF page and adds
 inline FoxTutor email branding with structured feedback panels.
