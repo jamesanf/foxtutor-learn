@@ -337,7 +337,7 @@ function notificationControls(settings: NotificationSetting[], csrfToken: string
   };
   const groupMarkup = groups.map((group, index) => {
     const rows = group.types.map((type) => settingByType.get(type)).filter((setting): setting is NotificationSetting => Boolean(setting)).map(rowForSetting).join("");
-    return `<details class="notification-group"${index === 0 ? " open" : ""}><summary><span><strong>${escapeHtml(group.label)}</strong><small>${escapeHtml(group.description)}</small></span><span class="notification-group-count">${group.types.length}</span></summary><div class="notification-group-body"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></details>`;
+    return `<details class="notification-group" data-notification-group${index === 0 ? " open" : ""}><summary><span><strong>${escapeHtml(group.label)}</strong><small>${escapeHtml(group.description)}</small></span></summary><div class="notification-group-body"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></details>`;
   }).join("");
   return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Enable or disable future notifications and adjust when scheduled messages are sent.</p></div></div><div class="notification-settings-list">${groupMarkup}</div></section>`;
 }
@@ -354,7 +354,8 @@ function notificationList(
 ): string {
   const filters = ["", "PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT", "SUPPRESSED"].map((status) => {
     const label = status ? notificationStatusLabel(status) : "All";
-    return `<button type="button" class="button notification-filter-option${selectedStatus === status || (!selectedStatus && !status) ? "" : " secondary"}" data-notification-filter="${status}" aria-pressed="${selectedStatus === status || (!selectedStatus && !status) ? "true" : "false"}">${label}</button>`;
+    const active = selectedStatus === status || (!selectedStatus && !status);
+    return `<button type="button" class="button secondary notification-filter-option${active ? " is-active" : ""}" data-notification-filter="${status}" aria-pressed="${active ? "true" : "false"}">${label}</button>`;
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Suppressed</span><strong>${counts.SUPPRESSED}</strong></section></div>`;
   const body = rows.length

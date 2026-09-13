@@ -1020,6 +1020,13 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   });
 
   const setupNotificationConsole = () => {
+    const groups = Array.from(document.querySelectorAll<HTMLDetailsElement>("[data-notification-group]"));
+    groups.forEach((group) => group.addEventListener("toggle", () => {
+      if (!group.open) return;
+      groups.forEach((candidate) => {
+        if (candidate !== group) candidate.removeAttribute("open");
+      });
+    }));
     const filterToggle = document.querySelector<HTMLButtonElement>("[data-notification-filter-toggle]");
     const filterPanel = document.querySelector<HTMLElement>("[data-notification-filter-panel]");
     const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-notification-row]"));
