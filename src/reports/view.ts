@@ -22,11 +22,11 @@ function dateFromSnapshot(value: string): string {
 function timeFromInstant(value: string, timezone: string): string {
   if (!value || !timezone) return "";
   return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
-    hour12: false,
+    hour12: true,
     timeZone: timezone
-  }).format(new Date(value));
+  }).format(new Date(value)).replace(" ", "").toUpperCase().replace(/:00(AM|PM)$/, "$1");
 }
 
 export function reportViewModel(report: LessonReport): StudentLessonReportViewModel {

@@ -32,7 +32,7 @@ describe("structured lesson reports", () => {
   it("projects persisted snapshot data consistently", () => {
     const view = reportViewModel(report);
     expect(view.lessonDate).toBe("13/09/2026");
-    expect(view.lessonTime).toBe("13:00–13:55");
+    expect(view.lessonTime).toBe("1PM–1:55PM");
     expect(view.pupilName).toBe("Brian");
     expect(view.level).toBe("ESOL N5/H");
     expect(view.evenBetterIf).toContain("fluency");
