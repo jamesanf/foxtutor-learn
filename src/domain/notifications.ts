@@ -14,7 +14,7 @@ export const NOTIFICATION_TYPES = [
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
-export type NotificationStatus = "PENDING" | "SENDING" | "SENT" | "UNKNOWN" | "FAILED";
+export type NotificationStatus = "PENDING" | "SENDING" | "SENT" | "UNKNOWN" | "FAILED" | "SUPPRESSED";
 
 export const REMINDER_INTERVAL_MINUTES = 15;
 export const REMINDER_LOOKAHEAD_MINUTES = 7 * 24 * 60;

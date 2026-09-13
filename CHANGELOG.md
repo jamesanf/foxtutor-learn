@@ -884,3 +884,7 @@ tagging and pushing Phase 1 completion.
 **Production:** Worker version `85129275-02b5-40be-8626-db554aa6903f` remains current; no new application deployment was required after Pass 1.
 
 **Closure decision:** all required visual, authorization, privacy, responsive, lifecycle, timezone, overlap, regression, cleanup, documentation, Git and deployment gates passed. Phase 2.1 is closed. Calendar, availability, recurrence, notifications, resources, billing and reporting remain deferred.
+## Unreleased
+
+- Added persistent admin notification controls for enabling/disabling future notification types, adjusting reminder/delivery timing, and adding subject or body wording.
+- Improved the notification console with 12/24/48-page pagination, suppressed delivery visibility, and a less crowded delivery log.

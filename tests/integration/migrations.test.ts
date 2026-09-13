@@ -91,4 +91,13 @@ describe("D1 foundation", () => {
     expect(migration).toContain("idx_one_pending_reschedule_request");
     expect(migration).toContain("CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))");
   });
+
+  it("adds persistent notification controls without a second outbox", () => {
+    const migration = readFileSync("migrations/0013_notification_controls.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS notification_settings");
+    expect(migration).toContain("SUPPRESSED");
+    expect(migration).toContain("subject_prefix");
+    expect(migration).toContain("body_note");
+    expect(migration).toContain("LESSON_REMINDER");
+  });
 });

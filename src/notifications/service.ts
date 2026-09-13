@@ -9,14 +9,18 @@ import {
   markNotificationOutcome,
   markNotificationSent,
   resetNotificationForRetry,
+  suppressPendingNotification,
+  updatePendingNotificationContent,
   type Notification,
   type NotificationInsert
 } from "../db/notifications";
+import { findNotificationSetting } from "../db/notification-settings";
 import {
   eventIdempotencyKey,
   MAX_NOTIFICATION_ATTEMPTS,
   reminderDueAt,
   reminderIdempotencyKey,
+  REMINDER_INTERVAL_MINUTES,
   REMINDER_LOOKAHEAD_MINUTES,
   type NotificationType
 } from "../domain/notifications";
@@ -40,6 +44,23 @@ export interface NotificationDraft {
   reportId?: string | null;
   content: EmailContent;
   scheduledAt?: string | null;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character] ?? character
+  ));
+}
+
+function controlledContent(content: EmailContent, subjectPrefix: string, bodyNote: string): EmailContent {
+  if (!subjectPrefix && !bodyNote) return content;
+  return {
+    subject: `${subjectPrefix}${content.subject}`,
+    text: bodyNote ? `${content.text}\n\n${bodyNote}` : content.text,
+    html: bodyNote
+      ? `${content.html}<p>${escapeHtml(bodyNote).replace(/\n/g, "<br>")}</p>`
+      : content.html
+  };
 }
 
 function nextRetryAt(now: string, attemptCount: number): string | null {
@@ -105,7 +126,21 @@ export async function createAndDeliverNotification(
   now = new Date().toISOString(),
   fetcher: typeof fetch = fetch
 ): Promise<Notification> {
-  const notification = await createNotification(db, draft, now);
+  const setting = await findNotificationSetting(db, draft.type);
+  const content = controlledContent(draft.content, setting?.subject_prefix ?? "", setting?.body_note ?? "");
+  const scheduledAt = draft.scheduledAt ?? (
+    setting?.timing_minutes !== null && setting?.timing_minutes !== undefined && setting.timing_minutes !== 0
+      ? new Date(Date.parse(now) + setting.timing_minutes * 60_000).toISOString()
+      : null
+  );
+  const notification = await createNotification(db, { ...draft, content, scheduledAt }, now);
+  if (setting && setting.enabled === 0) {
+    await db.prepare(
+      "UPDATE notifications SET status = 'SUPPRESSED', next_attempt_at = NULL WHERE id = ? AND status = 'PENDING'"
+    ).bind(notification.id).run();
+    return (await findNotificationByIdempotencyKey(db, notification.idempotency_key)) ?? notification;
+  }
+  if (scheduledAt && Date.parse(scheduledAt) > Date.parse(now)) return notification;
   if (notification.status === "SENT") return notification;
   if (notification.status === "FAILED" || notification.status === "UNKNOWN") {
     await resetNotificationForRetry(db, notification.id, now);
@@ -123,22 +158,36 @@ export async function runReminderScheduler(
   const dueLessons = await listDueReminderLessons(db, now, 25, REMINDER_LOOKAHEAD_MINUTES);
   let processed = 0;
   const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN);
+  const setting = await findNotificationSetting(db, "LESSON_REMINDER");
+  const reminderMinutes = setting?.timing_minutes && setting.timing_minutes > 0 ? setting.timing_minutes : REMINDER_INTERVAL_MINUTES;
   for (const lesson of dueLessons) {
-    const scheduledAt = reminderDueAt(lesson.start_at);
-    if (!scheduledAt || Date.parse(scheduledAt) > Date.parse(now)) continue;
+    const scheduledAt = reminderDueAt(lesson.start_at, reminderMinutes);
+    if (!scheduledAt) continue;
     const key = reminderIdempotencyKey(lesson.id, lesson.start_at);
     const existing = await findNotificationByIdempotencyKey(db, key)
       ?? await findNotificationByIdempotencyKey(db, reminderIdempotencyKey(lesson.id));
-    if (existing?.status === "SENT") continue;
-    const content = renderEmail("LESSON_REMINDER", {
+    if (existing?.status === "SENT" || existing?.status === "SUPPRESSED") continue;
+    if (setting && setting.enabled === 0 && existing) {
+      await suppressPendingNotification(db, existing.id, now);
+      continue;
+    }
+    const rawContent = renderEmail("LESSON_REMINDER", {
       studentName: lesson.student_name,
       startAt: lesson.start_at,
       endAt: lesson.end_at,
       timezone: lesson.timezone,
       lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
       externalUrl: lesson.external_url,
-      reminderLeadMinutes: 15
+      reminderLeadMinutes: reminderMinutes
     }, origin);
+    const content = controlledContent(rawContent, setting?.subject_prefix ?? "", setting?.body_note ?? "");
+    if (existing?.status === "PENDING") {
+      await updatePendingNotificationContent(db, existing.id, {
+        subject: content.subject,
+        textBody: content.text,
+        htmlBody: content.html
+      }, scheduledAt, now);
+    }
     const notification = await insertNotification(db, {
       id: crypto.randomUUID(),
       eventType: "LESSON_REMINDER",
@@ -152,9 +201,10 @@ export async function runReminderScheduler(
       htmlBody: content.html,
       createdAt: now,
       scheduledAt,
-      nextAttemptAt: scheduledAt
+      nextAttemptAt: scheduledAt,
+      status: setting?.enabled === 0 ? "SUPPRESSED" : undefined
     });
-    if (notification.status !== "SENT" && Date.parse(scheduledAt) <= Date.parse(now)) {
+    if (notification.status === "PENDING" && Date.parse(scheduledAt) <= Date.parse(now)) {
       await deliverNotification(db, env, notification.id, now, fetcher);
       processed++;
     }
@@ -173,16 +223,18 @@ export async function runDstWarningScheduler(
   if (!warning) return 0;
   const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN);
   const recipients = await listInternationalStudentRecipients(db);
+  const setting = await findNotificationSetting(db, "DST_WARNING");
   let processed = 0;
   for (const student of recipients) {
     if (!student.learn_user_id) continue;
     const eventId = `${student.id}:${warning.localDate}`;
     const key = eventIdempotencyKey("DST_WARNING", eventId);
-    const content = renderEmail("DST_WARNING", {
+    const rawContent = renderEmail("DST_WARNING", {
       studentName: student.name,
       changeDate: warning.localDate,
       direction: warning.direction
     }, origin);
+    const content = controlledContent(rawContent, setting?.subject_prefix ?? "", setting?.body_note ?? "");
     const notification = await insertNotification(db, {
       id: crypto.randomUUID(),
       eventType: "DST_WARNING",
@@ -195,9 +247,10 @@ export async function runDstWarningScheduler(
       htmlBody: content.html,
       createdAt: now,
       scheduledAt: now,
-      nextAttemptAt: now
+      nextAttemptAt: now,
+      status: setting?.enabled === 0 ? "SUPPRESSED" : undefined
     });
-    if (notification.status !== "SENT") {
+    if (notification.status === "PENDING") {
       await deliverNotification(db, env, notification.id, now, fetcher);
       processed++;
     }

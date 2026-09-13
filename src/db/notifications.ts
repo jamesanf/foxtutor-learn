@@ -68,6 +68,21 @@ export async function updateNotificationSchedule(
   return Boolean(result.meta.changes);
 }
 
+export async function updatePendingNotificationContent(
+  db: D1Database,
+  id: string,
+  content: { subject: string; textBody: string; htmlBody: string },
+  scheduledAt: string,
+  now: string
+): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE notifications
+     SET subject = ?, text_body = ?, html_body = ?, scheduled_at = ?, next_attempt_at = ?, updated_at = ?
+     WHERE id = ? AND status = 'PENDING'`
+  ).bind(content.subject, content.textBody, content.htmlBody, scheduledAt, scheduledAt, now, id).run();
+  return Boolean(result.meta.changes);
+}
+
 export async function findNotificationByIdempotencyKey(db: D1Database, key: string): Promise<Notification | null> {
   return db.prepare(
     "SELECT n.*, u.email AS recipient_email FROM notifications n JOIN users u ON u.id = n.recipient_user_id WHERE n.idempotency_key = ?"
@@ -147,6 +162,12 @@ export async function resetNotificationForRetry(db: D1Database, id: string, now:
   ).bind(now, now, id).run();
 }
 
+export async function suppressPendingNotification(db: D1Database, id: string, now: string): Promise<void> {
+  await db.prepare(
+    "UPDATE notifications SET status = 'SUPPRESSED', updated_at = ?, next_attempt_at = NULL WHERE id = ? AND status = 'PENDING'"
+  ).bind(now, id).run();
+}
+
 export async function listNotifications(db: D1Database, status?: NotificationStatus, limit = 50, offset = 0): Promise<Notification[]> {
   const clause = status ? "WHERE n.status = ?" : "";
   const bindings: (string | number)[] = status ? [status, limit, offset] : [limit, offset];
@@ -164,7 +185,7 @@ export async function listNotifications(db: D1Database, status?: NotificationSta
 
 export async function notificationCounts(db: D1Database): Promise<Record<NotificationStatus, number>> {
   const result = await db.prepare("SELECT status, COUNT(*) AS count FROM notifications GROUP BY status").all<{ status: NotificationStatus; count: number | string }>();
-  const counts: Record<NotificationStatus, number> = { PENDING: 0, SENDING: 0, SENT: 0, UNKNOWN: 0, FAILED: 0 };
+  const counts: Record<NotificationStatus, number> = { PENDING: 0, SENDING: 0, SENT: 0, UNKNOWN: 0, FAILED: 0, SUPPRESSED: 0 };
   for (const row of result.results) counts[row.status] = Number(row.count);
   return counts;
 }
