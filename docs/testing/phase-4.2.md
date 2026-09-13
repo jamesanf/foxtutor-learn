@@ -24,6 +24,14 @@
   panels, a clear report CTA and safe rich-text projection.
 - Report delivery coverage verifies that a sent report can be resent with a
   fresh notification event and that successful resend updates `sent_at`.
+- Reactive report-action coverage verifies that Save draft, Send report and
+  Resend report submit a fragment request, expose a loading state and update
+  the report section without page navigation.
+- Email presentation coverage verifies that empty fields are omitted, pupil
+  metadata is not duplicated, duplicate bullet prefixes are normalised, the
+  contact/copyright footer is present and the FoxTutor Learn text link is used.
+- PDF coverage verifies the self-contained vector FoxTutor mark in the
+  single-page header.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
 - UK clock-change date/time detection and the `DST_WARNING` email projection
@@ -31,7 +39,7 @@
 
 ## Executed validation
 
-The final pushed application tree at `064d617` passed:
+The final pre-presentation application tree at `064d617` passed:
 
 ```text
 npm test                 87 tests across 19 files
@@ -43,8 +51,9 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-application release `064d617` is deployed as Worker
-`fd195518-ddce-402f-93e4-43043fe41eaf`. Production deployment and
+application release `064d617` was deployed as Worker
+`fd195518-ddce-402f-93e4-43043fe41eaf`. This document must be updated with the
+new release and Worker after the final deployment. Production deployment and
 unauthenticated smoke are confirmed. A production notification regression check
 also confirmed that delivery reloads the linked recipient email rather than
 sending an empty recipient.

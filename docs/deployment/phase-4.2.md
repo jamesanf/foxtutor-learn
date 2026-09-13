@@ -45,6 +45,14 @@ new notification event while retaining the persisted report content and
 attachments; an accepted resend updates the report's `sent_at` snapshot shown
 in the report view and lesson history.
 
+The final presentation pass adds no migration. Report Save draft, Send report
+and Resend report now support an in-place JSON fragment response with a
+redirect fallback, including a disabled spinner state and site notification.
+Report email uses a spacious metadata panel, omits empty feedback sections,
+removes duplicate pupil/footer content, adds the support contact and copyright
+footer, and uses a FoxTutor Learn text link. Generated PDFs remain
+single-page and now include a vector FoxTutor mark in the header.
+
 The first authenticated report-send attempt reached Fox Mail but failed with
 `400 invalid_recipient`. Production D1 inspection confirmed that both the
 student profile email and linked active Learn user email were

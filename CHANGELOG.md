@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-13 — Reactive reports and final presentation polish
+
+- Made Save draft, Send report and Resend report update the report view
+  in-place with a loading spinner, site notifications and a no-JavaScript
+  redirect fallback.
+- Redesigned lesson-report email metadata and spacing, omitted empty sections,
+  removed duplicate pupil/footer content, added the support contact and
+  copyright footer, and changed the CTA to “View this report on FoxTutor
+  Learn”.
+- Normalised duplicate rich-text bullet markers and added a self-contained
+  vector FoxTutor mark to the one-page PDF header.
+
 ### 2026-09-13 — Resend lesson reports
 
 - Added an admin-only Resend report action to sent report views.

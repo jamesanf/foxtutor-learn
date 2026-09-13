@@ -317,6 +317,13 @@ function calendarFragmentResponse(subscriptionHtml: string, message: string): Re
   return new Response(JSON.stringify({ subscriptionHtml, message }), { status: 200, headers });
 }
 
+function reportActionResponse(request: Request, payload: Record<string, unknown>, status = 200): Response | null {
+  if (request.headers.get("X-Report-Fragment") !== "1") return null;
+  const headers = privateHeaders("application/json; charset=utf-8");
+  headers.set("Cache-Control", "no-store");
+  return new Response(JSON.stringify(payload), { status, headers });
+}
+
 async function currentCalendarFeedUrl(request: Request, env: Env, feed: CalendarFeed | null): Promise<string | undefined> {
   if (!feed?.token_ciphertext || !env.CALENDAR_FEED_ENCRYPTION_KEY) return undefined;
   const token = await decryptFeedToken(feed.token_ciphertext, env.CALENDAR_FEED_ENCRYPTION_KEY);
@@ -1440,9 +1447,15 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
     if (existing?.status === "SENT") {
-      if (formText(form, "action") !== "resend") return appPage(active.user, csrfToken, "Lesson report", reportDocument(existing, true, csrfToken));
+      if (formText(form, "action") !== "resend") {
+        return reportActionResponse(request, { ok: false, message: "This report has already been sent." }, 409)
+          ?? appPage(active.user, csrfToken, "Lesson report", reportDocument(existing, true, csrfToken));
+      }
       const student = await findActiveStudentRecipient(db, lesson.student_id);
-      if (!student?.learn_user_id || !student.learn_user_email) return messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
+      if (!student?.learn_user_id || !student.learn_user_email) {
+        return reportActionResponse(request, { ok: false, message: "The lesson student does not have an active Learn account." }, 409)
+          ?? messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
+      }
       const notification = await emitLessonReportNotification(
         env,
         lesson,
@@ -1453,10 +1466,24 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         new Date().toISOString(),
         canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin)
       );
-      if (notification?.status === "SENT") return redirect(url.pathname);
-      if (notification?.status === "UNKNOWN") return redirect(`${url.pathname}?delivery=unknown`);
+      if (notification?.status === "SENT") {
+        const updatedReport = await findLessonReport(db, lesson.id);
+        const response = reportActionResponse(request, {
+          ok: true,
+          action: "resend",
+          message: "Report resent successfully.",
+          reportHtml: updatedReport ? reportDocument(updatedReport, true, csrfToken) : reportDocument(existing, true, csrfToken)
+        });
+        if (response) return response;
+        return redirect(url.pathname);
+      }
+      if (notification?.status === "UNKNOWN") {
+        return reportActionResponse(request, { ok: false, message: "Report resend status is unknown; check Notifications before trying again." }, 503)
+          ?? redirect(`${url.pathname}?delivery=unknown`);
+      }
       const reason = notification?.error_message ? `&reason=${encodeURIComponent(notification.error_message)}` : "";
-      return redirect(`${url.pathname}?delivery=failed${reason}`);
+      return reportActionResponse(request, { ok: false, message: `Report resend failed${notification?.error_message ? `: ${notification.error_message}` : "."}` }, 502)
+        ?? redirect(`${url.pathname}?delivery=failed${reason}`);
     }
     const level = formText(form, "level").trim();
     const thisLessonsFocus = formText(form, "thisLessonsFocus").trim();
@@ -1468,18 +1495,23 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const wantsSend = formText(form, "action") === "send";
     const draftReport = { ...existing, level, this_lessons_focus: thisLessonsFocus, next_lessons_focus: nextLessonsFocus, home_learning_task: homeLearningTask, notes, even_better_if: evenBetterIf } as LessonReport;
     if (!level || tooLong || (wantsSend && !thisLessonsFocus)) {
+      const message = wantsSend && !thisLessonsFocus ? "Enter This Lesson's Focus before sending the report." : "Level is required and each report field must be 12,000 characters or fewer.";
+      const response = reportActionResponse(request, { ok: false, message }, 422);
+      if (response) return response;
       return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
         csrfToken,
         url.pathname,
         lesson,
         studentRecord,
         draftReport,
-        wantsSend && !thisLessonsFocus ? "Enter This Lesson's Focus before sending the report." : "Level is required and each report field must be 12,000 characters or fewer.",
+        message,
         await listResourcesForLesson(db, lesson.id)
       ));
     }
     const attachments = form.getAll("attachments").filter((value): value is File => value instanceof File && value.size > 0);
     if (wantsSend && attachments.length > 5) {
+      const response = reportActionResponse(request, { ok: false, message: "Choose no more than 5 lesson attachments." }, 422);
+      if (response) return response;
       return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
         csrfToken,
         url.pathname,
@@ -1502,6 +1534,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         uploadForm.set("file", attachment);
         const uploadResponse = await resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true);
         if (uploadResponse.status !== 204) {
+          const response = reportActionResponse(request, { ok: false, message: `The attachment "${attachment.name}" could not be uploaded. Check the file type and size, then try again.` }, 422);
+          if (response) return response;
           return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
             csrfToken,
             url.pathname,
@@ -1536,18 +1570,41 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       now
     });
     await updateStudentLevel(db, studentRecord.id, level, now);
-    if (!wantsSend) return redirect(`${url.pathname}?saved=1`);
+    if (!wantsSend) {
+      return reportActionResponse(request, { ok: true, action: "save", message: "Draft saved." })
+        ?? redirect(`${url.pathname}?saved=1`);
+    }
     const savedReport = await findLessonReport(db, lesson.id);
-    if (!savedReport) return messagePage("Report unavailable", "The report could not be saved.", 500);
+    if (!savedReport) {
+      return reportActionResponse(request, { ok: false, message: "The report could not be saved." }, 500)
+        ?? messagePage("Report unavailable", "The report could not be saved.", 500);
+    }
     const student = await findActiveStudentRecipient(db, lesson.student_id);
-    if (!student?.learn_user_id || !student.learn_user_email) return messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
+    if (!student?.learn_user_id || !student.learn_user_email) {
+      return reportActionResponse(request, { ok: false, message: "The lesson student does not have an active Learn account." }, 409)
+        ?? messagePage("Report unavailable", "The lesson student does not have an active Learn account.", 409);
+    }
     const resources = await listResourcesForLesson(db, lesson.id);
     const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin);
     const notification = await emitLessonReportNotification(env, lesson, savedReport, student, resources, reportId, now, origin);
-    if (notification?.status === "SENT") return redirect(url.pathname);
-    if (notification?.status === "UNKNOWN") return redirect(`${url.pathname}?delivery=unknown`);
+    if (notification?.status === "SENT") {
+      const updatedReport = await findLessonReport(db, lesson.id);
+      const response = reportActionResponse(request, {
+        ok: true,
+        action: "send",
+        message: "Report sent successfully.",
+        reportHtml: updatedReport ? reportDocument(updatedReport, true, csrfToken) : reportDocument(savedReport, true, csrfToken)
+      });
+      if (response) return response;
+      return redirect(url.pathname);
+    }
+    if (notification?.status === "UNKNOWN") {
+      return reportActionResponse(request, { ok: false, message: "Report delivery status is unknown; check Notifications before trying again." }, 503)
+        ?? redirect(`${url.pathname}?delivery=unknown`);
+    }
     const reason = notification?.error_message ? `&reason=${encodeURIComponent(notification.error_message)}` : "";
-    return redirect(`${url.pathname}?delivery=failed${reason}`);
+    return reportActionResponse(request, { ok: false, message: `Report delivery failed${notification?.error_message ? `: ${notification.error_message}` : "."}` }, 502)
+      ?? redirect(`${url.pathname}?delivery=failed${reason}`);
   }
   if (route === "admin-lesson-report-pdf") {
     const id = lessonIdFromPath(url.pathname);

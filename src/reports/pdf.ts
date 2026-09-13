@@ -57,13 +57,22 @@ function footer(commands: string[]): void {
   text(commands, PAGE_WIDTH - 78, 18, "Page 1 of 1", 7, "0.35 0.4 0.45");
 }
 
+function foxLogo(commands: string[], x: number, y: number, size: number): void {
+  const right = x + size;
+  const top = y + size;
+  commands.push(`1 1 1 rg ${x + 2} ${y + 2} m ${x + 2} ${top} l ${x + size * 0.34} ${y + size * 0.72} l ${x + size * 0.5} ${top - 2} l ${x + size * 0.66} ${y + size * 0.72} l ${right - 2} ${top} l ${right - 2} ${y + 2} l ${x + size * 0.5} ${y - 2} h f`);
+  commands.push(`${BLUE} rg ${x + 7} ${y + 10} 4 4 re f ${x + size - 11} ${y + 10} 4 4 re f`);
+  commands.push(`${BLUE} rg ${x + size * 0.5 - 3} ${y + 4} 6 4 re f`);
+}
+
 function reportHeader(commands: string[], report: StudentLessonReportViewModel): number {
   const top = PAGE_HEIGHT - MARGIN;
   const height = 112;
   const width = PAGE_WIDTH - 2 * MARGIN;
   const columnWidth = width / 4;
   commands.push(`${BLUE} rg ${MARGIN} ${top - 42} ${width} 42 re f`);
-  text(commands, MARGIN + 16, top - 27, "FoxTutor Learn", 17, "1 1 1", true);
+  foxLogo(commands, MARGIN + 14, top - 34, 25);
+  text(commands, MARGIN + 50, top - 27, "FoxTutor Learn", 17, "1 1 1", true);
   text(commands, MARGIN + width - 112, top - 27, "Lesson Report", 9, "1 1 1");
   rect(commands, MARGIN, top - height, width, height - 42, true);
   for (let index = 1; index < 4; index++) {

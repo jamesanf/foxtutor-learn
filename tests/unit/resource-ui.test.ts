@@ -77,13 +77,15 @@ describe("resource UX contract", () => {
 
   it("groups report actions and tracks saved drafts until the form changes", () => {
     expect(workerSource).toContain('data-report-save-draft');
-    expect(workerSource).toContain('if (!wantsSend) return redirect(`${url.pathname}?saved=1`);');
+    expect(workerSource).toContain('return reportActionResponse(request, { ok: true, action: "save", message: "Draft saved." })');
     expect(workerSource).toContain('<div class="report-submit-actions">');
     expect(clientSource).toContain('const reportSavedFromRedirect = pathname.endsWith("/report")');
     expect(clientSource).toContain('reportSaveButton.textContent = "Saved"');
     expect(clientSource).toContain('reportSaveButton.textContent = "Save draft"');
     expect(clientSource).toContain('reportForm.addEventListener("input", markReportDirty)');
     expect(clientSource).toContain('reportForm.addEventListener("change", markReportDirty)');
+    expect(clientSource).toContain('headers: { Accept: "application/json", "X-Report-Fragment": "1" }');
+    expect(clientSource).toContain('submitter.classList.add("is-loading")');
     expect(cssSource).toContain(".report-form-actions { justify-content: space-between");
     expect(cssSource).toContain(".report-submit-actions { display: flex");
     expect(cssSource).toContain(".report-save-draft.is-saved");

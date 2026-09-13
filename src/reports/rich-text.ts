@@ -23,7 +23,7 @@ export function renderRichTextHtml(value: string): string {
   };
 
   for (const line of lines) {
-    const bullet = /^\s*[-*]\s+(.+)$/.exec(line);
+    const bullet = /^\s*[-*]\s+(?:[-*]\s+)?(.+)$/.exec(line);
     if (bullet) {
       if (listType !== "ul") {
         flushList();

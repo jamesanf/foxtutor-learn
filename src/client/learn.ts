@@ -98,9 +98,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       const target = event.target as HTMLElement;
       if (target.closest("[data-report-format], [data-level-option]")) markReportDirty();
     });
-    reportForm.addEventListener("submit", (event) => {
-      if ((event as SubmitEvent).submitter === reportSaveButton) markReportSaved();
-    });
   }
 
   const reportEditors = document.querySelectorAll<HTMLElement>("[data-report-editor]");
@@ -1020,6 +1017,55 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       if (status) status.textContent = "Uploading…";
     });
     renderSelectedFile();
+  });
+
+  type ReportActionPayload = { ok?: boolean; action?: string; message?: string; reportHtml?: string };
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || (!form.matches("[data-report-attachment-form]") && !form.matches(".report-resend-form"))) return;
+    event.preventDefault();
+    const submitEvent = event as SubmitEvent;
+    const submitter = submitEvent.submitter instanceof HTMLButtonElement
+      ? submitEvent.submitter
+      : form.querySelector<HTMLButtonElement>("button[name='action']");
+    if (!submitter) return;
+    const originalText = submitter.textContent ?? "";
+    const action = submitter.value || (form.matches(".report-resend-form") ? "resend" : "save");
+    submitter.disabled = true;
+    submitter.classList.add("is-loading");
+    submitter.setAttribute("aria-busy", "true");
+    submitter.textContent = action === "save" ? "Saving…" : "Sending…";
+    form.setAttribute("aria-busy", "true");
+    void (async () => {
+      try {
+        const body = new FormData(form);
+        if (submitter.name) body.set(submitter.name, submitter.value);
+        const response = await fetch(form.action, {
+          method: "POST",
+          body,
+          credentials: "same-origin",
+          headers: { Accept: "application/json", "X-Report-Fragment": "1" }
+        });
+        const payload = await response.json() as ReportActionPayload;
+        if (!response.ok || !payload.ok) throw new Error(payload.message || "The report action could not be completed.");
+        if (payload.reportHtml) {
+          const replacement = document.createRange().createContextualFragment(payload.reportHtml).firstElementChild;
+          const current = form.closest<HTMLElement>("section.report-form, section.report-document");
+          if (!(replacement instanceof HTMLElement) || !current) throw new Error("The report view could not be updated.");
+          current.replaceWith(replacement);
+        } else if (payload.action === "save") {
+          markReportSaved();
+        }
+        showNotification(payload.message ?? "Report updated");
+      } catch (error) {
+        submitter.disabled = false;
+        submitter.classList.remove("is-loading");
+        submitter.removeAttribute("aria-busy");
+        submitter.textContent = originalText;
+        form.removeAttribute("aria-busy");
+        showNotification(error instanceof Error ? error.message : "The report action could not be completed.", "error");
+      }
+    })();
   });
 })();
 

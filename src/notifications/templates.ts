@@ -74,7 +74,8 @@ function lessonTime(data: LessonEmailData): string {
 }
 
 function frame(title: string, text: string, body: string): string {
-  return `<div style="margin:0;padding:28px 12px;background:#f1f7f8;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5"><div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #d8e5e8;border-radius:12px;overflow:hidden"><div style="padding:20px 28px;background:#0e7490;color:#ffffff"><div style="font-size:20px;font-weight:700;letter-spacing:.02em">FoxTutor</div><div style="font-size:13px;margin-top:2px;color:#d8f3f7">Learn</div></div><div style="padding:28px"><h1 style="margin:0 0 22px;color:#155e75;font-size:27px;line-height:1.2">${escapeHtml(title)}</h1>${body}</div><div style="padding:18px 28px;border-top:1px solid #e2edf0;color:#64748b;font-size:12px">${escapeHtml(text)}<br>FoxTutor Learn</div></div></div>`;
+  const note = text === "FoxTutor Learn" ? "" : `<div style="margin-bottom:6px">${escapeHtml(text)}</div>`;
+  return `<div style="margin:0;padding:28px 12px;background:#f1f7f8;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5"><div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #d8e5e8;border-radius:12px;overflow:hidden"><div style="padding:20px 28px;background:#0e7490;color:#ffffff"><div style="font-size:20px;font-weight:700;letter-spacing:.02em">FoxTutor</div><div style="font-size:13px;margin-top:2px;color:#d8f3f7">Learn</div></div><div style="padding:32px 30px"><h1 style="margin:0 0 26px;color:#155e75;font-size:27px;line-height:1.2">${escapeHtml(title)}</h1>${body}</div><div style="padding:18px 30px;border-top:1px solid #e2edf0;color:#64748b;font-size:12px">${note}© 2026 Fox Learning Ltd. All rights reserved.</div></div></div>`;
 }
 
 function emailRichText(value: string): string {
@@ -167,14 +168,15 @@ export function renderLessonReport(data: ReportEmailData, origin: string): Email
     ["Home Learning Task", data.homeLearningTask],
     ["Notes", data.notes],
     ["Even Better If", data.evenBetterIf]
-  ];
-  const textFields = fields.map(([label, value]) => `\n\n${label}:\n${value ? richTextToPlainText(value) : "—"}`).join("");
+  ].filter((field): field is [string, string] => Boolean(field[1].trim()));
+  const textFields = fields.map(([label, value]) => `\n\n${label}:\n${richTextToPlainText(value)}`).join("");
   const htmlFields = fields.map(([label, value]) => emailField(label, value)).join("");
   const reportLink = learnLink(origin, data.reportPath);
+  const detailTable = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;border:1px solid #dcebed;background:#f7fbfc;border-collapse:separate;border-spacing:0;border-radius:8px;overflow:hidden"><tr><td width="34%" style="padding:18px 16px;vertical-align:top;border-right:1px solid #dcebed"><div style="margin:0 0 7px;color:#0e7490;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Lesson date</div><strong style="font-size:15px">${escapeHtml(date)}</strong></td><td width="33%" style="padding:18px 16px;vertical-align:top;border-right:1px solid #dcebed"><div style="margin:0 0 7px;color:#0e7490;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Time</div><strong style="font-size:15px">${escapeHtml(time)}</strong><br><span style="font-size:12px;color:#64748b">${escapeHtml(data.timezone)}</span></td><td width="33%" style="padding:18px 16px;vertical-align:top"><div style="margin:0 0 7px;color:#0e7490;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Level</div><strong style="font-size:15px">${escapeHtml(data.level)}</strong></td></tr></table>`;
   return {
     subject: `Your lesson report — ${date}`,
-    text: `Hello ${data.studentName},\n\nLesson report\nPupil: ${data.pupilName}\nLevel: ${data.level}\nLesson date/time: ${date}\n${time} (${data.timezone})${textFields}${resourcesText}\n\nOpen report: ${reportLink}`,
-    html: frame("Lesson report", "FoxTutor Learn", `<p style="margin:0 0 20px">Hello ${escapeHtml(data.studentName)},</p><div style="margin:0 0 20px;padding:16px 18px;background:#eef8fa;border-left:4px solid #0e7490;border-radius:6px"><div style="font-size:12px;color:#0e7490;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Lesson details</div><p style="margin:7px 0 0"><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)} (${escapeHtml(data.timezone)})<br>Pupil: ${escapeHtml(data.pupilName)}<br>Level: ${escapeHtml(data.level)}</p></div><div style="margin:0 0 8px;color:#155e75;font-size:16px;font-weight:700">Tutorial feedback</div>${htmlFields}${resourcesHtml}<p style="margin:24px 0 0"><a href="${escapeHtml(reportLink)}" style="display:inline-block;padding:12px 20px;background:#0e7490;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700">Open report</a></p>`)
+    text: `Hello ${data.studentName},\n\nLesson report\nLevel: ${data.level}\nLesson date/time: ${date}\n${time} (${data.timezone})${textFields}${resourcesText}\n\nView this report on FoxTutor Learn: ${reportLink}\n\nQuestions? Email james@foxtutor.org`,
+    html: frame("Lesson report", "Questions? Email james@foxtutor.org", `<p style="margin:0 0 24px">Hello ${escapeHtml(data.studentName)},</p>${detailTable}<div style="margin:0 0 12px;color:#155e75;font-size:16px;font-weight:700">Tutorial feedback</div>${htmlFields}${resourcesHtml}<p style="margin:28px 0 0;font-size:14px">View this report on <a href="${escapeHtml(reportLink)}" style="color:#0e7490;font-weight:700">FoxTutor Learn</a>.</p>`)
   };
 }
 

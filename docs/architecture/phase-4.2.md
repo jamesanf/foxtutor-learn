@@ -60,6 +60,13 @@ The same resource notification and idempotency behavior is retained, and the
 file appears in the existing admin and student lesson resource views without
 a second attachment system or a separate upload page.
 
+Report Save draft, Send report and admin Resend report use an additive
+fragment interaction. The client submits the existing multipart form with
+`X-Report-Fragment: 1`, disables the clicked action with a grey spinner, and
+updates the report section and site notification from the JSON response. A
+normal form submission remains available as a redirect fallback when
+JavaScript is unavailable.
+
 The scheduled Worker sends one idempotent `DST_WARNING` notification at 09:00
 UK time on the last Sunday in March and October to active students with the
 international preference enabled. The message says that all lessons remain
@@ -88,4 +95,15 @@ or D1 blob.
 The renderer uses an explicit fixed `© 2026 Fox Learning Ltd. All rights
 reserved.` footer policy matching the supplied template. Long text is wrapped within the
 feedback cells and the renderer reduces the line scale when needed to retain
-the one-page format.
+the one-page format. A small vector FoxTutor mark is drawn in the top-left
+header so the PDF remains self-contained and Worker-compatible.
+
+## Email presentation
+
+Lesson-report email is an inline-styled FoxTutor Learn message designed for
+Fox Mail/Brevo and Gmail clients. The lesson date, start/end time and level
+use a single spacious metadata panel; the recipient's pupil name is not
+repeated in that panel. Empty feedback fields are omitted, duplicate bullet
+prefixes are normalised, and the call to action is the text link
+“View this report on FoxTutor Learn”. The footer contains the
+`james@foxtutor.org` contact address and one copyright line.
