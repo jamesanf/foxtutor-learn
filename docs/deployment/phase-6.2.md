@@ -26,9 +26,9 @@ The rollout order is:
 
 ## Release record
 
-- Source commit: `11a0a065b8e4252cfca0c23cada236703c5390a5`
-- Remote `main`: `11a0a065b8e4252cfca0c23cada236703c5390a5`
-- Production Worker: `009e6eb2-c40e-4026-bbb3-214e38e3d7ba`
+- Source commit: `c515b6b`
+- Remote `main`: `c515b6b`
+- Production Worker: `1386d7d5-3c7a-42bf-89a2-965c0db2c8c1`
 - Production D1: `0017_accounting_operations.sql` applied; no migrations
   pending
 - FreeAgent secrets, OAuth connection, contact mappings and invoice mapping

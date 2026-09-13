@@ -18,7 +18,7 @@
   sandbox/production acceptance and human commercial-approval gates in the
   Phase 6.2 architecture, testing, deployment and security documents.
 - **Status:** deployed as Worker
-  `009e6eb2-c40e-4026-bbb3-214e38e3d7ba` from commit `11a0a06`; Phase 6
+  `1386d7d5-3c7a-42bf-89a2-965c0db2c8c1` from commit `c515b6b`; Phase 6
   remains open because no FreeAgent credentials or financial mutation are
   configured.
 
