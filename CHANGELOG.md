@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-14 - Use the main logo in the Learn footer
+
+- Replaced the footer-only Learn logo with the same square FoxTutor logo used
+  in the top-left application brand.
+- Deployed executable commit
+  `a1ba371b6f27f53799486af4ba1a2fa63b18b3e2` as Worker version
+  `54a5ef2f-a483-49a6-aeb4-292a21d1aac1`.
+
 ### 2026-09-14 - Polish accounting administration UI
 
 - Replaced the accounting sidebar notification icon with a dedicated money
