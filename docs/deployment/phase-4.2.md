@@ -28,9 +28,9 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migrations `0008_structured_lesson_reports.sql` and
 `0009_international_students.sql` were applied to the production database on
-`2026-09-13`. The current deployed application release is `a4c4084`, synchronized with
+`2026-09-13`. The current deployed application release is `dac22d3`, synchronized with
 `origin/main`, and is deployed as Worker version
-`2b3bed75-6a0f-4c16-acfb-9c3c941eeed2`. A remote migration check reports no
+`f5b90e5d-0ad3-4446-86b1-dd95add1dd43`. A remote migration check reports no
 migrations pending. The release includes the report editor refinements,
 start-only report time, compact auto-growing fields and lesson attachments
 submitted with the report action through the existing resource/R2 pipeline.
@@ -39,6 +39,11 @@ The release also qualifies report columns in the student ownership
 query, fixing the ambiguous-column path behind the student report 1101;
 humanises sent timestamps, keeps ordinary reports on one PDF page and adds
 inline FoxTutor email branding with structured feedback panels.
+
+Sent reports now have an admin-only Resend report action. Each resend uses a
+new notification event while retaining the persisted report content and
+attachments; an accepted resend updates the report's `sent_at` snapshot shown
+in the report view and lesson history.
 
 The first authenticated report-send attempt reached Fox Mail but failed with
 `400 invalid_recipient`. Production D1 inspection confirmed that both the

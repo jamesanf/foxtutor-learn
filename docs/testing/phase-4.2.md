@@ -22,6 +22,8 @@
   Cloudflare 1101 caused by ambiguous SQLite column names.
 - Report email coverage verifies inline FoxTutor branding, styled feedback
   panels, a clear report CTA and safe rich-text projection.
+- Report delivery coverage verifies that a sent report can be resent with a
+  fresh notification event and that successful resend updates `sent_at`.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
 - UK clock-change date/time detection and the `DST_WARNING` email projection
@@ -29,10 +31,10 @@
 
 ## Executed validation
 
-The final pushed application tree at `a4c4084` passed:
+The final pushed application tree at `dac22d3` passed:
 
 ```text
-npm test                 86 tests across 19 files
+npm test                 87 tests across 19 files
 npm run build            PASS
 npm run check            PASS
 npm run test:browser     PASS (static shell contract)
@@ -41,8 +43,8 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-application release `a4c4084` is deployed as Worker
-`2b3bed75-6a0f-4c16-acfb-9c3c941eeed2`. Production deployment and
+application release `dac22d3` is deployed as Worker
+`f5b90e5d-0ad3-4446-86b1-dd95add1dd43`. Production deployment and
 unauthenticated smoke are confirmed. A production notification regression check
 also confirmed that delivery reloads the linked recipient email rather than
 sending an empty recipient.
@@ -55,7 +57,7 @@ are still required before closure.
 |---|---|
 | Student level | Admin edit, nullable existing records, report snapshot |
 | Report draft | D1 structured content, no student visibility/email |
-| Report send | One notification, provider acceptance, `SENT` and `sent_at` |
+| Report send/resend | Initial and repeat sends create delivery events, provider acceptance updates `SENT` and the latest `sent_at` |
 | Student history | Completed lessons show only sent report actions |
 | Admin history | Create/Edit/View actions appear in Past Lessons |
 | Admin report queue | Started lessons appear on the admin Dashboard with Create/Edit report actions |

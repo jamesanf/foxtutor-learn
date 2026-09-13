@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-13 — Resend lesson reports
+
+- Added an admin-only Resend report action to sent report views.
+- Resends create a fresh notification event from the persisted report and
+  refresh the displayed sent timestamp only after successful delivery.
+- Added coverage and release documentation for repeat report delivery.
+
 ### 2026-09-13 — Lesson report presentation and student access hardening
 
 - Fixed the student sent-report query by qualifying report columns across the
