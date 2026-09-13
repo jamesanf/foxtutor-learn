@@ -17,7 +17,7 @@
     "test:browser:visual": "node scripts/verify-calendar-visual.mjs",
     "test:production": "node scripts/smoke-production.mjs",
     "dev": "npx wrangler dev --config wrangler.local.jsonc",
-    "deploy": "npx wrangler deploy --config wrangler.jsonc --message \"Learn branding footer and legal pages\""
+    "deploy": "npx wrangler deploy --config wrangler.jsonc --message \"Deploy foxtutor-learn\""
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260905.1",

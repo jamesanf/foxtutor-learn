@@ -1,5 +1,8 @@
 # Phase 6.2 — Testing and acceptance record
 
+> Historical release record. See [`docs/testing/phase-6.md`](phase-6.md) for
+> the current Phase 6 testing boundary.
+
 ## Automated evidence
 
 The current local suite contains **26 test files and 122 tests**. The

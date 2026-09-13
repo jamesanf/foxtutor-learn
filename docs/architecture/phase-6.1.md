@@ -1,5 +1,8 @@
 # Phase 6.1 — FreeAgent accounting boundary
 
+> Historical release record. See [`docs/phase-6.md`](../phase-6.md) for the
+> current Phase 6 status and acceptance boundary.
+
 ## Status
 
 The local implementation is complete through the durable integration boundary

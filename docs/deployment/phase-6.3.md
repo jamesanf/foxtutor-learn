@@ -1,5 +1,8 @@
 # Phase 6.3 - Deployment and handover record
 
+> Historical release record. See [`docs/deployment/phase-6.md`](phase-6.md) for
+> the current Phase 6 deployment state.
+
 ## Verified deployment
 
 - Repository `main`: `cef0591` at preflight start

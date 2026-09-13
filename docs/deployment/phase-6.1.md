@@ -1,5 +1,8 @@
 # Phase 6.1 — Deployment record
 
+> Historical release record. See [`docs/deployment/phase-6.md`](phase-6.md) for
+> the current Phase 6 deployment state.
+
 ## Release boundary
 
 The code adds a separate accounting outbox, OAuth connection storage, the

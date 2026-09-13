@@ -195,7 +195,16 @@ export class FreeAgentClient {
   }
 
   async findInvoiceByReference(accessToken: string, contactUrl: string, reference: string): Promise<FreeAgentInvoice | null> {
-    const query = `?contact=${encodeURIComponent(contactUrl)}&per_page=100`;
+    const canonicalContactUrl = canonicalProviderUrl(contactUrl, this.options.environment);
+    if (!canonicalContactUrl) throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent contact URL is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const query = `?contact=${encodeURIComponent(canonicalContactUrl)}&per_page=100`;
     const result = await this.requestJson<{ invoices?: Array<{ url?: string; reference?: string }> }>(accessToken, `/v2/invoices${query}`);
     const invoice = (result.data.invoices ?? []).find((candidate) => candidate.reference === reference);
     if (!invoice?.url) return null;
@@ -244,6 +253,8 @@ export class FreeAgentClient {
       itemType: string;
       description: string;
       price: string;
+      salesTaxRate?: string;
+      salesTaxStatus?: "EXEMPT";
       categoryUrl?: string;
       currency?: string;
     }
@@ -262,6 +273,8 @@ export class FreeAgentClient {
         description: input.description,
         quantity: "1.0",
         price: input.price,
+        ...(input.salesTaxStatus ? { sales_tax_status: input.salesTaxStatus } : {}),
+        ...(input.salesTaxRate ? { sales_tax_rate: input.salesTaxRate } : {}),
         ...(input.categoryUrl ? { category: input.categoryUrl } : {})
       }]
     };

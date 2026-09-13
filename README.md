@@ -4,14 +4,16 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the
 Foxtutor administrator. It is a Cloudflare Worker application for lessons,
 resources, notifications and structured lesson reports. It is not a public
 registration system, password service, tutoring marketplace, Fox Mail
-replacement or accounting system.
+replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 6.3 preflight blocked; commercial approval and external FreeAgent acceptance pending
+**Phase:** Engineering-complete; Phase 6 remains externally acceptance-blocked
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** Phase 6.2 accounting operations hardening
-**Worker:** `26463610-92d2-490a-8e0f-c067cf45b846`
+**Application/runtime release:** Phase 6 accounting boundary hardening
+**Deployed source:** recorded separately from repository HEAD in
+[`docs/deployment/phase-6.md`](docs/deployment/phase-6.md)
+**Worker version:** recorded in the latest deployment changelog entry
 **D1 migrations:** `0001_foundation.sql` through `0017_accounting_operations.sql`
 
 The current release includes structured D1 lesson reports, historical student
@@ -25,17 +27,15 @@ for consistent recipient engagement. Brevo-controlled tracking and
 unsubscribe headers remain outside Learn's control.
 Phase 4 is closed at the preserved `phase-4-complete` baseline. Phase 5 adds
 server-authoritative cancellation, late exception requests, admin decisions,
-rescheduling history and operational billing classification. Phase 6.1 adds a separate, idempotent accounting outbox, encrypted FreeAgent
-OAuth connection storage, sandbox/production adapter, bounded Worker delivery,
-admin retry/reconciliation and accounting-history retention. Phase 6.2 adds
-verified admin contact mappings, pinned company/environment identity and
-additive manual-retry audit records. Live FreeAgent financial actions remain
-disabled until the commercial policy, credentials and authenticated
-sandbox/production acceptance are supplied.
-The Phase 6.3 preflight confirmed the repository/runtime/D1 baseline, reran
-the complete local and perimeter gates, rechecked official FreeAgent
-documentation, and stopped without configuring credentials or creating a
-financial action.
+rescheduling history and operational billing classification. Phase 6 adds a separate, idempotent accounting outbox, encrypted FreeAgent
+OAuth connection storage, a sandbox/production adapter, bounded Worker
+delivery, admin retry/reconciliation, verified contact mappings, pinned
+company/environment identity, retry audit records and accounting-history
+retention. Unsupported or incomplete commercial configuration fails closed.
+The application-side Phase 6 implementation is complete and hardened. The
+phase remains operationally open only because the remaining external
+commercial/provider acceptance requires human-owned approval/credentials and
+controlled real FreeAgent mutations.
 
 ## Architecture
 
@@ -52,6 +52,8 @@ financial action.
 - Lesson files use the existing D1 metadata and private R2 resource pipeline.
 - FreeAgent remains the accounting authority; Learn stores only integration
   identity, delivery state and external references.
+- Accounting follows the boundary `operational event -> accounting
+  consequence -> outbox -> scheduled Worker -> FreeAgent adapter`.
 - The authenticated shell uses the Learn logo, shared FoxTutor footer, and
   legal pages generated as an exact mirror of the public site's canonical
   terms and privacy source.
@@ -111,25 +113,19 @@ CHANGELOG.md         Material implementation history
 | `docs/deployment/phase-5.1.md` | Phase 5.1 release and deployment record |
 | `docs/architecture/learn-branding-legal.md` | Learn shell branding and portal legal policy boundary |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
-| `docs/architecture/phase-6.1.md` | FreeAgent accounting boundary and contract |
-| `docs/testing/phase-6.1.md` | Accounting integration acceptance matrix |
-| `docs/deployment/phase-6.1.md` | Accounting release and deployment record |
-| `docs/security/phase-6.1.md` | Accounting credential and retention controls |
-| `docs/architecture/phase-6.2.md` | Commercial boundary and accounting operations |
-| `docs/testing/phase-6.2.md` | Phase 6.2 automated and external acceptance state |
-| `docs/deployment/phase-6.2.md` | Phase 6.2 release and human handover |
-| `docs/security/phase-6.2.md` | Phase 6.2 security and operational controls |
-| `docs/architecture/phase-6.3.md` | Phase 6.3 commercial and provider preflight |
-| `docs/testing/phase-6.3.md` | Phase 6.3 baseline and acceptance handover |
-| `docs/deployment/phase-6.3.md` | Phase 6.3 runtime and handover record |
-| `docs/security/phase-6.3.md` | Phase 6.3 security preflight |
+| `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
+| `docs/architecture/phase-6.md` | Current accounting architecture and state model |
+| `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
+| `docs/deployment/phase-6.md` | Current deployment state and rollout order |
+| `docs/security/phase-6.md` | Current security and operational controls |
+| `docs/handover/phase-6.md` | Exact sandbox and production acceptance runbook |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/architecture/` | Earlier phase architecture records |
 | `docs/testing/` | Earlier phase validation and acceptance records |
 | `docs/deployment/` | Earlier phase deployment records |
 
-Historical documents retain the evidence for their own release. The current
-status above and the latest Phase 6.2 documents are authoritative for this
+Historical Phase 6.1, 6.2 and 6.3 documents retain evidence for their own
+release. The current Phase 6 documents above are authoritative for the present
 working tree.
 
 ## Phase map
@@ -141,7 +137,7 @@ working tree.
 | 3 | Private lesson resources and R2 storage | Deployed; acceptance recorded in phase documents |
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
-| 6 | FreeAgent/accounting boundary | Phase 6.3 preflight blocked; sandbox/commercial/production acceptance pending |
+| 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
 | 7 | Optional billing visibility and hardening | Deferred |
 
 ## Security model

@@ -1,5 +1,8 @@
 # Phase 6.2 — Deployment and human handover
 
+> Historical release record. See [`docs/deployment/phase-6.md`](phase-6.md) for
+> the current Phase 6 deployment state.
+
 ## Starting state
 
 - Branch: `main`

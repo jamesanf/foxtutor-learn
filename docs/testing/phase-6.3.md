@@ -1,5 +1,8 @@
 # Phase 6.3 - Testing and acceptance preflight
 
+> Historical release record. See [`docs/testing/phase-6.md`](phase-6.md) for
+> the current Phase 6 testing boundary.
+
 ## Automated baseline
 
 The pre-change baseline on 2026-09-13 was:

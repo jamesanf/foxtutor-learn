@@ -1,5 +1,25 @@
 # Changelog
 
+### 2026-09-13 - Phase 6 final technical completion pass
+
+- Reconciled the Phase 6 implementation against the actual accounting domain,
+  D1 outbox, retry state machine, FreeAgent adapter, OAuth boundary,
+  authorization, CSRF, retention and scheduled Worker path.
+- Hardened invoice configuration so amount, category, payment terms, currency,
+  VAT/tax and provider environment must be explicit and valid before a
+  provider mutation can occur.
+- Added provider contact URL validation, explicit accounting transition
+  checks, valid effective-date validation and a mapping replacement guard while
+  accounting work is active.
+- Current automated result: 26 test files and 124 tests passed; build, check,
+  local migration validation, browser contract and production-perimeter smoke
+  passed.
+- Added the current Phase 6 status/evidence matrix, architecture, security,
+  testing, deployment and exact human acceptance runbook. Historical 6.1-6.3
+  records remain available as release evidence.
+- **Status:** technically complete; external commercial/provider acceptance
+  remains outstanding. `phase-6-complete` was not created.
+
 ### 2026-09-13 — Phase 6.3 commercial and provider acceptance preflight
 
 - Verified `main` and `origin/main` at `cef0591`, the Phase 6.2 runtime release

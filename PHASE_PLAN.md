@@ -787,31 +787,19 @@ Connect Foxtutor's operational lesson/cancellation state to external accounting 
 
 Accounting consequences can be passed to FreeAgent reliably without making the tutoring application responsible for direct debit or payment processing.
 
-### Phase 6.2 current state
+### Phase 6 current state
 
-The Phase 6.2 pass has hardened the accounting boundary with explicit
-admin-managed and provider-verified contact mappings, pinned FreeAgent
-environment/company identity and additive manual-retry audit records. Phase 6
-remains open because the business has not approved the `ADMIN_CANCELLED`
-commercial treatment or the amount, payer, item/category, VAT/tax, currency
-and effective-date contract, and no FreeAgent sandbox or production
-credentials are configured. No completion tag may be created until the
-documented sandbox and controlled production acceptance evidence exists.
+The application-side Phase 6 implementation is complete and hardened. The
+current evidence matrix, architecture, security controls, test boundary,
+deployment distinction, human checklist and acceptance runbook are maintained
+in [`docs/phase-6.md`](docs/phase-6.md).
 
-### Phase 6.3 current state
-
-The 2026-09-13 preflight verified repository `cef0591`, deployed Worker
-`26463610-92d2-490a-8e0f-c067cf45b846`, runtime release `b5a213f`, production
-D1 migrations through `0017_accounting_operations.sql`, no pending
-migrations, and zero production accounting configuration rows. The complete
-local suite contains 26 test files and 123 passing tests; build, check,
-browser-contract and production-perimeter smoke commands pass.
-
-Phase 6.3 is blocked, not complete. Commercial approval, sandbox credentials,
-OAuth connection, company identity, contact mapping, invoice/tax mapping,
-sandbox acceptance and controlled production acceptance are absent. No
-financial mutation was attempted and no `phase-6-complete` tag may be
-created.
+Phase 6 remains operationally open only because human-owned commercial approval,
+FreeAgent credentials, sandbox provider acceptance and one controlled
+production accounting event are outstanding. No technical TODO is represented
+as a human blocker, no financial mutation has been fabricated, and
+`phase-6-complete` must not be created until the external closure evidence is
+recorded.
 
 ---
 

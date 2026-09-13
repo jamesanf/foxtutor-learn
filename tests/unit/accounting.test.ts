@@ -4,6 +4,8 @@ import {
   accountingEventTypeForHistory,
   accountingIdempotencyKey,
   accountingReference,
+  canTransitionAccountingStatus,
+  isAccountingEffectiveDate,
   isSafeAccountingRetry,
   nextAccountingRetryAt
 } from "../../src/domain/accounting";
@@ -14,6 +16,7 @@ import {
   FreeAgentClient,
   refreshAccessToken
 } from "../../src/accounting/freeagent/client";
+import { configuredInvoice, invoiceConfigurationIssue } from "../../src/accounting/service";
 
 function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
   const responseHeaders = new Headers(headers);
@@ -44,6 +47,36 @@ describe("accounting domain", () => {
     expect(isSafeAccountingRetry("RETRYABLE", "NETWORK")).toBe(true);
     expect(isSafeAccountingRetry("UNKNOWN", "TIMEOUT")).toBe(false);
     expect(isSafeAccountingRetry("FAILED", "BUSINESS_MAPPING_REQUIRED")).toBe(false);
+    expect(canTransitionAccountingStatus("PROCESSING", "UNKNOWN")).toBe(true);
+    expect(canTransitionAccountingStatus("SUCCEEDED", "PENDING")).toBe(false);
+    expect(isAccountingEffectiveDate("2026-02-29")).toBe(false);
+    expect(isAccountingEffectiveDate("2026-09-13")).toBe(true);
+  });
+});
+
+describe("invoice configuration", () => {
+  const valid = {
+    FREEAGENT_ENVIRONMENT: "sandbox",
+    FREEAGENT_INVOICE_AMOUNT: "55.00",
+    FREEAGENT_INVOICE_ITEM_TYPE: "Hours",
+    FREEAGENT_INVOICE_CATEGORY_URL: "https://api.sandbox.freeagent.com/v2/categories/1",
+    FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS: "14",
+    FREEAGENT_INVOICE_CURRENCY: "GBP",
+    FREEAGENT_INVOICE_SALES_TAX_RATE: "20"
+  };
+
+  it("requires explicit amount, category, currency, tax and strict payment-term configuration", () => {
+    expect(invoiceConfigurationIssue(valid)).toBeNull();
+    expect(configuredInvoice(valid)).toMatchObject({
+      amount: "55.00",
+      paymentTermsInDays: 14,
+      currency: "GBP",
+      salesTaxRate: "20"
+    });
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS: "14days" })).toContain("payment terms");
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_CURRENCY: "ZZZ" })).toContain("currency");
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_SALES_TAX_RATE: undefined })).toContain("VAT/tax");
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_CATEGORY_URL: "https://api.freeagent.com/v2/categories/1" })).toContain("environment");
   });
 });
 
@@ -93,7 +126,8 @@ describe("FreeAgent adapter", () => {
       paymentTermsInDays: 14,
       itemType: "https://api.sandbox.freeagent.com/v2/item_types/1",
       description: "Late cancellation",
-      price: "55.00"
+      price: "55.00",
+      salesTaxRate: "20"
     })).resolves.toMatchObject({ url: "https://api.sandbox.freeagent.com/v2/invoices/42" });
     expect(requestUrl).toBe("https://api.sandbox.freeagent.com/v2/invoices");
     expect(requestMethod).toBe("POST");
@@ -102,7 +136,7 @@ describe("FreeAgent adapter", () => {
       invoice: {
         reference: "FT-ACC-history1",
         contact: "https://api.sandbox.freeagent.com/v2/contacts/7",
-        invoice_items: [{ price: "55.00", quantity: "1.0" }]
+        invoice_items: [{ price: "55.00", quantity: "1.0", sales_tax_rate: "20" }]
       }
     });
   });
@@ -129,6 +163,8 @@ describe("FreeAgent adapter", () => {
       description: "description",
       price: "1.00"
     })).rejects.toMatchObject({ shape: { code: "MALFORMED_RESPONSE", unknown: true } });
+    await expect(unsafe.findInvoiceByReference("token", "https://evil.example.test/v2/contacts/7", "ref"))
+      .rejects.toMatchObject({ shape: { code: "CONFIGURATION", retryable: false } });
   });
 
   it("rejects credential-bearing requests with an external request origin", async () => {

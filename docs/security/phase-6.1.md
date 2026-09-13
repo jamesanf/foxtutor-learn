@@ -1,5 +1,8 @@
 # Phase 6.1 — Accounting integration security
 
+> Historical release record. See [`docs/security/phase-6.md`](phase-6.md) for
+> the current Phase 6 security boundary.
+
 FreeAgent credentials are server-side only. OAuth access and refresh tokens are
 encrypted before storage in `accounting_connections`; they are not stored on
 students, lessons or billing events, rendered in HTML, returned by routes or

@@ -3,6 +3,7 @@ import {
   accountingEventTypeForHistory,
   accountingIdempotencyKey,
   accountingReference,
+  isAccountingEffectiveDate,
   type AccountingErrorCode,
   type AccountingEventType,
   type AccountingStatus
@@ -108,6 +109,9 @@ export function accountingOutboxStatement(
 ): D1PreparedStatement | null {
   const eventType = accountingEventTypeForHistory(input.historyEventType);
   if (!eventType) return null;
+  if (!isAccountingEffectiveDate(input.accountingEffectiveDate)) {
+    throw new Error("Accounting effective date must be a valid ISO date.");
+  }
   const decision = accountingDecisionForBillingConsequence(input.billingConsequence);
   const nextAttemptAt = decision.status === "PENDING" ? input.now : null;
   const completedAt = decision.status === "NOT_REQUIRED" ? input.now : null;
@@ -333,6 +337,17 @@ export async function findExternalAccountingLink(db: D1Database, studentId: stri
     `SELECT * FROM external_accounting_links
      WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND local_entity_id = ?`
   ).bind(studentId).first<ExternalAccountingLink>();
+}
+
+export async function hasActiveAccountingDependency(db: D1Database, studentId: string): Promise<boolean> {
+  const row = await db.prepare(
+    `SELECT 1 AS present
+     FROM accounting_outbox
+     WHERE student_id = ?
+       AND status IN ('PENDING', 'PROCESSING', 'RETRYABLE', 'UNKNOWN')
+     LIMIT 1`
+  ).bind(studentId).first<{ present: number }>();
+  return Boolean(row);
 }
 
 export async function listExternalAccountingLinks(db: D1Database): Promise<ExternalAccountingLink[]> {

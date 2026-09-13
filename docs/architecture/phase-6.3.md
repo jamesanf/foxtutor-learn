@@ -1,5 +1,8 @@
 # Phase 6.3 - Commercial approval and external acceptance preflight
 
+> Historical release record. See [`docs/phase-6.md`](../phase-6.md) for the
+> current Phase 6 status and acceptance boundary.
+
 ## Status
 
 Phase 6.3 is **blocked at the external commercial and provider-configuration

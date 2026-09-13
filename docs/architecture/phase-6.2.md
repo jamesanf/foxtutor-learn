@@ -1,5 +1,8 @@
 # Phase 6.2 — Commercial boundary and accounting operations
 
+> Historical release record. See [`docs/phase-6.md`](../phase-6.md) for the
+> current Phase 6 status and acceptance boundary.
+
 ## Current state
 
 Phase 6.2 hardening is implemented locally, but Phase 6 is **not closed**.

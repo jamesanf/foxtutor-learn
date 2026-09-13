@@ -1,5 +1,8 @@
 # Phase 6.3 - Security preflight
 
+> Historical release record. See [`docs/security/phase-6.md`](phase-6.md) for
+> the current Phase 6 security boundary.
+
 ## Repository inspection
 
 The repository was inspected for environment files, credential-shaped values,

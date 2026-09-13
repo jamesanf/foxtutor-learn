@@ -32,7 +32,6 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   ├── security/
 │   ├── mail/
 │   ├── notifications/
-│   └── reports/
 │   ├── reports/
 │   └── client/
 ├── public/
@@ -47,6 +46,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   └── fixtures/
 ├── scripts/
 ├── docs/
+│   ├── phase-6.md
 │   ├── architecture/
 │   ├── security/
 │   ├── deployment/
@@ -54,8 +54,6 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   ├── testing/
 │   ├── evidence/
 │   └── handover/
-└── agent-work/
-    └── task-log.md
 ```
 
 ## Directory rules
@@ -67,6 +65,6 @@ This is the current canonical structure. Agents may refine it when implementatio
 - `tests/` contains automated checks.
 - `docs/` contains project operating documentation.
 - `scripts/` contains deterministic project helpers and verification tools.
-- `agent-work/` contains task-oriented project records, not credentials or production data.
+- Session task records are kept outside the repository; credentials and production data never belong in project files.
 - Authenticated browser profiles, cookies, access tokens, test downloads, local R2 exports, and other sensitive runtime state must never be committed.
 - `foxtutorpublic/` is a local read-only branding/reference export and is ignored; the public-site repository is never a submodule or deployment input.

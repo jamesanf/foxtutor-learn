@@ -1,5 +1,8 @@
 # Phase 6.1 — Testing and acceptance
 
+> Historical release record. See [`docs/testing/phase-6.md`](phase-6.md) for
+> the current Phase 6 testing boundary.
+
 ## Automated baseline
 
 The existing Vitest suite and Worker type/build checks cover the repository

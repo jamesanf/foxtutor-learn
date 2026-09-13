@@ -1,5 +1,8 @@
 # Phase 6.2 — Security and operational controls
 
+> Historical release record. See [`docs/security/phase-6.md`](phase-6.md) for
+> the current Phase 6 security boundary.
+
 - FreeAgent credentials and token material remain server-side only.
 - OAuth access and refresh tokens remain encrypted at rest and are not
   rendered, logged, returned to browsers or written to fixtures.

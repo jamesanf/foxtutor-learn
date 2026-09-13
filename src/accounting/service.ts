@@ -8,6 +8,7 @@ import {
   upsertExternalAccountingLink,
   reconcileAccountingReference,
   saveAccountingConnection,
+  hasActiveAccountingDependency,
   updateAccountingConnectionStatus,
   type AccountingOutbox
 } from "../db/accounting";
@@ -34,6 +35,7 @@ export interface AccountingEnvironment {
   FREEAGENT_INVOICE_CATEGORY_URL?: string;
   FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?: string;
   FREEAGENT_INVOICE_CURRENCY?: string;
+  FREEAGENT_INVOICE_SALES_TAX_RATE?: string;
   FREEAGENT_COMPANY_SUBDOMAIN?: string;
 }
 
@@ -47,8 +49,29 @@ export interface AccountingIntegrationStatus {
   errorMessage: string | null;
 }
 
-function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvironment {
-  return env.FREEAGENT_ENVIRONMENT === "production" ? "production" : "sandbox";
+export interface InvoiceConfiguration {
+  amount: string;
+  itemType: string;
+  categoryUrl: string;
+  paymentTermsInDays: number;
+  currency: string;
+  salesTaxRate?: string;
+  salesTaxStatus?: "EXEMPT";
+}
+
+const supportedCurrencies = new Set([
+  "AED", "AMD", "AOA", "ARS", "AUD", "AWG", "AZN", "BBD", "BDT", "BGN", "BRL", "BWP", "CAD", "CHF",
+  "CLP", "CNY", "COP", "CRC", "CUC", "CUP", "CZK", "DKK", "DOP", "EGP", "EUR", "FJD", "GBP", "GEL",
+  "GHS", "GTQ", "GYD", "HKD", "HNL", "HRK", "HUF", "IDR", "ILS", "INR", "ISK", "JMD", "JPY", "KES",
+  "KRW", "KWD", "KYD", "KZT", "LAK", "LBP", "LKR", "LTL", "LVL", "MAD", "MDL", "MGA", "MUR", "MVR",
+  "MWK", "MXN", "MYR", "MZN", "NAD", "NGN", "NOK", "NPR", "NZD", "OMR", "PEN", "PHP", "PKR", "PLN",
+  "QAR", "RON", "RSD", "RUB", "RWF", "SAR", "SCR", "SEK", "SGD", "THB", "TND", "TRY", "TTD", "TWD",
+  "TZS", "UAH", "UGX", "USD", "UYU", "VEF", "VND", "VUV", "XAF", "XCD", "XOF", "ZAR", "ZMK"
+]);
+
+function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvironment | null {
+  if (env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production") return env.FREEAGENT_ENVIRONMENT;
+  return null;
 }
 
 function providerError(error: unknown): FreeAgentApiError | null {
@@ -59,18 +82,38 @@ function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
 }
 
-function configuredInvoice(env: AccountingEnvironment): { amount: string; itemType: string; paymentTermsInDays: number; categoryUrl?: string; currency?: string } | null {
+export function invoiceConfigurationIssue(env: AccountingEnvironment, environment = configuredEnvironment(env)): string | null {
+  if (!environment) return "FreeAgent environment is not configured.";
   const amount = env.FREEAGENT_INVOICE_AMOUNT?.trim();
   const itemType = env.FREEAGENT_INVOICE_ITEM_TYPE?.trim();
-  const paymentTerms = Number.parseInt(env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0", 10);
-  if (!amount || !itemType || !Number.isFinite(paymentTerms) || paymentTerms < 0 || paymentTerms > 365) return null;
-  if (!/^\d+(?:\.\d{1,2})?$/.test(amount)) return null;
+  const categoryUrl = env.FREEAGENT_INVOICE_CATEGORY_URL?.trim();
+  const paymentTermsText = env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?.trim();
+  const currency = env.FREEAGENT_INVOICE_CURRENCY?.trim();
+  const salesTax = env.FREEAGENT_INVOICE_SALES_TAX_RATE?.trim();
+  if (!amount || !/^\d+(?:\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) return "FreeAgent invoice amount is missing or invalid.";
+  if (!itemType) return "FreeAgent invoice item type is missing.";
+  if (!categoryUrl) return "FreeAgent invoice category is missing.";
+  if (!/^https:\/\/api(?:\.sandbox)?\.freeagent\.com\/v2\/categories\/[^/]+$/.test(categoryUrl)) return "FreeAgent invoice category URL is invalid.";
+  if (!paymentTermsText || !/^\d+$/.test(paymentTermsText)) return "FreeAgent invoice payment terms are missing or invalid.";
+  const paymentTerms = Number(paymentTermsText);
+  if (!Number.isInteger(paymentTerms) || paymentTerms < 0 || paymentTerms > 365) return "FreeAgent invoice payment terms are outside the supported range.";
+  if (!currency || !supportedCurrencies.has(currency)) return "FreeAgent invoice currency is missing or unsupported.";
+  if (!salesTax || (salesTax !== "EXEMPT" && (!/^\d+(?:\.\d{1,2})?$/.test(salesTax) || Number(salesTax) > 100))) return "FreeAgent invoice VAT/tax mapping is missing or invalid.";
+  if (!categoryUrl.startsWith(`https://api${environment === "sandbox" ? ".sandbox" : ""}.freeagent.com/`)) return "FreeAgent invoice category does not match the configured environment.";
+  return null;
+}
+
+export function configuredInvoice(env: AccountingEnvironment): InvoiceConfiguration | null {
+  const environment = configuredEnvironment(env);
+  if (invoiceConfigurationIssue(env, environment)) return null;
+  const salesTax = env.FREEAGENT_INVOICE_SALES_TAX_RATE!.trim();
   return {
-    amount,
-    itemType,
-    paymentTermsInDays: paymentTerms,
-    ...(env.FREEAGENT_INVOICE_CATEGORY_URL ? { categoryUrl: env.FREEAGENT_INVOICE_CATEGORY_URL } : {}),
-    ...(env.FREEAGENT_INVOICE_CURRENCY ? { currency: env.FREEAGENT_INVOICE_CURRENCY } : {})
+    amount: env.FREEAGENT_INVOICE_AMOUNT!.trim(),
+    itemType: env.FREEAGENT_INVOICE_ITEM_TYPE!.trim(),
+    categoryUrl: env.FREEAGENT_INVOICE_CATEGORY_URL!.trim(),
+    paymentTermsInDays: Number(env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS),
+    currency: env.FREEAGENT_INVOICE_CURRENCY!.trim(),
+    ...(salesTax === "EXEMPT" ? { salesTaxStatus: "EXEMPT" as const } : { salesTaxRate: salesTax })
   };
 }
 
@@ -83,7 +126,7 @@ async function accessToken(
 ): Promise<string> {
   const connection = await findAccountingConnection(db);
   const environment = configuredEnvironment(env);
-  if (!connection?.refresh_token_ciphertext || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET) {
+  if (!environment || !connection?.refresh_token_ciphertext || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
       status: null,
@@ -132,6 +175,16 @@ async function providerCall<T>(
   operation: (client: FreeAgentClient, token: string) => Promise<T>
 ): Promise<T> {
   const environment = configuredEnvironment(env);
+  if (!environment) {
+    throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent environment is not configured.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
   const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
   let token = await accessToken(db, env, now, fetcher);
   try {
@@ -147,8 +200,9 @@ async function providerCall<T>(
 export async function accountingIntegrationStatus(db: D1Database, env: AccountingEnvironment): Promise<AccountingIntegrationStatus> {
   const connection = await findAccountingConnection(db);
   const environment = configuredEnvironment(env);
+  const configurationMessage = invoiceConfigurationIssue(env, environment);
   const configured = Boolean(
-    (env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production") &&
+    environment &&
     env.FREEAGENT_CLIENT_ID &&
     env.FREEAGENT_CLIENT_SECRET &&
     env.FREEAGENT_TOKEN_ENCRYPTION_KEY &&
@@ -156,7 +210,15 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
     env.FREEAGENT_COMPANY_SUBDOMAIN
   );
   if (!configured || !connection) {
-    return { configured, connected: false, environment, label: configured ? "Connection requires attention" : "Not configured", lastSuccessAt: connection?.last_success_at ?? null, errorCode: connection?.last_error_code ?? null, errorMessage: connection?.last_error_message ?? null };
+    return {
+      configured,
+      connected: false,
+      environment: environment ?? "sandbox",
+      label: !configured ? "Not configured" : configurationMessage ? "Invoice mapping incomplete" : "Connection requires attention",
+      lastSuccessAt: connection?.last_success_at ?? null,
+      errorCode: connection?.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
+      errorMessage: connection?.last_error_message ?? configurationMessage
+    };
   }
   const identityMatches = connection.environment === environment &&
     (!env.FREEAGENT_COMPANY_SUBDOMAIN || connection.company_subdomain === env.FREEAGENT_COMPANY_SUBDOMAIN);
@@ -164,10 +226,12 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
     configured,
     connected: connection.status === "CONNECTED" && identityMatches,
     environment: connection.environment,
-    label: connection.status === "CONNECTED" && identityMatches ? "Connected to FreeAgent" : "Connection requires attention",
+    label: connection.status === "CONNECTED" && identityMatches
+      ? configurationMessage ? "Invoice mapping incomplete" : "Connected to FreeAgent"
+      : "Connection requires attention",
     lastSuccessAt: connection.last_success_at,
-    errorCode: connection.last_error_code,
-    errorMessage: connection.last_error_message
+    errorCode: connection.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
+    errorMessage: connection.last_error_message ?? configurationMessage
   };
 }
 
@@ -182,8 +246,9 @@ export async function connectFreeAgent(
     !env.FREEAGENT_CLIENT_SECRET ||
     !env.FREEAGENT_TOKEN_ENCRYPTION_KEY ||
     !env.FREEAGENT_COMPANY_SUBDOMAIN ||
-    (env.FREEAGENT_ENVIRONMENT !== "sandbox" && env.FREEAGENT_ENVIRONMENT !== "production") ||
-    input.environment !== env.FREEAGENT_ENVIRONMENT
+    !configuredEnvironment(env) ||
+    input.environment !== configuredEnvironment(env) ||
+    input.redirectUri !== env.FREEAGENT_OAUTH_REDIRECT_URI
   ) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
@@ -249,7 +314,7 @@ export async function processAccountingOutbox(
   }
   const invoiceConfig = configuredInvoice(env);
   if (!invoiceConfig) {
-    await markAccountingOutcome(db, id, "FAILED", "CONFIGURATION", "FreeAgent invoice mapping is not configured.", null, "NOT_ATTEMPTED", now);
+    await markAccountingOutcome(db, id, "FAILED", "CONFIGURATION", invoiceConfigurationIssue(env) ?? "FreeAgent invoice mapping is not configured.", null, "NOT_ATTEMPTED", now);
     return findAccountingOutbox(db, id);
   }
   if (!claimed.student_id) {
@@ -291,8 +356,10 @@ export async function processAccountingOutbox(
       itemType: invoiceConfig.itemType,
       description: `Foxtutor Learn ${claimed.billing_consequence}`,
       price: invoiceConfig.amount,
-      ...(invoiceConfig.categoryUrl ? { categoryUrl: invoiceConfig.categoryUrl } : {}),
-      ...(invoiceConfig.currency ? { currency: invoiceConfig.currency } : {})
+      categoryUrl: invoiceConfig.categoryUrl,
+      currency: invoiceConfig.currency,
+      ...(invoiceConfig.salesTaxRate ? { salesTaxRate: invoiceConfig.salesTaxRate } : {}),
+      ...(invoiceConfig.salesTaxStatus ? { salesTaxStatus: invoiceConfig.salesTaxStatus } : {})
     }));
     await markAccountingSucceeded(db, id, {
       externalReference: providerReference(invoice.url),
@@ -343,6 +410,17 @@ export async function verifyFreeAgentContactMapping(
       code: "CONFIGURATION",
       status: null,
       message: "Connect the intended FreeAgent company before mapping contacts.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  const existing = await findExternalAccountingLink(db, input.studentId);
+  if (existing && await hasActiveAccountingDependency(db, input.studentId)) {
+    throw new FreeAgentApiError({
+      code: "CONFLICT",
+      status: null,
+      message: "The existing contact mapping cannot be replaced while accounting work is active.",
       retryable: false,
       unknown: false,
       retryAfterSeconds: null

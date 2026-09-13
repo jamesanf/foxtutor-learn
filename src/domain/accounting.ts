@@ -28,6 +28,20 @@ export interface AccountingDecision {
   safeErrorMessage: string | null;
 }
 
+const accountingTransitions: Record<AccountingStatus, readonly AccountingStatus[]> = {
+  PENDING: ["PROCESSING"],
+  PROCESSING: ["SUCCEEDED", "RETRYABLE", "FAILED", "UNKNOWN"],
+  SUCCEEDED: [],
+  RETRYABLE: ["PROCESSING"],
+  FAILED: ["RETRYABLE"],
+  UNKNOWN: ["SUCCEEDED"],
+  NOT_REQUIRED: []
+};
+
+export function canTransitionAccountingStatus(from: AccountingStatus, to: AccountingStatus): boolean {
+  return accountingTransitions[from].includes(to);
+}
+
 export function accountingEventTypeForHistory(eventType: string): AccountingEventType | null {
   if (eventType === "STUDENT_CANCELLED" || eventType === "CANCELLATION_APPROVED" || eventType === "ADMIN_CANCELLED") {
     return "CANCELLATION_ACCOUNTING";
@@ -72,7 +86,13 @@ export function accountingIdempotencyKey(eventType: AccountingEventType, busines
 }
 
 export function accountingReference(businessEventId: string): string {
-  return `FT-ACC-${businessEventId.replace(/[^A-Za-z0-9]/g, "").slice(0, 24)}`;
+  return `FT-ACC-${businessEventId.replace(/[^A-Za-z0-9]/g, "")}`;
+}
+
+export function isAccountingEffectiveDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return date.toISOString().slice(0, 10) === value;
 }
 
 export function nextAccountingRetryAt(now: string, attemptCount: number): string | null {

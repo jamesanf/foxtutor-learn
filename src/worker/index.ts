@@ -143,7 +143,7 @@ import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
 import { accountingIntegrationStatus, connectFreeAgent, processAccountingOutbox, reconcileAccountingOutbox, verifyFreeAgentContactMapping } from "../accounting/service";
-import { freeAgentAuthorizationUrl, type FreeAgentEnvironment } from "../accounting/freeagent/client";
+import { freeAgentAuthorizationUrl, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
   MAX_RESOURCE_SIZE_BYTES,
@@ -181,6 +181,7 @@ export interface Env {
   FREEAGENT_INVOICE_CATEGORY_URL?: string;
   FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?: string;
   FREEAGENT_INVOICE_CURRENCY?: string;
+  FREEAGENT_INVOICE_SALES_TAX_RATE?: string;
   FREEAGENT_COMPANY_SUBDOMAIN?: string;
   RESOURCES_BUCKET?: R2Bucket;
 }
@@ -1617,7 +1618,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
   if (route === "admin-accounting-connect") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the FreeAgent connection link from the accounting page.", 405);
-    if (!env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_OAUTH_REDIRECT_URI || !env.FREEAGENT_COMPANY_SUBDOMAIN || (env.FREEAGENT_ENVIRONMENT !== "sandbox" && env.FREEAGENT_ENVIRONMENT !== "production")) {
+    if (!env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_OAUTH_REDIRECT_URI || !env.FREEAGENT_COMPANY_SUBDOMAIN || (env.FREEAGENT_ENVIRONMENT !== "sandbox" && env.FREEAGENT_ENVIRONMENT !== "production")) {
       return messagePage("FreeAgent unavailable", "FreeAgent OAuth configuration is incomplete or the intended company is not pinned.", 503);
     }
     const environment: FreeAgentEnvironment = env.FREEAGENT_ENVIRONMENT;
@@ -1680,7 +1681,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!/^\d+$/.test(externalReference)) return messagePage("Invalid contact", "Enter a numeric FreeAgent contact ID.", 400);
     try {
       await verifyFreeAgentContactMapping(db, env, { studentId, externalReference, now: new Date().toISOString() });
-    } catch {
+    } catch (error) {
+      if (error instanceof FreeAgentApiError && error.shape.code === "CONFLICT") {
+        return messagePage("Contact mapping in use", error.message, 409);
+      }
       const link = await findExternalAccountingLink(db, studentId);
       if (link) {
         await updateExternalAccountingLinkStatus(db, studentId, {
