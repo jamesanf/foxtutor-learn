@@ -23,8 +23,11 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/admin/students/new")).toBe("admin-student-form");
     expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/status")).toBe("admin-lesson-status");
     expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/report")).toBe("admin-lesson-report");
+    expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/report.pdf")).toBe("admin-lesson-report-pdf");
     expect(classifyLearnRoute("/learn/admin/notifications")).toBe("admin-notifications");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1")).toBe("student-lesson");
+    expect(classifyLearnRoute("/learn/student/lessons/lesson-1/report")).toBe("student-lesson-report");
+    expect(classifyLearnRoute("/learn/student/lessons/lesson-1/report.pdf")).toBe("student-lesson-report-pdf");
     expect(classifyLearnRoute("/learn/assets/learn.css")).toBe("asset");
     expect(classifyLearnRoute("/learn/assets/foxlearninglogo-240.webp")).toBe("asset");
     expect(classifyLearnRoute("/learn/assets/fonts/geist-latin-wght-normal.woff2")).toBe("asset");

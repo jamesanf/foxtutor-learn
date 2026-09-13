@@ -621,6 +621,24 @@ Access Service Auth path must be restored before a real send can be claimed.
 `CANCELLATION_REQUESTED` is contract-ready but dormant; cancellation rules and
 rescheduling remain Phase 5.
 
+### Phase 4.2 current state — 2026-09-13
+
+Structured reports now follow the supplied template rather than the generic
+4.1 summary/homework model. Migration `0008_structured_lesson_reports.sql`
+adds nullable `students.level`, report-time header snapshots and the six
+Tutorial Feedback fields. Existing 4.1 content is reconciled as
+`summary -> This Lesson's Focus`, `homework -> Home Learning Task` and
+`additional_notes -> Notes`.
+
+Admins can save/send one report per completed lesson. Sent reports are
+immutable in the normal workflow, visible to the owning student from Previous
+Lessons, and available through the same authorized HTML/PDF route for admins.
+The PDF is generated on demand in the Worker from the persisted D1 projection;
+no PDF is written to R2 or D1. Student level is canonical on `students.level`
+and duplicated only as a report snapshot. Production mail/browser acceptance
+and deployment evidence must still be recorded before Phase 4 is formally
+closed.
+
 ### Must achieve
 
 - Define one small, stable internal notification contract.

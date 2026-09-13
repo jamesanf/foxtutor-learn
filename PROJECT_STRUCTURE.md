@@ -25,6 +25,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   ├── mail/
 │   ├── notifications/
 │   └── reports/
+│   ├── reports/
 │   └── client/
 ├── public/
 │   ├── learn.css

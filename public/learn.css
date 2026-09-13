@@ -319,6 +319,25 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; }
 .detail-grid p { margin: 0; }
 .full-width { grid-column: 1 / -1; white-space: normal; overflow-wrap: anywhere; }
+.report-form { max-width: 900px; }
+.report-form > h2 { margin-top: 30px; }
+.report-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
+.report-meta p, .report-meta label { margin: 0; }
+.report-document { max-width: 980px; }
+.report-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
+.report-heading h1 { margin-bottom: 0; }
+.report-feedback { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 30px; }
+.report-feedback > h2 { grid-column: 1 / -1; margin: 0; }
+.report-field { min-height: 130px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: #f8fbfd; }
+.report-field h2 { margin: 0 0 12px; color: var(--action); font-size: .9rem; }
+.report-field p { margin: 0; white-space: normal; overflow-wrap: anywhere; }
+.report-delivery { margin-top: 22px; color: var(--muted); }
+.report-document { break-inside: avoid; }
+@media print {
+  .topbar, nav, .report-heading .form-actions, .site-notifications { display: none !important; }
+  .layout, .content { display: block; padding: 0; }
+  .report-document { max-width: none; border: 0; box-shadow: none; }
+}
 .centered { display: grid; min-height: 100vh; place-items: center; padding: 24px; }
 .centered .card { width: min(100%, 520px); margin: 0; }
 .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; margin-top: 10px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--radius-sm); color: white; background: var(--action); text-decoration: none; font-weight: 650; }
@@ -344,6 +363,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .content { padding: 34px 20px 52px; }
   .page-heading { align-items: flex-start; flex-direction: column; }
   .detail-grid, .summary-grid { grid-template-columns: 1fr; }
+  .report-meta, .report-feedback { grid-template-columns: 1fr; }
+  .report-feedback > h2 { grid-column: auto; }
+  .report-heading { flex-direction: column; }
   .full-width { grid-column: auto; }
   .subscription-card > summary { padding: 16px 18px; }
   .subscription-content { padding: 16px 18px 18px; }

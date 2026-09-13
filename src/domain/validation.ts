@@ -27,6 +27,11 @@ export function validName(value: string): string | null {
   return name.length > 0 && name.length <= MAX_NAME_LENGTH ? name : null;
 }
 
+export function validLevel(value: string): string | null {
+  const level = value.trim();
+  return level.length <= 120 ? (level || null) : null;
+}
+
 export function validEmail(value: string): string | null {
   const email = value.trim().toLowerCase();
   return email.length > 0 && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;

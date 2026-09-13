@@ -48,4 +48,15 @@ describe("D1 foundation", () => {
     expect(notifications).toContain("provider_reference TEXT");
     expect(notifications).toContain("idx_notifications_status_attempt");
   });
+
+  it("adds structured report snapshots and the nullable student level forward-only", () => {
+    const migration = readFileSync("migrations/0008_structured_lesson_reports.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE students ADD COLUMN level TEXT");
+    expect(migration).toContain("ALTER TABLE lesson_reports ADD COLUMN pupil_name TEXT");
+    expect(migration).toContain("ALTER TABLE lesson_reports ADD COLUMN lesson_timezone TEXT");
+    expect(migration).toContain("summary");
+    expect(migration).toContain("homework");
+    expect(migration).toContain("additional_notes");
+    expect(migration).toContain("idx_lesson_reports_student_status");
+  });
 });

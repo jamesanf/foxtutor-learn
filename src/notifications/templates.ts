@@ -29,9 +29,15 @@ export interface ReportResourceData {
 }
 
 export interface ReportEmailData extends LessonEmailData {
-  summary: string;
-  homework: string;
-  additionalNotes: string;
+  pupilName: string;
+  level: string;
+  reportPath: string;
+  thisLessonsFocus: string;
+  nextLessonsFocus: string;
+  writingPractice: string;
+  homeLearningTask: string;
+  notes: string;
+  evenBetterIf: string;
   resources: ReportResourceData[];
 }
 
@@ -134,19 +140,27 @@ export function renderCancellationProcessed(data: LessonEmailData, origin: strin
 }
 
 export function renderLessonReport(data: ReportEmailData, origin: string): EmailContent {
-  const details = lessonDetails(data, origin);
+  const date = lessonDate(data);
+  const time = lessonTime(data);
   const resourcesText = data.resources.length ? `\n\nResources:\n${data.resources.map((resource) => `- ${resource.filename}: ${learnLink(origin, resource.path)}`).join("\n")}` : "";
   const resourcesHtml = data.resources.length
     ? `<h2>Resources</h2><ul>${data.resources.map((resource) => `<li><a href="${escapeHtml(learnLink(origin, resource.path))}">${escapeHtml(resource.filename)}</a></li>`).join("")}</ul>`
     : "";
-  const optionalText = data.homework ? `\n\nHomework / follow-up:\n${data.homework}` : "";
-  const optionalHtml = data.homework ? `<h2>Homework / follow-up</h2><p>${lineBreaks(data.homework)}</p>` : "";
-  const notesText = data.additionalNotes ? `\n\nAdditional notes:\n${data.additionalNotes}` : "";
-  const notesHtml = data.additionalNotes ? `<h2>Additional notes</h2><p>${lineBreaks(data.additionalNotes)}</p>` : "";
+  const fields: Array<[string, string]> = [
+    ["This Lesson's Focus", data.thisLessonsFocus],
+    ["Next Lesson's Focus", data.nextLessonsFocus],
+    ["Writing Practice", data.writingPractice],
+    ["Home Learning Task", data.homeLearningTask],
+    ["Notes", data.notes],
+    ["Even Better If", data.evenBetterIf]
+  ];
+  const textFields = fields.filter(([, value]) => value).map(([label, value]) => `\n\n${label}:\n${value}`).join("");
+  const htmlFields = fields.filter(([, value]) => value).map(([label, value]) => `<h2>${escapeHtml(label)}</h2><p>${lineBreaks(value)}</p>`).join("");
+  const reportLink = learnLink(origin, data.reportPath);
   return {
-    subject: `Your lesson report — ${lessonDate(data)}`,
-    text: `Hello ${data.studentName},\n\nLesson report\n${details.text}\n\nSummary:\n${data.summary}${optionalText}${notesText}${resourcesText}`,
-    html: frame("Lesson report", "FoxTutor Learn", `<p>Hello ${escapeHtml(data.studentName)},</p><p><strong>${escapeHtml(lessonDate(data))}</strong><br>${escapeHtml(lessonTime(data))} (${escapeHtml(data.timezone)})</p><h2>Summary</h2><p>${lineBreaks(data.summary)}</p>${optionalHtml}${notesHtml}${resourcesHtml}<p><a href="${escapeHtml(learnLink(origin, data.lessonPath))}">Open lesson</a></p>`)
+    subject: `Your lesson report — ${date}`,
+    text: `Hello ${data.studentName},\n\nLesson report\nPupil: ${data.pupilName}\nLevel: ${data.level}\nLesson date/time: ${date}\n${time} (${data.timezone})${textFields}${resourcesText}\n\nOpen report: ${reportLink}`,
+    html: frame("Lesson report", "FoxTutor Learn", `<p>Hello ${escapeHtml(data.studentName)},</p><p><strong>Lesson date</strong><br>${escapeHtml(date)}<br>${escapeHtml(time)} (${escapeHtml(data.timezone)})</p><p><strong>Pupil</strong><br>${escapeHtml(data.pupilName)}<br><strong>Level</strong><br>${escapeHtml(data.level)}</p>${htmlFields}${resourcesHtml}<p><a href="${escapeHtml(reportLink)}">Open report</a></p>`)
   };
 }
 
@@ -166,6 +180,6 @@ export function renderEmail(type: NotificationType, data: Record<string, unknown
     return renderResourceAdded(data as unknown as ResourceEmailData, origin);
   }
   if (type === "CANCELLATION_PROCESSED" || type === "CANCELLATION_REQUESTED") return renderCancellationProcessed(data as unknown as LessonEmailData, origin);
-  requireFields(data, ["studentName", "startAt", "endAt", "timezone", "lessonPath", "summary"]);
+  requireFields(data, ["studentName", "startAt", "endAt", "timezone", "lessonPath", "pupilName", "level", "reportPath", "thisLessonsFocus"]);
   return renderLessonReport(data as unknown as ReportEmailData, origin);
 }

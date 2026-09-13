@@ -12,6 +12,8 @@ export interface Lesson {
   external_url: string | null;
   created_at: string;
   updated_at: string;
+  report_id?: string | null;
+  report_status?: "DRAFT" | "SENT" | null;
 }
 
 const lessonColumns = "l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.status, l.notes, l.external_url, l.created_at, l.updated_at";
@@ -76,8 +78,9 @@ export async function listPastLessons(
 ): Promise<Lesson[]> {
   const result = await db
     .prepare(
-      `SELECT ${lessonColumns}, s.name AS student_name
+      `SELECT ${lessonColumns}, s.name AS student_name, r.id AS report_id, r.status AS report_status
        FROM lessons l JOIN students s ON s.id = l.student_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
        WHERE l.status != 'scheduled' OR l.start_at <= ?
        ORDER BY l.start_at DESC, l.id DESC
        LIMIT ? OFFSET ?`
@@ -116,9 +119,10 @@ export async function listLessonsInRange(db: D1Database, startAt: string, endAt:
 export async function listLessonsForUser(db: D1Database, userId: string): Promise<Lesson[]> {
   const result = await db
     .prepare(
-      `SELECT ${studentLessonColumns}
+      `SELECT ${studentLessonColumns}, r.id AS report_id, r.status AS report_status
        FROM lessons l JOIN students s ON s.id = l.student_id
        JOIN users u ON u.id = s.learn_user_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
        WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
        ORDER BY l.start_at ASC`
     )
@@ -135,9 +139,10 @@ export async function listLessonsForUserInRange(
 ): Promise<Lesson[]> {
   const result = await db
     .prepare(
-      `SELECT ${studentLessonColumns}
+      `SELECT ${studentLessonColumns}, r.id AS report_id, r.status AS report_status
        FROM lessons l JOIN students s ON s.id = l.student_id
        JOIN users u ON u.id = s.learn_user_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
        WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
          AND l.start_at < ? AND l.end_at > ?
        ORDER BY l.start_at ASC, l.id ASC`
