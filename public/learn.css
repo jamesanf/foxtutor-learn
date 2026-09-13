@@ -306,10 +306,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .help { margin: -4px 0 22px; font-size: .9rem; font-weight: 400; }
 .field-help { display: block; margin-top: 6px; color: var(--muted); font-size: .78rem; font-weight: 400; }
 .info-box { display: block; margin-top: 7px; padding: 8px 10px; border: 1px solid #b9dce4; border-radius: 7px; color: #155e75; background: #effafd; font-size: .78rem; font-weight: 450; }
+.field-info { display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center; margin-left: 5px; border: 1px solid #75b7c4; border-radius: 50%; color: #0e7490; background: #effafd; cursor: help; font-size: .7rem; font-weight: 750; line-height: 1; vertical-align: 1px; }
+.field-info:hover, .field-info:focus-visible { border-color: #0e7490; color: white; background: #0e7490; outline: 0; }
+.student-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.student-form-grid label { margin: 10px 0; }
+.student-form-grid [data-academic-year-field][hidden] { display: none; }
 .student-academic-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
 .student-dst-field { margin: 18px 0; }
 .student-dst-toggle { margin: 0; }
-.student-dst-info { margin-top: 8px; }
 .form-error { padding: 12px 14px; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b !important; background: #fef2f2; }
 .lesson-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
 .lesson-form-grid label { margin: 10px 0; }
@@ -527,7 +531,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .feed-link-row .button { width: 100%; }
   .lesson-form-grid { grid-template-columns: 1fr; }
   .lesson-form-grid .field-wide, .lesson-form-grid .additional-details { grid-column: auto; }
-  .student-academic-grid { grid-template-columns: 1fr; }
+  .student-form-grid, .student-academic-grid { grid-template-columns: 1fr; }
   .student-collapsible-body { padding: 0 14px 16px; }
   .dashboard-empty, .section-heading { align-items: flex-start; flex-direction: column; }
   .list-footer { grid-template-columns: 1fr; justify-items: stretch; }

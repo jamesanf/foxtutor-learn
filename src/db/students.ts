@@ -10,6 +10,7 @@ export interface Student {
   email: string;
   level: string | null;
   international: number;
+  parent_name: string;
   parent_email: string;
   billing_address: string;
   additional_support_needs: string;
@@ -24,7 +25,7 @@ export interface Student {
   updated_at: string;
 }
 
-const studentColumns = "s.id, s.name, s.email, s.level, s.international, s.parent_email, s.billing_address, s.additional_support_needs, s.academic_year_system, s.academic_year, s.academic_year_anchor_date, s.class_texts, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at";
+const studentColumns = "s.id, s.name, s.email, s.level, s.international, s.parent_name, s.parent_email, s.billing_address, s.additional_support_needs, s.academic_year_system, s.academic_year, s.academic_year_anchor_date, s.class_texts, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at";
 
 async function syncAcademicYear(db: D1Database, student: Student, now = new Date().toISOString()): Promise<Student> {
   const current = currentAcademicYear(student.academic_year_system, student.academic_year, student.academic_year_anchor_date, now);
@@ -115,6 +116,7 @@ type StudentProfileInput = {
   email: string;
   level?: string | null;
   international?: boolean;
+  parentName?: string;
   parentEmail?: string;
   billingAddress?: string;
   additionalSupportNeeds?: string;
@@ -129,18 +131,18 @@ type StudentProfileInput = {
 export async function insertStudent(db: D1Database, student: StudentProfileInput): Promise<void> {
   await db
     .prepare(
-      "INSERT INTO students(id, name, email, level, international, parent_email, billing_address, additional_support_needs, academic_year_system, academic_year, academic_year_anchor_date, class_texts, learn_user_id, status, created_at, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)"
+      "INSERT INTO students(id, name, email, level, international, parent_name, parent_email, billing_address, additional_support_needs, academic_year_system, academic_year, academic_year_anchor_date, class_texts, learn_user_id, status, created_at, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)"
     )
-    .bind(student.id, student.name, student.email, student.level ?? null, student.international ? 1 : 0, student.parentEmail ?? "", student.billingAddress ?? "", student.additionalSupportNeeds ?? "", student.academicYearSystem, student.academicYear, student.academicYearAnchorDate === undefined ? student.now.slice(0, 10) : student.academicYearAnchorDate, student.classTexts ?? "", student.learnUserId, student.now, student.now)
+    .bind(student.id, student.name, student.email, student.level ?? null, student.international ? 1 : 0, student.parentName ?? "", student.parentEmail ?? "", student.billingAddress ?? "", student.additionalSupportNeeds ?? "", student.academicYearSystem, student.academicYear, student.academicYearAnchorDate === undefined ? student.now.slice(0, 10) : student.academicYearAnchorDate, student.classTexts ?? "", student.learnUserId, student.now, student.now)
     .run();
 }
 
 export async function updateStudent(db: D1Database, student: StudentProfileInput): Promise<void> {
   await db
     .prepare(
-      "UPDATE students SET name = ?, email = ?, level = ?, international = ?, parent_email = ?, billing_address = ?, additional_support_needs = ?, academic_year_system = ?, academic_year = ?, academic_year_anchor_date = ?, class_texts = ?, learn_user_id = ?, updated_at = ? WHERE id = ?"
+      "UPDATE students SET name = ?, email = ?, level = ?, international = ?, parent_name = ?, parent_email = ?, billing_address = ?, additional_support_needs = ?, academic_year_system = ?, academic_year = ?, academic_year_anchor_date = ?, class_texts = ?, learn_user_id = ?, updated_at = ? WHERE id = ?"
     )
-    .bind(student.name, student.email, student.level ?? null, student.international ? 1 : 0, student.parentEmail ?? "", student.billingAddress ?? "", student.additionalSupportNeeds ?? "", student.academicYearSystem, student.academicYear, student.academicYearAnchorDate === undefined ? student.now.slice(0, 10) : student.academicYearAnchorDate, student.classTexts ?? "", student.learnUserId, student.now, student.id)
+    .bind(student.name, student.email, student.level ?? null, student.international ? 1 : 0, student.parentName ?? "", student.parentEmail ?? "", student.billingAddress ?? "", student.additionalSupportNeeds ?? "", student.academicYearSystem, student.academicYear, student.academicYearAnchorDate === undefined ? student.now.slice(0, 10) : student.academicYearAnchorDate, student.classTexts ?? "", student.learnUserId, student.now, student.id)
     .run();
 }
 

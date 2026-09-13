@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-13 — Student profile form refinement
+
+- Added a parent/carer name field and relabelled the first name field as
+  `Pupil name`.
+- Grouped short student fields into a responsive two-column grid.
+- Replaced explanatory paragraphs with keyboard-accessible `(i)` hover
+  tooltips.
+- Hid Academic year unless English or Scottish is selected; Private,
+  International and Mature profiles do not show an academic-year control.
+- Added migration `0015_parent_name.sql`.
+
 ### 2026-09-13 — Student edit form alignment
 
 - Separated the international-pupil reminder note from the toggle control so

@@ -10,6 +10,7 @@ ownership.
 The profile also stores:
 
 - billing address;
+- parent/carer name and email;
 - additional support needs;
 - class texts;
 - level;
@@ -42,5 +43,6 @@ section page sizes use the established 12, 24 and 48-row options. Resource
 creation remains available from the section body for active students, while
 deactivation remains an explicit action at the bottom of the record.
 
-Migration `0014_student_profiles.sql` is forward-only and must be applied
-before deploying code that reads or writes these columns.
+Migrations `0014_student_profiles.sql` and `0015_parent_name.sql` are
+forward-only and must be applied before deploying code that reads or writes
+these columns.

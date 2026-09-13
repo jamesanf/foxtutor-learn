@@ -1089,19 +1089,23 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   document.querySelectorAll<HTMLFormElement>("[data-student-profile-form]").forEach((form) => {
     const systemElement = form.querySelector("[data-academic-system]");
     const yearElement = form.querySelector("[data-academic-year]");
-    if (!(systemElement instanceof HTMLSelectElement) || !(yearElement instanceof HTMLSelectElement)) return;
+    const yearField = form.querySelector("[data-academic-year-field]");
+    if (!(systemElement instanceof HTMLSelectElement) || !(yearElement instanceof HTMLSelectElement) || !(yearField instanceof HTMLElement)) return;
     const system = systemElement;
     const year = yearElement;
     const syncAcademicYears = () => {
+      const dynamicSystem = system.value === "ENGLISH" || system.value === "SCOTTISH";
+      yearField.hidden = !dynamicSystem;
+      year.disabled = !dynamicSystem;
       const selected = year.value;
       let firstEnabled = "";
       Array.from(year.options).forEach((option) => {
-        const enabled = option.dataset.academicSystem === system.value;
+        const enabled = dynamicSystem && option.dataset.academicSystem === system.value;
         option.hidden = !enabled;
         option.disabled = !enabled;
         if (enabled && !firstEnabled) firstEnabled = option.value;
       });
-      if (!Array.from(year.options).some((option) => !option.disabled && option.value === selected)) year.value = firstEnabled;
+      if (dynamicSystem && !Array.from(year.options).some((option) => !option.disabled && option.value === selected)) year.value = firstEnabled;
     };
     system.addEventListener("change", syncAcademicYears);
     syncAcademicYears();

@@ -12,7 +12,7 @@ replacement or accounting system.
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** `272bf08`
 **Worker:** `28a5e1c3-b2ea-4289-88ea-75228a3749ce`
-**D1 migrations:** `0001_foundation.sql` through `0014_student_profiles.sql`
+**D1 migrations:** `0001_foundation.sql` through `0015_parent_name.sql`
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,

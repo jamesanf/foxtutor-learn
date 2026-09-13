@@ -110,4 +110,9 @@ describe("D1 foundation", () => {
     expect(migration).toContain("academic_year_anchor_date");
     expect(migration).toContain("class_texts TEXT NOT NULL DEFAULT ''");
   });
+
+  it("adds the optional parent or carer name", () => {
+    const migration = readFileSync("migrations/0015_parent_name.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''");
+  });
 });
