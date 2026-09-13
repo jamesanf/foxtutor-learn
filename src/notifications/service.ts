@@ -23,6 +23,7 @@ import { renderEmail, type EmailContent } from "./templates";
 import { canonicalLearnOrigin } from "./links";
 import { dstWarningForInstant } from "../domain/dst";
 import { listInternationalStudentRecipients } from "../db/students";
+import { lessonUrlKey } from "../domain/lesson-url";
 
 export interface NotificationEnvironment extends MailEnvironment {
   PUBLIC_ORIGIN?: string;
@@ -131,7 +132,7 @@ export async function runReminderScheduler(
       startAt: lesson.start_at,
       endAt: lesson.end_at,
       timezone: lesson.timezone,
-      lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
+      lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
       externalUrl: lesson.external_url
     }, origin);
     const notification = await insertNotification(db, {

@@ -67,6 +67,8 @@ import { createAndDeliverNotification, runDstWarningScheduler, runReminderSchedu
 import { canonicalLearnOrigin } from "../notifications/links";
 import { renderEmail } from "../notifications/templates";
 import { eventIdempotencyKey, hasMaterialLessonChange, reminderDueAt } from "../domain/notifications";
+import { lessonIdFromUrlKey, lessonUrlKey } from "../domain/lesson-url";
+import { reportDocumentTitleFromIsoDate, reportPdfFilenameFromIsoDate } from "../domain/report-title";
 import {
   CALENDAR_TIMEZONE,
   currentCalendarDate
@@ -137,8 +139,8 @@ async function emitLessonReportNotification(
     startAt: report.lesson_start_at,
     endAt: report.lesson_end_at,
     timezone: report.lesson_timezone,
-    lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
-    reportPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}/report`,
+    lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
+    reportPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}/report`,
     externalUrl: lesson.external_url,
     pupilName: report.pupil_name,
     level: report.level,
@@ -163,10 +165,11 @@ async function emitLessonReportNotification(
   }, now);
 }
 
-function htmlDocument(title: string, body: string): Response {
+function htmlDocument(title: string, body: string, appendBrand = true): Response {
   const headers = privateHeaders("text/html; charset=utf-8");
+  const documentTitle = appendBrand ? `${title} | FoxTutor Learn` : title;
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta name="theme-color" content="#0e7490"><title>${escapeHtml(title)} | FoxTutor Learn</title><link rel="icon" type="image/png" href="/learn/assets/my-favicon/favicon-96x96.png" sizes="96x96"><link rel="shortcut icon" href="/learn/assets/my-favicon/favicon.ico"><link rel="apple-touch-icon" href="/learn/assets/my-favicon/apple-touch-icon.png"><link rel="manifest" href="/learn/assets/my-favicon/site.webmanifest"><link rel="preload" href="/learn/assets/fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/learn/assets/learn.css"><script src="/learn/assets/learn.js" defer></script></head><body>${body}</body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta name="theme-color" content="#0e7490"><title>${escapeHtml(documentTitle)}</title><link rel="icon" type="image/png" href="/learn/assets/my-favicon/favicon-96x96.png" sizes="96x96"><link rel="shortcut icon" href="/learn/assets/my-favicon/favicon.ico"><link rel="apple-touch-icon" href="/learn/assets/my-favicon/apple-touch-icon.png"><link rel="manifest" href="/learn/assets/my-favicon/site.webmanifest"><link rel="preload" href="/learn/assets/fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/learn/assets/learn.css"><script src="/learn/assets/learn.js" defer></script></head><body>${body}</body></html>`,
     { headers }
   );
 }
@@ -199,12 +202,12 @@ function navigation(role: Role): string {
   return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
 }
 
-function appPage(user: AppUser, csrfToken: string, title: string, content: string): Response {
+function appPage(user: AppUser, csrfToken: string, title: string, content: string, exactTitle = false): Response {
   const identity = user.role === "ADMIN"
     ? `<span class="header-control identity-role">ADMIN</span>`
     : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
   const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
-  return htmlDocument(title, body);
+  return htmlDocument(title, body, !exactTitle);
 }
 
 function withSessionCookies(response: Response, setCookies: string[] | undefined): Response {
@@ -244,7 +247,7 @@ function lessonMailData(lesson: Lesson): {
     startAt: lesson.start_at,
     endAt: lesson.end_at,
     timezone: lesson.timezone,
-    lessonPath: `/learn/student/lessons/${encodeURIComponent(lesson.id)}`,
+    lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
     externalUrl: lesson.external_url
   };
 }
@@ -265,7 +268,7 @@ function notificationList(
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section></div>`;
   const body = rows.length
-    ? `<div class="table-wrap"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Created</th><th>Provider</th><th>Failure</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Event">${escapeHtml(row.event_type.replaceAll("_", " "))}</td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${encodeURIComponent(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Created">${escapeHtml(row.created_at)}</td><td data-label="Provider">${escapeHtml(row.provider_reference ?? "—")}</td><td data-label="Failure">${escapeHtml(row.error_category ?? "—")}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Created</th><th>Provider</th><th>Failure</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Event">${escapeHtml(row.event_type.replaceAll("_", " "))}</td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Created">${escapeHtml(row.created_at)}</td><td data-label="Provider">${escapeHtml(row.provider_reference ?? "—")}</td><td data-label="Failure">${escapeHtml(row.error_category ?? "—")}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
   return `${summary}<section class="card"><div class="section-heading"><h2>Delivery</h2><div class="form-actions">${filters}</div></div>${body}</section>`;
 }
@@ -287,7 +290,7 @@ function lessonReportForm(
   const levelControl = `<div class="report-level-combobox" data-level-combobox><label for="report-level">Level<input id="report-level" name="level" value="${escapeHtml(level)}" maxlength="120" required autocomplete="off" aria-autocomplete="list" aria-controls="report-level-options"></label><div id="report-level-options" class="report-level-options" role="listbox" hidden>${levelOptions}</div></div>`;
   const editor = (label: string, name: string, content: string, required = false, toolbarLabel = label || "Notes"): string => `<div class="report-editor" data-report-editor data-list-mode="bullet"><label>${label ? escapeHtml(label) : ""}<textarea name="${name}" rows="3" maxlength="12000"${required ? " required" : ""}>${escapeHtml(content)}</textarea></label><div class="report-toolbar" role="toolbar" aria-label="${escapeHtml(toolbarLabel)} formatting"><button type="button" class="report-tool report-list-mode is-active" data-report-format="list-bullet" aria-pressed="true" title="Bullet points"><svg class="report-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v2H5V5h2Zm4 0v2h10V5H11ZM7 11v2H5v-2h2Zm4 0v2h10v-2H11ZM7 17v2H5v-2h2Zm4 0v2h10v-2H11Z"/></svg></button><button type="button" class="report-tool report-list-mode" data-report-format="list-numbered" aria-pressed="false" title="Numbered list"><svg class="report-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 13V11H21V13H7M7 19V17H21V19H7M7 7V5H21V7H7M3 8V5H2V4H4V8H3M2 17V16H5V20H2V19H4V18.5H3V17.5H4V17H2M4.25 10A.75.75 0 0 1 5 10.75C5 10.95 4.92 11.14 4.79 11.27L3.12 13H5V14H2V13.08L4 11H2V10H4.25Z"/></svg></button><button type="button" class="report-tool" data-report-format="bold" title="Bold"><strong>B</strong></button><button type="button" class="report-tool report-tool-highlight" data-report-format="highlight" title="Yellow highlight">A</button></div></div>`;
   const notes = value("notes") || value("additional_notes");
-  return `<section class="card form-card report-form"><h1>Lesson Report</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form id="lesson-report-form" method="post" action="${action}" enctype="multipart/form-data" data-report-attachment-form>${hiddenCsrf(csrfToken)}<div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(reportDate(lesson))}</p><p><strong>Pupil</strong><br>${escapeHtml(pupil)}</p><p><strong>Time</strong><br>${escapeHtml(reportTime(lesson))}</p>${levelControl}</div><div class="report-feedback-form">${editor("This Lesson's Focus", "thisLessonsFocus", value("this_lessons_focus") || value("summary"), true)}${editor("Next Lesson's Focus", "nextLessonsFocus", value("next_lessons_focus"))}${editor("Even Better If", "evenBetterIf", value("even_better_if"))}${editor("Home Learning Task", "homeLearningTask", value("home_learning_task") || value("homework"))}<details class="report-notes-details"${notes ? " open" : ""}><summary>Notes</summary>${editor("", "notes", notes, false, "Notes")}</details></div>${reportAttachmentUploadForm(lesson, resources)}</form><div class="form-actions report-form-actions"><a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Cancel</a><div class="report-submit-actions"><button class="button secondary report-save-draft" data-report-save-draft type="submit" form="lesson-report-form" name="action" value="save">Save draft</button><button class="button" type="submit" form="lesson-report-form" name="action" value="send">Send report</button></div></div></section>`;
+  return `<section class="card form-card report-form"><h1>Lesson Report</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form id="lesson-report-form" method="post" action="${action}" enctype="multipart/form-data" data-report-attachment-form>${hiddenCsrf(csrfToken)}<div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(reportDate(lesson))}</p><p><strong>Pupil</strong><br>${escapeHtml(pupil)}</p><p><strong>Time</strong><br>${escapeHtml(reportTime(lesson))}</p>${levelControl}</div><div class="report-feedback-form">${editor("This Lesson's Focus", "thisLessonsFocus", value("this_lessons_focus") || value("summary"), true)}${editor("Next Lesson's Focus", "nextLessonsFocus", value("next_lessons_focus"))}${editor("Even Better If", "evenBetterIf", value("even_better_if"))}${editor("Home Learning Task", "homeLearningTask", value("home_learning_task") || value("homework"))}<details class="report-notes-details"${notes ? " open" : ""}><summary>Notes</summary>${editor("", "notes", notes, false, "Notes")}</details></div>${reportAttachmentUploadForm(lesson, resources)}</form><div class="form-actions report-form-actions"><a class="button secondary" href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">Cancel</a><div class="report-submit-actions"><button class="button secondary report-save-draft" data-report-save-draft type="submit" form="lesson-report-form" name="action" value="save">Save draft</button><button class="button" type="submit" form="lesson-report-form" name="action" value="send">Send report</button></div></div></section>`;
 }
 
 function reportAttachmentUploadForm(lesson: Lesson, resources: Resource[]): string {
@@ -360,6 +363,14 @@ function reportDate(lesson: Lesson): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: lesson.timezone }).format(new Date(lesson.start_at));
 }
 
+function reportDocumentTitle(lesson: Lesson): string {
+  return reportDocumentTitleFromIsoDate(reportDateValue(lesson));
+}
+
+function reportDocumentTitleFromSnapshot(report: LessonReport): string {
+  return reportDocumentTitleFromIsoDate(report.lesson_date);
+}
+
 function reportDateValue(lesson: Lesson): string {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: lesson.timezone }).formatToParts(new Date(lesson.start_at));
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
@@ -383,9 +394,9 @@ function reportField(label: string, value: string): string {
 function reportDocument(report: LessonReport, admin: boolean, csrfToken?: string, notice?: string): string {
   const view = reportViewModel(report);
   const resend = admin && csrfToken && report.status === "SENT"
-    ? `<form class="report-resend-form" method="post" action="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit" name="action" value="resend">Resend report</button></form>`
+    ? `<form class="report-resend-form" method="post" action="/learn/admin/lessons/${lessonRouteId(report.lesson_id)}/report">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit" name="action" value="resend">Resend report</button></form>`
     : "";
-  return `<section class="card report-document">${notice ? `<p class="form-error" role="alert">${escapeHtml(notice)}</p>` : ""}<div class="report-heading"><div><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Time</strong><br>${escapeHtml(view.lessonTime)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p></div><div class="report-feedback">${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<div class="report-delivery-row"><p class="report-delivery"><strong>${report.status === "SENT" && report.sent_at ? escapeHtml(reportSentAt(report.sent_at, report.lesson_timezone)) : report.status === "SENT" ? "Sent" : "Draft"}</strong></p>${resend}</div>` : ""}</section>`;
+  return `<section class="card report-document">${notice ? `<p class="form-error" role="alert">${escapeHtml(notice)}</p>` : ""}<div class="report-heading"><div><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${lessonRouteId(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${lessonRouteId(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${lessonRouteId(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Time</strong><br>${escapeHtml(view.lessonTime)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p></div><div class="report-feedback">${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<div class="report-delivery-row"><p class="report-delivery"><strong>${report.status === "SENT" && report.sent_at ? escapeHtml(reportSentAt(report.sent_at, report.lesson_timezone)) : report.status === "SENT" ? "Sent" : "Draft"}</strong></p>${resend}</div>` : ""}</section>`;
 }
 
 function formatCalendarLessonTime(lesson: Lesson): string {
@@ -404,7 +415,7 @@ function calendarView(lessons: Lesson[], role: Role): string {
       title,
       start: lesson.start_at,
       end: lesson.end_at,
-      url: `${basePath}/${encodeURIComponent(lesson.id)}`,
+      url: `${basePath}/${lessonRouteId(lesson.id)}`,
       classNames: [`lesson-status-${lesson.status}`],
       extendedProps: { displayTime, status: statusLabel(lesson.status) }
     };
@@ -447,7 +458,7 @@ function parseLessonPagination(url: URL): { page: number; pageSize: number } {
 
 function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, emptyAction?: string): string {
   if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? `<a class="button" href="/learn/admin/lessons/new">${escapeHtml(emptyAction)}</a>` : ""}</div>`;
-  return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function paginationPageNumbers(page: number, pageCount: number, hrefForPage: (page: number) => string): string {
@@ -778,7 +789,7 @@ function resourceContext(context: ResourceUploadContext): string {
 }
 
 function resourceReturnPath(context: ResourceUploadContext): string {
-  if (context.kind === "lesson") return `/learn/admin/lessons/${encodeURIComponent(context.lesson.id)}`;
+  if (context.kind === "lesson") return `/learn/admin/lessons/${lessonRouteId(context.lesson.id)}`;
   if (context.kind === "student") return `/learn/admin/students/${encodeURIComponent(context.student.id)}`;
   return "/learn/admin/resources";
 }
@@ -822,11 +833,11 @@ function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): stri
   const report = !lessonReportEligible(lesson)
     ? "—"
     : lesson.report_status === "SENT"
-      ? `<a href="${basePath}/${encodeURIComponent(lesson.id)}/report">View report</a>`
+      ? `<a href="${basePath}/${lessonRouteId(lesson.id)}/report">View report</a>`
       : showStudent
         ? "No report available"
-        : `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Create report</a>`;
-  return `<tr><td data-label="${showStudent ? "Student" : "Lesson"}">${showStudent ? `<a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>` : "Lesson"}</td><td data-label="Date and time"><a href="${basePath}/${encodeURIComponent(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${report}</td></tr>`;
+        : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`;
+  return `<tr><td data-label="${showStudent ? "Student" : "Lesson"}">${showStudent ? `<a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>` : "Lesson"}</td><td data-label="Date and time"><a href="${basePath}/${lessonRouteId(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${report}</td></tr>`;
 }
 
 function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean): string {
@@ -918,7 +929,12 @@ function studentIdFromPath(pathname: string): string | null {
 
 function lessonIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/(?:admin\/lessons|student\/lessons)\/([^/]+)(?:\/(?:edit|status|report(?:\.pdf)?))?$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  const segment = match ? decodePathSegment(match[1]) : null;
+  return segment ? lessonIdFromUrlKey(segment) : null;
+}
+
+function lessonRouteId(id: string): string {
+  return encodeURIComponent(lessonUrlKey(id));
 }
 
 function resourceIdFromPath(pathname: string): string | null {
@@ -1123,8 +1139,7 @@ async function downloadResource(request: Request, env: Env, resource: Resource):
 }
 
 function reportPdfFilename(report: LessonReport): string {
-  const date = report.lesson_date.replace(/[^0-9-]/g, "").replace(/-/g, "-") || "lesson";
-  return `lesson-report-${date}.pdf`;
+  return reportPdfFilenameFromIsoDate(report.lesson_date);
 }
 
 async function downloadLessonReportPdf(request: Request, env: Env, report: LessonReport): Promise<Response> {
@@ -1160,10 +1175,10 @@ async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database):
   const reportQueue = await listStartedLessonsNeedingReports(db, now, 5);
   const activeStudents = await countActiveStudents(db);
   const preview = upcoming.length
-    ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
+    ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${lessonRouteId(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
     : `<div class="dashboard-empty"><p>No upcoming bookings.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
   const reportPreview = reportQueue.length
-    ? `<div class="dashboard-bookings">${reportQueue.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.report_status === "DRAFT" ? "draft" : "scheduled"}">${lesson.report_status === "DRAFT" ? "Edit draft" : "Create report"}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/lessons">View past lessons</a>`
+    ? `<div class="dashboard-bookings">${reportQueue.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.report_status === "DRAFT" ? "draft" : "scheduled"}">${lesson.report_status === "DRAFT" ? "Edit draft" : "Create report"}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/lessons">View past lessons</a>`
     : `<div class="dashboard-empty"><p>No lesson reports waiting to be written.</p></div>`;
   return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</section><section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section><section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section></div><section class="card dashboard-section"><div class="section-heading"><h2>Reports to write</h2><a class="text-link" href="/learn/admin/lessons">Past Lessons</a></div>${reportPreview}</section><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
@@ -1441,7 +1456,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!studentRecord) return messagePage("Report unavailable", "The lesson student record does not exist.", 409);
     if (request.method === "GET") {
       const lessonResources = await listResourcesForLesson(db, lesson.id);
-      return appPage(active.user, csrfToken, "Lesson report", existing?.status === "SENT"
+      return appPage(active.user, csrfToken, reportDocumentTitle(lesson), existing?.status === "SENT"
         ? reportDocument(
           existing,
           true,
@@ -1458,7 +1473,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
             : url.searchParams.get("delivery") === "unknown"
               ? "Report saved. Email delivery is unknown; retry only after checking Notifications."
               : undefined,
-          lessonResources));
+          lessonResources), true);
     }
     if (request.method !== "POST" || !(await csrfValid(request, active))) {
       return reportActionResponse(request, { ok: false, message: "Request not verified. Refresh the page and try again." }, 403)
@@ -1472,7 +1487,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (existing?.status === "SENT") {
       if (formText(form, "action") !== "resend") {
         return reportActionResponse(request, { ok: false, message: "This report has already been sent." }, 409)
-          ?? appPage(active.user, csrfToken, "Lesson report", reportDocument(existing, true, csrfToken));
+          ?? appPage(active.user, csrfToken, reportDocumentTitle(lesson), reportDocument(existing, true, csrfToken), true);
       }
       const student = await findActiveStudentRecipient(db, lesson.student_id);
       if (!student?.learn_user_id || !student.learn_user_email) {
@@ -1521,7 +1536,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const message = wantsSend && !thisLessonsFocus ? "Enter This Lesson's Focus before sending the report." : "Level is required and each report field must be 12,000 characters or fewer.";
       const response = reportActionResponse(request, { ok: false, message }, 422);
       if (response) return response;
-      return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
+      return appPage(active.user, csrfToken, reportDocumentTitle(lesson), lessonReportForm(
         csrfToken,
         url.pathname,
         lesson,
@@ -1529,13 +1544,13 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         draftReport,
         message,
         await listResourcesForLesson(db, lesson.id)
-      ));
+      ), true);
     }
     const attachments = form.getAll("attachments").filter((value): value is File => value instanceof File && value.size > 0);
     if (wantsSend && attachments.length > 5) {
       const response = reportActionResponse(request, { ok: false, message: "Choose no more than 5 lesson attachments." }, 422);
       if (response) return response;
-      return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
+      return appPage(active.user, csrfToken, reportDocumentTitle(lesson), lessonReportForm(
         csrfToken,
         url.pathname,
         lesson,
@@ -1543,7 +1558,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         draftReport,
         "Choose no more than 5 lesson attachments.",
         await listResourcesForLesson(db, lesson.id)
-      ));
+      ), true);
     }
     if (wantsSend) {
       const attachmentKey = formText(form, "attachmentIdempotencyKey") || crypto.randomUUID();
@@ -1559,7 +1574,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         if (uploadResponse.status !== 204) {
           const response = reportActionResponse(request, { ok: false, message: `The attachment "${attachment.name}" could not be uploaded. Check the file type and size, then try again.` }, 422);
           if (response) return response;
-          return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
+          return appPage(active.user, csrfToken, reportDocumentTitle(lesson), lessonReportForm(
             csrfToken,
             url.pathname,
             lesson,
@@ -1567,7 +1582,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
             draftReport,
             `The attachment "${attachment.name}" could not be uploaded. Check the file type and size, then try again.`,
             await listResourcesForLesson(db, lesson.id)
-          ));
+          ), true);
         }
       }
     }
@@ -1653,7 +1668,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
           : report?.status === "DRAFT"
             ? `Draft · <a href="${url.pathname}/report">Edit report</a>`
             : `Not created · <a href="${url.pathname}/report">Create report</a>`;
-      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div><div class="form-actions">${buttonLink(`${url.pathname}/edit`, "Edit lesson")}${reportAction}</div></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p><p><strong>Lesson report</strong><br>${reportDetails}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${encodeURIComponent(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
+      return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">LESSON RECORD</p><div class="page-heading"><div><h1>${escapeHtml(lesson.student_name ?? "Lesson")}</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p></div><div class="form-actions">${buttonLink(`${url.pathname}/edit`, "Edit lesson")}${reportAction}</div></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>External lesson URL</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not set"}</p><p class="full-width"><strong>Private notes</strong><br>${lesson.notes ? escapeHtml(lesson.notes).replace(/\n/g, "<br>") : "No notes"}</p><p><strong>Lesson report</strong><br>${reportDetails}</p></section><form method="post" action="${url.pathname}/status" class="inline-form">${hiddenCsrf(csrfToken)}<label>Change status<select name="status">${(["scheduled", "completed", "cancelled"] as LessonStatus[]).map((status) => `<option value="${status}"${status === lesson.status ? " selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label><button class="button" type="submit">Save status</button></form><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div>      ${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(lesson.student_id)}&lesson=${lessonRouteId(lesson.id)}`, "Add resource")}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources attached to this lesson.</p>`}</section>`);
     }
     if (route === "admin-lesson-status") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -1676,7 +1691,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
           }, now);
         }
       }
-      return redirect(`/learn/admin/lessons/${encodeURIComponent(lesson.id)}`);
+      return redirect(`/learn/admin/lessons/${lessonRouteId(lesson.id)}`);
     }
     const students = await listStudents(db);
     if (request.method === "GET") return appPage(active.user, csrfToken, "Edit lesson", lessonForm(csrfToken, url.pathname, students, undefined, lesson));
@@ -1714,7 +1729,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         }, now);
       }
     }
-    return redirect(`/learn/admin/lessons/${encodeURIComponent(lesson.id)}`);
+    return redirect(`/learn/admin/lessons/${lessonRouteId(lesson.id)}`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }
@@ -1791,7 +1806,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const report = await findSentLessonReportForStudent(db, id, active.user.id);
     if (!report) return messagePage("Not found", "That lesson report does not exist.", 404);
     if (route === "student-lesson-report-pdf") return await downloadLessonReportPdf(request, env, report);
-    return appPage(active.user, csrfToken, "Lesson report", reportDocument(report, false));
+    return appPage(active.user, csrfToken, reportDocumentTitleFromSnapshot(report), reportDocument(report, false), true);
   }
   if (route === "student-lesson") {
     const id = lessonIdFromPath(new URL(request.url).pathname);
@@ -1800,7 +1815,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
     const resources = await listResourcesForLessonForStudent(db, lesson.id, active.user.id);
     const report = await findSentLessonReportForStudent(db, lesson.id, active.user.id);
-    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section>${report ? `<section class="card"><div class="section-heading"><div><p class="eyebrow">LESSON REPORT</p><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${encodeURIComponent(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
+    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section>${report ? `<section class="card"><div class="section-heading"><div><p class="eyebrow">LESSON REPORT</p><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }

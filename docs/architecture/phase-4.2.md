@@ -74,12 +74,15 @@ scheduled in UK time and asks the recipient to check their own time difference.
 
 ## Views and access
 
-Admins use `/learn/admin/lessons/<lesson-id>/report`; students use
-`/learn/student/lessons/<lesson-id>/report`. Student SQL resolves the current
-active STUDENT account to its linked student and returns a generic 404 unless
-the requested lesson has a sent report. Lesson history uses one joined report
-query, exposing report actions without N+1 lookups. Student views never expose
-drafts or admin controls.
+Admins use `/learn/admin/lessons/<lesson-key>/report`; students use
+`/learn/student/lessons/<lesson-key>/report`. Generated lesson keys are compact
+base64url representations rather than the internal UUID, so normal links do not
+expose the database identifier. Existing UUID-shaped links remain accepted for
+backward compatibility. Student SQL resolves the current active STUDENT
+account to its linked student and returns a generic 404 unless the requested
+lesson has a sent report. Lesson history uses one joined report query,
+exposing report actions without N+1 lookups. Student views never expose drafts
+or admin controls.
 
 ## PDF
 
@@ -103,7 +106,8 @@ title uses matching 17-point bold white typography with an inset right edge;
 feedback labels use the same compact scale as the metadata labels while body
 text retains its readable size. The footer contains a right-aligned clickable
 “View this report on FoxTutor Learn” URI link. PDFs do not use a separate R2
-object or display a page counter for the single-page document.
+object or display a page counter for the single-page document. The HTML report
+document title and downloaded filename use `YY/MM/DD - FoxTutor Lesson Report`.
 
 ## Email presentation
 

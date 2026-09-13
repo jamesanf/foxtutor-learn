@@ -6,6 +6,8 @@
   `students.international` preference, structured report fields, snapshot
   columns, reconciliation updates and report indexes.
 - Route classification covers admin/student report HTML and PDF endpoints.
+- Lesson route-key coverage verifies generated compact base64url lesson keys,
+  UUID round-tripping and backward-compatible UUID links.
 - The report projection uses persisted pupil, level, date/time and all five
   feedback fields.
 - Email templates use the exact template labels, escaped values and the
@@ -35,6 +37,8 @@
   body text, omitted empty feedback fields, grid repacking for sparse reports,
   right-aligned clickable report URI footer link, omitted single-page counter
   and dynamically dated copyright footer.
+- Report document-title and PDF filename coverage uses the
+  `YY/MM/DD - FoxTutor Lesson Report` format.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
 - UK clock-change date/time detection and the `DST_WARNING` email projection

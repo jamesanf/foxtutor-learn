@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-13 — Lesson report titles and compact lesson URLs
+
+- **Status:** pending deployment from the current working tree.
+- Changed report document titles and downloaded filenames to
+  `YY/MM/DD - FoxTutor Lesson Report`.
+- Replaced generated lesson/report links that exposed database UUIDs with
+  compact base64url route keys. Existing UUID-shaped links remain compatible,
+  and authorization continues to resolve against the internal lesson UUID.
+
 ### 2026-09-13 — PDF report spacing and conditional layout
 
 - **Status:** deployed as Worker
