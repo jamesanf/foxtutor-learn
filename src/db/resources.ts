@@ -32,6 +32,15 @@ export interface ResourceListOptions {
   sort?: "newest" | "oldest" | "filename-asc" | "filename-desc";
 }
 
+export interface ResourceSuggestion {
+  id: string;
+  label: string;
+  detail: string;
+  kind: "file" | "student" | "lesson";
+  value?: string;
+  studentId?: string;
+}
+
 const resourceColumns = `
   r.id, r.student_id, r.lesson_id, r.uploaded_by_user_id, r.original_filename,
   r.storage_key, r.content_type, r.size_bytes, r.sha256, r.page_count, r.status,
@@ -43,9 +52,9 @@ export async function listResources(db: D1Database, options: ResourceListOptions
   const clauses = ["r.deleted_at IS NULL", "r.status = 'available'"];
   const bindings: (string | number)[] = [];
   if (options.search) {
-    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\')");
+    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\' OR LOWER(COALESCE(l.notes, '')) LIKE LOWER(?) ESCAPE '\\')");
     const search = `%${options.search.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-    bindings.push(search, search);
+    bindings.push(search, search, search);
   }
   if (options.studentId) {
     clauses.push("r.student_id = ?");
@@ -90,9 +99,9 @@ export async function countResources(db: D1Database, options: Omit<ResourceListO
   const clauses = ["r.deleted_at IS NULL", "r.status = 'available'"];
   const bindings: string[] = [];
   if (options.search) {
-    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\')");
+    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\' OR LOWER(COALESCE(l.notes, '')) LIKE LOWER(?) ESCAPE '\\')");
     const search = `%${options.search.replace(/[%_]/g, (character) => `\\${character}`)}%`;
-    bindings.push(search, search);
+    bindings.push(search, search, search);
   }
   if (options.studentId) {
     clauses.push("r.student_id = ?");
@@ -115,11 +124,79 @@ export async function countResources(db: D1Database, options: Omit<ResourceListO
       `SELECT COUNT(*) AS count
        FROM resources r
        LEFT JOIN students s ON s.id = r.student_id
+       LEFT JOIN lessons l ON l.id = r.lesson_id
        WHERE ${clauses.join(" AND ")}`
     )
     .bind(...bindings)
     .first<{ count: number | string }>();
   return Number(result?.count ?? 0);
+}
+
+function escapedSearch(value: string): string {
+  return `%${value.trim().slice(0, 100).replace(/[%_]/g, (character) => `\\${character}`)}%`;
+}
+
+export async function listResourceSuggestions(db: D1Database, query: string, limit = 5, studentId?: string): Promise<{
+  files: ResourceSuggestion[];
+  students: ResourceSuggestion[];
+  lessons: ResourceSuggestion[];
+}> {
+  const trimmed = query.trim().slice(0, 100);
+  if (trimmed.length < 2) return { files: [], students: [], lessons: [] };
+  const pattern = escapedSearch(trimmed);
+  const prefix = `${trimmed.replace(/[%_]/g, (character) => `\\${character}`)}%`;
+  const bounded = Math.max(1, Math.min(limit, 5));
+  const [files, students, lessons] = await Promise.all([
+    db.prepare(
+      `SELECT r.id, r.original_filename AS label, s.name AS detail
+       FROM resources r
+       LEFT JOIN students s ON s.id = r.student_id
+       LEFT JOIN lessons l ON l.id = r.lesson_id
+       WHERE r.deleted_at IS NULL AND r.status = 'available'
+         AND (LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\'
+           OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\'
+           OR LOWER(COALESCE(l.notes, '')) LIKE LOWER(?) ESCAPE '\\')
+       ORDER BY CASE
+         WHEN LOWER(r.original_filename) = LOWER(?) THEN 0
+         WHEN LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' THEN 1
+         WHEN LOWER(s.name) = LOWER(?) THEN 2
+         ELSE 3 END,
+         r.created_at DESC, r.id DESC
+       LIMIT ?`
+    ).bind(pattern, pattern, pattern, trimmed, prefix, trimmed, bounded).all<{ id: string; label: string; detail: string | null }>(),
+    db.prepare(
+      `SELECT s.id, s.name AS label, COUNT(r.id) AS detail
+       FROM students s
+       JOIN resources r ON r.student_id = s.id
+       WHERE s.status = 'ACTIVE' AND r.deleted_at IS NULL AND r.status = 'available'
+         AND LOWER(s.name) LIKE LOWER(?) ESCAPE '\\'
+       GROUP BY s.id, s.name
+       ORDER BY CASE WHEN LOWER(s.name) = LOWER(?) THEN 0 WHEN LOWER(s.name) LIKE LOWER(?) ESCAPE '\\' THEN 1 ELSE 2 END, LOWER(s.name)
+       LIMIT ?`
+    ).bind(pattern, trimmed, prefix, bounded).all<{ id: string; label: string; detail: number | string }>(),
+    db.prepare(
+      `SELECT l.id, l.student_id, s.name AS student_name, l.start_at, l.notes
+       FROM lessons l
+       JOIN students s ON s.id = l.student_id
+       WHERE s.status = 'ACTIVE'
+         AND (? = '' OR l.student_id = ?)
+         AND (LOWER(s.name) LIKE LOWER(?) ESCAPE '\\' OR LOWER(COALESCE(l.notes, '')) LIKE LOWER(?) ESCAPE '\\')
+       ORDER BY CASE WHEN LOWER(COALESCE(l.notes, '')) LIKE LOWER(?) ESCAPE '\\' THEN 0 ELSE 1 END, l.start_at DESC, l.id DESC
+       LIMIT ?`
+    ).bind(studentId ?? "", studentId ?? "", pattern, pattern, prefix, bounded).all<{ id: string; student_name: string; start_at: string; notes: string; student_id: string }>()
+  ]);
+  return {
+    files: files.results.map((item) => ({ id: item.id, label: item.label, detail: item.detail ?? "Resource", kind: "file" })),
+    students: students.results.map((item) => ({ id: item.id, label: item.label, detail: `${Number(item.detail)} resource${Number(item.detail) === 1 ? "" : "s"}`, kind: "student", value: item.id })),
+    lessons: lessons.results.map((item) => ({
+      id: item.id,
+      label: `${item.student_name} · ${new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }).format(new Date(item.start_at))}`,
+      detail: item.notes.trim().split(/\s+/).slice(0, 5).join(" ") || "Lesson context",
+      kind: "lesson",
+      value: item.id,
+      studentId: item.student_id
+    }))
+  };
 }
 
 export async function activeResourceBytesForLesson(db: D1Database, lessonId: string): Promise<number> {
@@ -130,7 +207,15 @@ export async function activeResourceBytesForLesson(db: D1Database, lessonId: str
   return Number(result?.bytes ?? 0);
 }
 
-export async function listResourcesForStudent(db: D1Database, userId: string): Promise<Resource[]> {
+export async function listResourcesForStudent(db: D1Database, userId: string, search?: string): Promise<Resource[]> {
+  const searchClause = search?.trim()
+    ? "AND (LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(COALESCE(l.notes, '')) LIKE LOWER(?) ESCAPE '\\')"
+    : "";
+  const bindings: (string | number)[] = [userId, userId, userId];
+  if (search?.trim()) {
+    const pattern = escapedSearch(search);
+    bindings.push(pattern, pattern);
+  }
   const result = await db
     .prepare(
       `SELECT ${resourceColumns}
@@ -144,10 +229,10 @@ export async function listResourcesForStudent(db: D1Database, userId: string): P
          AND (
            (s.learn_user_id = ? AND s.status = 'ACTIVE')
            OR (lesson_student.learn_user_id = ? AND lesson_student.status = 'ACTIVE')
-         )
+         ) ${searchClause}
        ORDER BY r.created_at DESC, r.id DESC`
     )
-    .bind(userId, userId, userId)
+    .bind(...bindings)
     .all<Resource>();
   return result.results;
 }

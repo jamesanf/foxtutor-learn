@@ -19,6 +19,22 @@ export async function listStudents(db: D1Database): Promise<Student[]> {
   return result.results;
 }
 
+export async function listActiveStudentsForResourceFilter(db: D1Database, selectedId?: string, limit = 20): Promise<Student[]> {
+  const boundedLimit = Math.max(1, Math.min(limit, 50));
+  const result = await db
+    .prepare(
+      `SELECT s.id, s.name, s.email, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
+       FROM students s
+       LEFT JOIN users u ON u.id = s.learn_user_id
+       WHERE s.status = 'ACTIVE'
+       ORDER BY CASE WHEN s.id = ? THEN 0 ELSE 1 END, LOWER(s.name), s.id
+       LIMIT ?`
+    )
+    .bind(selectedId ?? "", boundedLimit)
+    .all<Student>();
+  return result.results;
+}
+
 export async function findStudent(db: D1Database, id: string): Promise<Student | null> {
   return db.prepare("SELECT s.id, s.name, s.email, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at FROM students s LEFT JOIN users u ON u.id = s.learn_user_id WHERE s.id = ?").bind(id).first<Student>();
 }

@@ -60,4 +60,31 @@ describe("resource UX contract", () => {
     expect(resourceDbSource).toContain("r.created_at >= ?");
     expect(resourceDbSource).toContain("LOWER(r.original_filename)");
   });
+
+  it("makes search primary and keeps admin refinement controls collapsed and custom", () => {
+    expect(workerSource).toContain("Search files, students or lessons…");
+    expect(workerSource).toContain('data-resource-filter-toggle');
+    expect(workerSource).toContain('aria-expanded="false"');
+    expect(workerSource).toContain('role="listbox"');
+    expect(workerSource).toContain('data-suggestion-url="/learn/admin/resources/search"');
+    expect(workerSource).toContain("listResourceSuggestions");
+    expect(workerSource).not.toContain('<select id="resource-student-filter"');
+    expect(workerSource).not.toContain('<select id="resource-lesson-filter"');
+    expect(workerSource).not.toContain('<select id="resource-type-filter"');
+    expect(workerSource).not.toContain('<select id="resource-added-filter"');
+    expect(clientSource).toContain("ArrowDown");
+    expect(clientSource).toContain("ArrowUp");
+    expect(clientSource).toContain('event.key === "Escape"');
+    expect(clientSource).toContain("AbortController");
+    expect(cssSource).toContain(".resource-filter-panel");
+    expect(cssSource).toContain(".resource-suggestions");
+  });
+
+  it("keeps the student resource surface read-only and own-resource scoped", () => {
+    expect(workerSource).toContain('placeholder="Search your resources…"');
+    expect(workerSource).toContain('listResourcesForStudent(db, active.user.id, search)');
+    expect(workerSource).toContain("findResourceForStudent");
+    expect(workerSource).not.toContain('action="/learn/student/resources/bulk-delete"');
+    expect(workerSource).not.toContain('data-resource-selection-toolbar"');
+  });
 });

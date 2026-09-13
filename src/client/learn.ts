@@ -152,42 +152,238 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     updateEndPreview();
   });
 
-  document.querySelectorAll<HTMLFormElement>(".resource-filter-form").forEach((form) => {
-    type FilterSelect = Element & { value: string; options: HTMLCollectionOf<HTMLOptionElement> };
-    const isFilterSelect = (element: Element | null): element is FilterSelect => element?.tagName === "SELECT";
-    const studentElement = form.querySelector("#resource-student-filter");
-    const lessonElement = form.querySelector("#resource-lesson-filter");
-    const student = isFilterSelect(studentElement) ? studentElement : null;
-    const lesson = isFilterSelect(lessonElement) ? lessonElement : null;
-    const submitFilters = () => {
-      const page = form.querySelector<HTMLInputElement>('input[name="page"]');
-      page?.remove();
-      form.submit();
-    };
-    Array.from(form.querySelectorAll("[data-resource-filter]")).filter(isFilterSelect).forEach((control) => {
-      control.addEventListener("change", () => {
-        if (control === student && lesson) {
-          for (const option of Array.from(lesson.options)) {
-            if (!option.dataset.studentId) continue;
-            const allowed = !student.value || option.dataset.studentId === student.value;
-            option.hidden = !allowed;
-            option.disabled = !allowed;
-            if (!allowed && option.selected) lesson.value = "";
-          }
+  document.querySelectorAll<HTMLFormElement>("[data-resource-finder]").forEach((form) => {
+    const panel = form.querySelector<HTMLElement>("[data-resource-filter-panel]");
+    const toggle = form.querySelector<HTMLButtonElement>("[data-resource-filter-toggle]");
+    const submit = () => form.submit();
+    const state = (name: string) => form.querySelector<HTMLInputElement>(`[data-resource-state="${name}"]`);
+    const closeMenus = (except?: HTMLElement) => {
+      form.querySelectorAll<HTMLElement>("[data-resource-choice-menu]").forEach((menu) => {
+        if (menu !== except) {
+          menu.hidden = true;
+          const field = menu.dataset.resourceChoiceMenu;
+          form.querySelector<HTMLButtonElement>(`[data-resource-choice-trigger="${field}"]`)?.setAttribute("aria-expanded", "false");
         }
-        submitFilters();
+      });
+    };
+    type FilterOption = { id: string; value?: string; label: string; detail?: string };
+    const bindFilterOption = (option: HTMLButtonElement) => {
+      option.addEventListener("click", () => {
+        const field = option.dataset.resourceFilterOption;
+        const value = option.dataset.value ?? "";
+        if (!field) return;
+        const input = state(field);
+        if (input) input.value = field === "added" && value === "any" ? "" : field === "sort" && value === "newest" ? "" : value;
+        if (field === "student") {
+          const lesson = state("lesson");
+          if (lesson) lesson.value = "";
+        }
+        submit();
+      });
+    };
+    toggle?.addEventListener("click", () => {
+      if (!panel) return;
+      panel.hidden = !panel.hidden;
+      toggle.setAttribute("aria-expanded", String(!panel.hidden));
+      if (!panel.hidden) panel.querySelector<HTMLButtonElement>("[data-resource-choice-trigger]")?.focus();
+    });
+    form.querySelectorAll<HTMLButtonElement>("[data-resource-choice-trigger]").forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        const field = trigger.dataset.resourceChoiceTrigger;
+        const menu = field ? form.querySelector<HTMLElement>(`[data-resource-choice-menu="${field}"]`) : null;
+        if (!menu || trigger.disabled) return;
+        const opening = menu.hidden;
+        closeMenus(menu);
+        menu.hidden = !opening;
+        trigger.setAttribute("aria-expanded", String(!menu.hidden));
+        if (opening) menu.querySelector<HTMLInputElement>("[data-resource-choice-search]")?.focus();
       });
     });
-    form.querySelector<HTMLInputElement>('input[type="search"]')?.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        submitFilters();
-      }
+    form.querySelectorAll<HTMLButtonElement>("[data-resource-filter-option]").forEach(bindFilterOption);
+    const choiceSearchTimers = new Map<string, number>();
+    form.querySelectorAll<HTMLInputElement>("[data-resource-choice-search]").forEach((search) => {
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLowerCase();
+        const field = search.dataset.resourceChoiceSearch;
+        if (!field) return;
+        form.querySelectorAll<HTMLElement>(`[data-resource-filter-option="${field}"]`).forEach((option) => {
+          option.hidden = Boolean(query) && !option.textContent?.toLowerCase().includes(query);
+        });
+        if ((field !== "student" && field !== "lesson") || search.value.trim().length < 2) return;
+        window.clearTimeout(choiceSearchTimers.get(field));
+        choiceSearchTimers.set(field, window.setTimeout(async () => {
+          const queryValue = search.value.trim();
+          const studentId = state("student")?.value ?? "";
+          const response = await fetch(`/learn/admin/resources/search?q=${encodeURIComponent(queryValue)}${field === "lesson" && studentId ? `&student=${encodeURIComponent(studentId)}` : ""}`, { headers: { Accept: "application/json" } });
+          if (!response.ok) return;
+          const data = await response.json() as { students?: FilterOption[]; lessons?: FilterOption[] };
+          const items = field === "student" ? data.students ?? [] : data.lessons ?? [];
+          const menu = search.closest<HTMLElement>("[data-resource-choice-menu]");
+          if (!menu) return;
+          menu.querySelectorAll<HTMLElement>("[data-resource-filter-option]").forEach((option) => option.remove());
+          const all = document.createElement("button");
+          all.type = "button";
+          all.role = "option";
+          all.className = "resource-choice-option";
+          all.dataset.resourceFilterOption = field;
+          all.dataset.value = "";
+          all.setAttribute("aria-selected", "false");
+          all.textContent = field === "student" ? "All students" : "All lessons";
+          menu.appendChild(all);
+          bindFilterOption(all);
+          items.forEach((item) => {
+            const option = document.createElement("button");
+            option.type = "button";
+            option.role = "option";
+            option.className = "resource-choice-option";
+            option.dataset.resourceFilterOption = field;
+            option.dataset.value = item.value ?? item.id;
+            option.setAttribute("aria-selected", "false");
+            const label = document.createElement("span");
+            label.textContent = item.label;
+            option.appendChild(label);
+            if (item.detail) {
+              const detail = document.createElement("small");
+              detail.textContent = item.detail;
+              option.appendChild(detail);
+            }
+            menu.appendChild(option);
+            bindFilterOption(option);
+          });
+        }, 180));
+      });
+      search.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          const menu = search.closest<HTMLElement>("[data-resource-choice-menu]");
+          const field = menu?.dataset.resourceChoiceMenu;
+          if (menu) closeMenus();
+          form.querySelector<HTMLButtonElement>(`[data-resource-choice-trigger="${field}"]`)?.focus();
+        }
+      });
     });
-    form.querySelector<HTMLButtonElement>("[data-resource-filter-clear]")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      window.location.href = form.getAttribute("action") ?? "/learn/admin/resources";
-    });
+
+    const search = form.querySelector<HTMLInputElement>("[data-resource-search]");
+    const suggestions = form.querySelector<HTMLElement>("#resource-search-suggestions");
+    if (search && suggestions) {
+      type Suggestion = { id: string; label: string; detail: string; kind: "file" | "student" | "lesson"; value?: string };
+      let suggestionItems: Suggestion[] = [];
+      let activeSuggestion = -1;
+      let timer: number | undefined;
+      let controller: AbortController | undefined;
+      const closeSuggestions = () => {
+        suggestions.hidden = true;
+        search.setAttribute("aria-expanded", "false");
+        search.removeAttribute("aria-activedescendant");
+        activeSuggestion = -1;
+      };
+      const selectSuggestion = (item: Suggestion) => {
+        if (item.kind === "student") {
+          const student = state("student");
+          const lesson = state("lesson");
+          if (student) student.value = item.value ?? item.id;
+          if (lesson) lesson.value = "";
+          search.value = "";
+        } else {
+          search.value = item.kind === "file" ? item.label : item.label.split(" · ")[0];
+        }
+        closeSuggestions();
+        submit();
+      };
+      const updateActiveSuggestion = () => {
+        suggestionItems.forEach((item, index) => {
+          const element = suggestions.querySelector<HTMLElement>(`[data-suggestion-index="${index}"]`);
+          element?.classList.toggle("is-active", index === activeSuggestion);
+          element?.setAttribute("aria-selected", String(index === activeSuggestion));
+        });
+        if (activeSuggestion >= 0) search.setAttribute("aria-activedescendant", `resource-suggestion-${activeSuggestion}`);
+        else search.removeAttribute("aria-activedescendant");
+      };
+      const renderSuggestions = (groups: Array<{ label: string; items: Suggestion[] }>) => {
+        suggestionItems = groups.flatMap((group) => group.items);
+        if (!suggestionItems.length) {
+          closeSuggestions();
+          return;
+        }
+        let index = 0;
+        suggestions.replaceChildren();
+        for (const group of groups) {
+          if (!group.items.length) continue;
+          const heading = document.createElement("div");
+          heading.className = "resource-suggestion-heading";
+          heading.textContent = group.label;
+          suggestions.appendChild(heading);
+          for (const item of group.items) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.id = `resource-suggestion-${index}`;
+            button.className = "resource-suggestion";
+            button.setAttribute("role", "option");
+            button.setAttribute("aria-selected", "false");
+            button.dataset.suggestionIndex = String(index);
+            const label = document.createElement("strong");
+            label.textContent = item.label;
+            const detail = document.createElement("small");
+            detail.textContent = item.detail;
+            button.appendChild(label);
+            button.appendChild(detail);
+            button.addEventListener("mousedown", (event) => event.preventDefault());
+            button.addEventListener("click", () => selectSuggestion(item));
+            suggestions.appendChild(button);
+            index++;
+          }
+        }
+        activeSuggestion = -1;
+        suggestions.hidden = false;
+        search.setAttribute("aria-expanded", "true");
+      };
+      const loadSuggestions = async () => {
+        const query = search.value.trim();
+        if (query.length < 2) {
+          controller?.abort();
+          closeSuggestions();
+          return;
+        }
+        controller?.abort();
+        controller = new AbortController();
+        try {
+          const response = await fetch(`${search.dataset.suggestionUrl}?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" }, signal: controller.signal });
+          if (!response.ok) throw new Error("Suggestion request failed.");
+          const data = await response.json() as { files?: Suggestion[]; students?: Suggestion[]; lessons?: Suggestion[] };
+          renderSuggestions([
+            { label: "Files", items: data.files ?? [] },
+            { label: "Students", items: data.students ?? [] },
+            { label: "Lessons", items: data.lessons ?? [] }
+          ]);
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          closeSuggestions();
+        }
+      };
+      search.addEventListener("input", () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => void loadSuggestions(), 180);
+      });
+      search.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown" && !suggestions.hidden) {
+          event.preventDefault();
+          activeSuggestion = Math.min(activeSuggestion + 1, suggestionItems.length - 1);
+          updateActiveSuggestion();
+        } else if (event.key === "ArrowUp" && !suggestions.hidden) {
+          event.preventDefault();
+          activeSuggestion = Math.max(activeSuggestion - 1, 0);
+          updateActiveSuggestion();
+        } else if (event.key === "Enter" && activeSuggestion >= 0 && !suggestions.hidden) {
+          event.preventDefault();
+          selectSuggestion(suggestionItems[activeSuggestion]);
+        } else if (event.key === "Escape" && !suggestions.hidden) {
+          event.preventDefault();
+          closeSuggestions();
+        }
+      });
+      document.addEventListener("click", (event) => {
+        if (!form.contains(event.target as Node)) closeSuggestions();
+      });
+    }
   });
 
   const resourceSelectionToolbar = document.querySelector<HTMLElement>("[data-resource-selection-toolbar]");

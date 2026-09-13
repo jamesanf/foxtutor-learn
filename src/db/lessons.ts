@@ -24,6 +24,23 @@ export async function listLessons(db: D1Database): Promise<Lesson[]> {
   return result.results;
 }
 
+export async function listLessonsForResourceFilter(db: D1Database, studentId: string, selectedId?: string, limit = 20): Promise<Lesson[]> {
+  if (!studentId) return [];
+  const boundedLimit = Math.max(1, Math.min(limit, 50));
+  const result = await db
+    .prepare(
+      `SELECT ${lessonColumns}, s.name AS student_name
+       FROM lessons l
+       JOIN students s ON s.id = l.student_id
+       WHERE s.status = 'ACTIVE' AND l.student_id = ?
+       ORDER BY CASE WHEN l.id = ? THEN 0 ELSE 1 END, l.start_at DESC, l.id DESC
+       LIMIT ?`
+    )
+    .bind(studentId, selectedId ?? "", boundedLimit)
+    .all<Lesson>();
+  return result.results;
+}
+
 export async function listUpcomingLessons(
   db: D1Database,
   now: string,
