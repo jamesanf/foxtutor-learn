@@ -220,10 +220,22 @@ function escapeHtml(value: string): string {
 }
 
 function navigation(role: Role): string {
-  const links = role === "ADMIN"
+  const icons = {
+    dashboard: "M13 3v6h8V3h-8Zm0 18h8V11h-8v10ZM3 21h8v-8H3v8ZM3 3v8h8V3H3Z",
+    calendar: "M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 16H5V9h14v11ZM5 7V6h14v1H5Z",
+    bookings: "M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm-7-0.25c.41 0 .75.34.75.75s-.34.75-.75.75-.75-.34-.75-.75.34-.75.75-.75ZM19 19H5V5h14v14Z",
+    lessons: "M12 3 1 9l4 2.18v6L12 21l7-3.82v-6.01L21 9 12 3Zm5.82 6L12 12.18 6.18 9 12 5.82 17.82 9ZM17 16.17l-5 2.73-5-2.73v-3.88l5 2.73 5-2.73v3.88Z",
+    reschedules: "M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z",
+    resources: "M10 4H2c-1.11 0-1.99.89-1.99 2L0 18c0 1.1.89 2 2 2h20c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-10l-2-2Z",
+    notifications: "M21 19v-2l-2-2v-5c0-3.07-1.63-5.64-4.5-6.32V3c0-.83-.67-1.5-1.5-1.5S11.5 2.17 11.5 3v.68C8.63 4.36 7 6.93 7 10v5l-2 2v2h16Zm-7 3c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z",
+    students: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3ZM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm8 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5ZM8 13c-2.33 0-7 1.17-7 3.5V19h5v-2.5c0-1.03.42-1.91 1.09-2.63C6.98 13.32 7.5 13.12 8 13Z"
+  } as const;
+  const icon = (name: keyof typeof icons): string => `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
+  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Students: "students", "My lessons": "lessons" };
+  const links: Array<[string, string]> = role === "ADMIN"
     ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/resources", "Resources"]];
-  return links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("");
+  return links.map(([href, label]) => `<a href="${href}">${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
 
 function appPage(user: AppUser, csrfToken: string, title: string, content: string, exactTitle = false): Response {

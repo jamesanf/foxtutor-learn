@@ -56,7 +56,9 @@ a, button, input, select, textarea { transition: border-color 150ms ease, backgr
 .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 76px); }
 nav { padding: 28px 16px; border-right: 1px solid var(--line); background: var(--nav); }
 .nav-links { display: grid; gap: 4px; }
-nav a { display: block; padding: 10px 12px; border-radius: 8px; color: #243b53; text-decoration: none; }
+nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #243b53; text-decoration: none; }
+nav a .nav-icon { width: 19px; height: 19px; flex: 0 0 19px; fill: currentColor; }
+nav a span { min-width: 0; }
 nav a:hover, nav a:focus-visible { color: var(--action-hover); background: #d6e4ee; }
 nav a[aria-current="page"] { color: #0b4f6c; background: var(--surface); box-shadow: inset 3px 0 var(--brand), 0 1px 2px rgb(16 42 67 / 8%); font-weight: 650; }
 .content { width: min(100%, 1160px); padding: clamp(26px, 4vw, 44px); }
