@@ -4,12 +4,13 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 
 ### 2026-09-13 — Inline report attachment submission
 
-**Status:** ready for deployment; authenticated production acceptance pending
+**Status:** deployed; authenticated production acceptance pending
 
 - Moved lesson attachments into the primary multipart lesson-report form.
 - Removed the separate report attachment upload action and success-page redirect.
 - Reused the existing D1/R2 resource validation, idempotency and `RESOURCE_ADDED` notification flow before completing report save/send.
 - Preserved the report draft and displayed an inline error when attachment processing fails.
+- Committed as `11507c6` and deployed as Worker `62c8590c-bf1d-4370-803c-a25eddbfa378`.
 
 ### 2026-09-13 — Phase 4 documentation reconciliation
 

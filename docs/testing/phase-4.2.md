@@ -27,7 +27,7 @@
 The final pushed tree passed:
 
 ```text
-npm test                 80 tests across 19 files
+npm test                 81 tests across 19 files
 npm run build            PASS
 npm run check            PASS
 npm run test:browser     PASS (static shell contract)
@@ -36,8 +36,8 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-current source commit `46bbde1` is deployed as Worker
-`68f36aa2-51a8-449e-b761-ac142b691bb2`. Production deployment and
+current source commit `11507c6` is deployed as Worker
+`62c8590c-bf1d-4370-803c-a25eddbfa378`. Production deployment and
 unauthenticated smoke are confirmed, but the acceptance matrix below still
 requires authenticated browser, Fox Mail, PDF visual and no-storage evidence
 before closure.

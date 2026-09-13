@@ -7,8 +7,8 @@ Foxtutor Learn is a private, invite-only tutoring portal for students and the Fo
 **Phase:** Phase 4.2 implementation deployed; formal Phase 4 closure pending authenticated acceptance
 **Production URL:** `https://foxtutor.org/learn` (private Access perimeter active)
 **Public site:** `https://foxtutor.org/` remains a separate read-only deployment
-**Current source:** `46bbde1` on `main` and `origin/main`
-**Current Worker:** `68f36aa2-51a8-449e-b761-ac142b691bb2`
+**Current source:** `11507c6` on `main` and `origin/main`
+**Current Worker:** `62c8590c-bf1d-4370-803c-a25eddbfa378`
 **Production migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no remote migrations are pending
 **Latest state:** Phase 4.2 is deployed with start-time report eligibility, automatic completion after lesson end, structured D1 reports, historical student-level snapshots, an opt-in International flag, idempotent UK clock-change reminders and the existing Fox Mail notification boundary. The report editor includes default bullet mode, numbered-list toggling, bold/highlight markers, compact auto-growing fields and lesson attachments submitted with the report action through the existing D1/R2 resource pipeline. Automated and unauthenticated production smoke checks pass; authenticated browser, real Fox Mail, visual PDF and no-storage acceptance remain open.
 
@@ -209,7 +209,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
 | 3.2 | Contextual Add Resource UX, dropzone selection and category removal from application code | Local implementation; production acceptance pending |
-| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `68f36aa2-51a8-449e-b761-ac142b691bb2` from `46bbde1`; authenticated/Fox Mail/PDF acceptance pending |
+| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `62c8590c-bf1d-4370-803c-a25eddbfa378` from `11507c6`; authenticated/Fox Mail/PDF acceptance pending |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |

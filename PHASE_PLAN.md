@@ -647,8 +647,8 @@ persisted D1 projection; no PDF is written to R2 or D1. Student level is
 canonical on `students.level` and duplicated only as a report snapshot.
 
 Migrations through `0009_international_students.sql` are applied to
-production. The current pushed commit is `46bbde1`, deployed as Worker
-`68f36aa2-51a8-449e-b761-ac142b691bb2`; no remote migrations are pending.
+production. The current pushed commit is `11507c6`, deployed as Worker
+`62c8590c-bf1d-4370-803c-a25eddbfa378`; no remote migrations are pending.
 Automated checks and unauthenticated production smoke pass; authenticated
 mail/browser/PDF/no-storage acceptance remains required before Phase 4 is
 formally closed.
