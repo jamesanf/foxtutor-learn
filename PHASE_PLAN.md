@@ -626,7 +626,7 @@ rescheduling remain Phase 5.
 Structured reports now follow the supplied template rather than the generic
 4.1 summary/homework model. Migrations `0008_structured_lesson_reports.sql`
 and `0009_international_students.sql`
-add nullable `students.level`, report-time header snapshots and the six
+add nullable `students.level`, report-time header snapshots and the structured
 Tutorial Feedback fields. Existing 4.1 content is reconciled as
 `summary -> This Lesson's Focus`, `homework -> Home Learning Task` and
 `additional_notes -> Notes`.
@@ -647,11 +647,14 @@ persisted D1 projection; no PDF is written to R2 or D1. Student level is
 canonical on `students.level` and duplicated only as a report snapshot.
 
 Migrations through `0009_international_students.sql` are applied to
-production. The current pushed commit is `5a795be`, deployed as Worker
-`5194a769-d6cd-4edb-83c4-9e911ddbff6d`; no remote migrations are pending.
-Automated checks and unauthenticated production smoke pass; authenticated
-mail/browser/PDF/no-storage acceptance remains required before Phase 4 is
-formally closed.
+production. The current deployed runtime commit is `b7e9a1a`, deployed as
+Worker `1601099f-35d8-4803-9846-4c95b58af122`; no remote migrations are
+pending.
+Generated lesson/report links use compact base64url route keys while existing
+UUID links remain compatible. Report HTML titles and downloaded PDF filenames
+use `YY/MM/DD - FoxTutor Lesson Report`. Automated checks and unauthenticated
+production smoke pass; authenticated mail/browser/PDF/no-storage acceptance
+remains required before Phase 4 is formally closed.
 
 ### Must achieve
 

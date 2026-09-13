@@ -8,6 +8,9 @@
 - Student HTML and PDF routes require an active STUDENT user, the linked active
   student record, the requested lesson and a sent report. Unauthorized or
   draft reports return a generic 404.
+- Generated lesson/report URLs use compact base64url route keys instead of
+  exposing the internal lesson UUID. Existing UUID-shaped URLs remain
+  accepted, and neither form changes the server-side ownership predicates.
 - PDF responses are private/no-store, `nosniff`, non-indexable and generated
   from authoritative D1 data. No PDF bytes are stored in R2 or D1.
 - Report body text and lightweight formatting markers are escaped and rendered
