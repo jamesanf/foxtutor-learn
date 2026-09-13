@@ -95,15 +95,16 @@ or D1 blob.
 The renderer uses an explicit fixed `© 2026 Fox Learning Ltd. All rights
 reserved.` footer policy matching the supplied template. Long text is wrapped within the
 feedback cells and the renderer reduces the line scale when needed to retain
-the one-page format. A small vector FoxTutor mark is drawn in the top-left
-header so the PDF remains self-contained and Worker-compatible.
+the one-page format. The supplied FoxTutor logo asset is embedded in the
+top-left header as a JPEG XObject loaded from the Worker asset bundle; PDFs do
+not use a separate R2 object.
 
 ## Email presentation
 
 Lesson-report email is an inline-styled FoxTutor Learn message designed for
 Fox Mail/Brevo and Gmail clients. The lesson date, start/end time and level
 use a single spacious metadata panel; the recipient's pupil name is not
-repeated in that panel. Empty feedback fields are omitted, duplicate bullet
-prefixes are normalised, and the call to action is the text link
-“View this report on FoxTutor Learn”. The footer contains the
-`james@foxtutor.org` contact address and one copyright line.
+repeated in that panel. Empty feedback fields are omitted, duplicate bullet prefixes are normalised, and the
+call to action is the text link “View this report on FoxTutor Learn”. The
+support sentence appears in the main content rather than the footer, while the
+footer contains one dynamically dated copyright line.

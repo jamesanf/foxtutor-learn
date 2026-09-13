@@ -19,6 +19,12 @@ function pdfBytes(value: string): Uint8Array {
   return Uint8Array.from(value, (character) => character.charCodeAt(0) & 0xff);
 }
 
+function binaryString(bytes: Uint8Array): string {
+  let value = "";
+  for (const byte of bytes) value += String.fromCharCode(byte);
+  return value;
+}
+
 function wrap(value: string, width: number): string[] {
   const lines: string[] = [];
   for (const paragraph of value.split(/\r?\n/)) {
@@ -53,25 +59,17 @@ function rect(commands: string[], x: number, y: number, width: number, height: n
 
 function footer(commands: string[]): void {
   commands.push(`${LINE} RG 0.6 w ${MARGIN} 30 m ${PAGE_WIDTH - MARGIN} 30 l S`);
-  text(commands, MARGIN, 18, "© 2026 Fox Learning Ltd. All rights reserved.", 7, "0.35 0.4 0.45");
+  text(commands, MARGIN, 18, `© ${new Date().getFullYear()} Fox Learning Ltd. All rights reserved.`, 7, "0.35 0.4 0.45");
   text(commands, PAGE_WIDTH - 78, 18, "Page 1 of 1", 7, "0.35 0.4 0.45");
 }
 
-function foxLogo(commands: string[], x: number, y: number, size: number): void {
-  const right = x + size;
-  const top = y + size;
-  commands.push(`1 1 1 rg ${x + 2} ${y + 2} m ${x + 2} ${top} l ${x + size * 0.34} ${y + size * 0.72} l ${x + size * 0.5} ${top - 2} l ${x + size * 0.66} ${y + size * 0.72} l ${right - 2} ${top} l ${right - 2} ${y + 2} l ${x + size * 0.5} ${y - 2} h f`);
-  commands.push(`${BLUE} rg ${x + 7} ${y + 10} 4 4 re f ${x + size - 11} ${y + 10} 4 4 re f`);
-  commands.push(`${BLUE} rg ${x + size * 0.5 - 3} ${y + 4} 6 4 re f`);
-}
-
-function reportHeader(commands: string[], report: StudentLessonReportViewModel): number {
+function reportHeader(commands: string[], report: StudentLessonReportViewModel, hasLogo: boolean): number {
   const top = PAGE_HEIGHT - MARGIN;
   const height = 112;
   const width = PAGE_WIDTH - 2 * MARGIN;
   const columnWidth = width / 4;
   commands.push(`${BLUE} rg ${MARGIN} ${top - 42} ${width} 42 re f`);
-  foxLogo(commands, MARGIN + 14, top - 34, 25);
+  if (hasLogo) commands.push(`q 31 0 0 30 ${MARGIN + 12} ${top - 36} cm /Im1 Do Q`);
   text(commands, MARGIN + 50, top - 27, "FoxTutor Learn", 17, "1 1 1", true);
   text(commands, MARGIN + width - 112, top - 27, "Lesson Report", 9, "1 1 1");
   rect(commands, MARGIN, top - height, width, height - 42, true);
@@ -118,9 +116,9 @@ function feedbackField(
   lines.forEach((line, index) => text(commands, x + 11, y + height - 39 - index * lineHeight, line, Math.max(5.5, lineHeight - 1.5)));
 }
 
-function singlePage(report: StudentLessonReportViewModel): string[] {
+function singlePage(report: StudentLessonReportViewModel, hasLogo: boolean): string[] {
   const commands: string[] = ["q"];
-  const feedbackTop = reportHeader(commands, report);
+  const feedbackTop = reportHeader(commands, report, hasLogo);
   text(commands, MARGIN, feedbackTop, "Tutorial Feedback", 13, BLUE, true);
   const gap = 9;
   const halfWidth = (PAGE_WIDTH - 2 * MARGIN - gap) / 2;
@@ -151,19 +149,24 @@ function singlePage(report: StudentLessonReportViewModel): string[] {
   return commands;
 }
 
-function buildDocument(pages: string[]): ArrayBuffer {
+function buildDocument(pages: string[], logoJpeg?: Uint8Array): ArrayBuffer {
   const objects: string[] = [];
   const pageObjectNumbers: number[] = [];
   objects.push("<< /Type /Catalog /Pages 2 0 R >>");
   objects.push("<< /Type /Pages /Kids [] /Count 0 >>");
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+  const logoObjectNumber = logoJpeg ? objects.length + 1 : undefined;
+  if (logoJpeg) {
+    objects.push(`<< /Type /XObject /Subtype /Image /Width 240 /Height 230 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoJpeg.byteLength} >>\nstream\n${binaryString(logoJpeg)}\nendstream`);
+  }
   for (const page of pages) {
     const stream = `${page}\n`;
     const contentObject = objects.length + 1;
     objects.push(`<< /Length ${pdfBytes(stream).byteLength} >>\nstream\n${stream}endstream`);
     const pageObject = objects.length + 1;
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObject} 0 R >>`);
+    const imageResources = logoObjectNumber ? ` /XObject << /Im1 ${logoObjectNumber} 0 R >>` : "";
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${imageResources} >> /Contents ${contentObject} 0 R >>`);
     pageObjectNumbers.push(pageObject);
   }
   objects[1] = `<< /Type /Pages /Kids [${pageObjectNumbers.map((number) => `${number} 0 R`).join(" ")}] /Count ${pageObjectNumbers.length} >>`;
@@ -183,6 +186,6 @@ function buildDocument(pages: string[]): ArrayBuffer {
   return result;
 }
 
-export function generateLessonReportPdf(report: StudentLessonReportViewModel): ArrayBuffer {
-  return buildDocument([singlePage(report).join("\n")]);
+export function generateLessonReportPdf(report: StudentLessonReportViewModel, logoJpeg?: Uint8Array): ArrayBuffer {
+  return buildDocument([singlePage(report, Boolean(logoJpeg)).join("\n")], logoJpeg);
 }

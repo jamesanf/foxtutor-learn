@@ -1127,9 +1127,11 @@ function reportPdfFilename(report: LessonReport): string {
   return `lesson-report-${date}.pdf`;
 }
 
-function downloadLessonReportPdf(request: Request, report: LessonReport): Response {
+async function downloadLessonReportPdf(request: Request, env: Env, report: LessonReport): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") return messagePage("Method not allowed", "Report downloads are read-only.", 405);
-  const pdf = generateLessonReportPdf(reportViewModel(report));
+  const logoResponse = await env.ASSETS.fetch(new Request(new URL("/foxlearninglogo-240.jpg", request.url)));
+  const logo = logoResponse.ok ? new Uint8Array(await logoResponse.arrayBuffer()) : undefined;
+  const pdf = generateLessonReportPdf(reportViewModel(report), logo);
   const headers = privateHeaders("application/pdf");
   headers.set("Content-Disposition", `attachment; filename="${reportPdfFilename(report)}"`);
   headers.set("Cache-Control", "private, no-store");
@@ -1620,7 +1622,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!id) return messagePage("Not found", "That lesson does not exist.", 404);
     const report = await findLessonReport(db, id);
     if (!report || report.status !== "SENT") return messagePage("Not found", "That lesson report does not exist.", 404);
-    return downloadLessonReportPdf(request, report);
+    return await downloadLessonReportPdf(request, env, report);
   }
   if (route === "admin-lesson" || route === "admin-lesson-edit" || route === "admin-lesson-status") {
     const id = lessonIdFromPath(url.pathname);
@@ -1776,7 +1778,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (!id) return messagePage("Not found", "That lesson report does not exist.", 404);
     const report = await findSentLessonReportForStudent(db, id, active.user.id);
     if (!report) return messagePage("Not found", "That lesson report does not exist.", 404);
-    if (route === "student-lesson-report-pdf") return downloadLessonReportPdf(request, report);
+    if (route === "student-lesson-report-pdf") return await downloadLessonReportPdf(request, env, report);
     return appPage(active.user, csrfToken, "Lesson report", reportDocument(report, false));
   }
   if (route === "student-lesson") {

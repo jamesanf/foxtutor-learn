@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-13 — Report email and PDF branding refinement
+
+- Simplified the report email header to FoxTutor and Lesson Report, removed
+  the duplicate greeting, widened the content surface and moved the complete
+  support sentence into the message body.
+- Made the email and PDF copyright year derive from the current year.
+- Replaced the temporary PDF placeholder mark with the supplied FoxTutor logo
+  asset embedded in the generated PDF.
+
 ### 2026-09-13 — Reactive reports and final presentation polish
 
 - Made Save draft, Send report and Resend report update the report view

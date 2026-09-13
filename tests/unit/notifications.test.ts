@@ -96,9 +96,12 @@ describe("notification domain", () => {
     expect(rendered.html).toContain("background:#0e7490");
     expect(rendered.html).toContain("Tutorial feedback");
     expect(rendered.html).toContain("View this report on");
-    expect(rendered.html).toContain("Questions? Email james@foxtutor.org");
+    expect(rendered.html).toContain("If you have any questions, please get in touch at");
+    expect(rendered.html).toContain("mailto:james@foxtutor.org");
     expect(rendered.html).toContain("© 2026 Fox Learning Ltd. All rights reserved.");
     expect(rendered.html).not.toContain("Pupil:");
+    expect(rendered.html).not.toContain("Hello A &lt;Student&gt;");
+    expect(rendered.html).not.toContain(">Learn</div>");
   });
 
   it("builds a minimal invitation with the Learn entry link", () => {

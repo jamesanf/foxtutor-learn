@@ -92,6 +92,9 @@ describe("structured lesson reports", () => {
     expect(text).toContain("Brian");
     expect(text).toContain("ESOL N5/H");
     expect((text.match(/\/Type \/Page\b/g) ?? []).length).toBe(1);
+    const brandedPdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel(report), Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])));
+    expect(brandedPdf).toContain("/Subtype /Image");
+    expect(brandedPdf).toContain("/Im1 Do");
   });
 
   it("renders numbered and bulleted report content safely", () => {

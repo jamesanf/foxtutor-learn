@@ -73,9 +73,10 @@ function lessonTime(data: LessonEmailData): string {
   return `${formatter.format(new Date(data.startAt))}–${formatter.format(new Date(data.endAt))}`;
 }
 
-function frame(title: string, text: string, body: string): string {
+function frame(title: string, text: string, body: string, headerLabel = title || "Learn"): string {
   const note = text === "FoxTutor Learn" ? "" : `<div style="margin-bottom:6px">${escapeHtml(text)}</div>`;
-  return `<div style="margin:0;padding:28px 12px;background:#f1f7f8;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5"><div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #d8e5e8;border-radius:12px;overflow:hidden"><div style="padding:20px 28px;background:#0e7490;color:#ffffff"><div style="font-size:20px;font-weight:700;letter-spacing:.02em">FoxTutor</div><div style="font-size:13px;margin-top:2px;color:#d8f3f7">Learn</div></div><div style="padding:32px 30px"><h1 style="margin:0 0 26px;color:#155e75;font-size:27px;line-height:1.2">${escapeHtml(title)}</h1>${body}</div><div style="padding:18px 30px;border-top:1px solid #e2edf0;color:#64748b;font-size:12px">${note}© 2026 Fox Learning Ltd. All rights reserved.</div></div></div>`;
+  const year = new Date().getFullYear();
+  return `<div style="margin:0;padding:28px 12px;background:#f1f7f8;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5"><div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d8e5e8;border-radius:12px;overflow:hidden"><div style="padding:20px 32px;background:#0e7490;color:#ffffff"><div style="font-size:21px;font-weight:700;letter-spacing:.02em">FoxTutor</div><div style="font-size:14px;margin-top:3px;color:#d8f3f7">${escapeHtml(headerLabel)}</div></div><div style="padding:36px 38px">${title ? `<h1 style="margin:0 0 28px;color:#155e75;font-size:27px;line-height:1.2">${escapeHtml(title)}</h1>` : ""}${body}</div><div style="padding:18px 38px;border-top:1px solid #e2edf0;color:#64748b;font-size:12px">${note}© ${year} Fox Learning Ltd. All rights reserved.</div></div></div>`;
 }
 
 function emailRichText(value: string): string {
@@ -160,7 +161,7 @@ export function renderLessonReport(data: ReportEmailData, origin: string): Email
   const time = lessonTime(data);
   const resourcesText = data.resources.length ? `\n\nResources:\n${data.resources.map((resource) => `- ${resource.filename}: ${learnLink(origin, resource.path)}`).join("\n")}` : "";
   const resourcesHtml = data.resources.length
-    ? `<div style="margin:20px 0 0;padding:16px 18px;background:#f7fbfc;border:1px solid #dcebed;border-radius:8px"><div style="margin:0 0 8px;color:#0e7490;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Resources</div><ul style="margin:0;padding-left:20px">${data.resources.map((resource) => `<li style="margin:0 0 5px"><a href="${escapeHtml(learnLink(origin, resource.path))}" style="color:#0e7490;font-weight:700">${escapeHtml(resource.filename)}</a></li>`).join("")}</ul></div>`
+    ? `<div style="margin:24px 0 0;padding:20px 22px;background:#f7fbfc;border:1px solid #dcebed;border-radius:8px"><div style="margin:0 0 10px;color:#0e7490;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Resources</div><ul style="margin:0;padding-left:22px">${data.resources.map((resource) => `<li style="margin:0 0 7px"><a href="${escapeHtml(learnLink(origin, resource.path))}" style="color:#0e7490;font-weight:700">${escapeHtml(resource.filename)}</a></li>`).join("")}</ul></div>`
     : "";
   const fields: Array<[string, string]> = [
     ["This Lesson's Focus", data.thisLessonsFocus],
@@ -175,8 +176,8 @@ export function renderLessonReport(data: ReportEmailData, origin: string): Email
   const detailTable = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;border:1px solid #dcebed;background:#f7fbfc;border-collapse:separate;border-spacing:0;border-radius:8px;overflow:hidden"><tr><td width="34%" style="padding:18px 16px;vertical-align:top;border-right:1px solid #dcebed"><div style="margin:0 0 7px;color:#0e7490;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Lesson date</div><strong style="font-size:15px">${escapeHtml(date)}</strong></td><td width="33%" style="padding:18px 16px;vertical-align:top;border-right:1px solid #dcebed"><div style="margin:0 0 7px;color:#0e7490;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Time</div><strong style="font-size:15px">${escapeHtml(time)}</strong><br><span style="font-size:12px;color:#64748b">${escapeHtml(data.timezone)}</span></td><td width="33%" style="padding:18px 16px;vertical-align:top"><div style="margin:0 0 7px;color:#0e7490;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Level</div><strong style="font-size:15px">${escapeHtml(data.level)}</strong></td></tr></table>`;
   return {
     subject: `Your lesson report — ${date}`,
-    text: `Hello ${data.studentName},\n\nLesson report\nLevel: ${data.level}\nLesson date/time: ${date}\n${time} (${data.timezone})${textFields}${resourcesText}\n\nView this report on FoxTutor Learn: ${reportLink}\n\nQuestions? Email james@foxtutor.org`,
-    html: frame("Lesson report", "Questions? Email james@foxtutor.org", `<p style="margin:0 0 24px">Hello ${escapeHtml(data.studentName)},</p>${detailTable}<div style="margin:0 0 12px;color:#155e75;font-size:16px;font-weight:700">Tutorial feedback</div>${htmlFields}${resourcesHtml}<p style="margin:28px 0 0;font-size:14px">View this report on <a href="${escapeHtml(reportLink)}" style="color:#0e7490;font-weight:700">FoxTutor Learn</a>.</p>`)
+    text: `Lesson report\nLevel: ${data.level}\nLesson date/time: ${date}\n${time} (${data.timezone})${textFields}${resourcesText}\n\nIf you have any questions, please get in touch at james@foxtutor.org.\n\nView this report on FoxTutor Learn: ${reportLink}`,
+    html: frame("", "FoxTutor Learn", `${detailTable}<div style="margin:0 0 14px;color:#155e75;font-size:16px;font-weight:700">Tutorial feedback</div>${htmlFields}${resourcesHtml}<p style="margin:28px 0 0;font-size:14px">If you have any questions, please get in touch at <a href="mailto:james@foxtutor.org" style="color:#0e7490;font-weight:700">james@foxtutor.org</a>.</p><p style="margin:18px 0 0;font-size:14px">View this report on <a href="${escapeHtml(reportLink)}" style="color:#0e7490;font-weight:700">FoxTutor Learn</a>.</p>`, "Lesson Report")
   };
 }
 
