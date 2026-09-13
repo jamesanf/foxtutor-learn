@@ -17,14 +17,16 @@
 
 | Field | State |
 |---|---|
-| Source commit | Pending final release commit |
-| Remote commit | Pending final push |
-| Worker version | Pending deployment |
-| Migrations | Applied and verified locally through `0007_notifications.sql` |
+| Source commit | `638bc2823fdcee0b021733c41a3b76ca3a531fe5` |
+| Remote commit | `638bc2823fdcee0b021733c41a3b76ca3a531fe5` |
+| Worker version | `ee699d26-504f-4a1e-81e4-862e7af121cb` |
+| Deployment time | `2026-09-13T12:42:54Z` |
+| Migrations | `0006_lesson_reports.sql` and `0007_notifications.sql` applied remotely and verified |
 | Cron | `*/5 * * * *` in Wrangler configuration |
 | Mail provider | Existing Fox Mail adapter only |
-| Production mail acceptance | Blocked: Fox Mail production internal secret/service-auth prerequisite is documented as unavailable |
-| Production report/reminder acceptance | Not claimed |
+| Production mail acceptance | Not claimed: no controlled authenticated production fixture/browser session was available |
+| Production report/reminder acceptance | Not claimed; local deterministic coverage and deployed scheduler are present |
+| Browser visual acceptance | Not run: existing visual harness requires a local Chrome DevTools session on `127.0.0.1:9222` |
 | Public repository/site changes | None |
 | Completion tag | Not created |
 
