@@ -637,7 +637,7 @@ The PDF is generated on demand in the Worker from the persisted D1 projection;
 no PDF is written to R2 or D1. Student level is canonical on `students.level`
 and duplicated only as a report snapshot. Migration `0008` is applied to
 production and the final pushed commit is deployed as Worker
-`14361364-1aef-4313-8bfd-aa946bcdb47c`. Automated checks and unauthenticated
+`810f6525-257f-4914-916b-2589fe150258`. Automated checks and unauthenticated
 production smoke pass; authenticated mail/browser/PDF acceptance remains
 required before Phase 4 is formally closed.
 
