@@ -83,4 +83,12 @@ describe("D1 foundation", () => {
     expect(migration).toContain("'LESSON_RESCHEDULED'");
     expect(migration).toContain("INSERT INTO notifications");
   });
+
+  it("adds student cancellation undo and short-notice reschedule requests", () => {
+    const migration = readFileSync("migrations/0012_student_undo_reschedule_requests.sql", "utf8");
+    expect(migration).toContain("'CANCELLATION_UNDONE'");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS lesson_reschedule_requests");
+    expect(migration).toContain("idx_one_pending_reschedule_request");
+    expect(migration).toContain("CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))");
+  });
 });

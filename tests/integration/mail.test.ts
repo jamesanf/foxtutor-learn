@@ -48,7 +48,7 @@ describe("mail boundary", () => {
         MAIL_API_FROM: "hello@foxtutor.org",
         MAIL_API_REPLY_TO: "james@foxtutor.org"
       },
-      { to: "student@example.com", subject: "Report", text: "Report", html: "<p>Report</p>", idempotencyKey: "notification-test-message-1", replyTo: "james@foxtutor.org" },
+      { to: "student@example.com", fromName: "FoxTutor", subject: "Report", text: "Report", html: "<p>Report</p>", idempotencyKey: "notification-test-message-1", replyTo: "james@foxtutor.org" },
       async (input, init) => {
         calls.push(new Request(input, init));
         return new Response(JSON.stringify({ id: "provider-1" }), { status: 202, headers: { "Content-Type": "application/json" } });
@@ -58,6 +58,7 @@ describe("mail boundary", () => {
     await expect(calls[0].json()).resolves.toMatchObject({
       html: "<p>Report</p>",
       replyTo: "james@foxtutor.org",
+      fromName: "FoxTutor",
       to: ["student@example.com"]
     });
   });

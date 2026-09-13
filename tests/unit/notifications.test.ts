@@ -7,7 +7,7 @@ import {
   reminderIdempotencyKey
 } from "../../src/domain/notifications";
 import { learnLink } from "../../src/notifications/links";
-import { renderDstWarning, renderEmail, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
+import { renderCancellationProcessed, renderDstWarning, renderEmail, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
 import { findNotificationById } from "../../src/db/notifications";
 
 function mockNotificationDb(firstResult: unknown): D1Database {
@@ -117,6 +117,23 @@ describe("notification domain", () => {
     expect(rendered.text).toContain("moved forward");
     expect(rendered.text).toContain("scheduled in UK time");
     expect(rendered.text).toContain("no lesson time has been changed");
+  });
+
+  it("keeps cancellation email content concise and exposes undo only for student cancellations", () => {
+    const rendered = renderCancellationProcessed({
+      studentName: "Jamie",
+      startAt: "2026-09-15T19:00:00.000Z",
+      endAt: "2026-09-15T19:55:00.000Z",
+      timezone: "Europe/London",
+      lessonPath: "/learn/student/lessons/lesson-1",
+      externalUrl: null,
+      undoPath: "/learn/student/lessons/lesson-1/undo-cancellation"
+    }, "https://foxtutor.org/learn");
+    expect(rendered.subject).toContain("Lesson cancelled");
+    expect(rendered.text).toContain("Was this a mistake?");
+    expect(rendered.text).not.toContain("Europe/London");
+    expect(rendered.text.match(/cancelled/gi)?.length).toBe(1);
+    expect(rendered.html).not.toContain("Open lesson");
   });
 
   it("rejects incomplete untyped template projections", () => {

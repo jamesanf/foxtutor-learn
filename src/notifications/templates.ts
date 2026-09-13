@@ -52,6 +52,10 @@ export interface CancellationDecisionEmailData extends LessonEmailData {
   decision?: "approved" | "rejected";
 }
 
+export interface CancellationProcessedEmailData extends LessonEmailData {
+  undoPath?: string;
+}
+
 function requireFields(data: Record<string, unknown>, fields: string[]): void {
   for (const field of fields) {
     if (typeof data[field] !== "string" || !(data[field] as string).trim()) throw new Error(`Missing notification template field: ${field}`);
@@ -151,12 +155,16 @@ export function renderResourceAdded(data: ResourceEmailData, origin: string): Em
   };
 }
 
-export function renderCancellationProcessed(data: LessonEmailData, origin: string): EmailContent {
-  const details = lessonDetails(data, origin);
+export function renderCancellationProcessed(data: CancellationProcessedEmailData, origin: string): EmailContent {
+  const date = lessonDate(data);
+  const time = lessonTime(data);
+  const undoLink = "undoPath" in data && typeof data.undoPath === "string" ? learnLink(origin, data.undoPath) : null;
+  const text = `Your lesson has been cancelled.\n\n${date}\n${time}${undoLink ? `\n\nWas this a mistake? Undo the cancellation: ${undoLink}` : ""}`;
+  const html = `<p>Your lesson has been cancelled.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${undoLink ? `<p>Was this a mistake? <a href="${escapeHtml(undoLink)}">Undo the cancellation</a>.</p>` : ""}`;
   return {
-    subject: `Lesson cancelled — ${lessonDate(data)}`,
-    text: `Your lesson has been cancelled.\n\n${details.text}`,
-    html: frame("Lesson cancelled", "FoxTutor Learn", `<p>Your lesson has been cancelled.</p>${details.html}`)
+    subject: `Lesson cancelled — ${date}`,
+    text,
+    html: frame("", "FoxTutor Learn", html)
   };
 }
 

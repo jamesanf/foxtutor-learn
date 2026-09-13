@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-13 — Cancellation and reschedule UX refinement
+
+- Removed late cancellation requests; student cancellation is disabled within
+  24 hours and students can submit a reschedule request instead.
+- Added student-only cancellation undo, with the original lesson restored by
+  the server and an undo link in student cancellation emails.
+- Simplified cancelled lesson pages and emails, hid cancelled lessons from
+  the student lesson list, and aligned lesson table columns.
+- Added per-message `FoxTutor` sender-name support through Fox Mail while
+  retaining `hello@foxtutor.org`.
+
 ### Phase 5.1 — Cancellation, exceptions and rescheduling
 
 - **Status:** deployed as Worker

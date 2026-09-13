@@ -6,6 +6,7 @@ export type LessonHistoryEventType =
   | "CANCELLATION_REQUESTED"
   | "CANCELLATION_APPROVED"
   | "CANCELLATION_REJECTED"
+  | "CANCELLATION_UNDONE"
   | "ADMIN_CANCELLED"
   | "RESCHEDULED";
 
@@ -183,6 +184,40 @@ export async function cancelLesson(
       input.previousTimezone,
       input.now
     )
+  ]);
+  return Boolean(results[0]?.meta.changes);
+}
+
+export async function undoStudentCancellation(
+  db: D1Database,
+  input: {
+    lessonId: string;
+    studentId: string;
+    actorUserId: string;
+    now: string;
+    startAt: string;
+    endAt: string;
+    timezone: string;
+  }
+): Promise<boolean> {
+  const results = await db.batch([
+    db.prepare(
+      `UPDATE lessons
+       SET status = 'scheduled', updated_at = ?
+       WHERE id = ? AND student_id = ? AND status = 'cancelled'
+         AND EXISTS (
+           SELECT 1 FROM lesson_history h
+           WHERE h.lesson_id = ? AND h.student_id = ? AND h.event_type = 'STUDENT_CANCELLED'
+             AND h.actor_role = 'STUDENT' AND h.initiated_by_user_id = ?
+         )`
+    ).bind(input.now, input.lessonId, input.studentId, input.lessonId, input.studentId, input.actorUserId),
+    db.prepare(
+      `INSERT INTO lesson_history
+       (id, lesson_id, student_id, initiated_by_user_id, actor_role, event_type, reason,
+        previous_start_at, previous_end_at, previous_timezone, resulting_lesson_status, created_at)
+       SELECT ?, ?, ?, ?, 'STUDENT', 'CANCELLATION_UNDONE', 'Student restored lesson', ?, ?, ?, 'scheduled', ?
+       WHERE changes() > 0`
+    ).bind(crypto.randomUUID(), input.lessonId, input.studentId, input.actorUserId, input.startAt, input.endAt, input.timezone, input.now)
   ]);
   return Boolean(results[0]?.meta.changes);
 }

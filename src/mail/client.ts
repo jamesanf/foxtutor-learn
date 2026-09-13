@@ -1,5 +1,6 @@
 export interface MailMessage {
   to: string;
+  fromName?: string;
   replyTo?: string;
   subject: string;
   text: string;
@@ -78,6 +79,7 @@ export async function sendMailDetailed(
         headers,
         body: JSON.stringify({
           from: env.MAIL_API_FROM,
+          ...(message.fromName ? { fromName: message.fromName } : {}),
           to: [message.to],
           cc: [],
           bcc: [],

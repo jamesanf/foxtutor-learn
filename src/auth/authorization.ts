@@ -34,9 +34,9 @@ export type LearnRoute =
   | "admin-lesson-report"
   | "admin-lesson-report-pdf"
   | "admin-notifications"
-  | "admin-cancellations"
-  | "admin-cancellation-approve"
-  | "admin-cancellation-reject"
+  | "admin-reschedules"
+  | "admin-reschedule-approve"
+  | "admin-reschedule-reject"
   | "admin-lesson-reschedule"
   | "student"
   | "student-calendar"
@@ -44,7 +44,7 @@ export type LearnRoute =
   | "student-lessons"
   | "student-lesson"
   | "student-lesson-cancel"
-  | "student-lesson-cancellation-request"
+  | "student-lesson-undo-cancellation"
   | "student-lesson-reschedule"
   | "student-lesson-report"
   | "student-lesson-report-pdf"
@@ -82,9 +82,9 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/lessons\/[^/]+\/report$/.test(path)) return "admin-lesson-report";
   if (/^\/learn\/admin\/lessons\/[^/]+$/.test(path)) return "admin-lesson";
   if (path === "/learn/admin/notifications") return "admin-notifications";
-  if (path === "/learn/admin/cancellations") return "admin-cancellations";
-  if (/^\/learn\/admin\/cancellations\/[^/]+\/approve$/.test(path)) return "admin-cancellation-approve";
-  if (/^\/learn\/admin\/cancellations\/[^/]+\/reject$/.test(path)) return "admin-cancellation-reject";
+  if (path === "/learn/admin/reschedules") return "admin-reschedules";
+  if (/^\/learn\/admin\/reschedules\/[^/]+\/approve$/.test(path)) return "admin-reschedule-approve";
+  if (/^\/learn\/admin\/reschedules\/[^/]+\/reject$/.test(path)) return "admin-reschedule-reject";
   if (path === "/learn/student") return "student";
   if (path === "/learn/student/calendar") return "student-calendar";
   if (path === "/learn/student/calendar/feed") return "student-calendar-feed";
@@ -92,7 +92,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/student\/lessons\/[^/]+\/report\.pdf$/.test(path)) return "student-lesson-report-pdf";
   if (/^\/learn\/student\/lessons\/[^/]+\/report$/.test(path)) return "student-lesson-report";
   if (/^\/learn\/student\/lessons\/[^/]+\/cancel$/.test(path)) return "student-lesson-cancel";
-  if (/^\/learn\/student\/lessons\/[^/]+\/request-cancellation$/.test(path)) return "student-lesson-cancellation-request";
+  if (/^\/learn\/student\/lessons\/[^/]+\/undo-cancellation$/.test(path)) return "student-lesson-undo-cancellation";
   if (/^\/learn\/student\/lessons\/[^/]+\/reschedule$/.test(path)) return "student-lesson-reschedule";
   if (/^\/learn\/student\/lessons\/[^/]+$/.test(path)) return "student-lesson";
   if (path === "/learn/student/resources") return "student-resources";
