@@ -256,7 +256,7 @@ async function emitNotification(
   }
 }
 
-function lessonMailData(lesson: Lesson): {
+function lessonMailData(lesson: Lesson, includeExternalUrl = true): {
   studentName: string;
   startAt: string;
   endAt: string;
@@ -270,7 +270,7 @@ function lessonMailData(lesson: Lesson): {
     endAt: lesson.end_at,
     timezone: lesson.timezone,
     lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
-    externalUrl: lesson.external_url
+    externalUrl: includeExternalUrl ? lesson.external_url : null
   };
 }
 
@@ -946,7 +946,7 @@ function rescheduleForm(csrfToken: string, lesson: Lesson, action: string, error
 
 function cancellationQueue(requests: CancellationRequest[], csrfToken: string): string {
   if (!requests.length) return `<section class="card empty-state compact-empty"><h2>No pending cancellation requests</h2><p>Exceptions will appear here for review.</p></section>`;
-  const rows = requests.map((request) => `<tr><td data-label="Student">${escapeHtml(request.student_name ?? "Student")}</td><td data-label="Lesson"><a href="/learn/admin/lessons/${lessonRouteId(request.lesson_id)}">${escapeHtml(request.lesson_start_at ? formatLessonTime({ start_at: request.lesson_start_at, end_at: request.lesson_end_at ?? request.lesson_start_at, timezone: request.lesson_timezone ?? "Europe/London" } as Lesson) : "Lesson")}</a></td><td data-label="Reason">${escapeHtml(request.reason)}</td><td data-label="Requested">${escapeHtml(request.created_at)}</td><td data-label="Actions"><div class="form-actions"><form method="post" action="/learn/admin/cancellations/${encodeURIComponent(request.id)}/approve">${hiddenCsrf(csrfToken)}<button class="button" type="submit">Approve cancellation</button></form><form method="post" action="/learn/admin/cancellations/${encodeURIComponent(request.id)}/reject">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Reject request</button></form></div></td></tr>`).join("");
+  const rows = requests.map((request) => `<tr><td data-label="Student">${escapeHtml(request.student_name ?? "Student")}</td><td data-label="Lesson"><a href="/learn/admin/lessons/${lessonRouteId(request.lesson_id)}">${escapeHtml(request.lesson_start_at ? formatLessonTime({ start_at: request.lesson_start_at, end_at: request.lesson_end_at ?? request.lesson_start_at, timezone: request.lesson_timezone ?? "Europe/London" } as Lesson) : "Lesson")}</a></td><td data-label="Reason">${escapeHtml(request.reason)}</td><td data-label="Requested">${escapeHtml(request.created_at)}</td><td data-label="Actions"><div class="form-actions"><details class="decision-confirmation"><summary class="button">Approve cancellation</summary><p>This will cancel the scheduled lesson.</p><form method="post" action="/learn/admin/cancellations/${encodeURIComponent(request.id)}/approve">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Approve</button></form></details><details class="decision-confirmation"><summary class="button secondary">Reject request</summary><p>The lesson will remain scheduled.</p><form method="post" action="/learn/admin/cancellations/${encodeURIComponent(request.id)}/reject">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Reject</button></form></details></div></td></tr>`).join("");
   return `<section class="card"><div class="table-wrap"><table><thead><tr><th>Student</th><th>Lesson</th><th>Reason</th><th>Requested</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
 
@@ -1327,7 +1327,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const student = await findActiveStudentRecipient(db, lesson.student_id);
       if (student?.learn_user_id && student.learn_user_email) {
         const type = decision === "APPROVED" ? "CANCELLATION_APPROVED" : "CANCELLATION_REJECTED";
-        const content = renderEmail(type, lessonMailData(lesson), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+        const content = renderEmail(type, lessonMailData(lesson, decision !== "APPROVED"), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
         await emitNotification(env, {
           type,
           eventId: requestId,
@@ -1896,7 +1896,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         if (!changed) return redirect(`/learn/admin/lessons/${lessonRouteId(lesson.id)}`);
         const student = await findActiveStudentRecipient(db, lesson.student_id);
         if (student?.learn_user_id && student.learn_user_email) {
-          const content = renderEmail("CANCELLATION_PROCESSED", lessonMailData(lesson), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+          const content = renderEmail("CANCELLATION_PROCESSED", lessonMailData(lesson, false), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
           await emitNotification(env, {
             type: "CANCELLATION_PROCESSED",
             eventId: lesson.id,
@@ -2078,7 +2078,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (changed) {
       const student = await findActiveStudentRecipient(db, currentLesson.student_id);
       if (student?.learn_user_id && student.learn_user_email) {
-        const content = renderEmail("CANCELLATION_PROCESSED", lessonMailData(currentLesson), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+        const content = renderEmail("CANCELLATION_PROCESSED", lessonMailData(currentLesson, false), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
         await emitNotification(env, {
           type: "CANCELLATION_PROCESSED",
           eventId: currentLesson.id,
