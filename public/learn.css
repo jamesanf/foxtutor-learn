@@ -143,10 +143,15 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .compact-empty { margin-top: var(--space-5); padding: 24px; }
 .compact-empty h2 { font-size: 1.15rem; }
 .compact-empty .button { width: fit-content; }
-.resource-filter-form { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) auto; align-items: end; gap: 12px; margin-bottom: var(--space-4); }
+.resource-filter-form { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(5, minmax(110px, 1fr)) auto; align-items: end; gap: 10px; margin-bottom: var(--space-4); padding: 14px; border: 1px solid #d6dee8; border-radius: var(--radius-md); background: rgb(255 255 255 / 72%); }
 .resource-filter-form label { margin: 0; }
 .resource-filter-form .button { margin-top: 0; }
+.resource-filter-clear { white-space: nowrap; }
 .resource-meta { display: block; margin-top: 3px; color: var(--muted); font-size: .78rem; }
+.resource-selection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; margin: 0 0 10px; padding: 8px 12px; border: 1px solid #c3dce5; border-radius: var(--radius-sm); color: var(--foreground); background: #f0f9fb; font-size: .88rem; font-weight: 650; }
+.resource-selection-toolbar[hidden] { display: none; }
+.resource-selection-toolbar .button { margin: 0; }
+.resource-selection-toolbar .resource-action-icon { width: 16px; height: 16px; margin-right: 5px; vertical-align: -3px; }
 .file-preview { display: block; margin-top: 8px; color: var(--foreground); font-size: .86rem; font-weight: 600; }
 .resource-upload { width: min(100%, 820px); padding: clamp(24px, 4vw, 36px); border: 1px solid #d6dee8; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 2px 5px rgb(16 42 67 / 7%); }
 .resource-upload-heading { margin-bottom: 24px; }
@@ -183,6 +188,26 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .resource-student-item h2 { font-size: 1.05rem; overflow-wrap: anywhere; }
 .resource-student-item p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
 .resource-student-item .button { flex: 0 0 auto; margin-top: 0; }
+.resource-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.resource-action { display: inline-grid; width: 32px; height: 32px; place-items: center; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--action); background: transparent; text-decoration: none; }
+.resource-action:hover { border-color: var(--line); color: var(--action-hover); background: var(--soft); }
+.resource-action-danger { color: var(--danger); background: transparent; cursor: pointer; }
+.resource-action-danger:hover { border-color: #fecaca; color: #991b1b; background: #fef2f2; }
+.resource-action-icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.resource-hidden-form { display: none; }
+.resource-select-column { width: 46px; padding-inline: 12px; text-align: center; }
+.resource-select-column input { width: 17px; height: 17px; margin: 0 auto; accent-color: var(--action); }
+.resource-filename { display: block; max-width: 31ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resource-list-table tbody tr.is-selected { background: #f0f9fb; box-shadow: inset 3px 0 var(--primary); }
+.resource-detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 26px; }
+.resource-detail-actions .button { gap: 7px; margin-top: 0; }
+.resource-detail-actions .resource-action-icon { width: 16px; height: 16px; }
+.resource-detail-actions .delete-confirmation { margin: 0; padding: 0; border: 0; }
+.resource-detail-actions .delete-confirmation summary { display: inline-flex; min-height: 38px; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid #fecaca; border-radius: var(--radius-sm); color: var(--danger); background: #fff; list-style: none; }
+.resource-detail-actions .delete-confirmation summary::-webkit-details-marker { display: none; }
+.resource-detail-actions .delete-confirmation summary .resource-action-icon { width: 16px; height: 16px; }
+.resource-detail-actions .delete-confirmation p { max-width: 42ch; margin: 12px 0; }
+.resource-detail-actions .delete-confirmation .button { margin-top: 0; }
 .resource-section { margin-top: var(--space-6); }
 .delete-confirmation { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--line); }
 .delete-confirmation summary { color: var(--danger); cursor: pointer; font-weight: 650; }
@@ -274,7 +299,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .list-footer { grid-template-columns: 1fr; justify-items: stretch; }
   .result-range { text-align: center; }
   .page-size-form { justify-content: center; }
-  .resource-filter-form { grid-template-columns: 1fr; }
+  .resource-filter-form { grid-template-columns: 1fr 1fr; }
+  .resource-filter-form label:first-child, .resource-filter-form .resource-filter-clear { grid-column: 1 / -1; }
   .resource-filter-form .button { width: 100%; }
   .resource-upload { padding: 24px 20px; }
   .resource-fields { grid-template-columns: 1fr; gap: 0; }
@@ -283,7 +309,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .resource-success .form-actions { align-items: stretch; flex-direction: column; }
   .resource-success .form-actions .button { width: 100%; }
   .resource-student-item { align-items: flex-start; flex-direction: column; }
-  .resource-student-item .button { width: 100%; }
+  .resource-student-item .resource-actions { width: 100%; justify-content: flex-start; }
   .pagination { align-items: stretch; flex-wrap: wrap; }
   .pagination-pages { order: -1; width: 100%; }
   .table-wrap { overflow: visible; border: 0; background: transparent; }
@@ -293,6 +319,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .table-wrap td { display: grid; grid-template-columns: minmax(5.5rem, 34%) minmax(0, 1fr); gap: 12px; padding: 11px 14px; }
   .table-wrap td::before { color: var(--muted); content: attr(data-label); font-size: .75rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
   .table-wrap td:last-child { border-bottom: 0; }
+  .resource-list-table td.resource-select-column { display: block; padding-bottom: 0; }
+  .resource-list-table td.resource-select-column::before { display: none; }
+  .resource-list-table td.resource-select-column input { margin: 0; }
+  .resource-list-table td[data-label="Actions"] { display: flex; justify-content: flex-end; }
+  .resource-list-table td[data-label="Actions"]::before { display: none; }
+  .resource-filename { max-width: 100%; }
+  .resource-selection-toolbar { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 900px) {
   .calendar-host.fc .fc-toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }

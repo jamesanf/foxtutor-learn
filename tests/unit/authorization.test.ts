@@ -13,6 +13,7 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/admin/resources")).toBe("admin-resources");
     expect(classifyLearnRoute("/learn/admin/resources/new")).toBe("admin-resource-form");
     expect(classifyLearnRoute("/learn/admin/resources/resource-1/download")).toBe("admin-resource-download");
+    expect(classifyLearnRoute("/learn/admin/resources/bulk-delete")).toBe("admin-resource-bulk-delete");
     expect(classifyLearnRoute("/learn/student/lessons")).toBe("student");
     expect(classifyLearnRoute("/learn/student/resources")).toBe("student-resources");
     expect(classifyLearnRoute("/learn/student/resources/resource-1/download")).toBe("student-resource-download");

@@ -1,4 +1,5 @@
 export const MAX_RESOURCE_SIZE_BYTES = 25 * 1024 * 1024;
+export const MAX_LESSON_STORAGE_BYTES = 25 * 1024 * 1024;
 export const RESOURCE_PAGE_SIZES = [12, 24, 48] as const;
 
 const FILE_POLICY: Record<string, { contentType: string; label: string }> = {
@@ -13,6 +14,18 @@ const FILE_POLICY: Record<string, { contentType: string; label: string }> = {
 
 export function fileTypeLabel(contentType: string): string {
   return Object.values(FILE_POLICY).find((policy) => policy.contentType === contentType)?.label ?? "Document";
+}
+
+export function fileTypeFilterContentTypes(type: string): string[] | null {
+  if (type === "pdf") return ["application/pdf"];
+  if (type === "docx") return ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+  if (type === "text") return ["text/plain"];
+  if (type === "image") return ["image/png", "image/jpeg", "image/webp"];
+  return null;
+}
+
+export function canRenderInline(contentType: string): boolean {
+  return contentType === "application/pdf" || contentType === "text/plain" || contentType.startsWith("image/");
 }
 
 export function safeDisplayFilename(value: string): string | null {

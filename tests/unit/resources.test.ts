@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_RESOURCE_SIZE_BYTES, hasExpectedSignature, safeDisplayFilename, validateResourceFile } from "../../src/resources/policy";
+import { MAX_LESSON_STORAGE_BYTES, MAX_RESOURCE_SIZE_BYTES, canRenderInline, fileTypeFilterContentTypes, hasExpectedSignature, safeDisplayFilename, validateResourceFile } from "../../src/resources/policy";
 
 describe("resource file policy", () => {
   it("accepts supported files only when the type and filename agree", () => {
@@ -19,5 +19,14 @@ describe("resource file policy", () => {
     expect(hasExpectedSignature("pdf", new TextEncoder().encode("%PDF-1.7"))).toBe(true);
     expect(hasExpectedSignature("pdf", new TextEncoder().encode("not a pdf"))).toBe(false);
     expect(hasExpectedSignature("png", new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true);
+  });
+
+  it("keeps derived type filters and lesson storage policy centralized", () => {
+    expect(MAX_LESSON_STORAGE_BYTES).toBe(25 * 1024 * 1024);
+    expect(fileTypeFilterContentTypes("pdf")).toEqual(["application/pdf"]);
+    expect(fileTypeFilterContentTypes("image")).toEqual(["image/png", "image/jpeg", "image/webp"]);
+    expect(fileTypeFilterContentTypes("unknown")).toBeNull();
+    expect(canRenderInline("application/pdf")).toBe(true);
+    expect(canRenderInline("application/vnd.openxmlformats-officedocument.wordprocessingml.document")).toBe(false);
   });
 });

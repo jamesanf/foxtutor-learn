@@ -2,6 +2,18 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 3.3 resource manager refinement
+
+**Status:** local implementation complete; deployment and authenticated production acceptance pending
+
+- Added server-side resource filtering for filename/student search, active-student selection, student-dependent lesson selection, derived file type, recent-added windows and a small newest/oldest/filename sort set. Query state is preserved across pagination and page-size changes.
+- Reworked the admin resource manager around a compact selection column, visible-row select-all semantics, selection count toolbar and guarded bulk deletion with server-side ID resolution, exact private R2 deletion and D1 reconciliation reporting.
+- Replaced text-heavy actions with accessible inline SVG icon buttons for Open, Download, Details and Delete. Open uses the authenticated Worker route in a new tab with `noopener noreferrer`; Download forces attachment behavior without exposing R2.
+- Added explicit Open and Download actions to admin/student detail and student/lesson resource surfaces. Add Resource remains the Phase 3.2 contextual dropzone workflow.
+- Added a single configured 25 MiB per-lesson active-resource allowance enforced server-side before upload. PDF compression remains deferred because this Worker-only repository has no verified asynchronous private processing service; the existing hard 25 MiB per-file limit remains authoritative.
+- Retention remains a recorded 12-month review horizon with no automatic destructive housekeeping. Student deactivation remains non-destructive; inactive students lose student-side resource access through existing ownership predicates.
+- Added resource-manager source contracts and Phase 3.3 architecture/testing/deployment records. Authenticated production fixtures, screenshots, deployment and completion tagging remain pending.
+
 ### 2026-09-13 — Phase 3.2 resource upload UX remediation
 
 **Status:** deployed as Worker `86417b0e-3656-4087-b787-a0c5cb1014f5` from commit `74e9ddd266e69cee3c6bf6d1245f02d17572c755`; authenticated acceptance pending

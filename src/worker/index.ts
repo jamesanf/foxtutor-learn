@@ -33,6 +33,7 @@ import {
 } from "../db/lessons";
 import {
   countResources,
+  activeResourceBytesForLesson,
   deleteResourceMetadata,
   findResource,
   findResourceByIdempotencyKey,
@@ -76,7 +77,10 @@ import { feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from ".
 import { feedRange, generateIcs } from "../domain/icalendar";
 import {
   MAX_RESOURCE_SIZE_BYTES,
+  MAX_LESSON_STORAGE_BYTES,
   RESOURCE_PAGE_SIZES,
+  canRenderInline,
+  fileTypeFilterContentTypes,
   fileTypeLabel,
   hasExpectedSignature,
   pdfPageCount,
@@ -275,6 +279,85 @@ function parseResourcePagination(url: URL): { page: number; pageSize: number } {
   return { page, pageSize };
 }
 
+type ResourceFilters = {
+  search: string;
+  studentId: string;
+  lessonId: string;
+  type: string;
+  added: "any" | "today" | "7" | "30";
+  sort: "newest" | "oldest" | "filename-asc" | "filename-desc";
+};
+
+function parseResourceFilters(url: URL): ResourceFilters {
+  const type = fileTypeFilterContentTypes(url.searchParams.get("type") ?? "") ? url.searchParams.get("type") ?? "" : "";
+  const added = ["any", "today", "7", "30"].includes(url.searchParams.get("added") ?? "")
+    ? url.searchParams.get("added") as ResourceFilters["added"]
+    : "any";
+  const sort = ["newest", "oldest", "filename-asc", "filename-desc"].includes(url.searchParams.get("sort") ?? "")
+    ? url.searchParams.get("sort") as ResourceFilters["sort"]
+    : "newest";
+  return {
+    search: (url.searchParams.get("q") ?? "").trim().slice(0, 100),
+    studentId: (url.searchParams.get("student") ?? "").trim().slice(0, 100),
+    lessonId: (url.searchParams.get("lesson") ?? "").trim().slice(0, 100),
+    type,
+    added,
+    sort
+  };
+}
+
+function resourceCreatedAfter(added: ResourceFilters["added"], now = new Date()): string | undefined {
+  if (added === "any") return undefined;
+  const start = new Date(now);
+  if (added === "today") {
+    start.setUTCHours(0, 0, 0, 0);
+  } else {
+    start.setTime(start.getTime() - Number(added) * 24 * 60 * 60 * 1000);
+  }
+  return start.toISOString();
+}
+
+function resourceListOptions(filters: ResourceFilters, page: number, pageSize: number): {
+  limit: number;
+  offset: number;
+  search?: string;
+  studentId?: string;
+  lessonId?: string;
+  contentTypes?: string[];
+  createdAfter?: string;
+  sort: ResourceFilters["sort"];
+} {
+  return {
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+    search: filters.search || undefined,
+    studentId: filters.studentId || undefined,
+    lessonId: filters.lessonId || undefined,
+    contentTypes: filters.type ? fileTypeFilterContentTypes(filters.type) ?? undefined : undefined,
+    createdAfter: resourceCreatedAfter(filters.added),
+    sort: filters.sort
+  };
+}
+
+function resourceFilterQuery(filters: ResourceFilters, page?: number, pageSize?: number): string {
+  const query = new URLSearchParams();
+  if (filters.search) query.set("q", filters.search);
+  if (filters.studentId) query.set("student", filters.studentId);
+  if (filters.lessonId) query.set("lesson", filters.lessonId);
+  if (filters.type) query.set("type", filters.type);
+  if (filters.added !== "any") query.set("added", filters.added);
+  if (filters.sort !== "newest") query.set("sort", filters.sort);
+  if (page && page > 1) query.set("page", String(page));
+  if (pageSize && pageSize !== 12) query.set("size", String(pageSize));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
+function resourceFilterHiddenInputs(filters: ResourceFilters, page: number, pageSize: number): string {
+  const query = resourceFilterQuery(filters, page, pageSize);
+  return Array.from(new URLSearchParams(query).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("");
+}
+
 function resourceDate(resource: Resource): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(resource.created_at));
 }
@@ -299,20 +382,66 @@ function resourceLessonLabel(resource: Resource): string {
   return `${date} · ${end ? `${time}–${end}` : time}`;
 }
 
-function resourceRows(resources: Resource[]): string {
-  if (!resources.length) {
-    return `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Add a document for a student or attach it to a lesson.</p><a class="button" href="/learn/admin/resources/new">Add resource</a></div>`;
-  }
-  return `<div class="table-wrap resource-list-table"><table><thead><tr><th>File</th><th>Student</th><th>Lesson</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>${resources.map((resource) => `<tr><td data-label="File"><strong>${escapeHtml(resource.original_filename)}</strong><small class="resource-meta">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</small></td><td data-label="Student">${escapeHtml(resource.student_name ?? "Student")}</td><td data-label="Lesson">${escapeHtml(resourceLessonLabel(resource))}</td><td data-label="Uploaded">${escapeHtml(resourceDate(resource))}</td><td data-label="Actions"><a href="/learn/admin/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a> <a href="/learn/admin/resources/${encodeURIComponent(resource.id)}">Details</a></td></tr>`).join("")}</tbody></table></div>`;
+function resourceIcon(name: "open" | "download" | "details" | "delete"): string {
+  const paths = {
+    open: '<path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+    details: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+    delete: '<path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 14h10l1-14"/><path d="M9 7V4h6v3"/>'
+  } as const;
+  return `<svg class="resource-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
 }
 
-function resourcePagination(page: number, pageSize: number, total: number, path: string): string {
+function resourceActionButtons(resource: Resource, admin: boolean): string {
+  const base = `/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}`;
+  const filename = escapeHtml(resource.original_filename);
+  const open = `<a class="resource-action" href="${base}/download" target="_blank" rel="noopener noreferrer" aria-label="Open ${filename}" title="Open">${resourceIcon("open")}</a>`;
+  const download = `<a class="resource-action" href="${base}/download?download=1" aria-label="Download ${filename}" title="Download">${resourceIcon("download")}</a>`;
+  if (!admin) return `<span class="resource-actions">${open}${download}</span>`;
+  const details = `<a class="resource-action" href="${base}" aria-label="View details for ${filename}" title="Details">${resourceIcon("details")}</a>`;
+  const deleteAction = `<button class="resource-action resource-action-danger" type="button" data-resource-delete-trigger="resource-delete-${encodeURIComponent(resource.id)}" data-resource-delete-confirm="Delete &quot;${filename}&quot;? This removes the resource from the student's portal." aria-label="Delete ${filename}" title="Delete">${resourceIcon("delete")}</button>`;
+  return `<span class="resource-actions">${open}${download}${details}${deleteAction}</span>`;
+}
+
+function resourceRows(resources: Resource[], options: { admin?: boolean; csrfToken?: string; filtered?: boolean } = {}): string {
+  if (!resources.length) {
+    return options.filtered
+      ? `<div class="empty-state compact-empty"><h2>No resources match your filters.</h2><a class="button secondary" href="/learn/admin/resources">Clear filters</a></div>`
+      : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Add a document for a student or attach it to a lesson.</p><a class="button" href="/learn/admin/resources/new">Add resource</a></div>`;
+  }
+
+  const admin = options.admin === true;
+  const checkColumn = admin ? "<th class=\"resource-select-column\"><span class=\"sr-only\">Select</span><input type=\"checkbox\" data-resource-select-all aria-label=\"Select all visible resources\"></th>" : "";
+  const rows = resources.map((resource) => {
+    const filename = escapeHtml(resource.original_filename);
+      const deleteForm = admin
+        ? `<form id="resource-delete-${encodeURIComponent(resource.id)}" method="post" action="/learn/admin/resources/${encodeURIComponent(resource.id)}/delete" class="resource-hidden-form" data-resource-delete-confirm="Delete &quot;${filename}&quot;? This removes the resource from the student's portal.">${hiddenCsrf(options.csrfToken ?? "")}</form>`
+      : "";
+    return `<tr>${admin ? `<td class="resource-select-column" data-label="Select"><input type="checkbox" name="resourceId" value="${escapeHtml(resource.id)}" form="resource-bulk-delete-form" data-resource-select aria-label="Select ${filename}"></td>` : ""}<td data-label="File"><strong class="resource-filename" title="${filename}">${filename}</strong><small class="resource-meta">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</small></td><td data-label="Student">${escapeHtml(resource.student_name ?? "Student")}</td><td data-label="Lesson">${escapeHtml(resourceLessonLabel(resource))}</td><td data-label="Uploaded">${escapeHtml(resourceDate(resource))}</td><td data-label="Actions">${resourceActionButtons(resource, admin)}${deleteForm}</td></tr>`;
+  }).join("");
+  return `<div class="table-wrap resource-list-table"><table><thead><tr>${checkColumn}<th>File</th><th>Student</th><th>Lesson</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function resourceFilterForm(filters: ResourceFilters, students: Student[], lessons: Lesson[]): string {
+  const activeStudents = students.filter((student) => student.status === "ACTIVE");
+  const activeStudentIds = new Set(activeStudents.map((student) => student.id));
+  const availableLessons = lessons.filter((lesson) => activeStudentIds.has(lesson.student_id) && (!filters.studentId || lesson.student_id === filters.studentId));
+  const option = (value: string, label: string, selected: boolean) => `<option value="${escapeHtml(value)}"${selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  const lessonOptions = availableLessons.map((lesson) => `<option value="${escapeHtml(lesson.id)}" data-student-id="${escapeHtml(lesson.student_id)}"${lesson.id === filters.lessonId ? " selected" : ""}>${escapeHtml(`${lesson.student_name ?? "Student"} · ${bookingDate(lesson)}`)}</option>`).join("");
+  return `<form class="resource-filter-form" method="get" action="/learn/admin/resources"><label for="resource-search">Search files<span class="sr-only"> by filename or student</span><input id="resource-search" type="search" name="q" value="${escapeHtml(filters.search)}" placeholder="Search files…" autocomplete="off"></label><label for="resource-student-filter">Student<select id="resource-student-filter" name="student" data-resource-filter><option value="">All students</option>${activeStudents.map((student) => option(student.id, student.name, student.id === filters.studentId)).join("")}</select></label><label for="resource-lesson-filter">Lesson<select id="resource-lesson-filter" name="lesson" data-resource-filter><option value="">All lessons</option>${lessonOptions}</select></label><label for="resource-type-filter">Type<select id="resource-type-filter" name="type" data-resource-filter>${option("", "All types", !filters.type)}${option("pdf", "PDF", filters.type === "pdf")}${option("docx", "Word document", filters.type === "docx")}${option("text", "Text", filters.type === "text")}${option("image", "Image", filters.type === "image")}</select></label><label for="resource-added-filter">Added<select id="resource-added-filter" name="added" data-resource-filter>${option("any", "Any time", filters.added === "any")}${option("today", "Today", filters.added === "today")}${option("7", "Last 7 days", filters.added === "7")}${option("30", "Last 30 days", filters.added === "30")}</select></label><label for="resource-sort-filter">Sort<select id="resource-sort-filter" name="sort" data-resource-filter>${option("newest", "Newest first", filters.sort === "newest")}${option("oldest", "Oldest first", filters.sort === "oldest")}${option("filename-asc", "Filename A–Z", filters.sort === "filename-asc")}${option("filename-desc", "Filename Z–A", filters.sort === "filename-desc")}</select></label><button class="button secondary resource-filter-clear" type="reset" data-resource-filter-clear>Clear filters</button></form>`;
+}
+
+function resourceSelectionToolbar(): string {
+  return `<div class="resource-selection-toolbar" data-resource-selection-toolbar hidden><span data-resource-selection-count>0 resources selected</span><button class="button danger" type="submit" form="resource-bulk-delete-form" data-resource-bulk-delete>${resourceIcon("delete")}<span>Delete selected</span></button></div>`;
+}
+
+function resourcePagination(page: number, pageSize: number, total: number, path: string, filters: ResourceFilters): string {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const first = total ? (page - 1) * pageSize + 1 : 0;
   const last = total ? Math.min(page * pageSize, total) : 0;
-  const separator = path.includes("?") ? "&" : "?";
+  const baseQuery = resourceFilterQuery(filters);
   const link = (nextPage: number, text: string, disabled: boolean) =>
-    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link" href="${path}${separator}page=${nextPage}&size=${pageSize}">${text}</a>`;
+    disabled ? `<span class="pagination-link is-disabled" aria-disabled="true">${text}</span>` : `<a class="pagination-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${nextPage}&size=${pageSize}">${text}</a>`;
   const numbers = pageCount <= 7
     ? Array.from({ length: pageCount }, (_, index) => index + 1)
     : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
@@ -322,10 +451,10 @@ function resourcePagination(page: number, pageSize: number, total: number, path:
     if (number - previous > 1) pageLinks.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
     pageLinks.push(number === page
       ? `<span class="pagination-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link" href="${path}${separator}page=${number}&size=${pageSize}">${number}</a>`);
+      : `<a class="pagination-link" href="${path}${baseQuery}${baseQuery ? "&" : "?"}page=${number}&size=${pageSize}">${number}</a>`);
     previous = number;
   }
-  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label><select id="resources-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  return `<footer class="list-footer"><div class="result-range">Showing ${first}–${last} of ${total}</div><nav class="pagination" aria-label="Resources pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? pageLinks.join("") : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav><form class="page-size-form" method="get" action="${path}"><label for="resources-page-size">Show per page</label>${Array.from(new URLSearchParams(baseQuery).entries()).map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("")}<select id="resources-page-size" class="page-size-select" name="size" onchange="this.form.submit()">${RESOURCE_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("")}</select><input type="hidden" name="page" value="1"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
 }
 
 type ResourceUploadContext =
@@ -386,7 +515,9 @@ function resourceUploadForm(
 
 function resourceSummary(resource: Resource, admin: boolean, csrfToken: string): string {
  const lesson = resource.lesson_start_at ? `Lesson · ${resourceLessonLabel(resource)}` : "General student resource";
- return `<section class="card resource-detail"><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div><a class="button" href="/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></div><div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Lesson</strong><br>${escapeHtml(lesson)}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div>${admin ? `<details class="delete-confirmation"><summary>Delete resource</summary><p>Delete “${escapeHtml(resource.original_filename)}”?</p><form method="post" action="/learn/admin/resources/${encodeURIComponent(resource.id)}/delete">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Delete resource</button></form></details>` : ""}</section>`;
+ const base = `/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}`;
+ const actionBar = `<div class="resource-detail-actions"><a class="button" href="${base}/download" target="_blank" rel="noopener noreferrer">${resourceIcon("open")}<span>Open</span></a><a class="button secondary" href="${base}/download?download=1">${resourceIcon("download")}<span>Download</span></a>${admin ? `<details class="delete-confirmation"><summary>${resourceIcon("delete")}<span>Delete</span></summary><p>Delete “${escapeHtml(resource.original_filename)}”? This removes the resource from the student's portal.</p><form method="post" action="${base}/delete">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Delete resource</button></form></details>` : ""}</div>`;
+ return `<section class="card resource-detail"><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div></div>${actionBar}<div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Lesson</strong><br>${escapeHtml(lesson)}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div></section>`;
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
@@ -593,6 +724,12 @@ async function resourceUpload(
   if ("error" in filePolicy) return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, filePolicy.error, values));
   const bytes = new Uint8Array(await fileValue.arrayBuffer());
   if (!hasExpectedSignature(filePolicy.extension, bytes)) return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "The file contents do not match the selected document type.", values));
+  if (lesson) {
+    const currentLessonBytes = await activeResourceBytesForLesson(env.DB as D1Database, lesson.id);
+    if (currentLessonBytes + bytes.byteLength > MAX_LESSON_STORAGE_BYTES) {
+      return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "This lesson's resource storage limit has been reached. Delete an existing resource before uploading another.", values));
+    }
+  }
   const now = new Date();
   const resourceId = crypto.randomUUID();
   const storageKey = `resources/${resourceId}/original`;
@@ -641,7 +778,8 @@ async function downloadResource(request: Request, env: Env, resource: Resource):
   const object = await env.RESOURCES_BUCKET.get(resource.storage_key);
   if (!object) return messagePage("Resource unavailable", "This resource is no longer available.", 404);
   const headers = privateHeaders(resource.content_type);
-  headers.set("Content-Disposition", `${resource.content_type === "application/pdf" ? "inline" : "attachment"}; filename="${sanitizeHeaderFilename(resource.original_filename)}"`);
+  const forceDownload = new URL(request.url).searchParams.get("download") === "1";
+  headers.set("Content-Disposition", `${!forceDownload && canRenderInline(resource.content_type) ? "inline" : "attachment"}; filename="${sanitizeHeaderFilename(resource.original_filename)}"`);
   headers.set("Content-Length", String(resource.size_bytes));
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers });
@@ -664,14 +802,22 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
   if (route === "admin-resources") {
     const { page, pageSize } = parseResourcePagination(url);
-    const search = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
-    const total = await countResources(db, { search });
+    const filters = parseResourceFilters(url);
+    const students = await listStudents(db);
+    const lessons = await listLessons(db);
+    const options = resourceListOptions(filters, page, pageSize);
+    const total = await countResources(db, options);
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
-    const resources = await listResources(db, { search, limit: pageSize, offset: (safePage - 1) * pageSize });
-    const query = search ? `?q=${encodeURIComponent(search)}` : "";
-    const heading = `<div class="page-heading"><div><h1>Resources</h1><p class="lede">Documents uploaded for students and lessons.</p></div>${buttonLink("/learn/admin/resources/new", "Add resource")}</div><form class="resource-filter-form" method="get" action="/learn/admin/resources"><label>Search<input type="search" name="q" value="${escapeHtml(search)}" placeholder="Filename or student"></label><button class="button secondary" type="submit">Search</button></form>`;
-    return appPage(active.user, csrfToken, "Resources", `${heading}${resourceRows(resources)}${resourcePagination(safePage, pageSize, total, `/learn/admin/resources${query}`)}`);
+    const resources = await listResources(db, { ...options, offset: (safePage - 1) * pageSize });
+    const hasFilters = Boolean(filters.search || filters.studentId || filters.lessonId || filters.type || filters.added !== "any" || filters.sort !== "newest");
+    const deleted = Number(url.searchParams.get("deleted") ?? 0);
+    const failed = Number(url.searchParams.get("failed") ?? 0);
+    const feedback = deleted || failed
+      ? `<p class="${failed ? "form-error" : "form-success"}" role="status">${deleted ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted.` : ""}${deleted && failed ? " " : ""}${failed ? `${failed} resource${failed === 1 ? "" : "s"} need${failed === 1 ? "s" : ""} attention.` : ""}</p>`
+      : "";
+    const heading = `<div class="page-heading"><div><h1>Resources</h1><p class="lede">Find private teaching material by filename, student, lesson, type or date.</p></div>${buttonLink("/learn/admin/resources/new", "Add resource")}</div>${feedback}${resourceFilterForm(filters, students, lessons)}${resources.length ? resourceSelectionToolbar() : ""}<form id="resource-bulk-delete-form" method="post" action="/learn/admin/resources/bulk-delete">${hiddenCsrf(csrfToken)}${resourceFilterHiddenInputs(filters, safePage, pageSize)}</form>`;
+    return appPage(active.user, csrfToken, "Resources", `${heading}${resourceRows(resources, { admin: true, csrfToken, filtered: hasFilters })}${resourcePagination(safePage, pageSize, total, "/learn/admin/resources", filters)}`);
   }
   if (route === "admin-resource-form") {
     const students = await listStudents(db);
@@ -688,6 +834,41 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (request.method === "GET") return appPage(active.user, csrfToken, "Add resource", resourceUploadForm(csrfToken, students, lessons, context));
     if (request.method !== "POST") return messagePage("Request not verified", "Refresh the page and try again.", 403);
     return withSessionCookies(await resourceUpload(request, env, active, students, lessons), undefined);
+  }
+  if (route === "admin-resource-bulk-delete") {
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    if (!env.RESOURCES_BUCKET) return messagePage("Service unavailable", "Resource storage is not configured for this environment.", 503);
+    const form = await parseForm(request);
+    if (!form) return messagePage("Invalid request", "The submitted selection is invalid.", 400);
+    const ids = form.getAll("resourceId").filter((value): value is string => typeof value === "string").map((value) => value.trim()).filter(Boolean);
+    const uniqueIds = [...new Set(ids)].slice(0, 48);
+    if (!uniqueIds.length) return redirect("/learn/admin/resources");
+    let deleted = 0;
+    let failed = 0;
+    for (const id of uniqueIds) {
+      const resource = await findResource(db, id);
+      if (!resource || resource.deleted_at || resource.status !== "available") {
+        failed++;
+        continue;
+      }
+      try {
+        await env.RESOURCES_BUCKET.delete(resource.storage_key);
+        await deleteResourceMetadata(db, resource.id, new Date().toISOString());
+        deleted++;
+      } catch (error) {
+        failed++;
+      }
+    }
+    const resultQuery = new URLSearchParams();
+    for (const key of ["q", "student", "lesson", "type", "added", "sort", "size"]) {
+      const value = formText(form, key);
+      if (value) resultQuery.set(key, value);
+    }
+    const requestedPage = Number(formText(form, "page"));
+    if (Number.isInteger(requestedPage) && requestedPage > 0) resultQuery.set("page", String(requestedPage));
+    resultQuery.set("deleted", String(deleted));
+    if (failed) resultQuery.set("failed", String(failed));
+    return redirect(`/learn/admin/resources?${resultQuery.toString()}`);
   }
   if (route === "admin-resource" || route === "admin-resource-download" || route === "admin-resource-delete") {
     const id = resourceIdFromPath(url.pathname);
@@ -874,7 +1055,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   }
   if (route === "student-resources") {
     const resources = await listResourcesForStudent(db, active.user.id);
-    return appPage(active.user, csrfToken, "Resources", `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Documents shared with you for your lessons and study.</p></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="card resource-student-item"><div><h2>${escapeHtml(resource.original_filename)}</h2><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}${resource.lesson_start_at ? ` · Lesson · ${escapeHtml(resourceLessonDate(resource.lesson_start_at))}` : ""}</p></div><a class="button" href="/learn/student/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></article>`).join("")}</div>` : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Your tutor's worksheets, notes, and other shared material will appear here.</p></div>`}`);
+    return appPage(active.user, csrfToken, "Resources", `<div class="page-heading"><div><p class="eyebrow">PRIVATE LEARNING MATERIALS</p><h1>Resources</h1><p class="lede">Documents shared with you for your lessons and study.</p></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="card resource-student-item"><div><h2>${escapeHtml(resource.original_filename)}</h2><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}${resource.lesson_start_at ? ` · Lesson · ${escapeHtml(resourceLessonDate(resource.lesson_start_at))}` : ""}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<div class="empty-state compact-empty"><h2>No resources yet.</h2><p>Your tutor's worksheets, notes, and other shared material will appear here.</p></div>`}`);
   }
   if (route === "student-resource-download") {
     const id = resourceIdFromPath(url.pathname);
@@ -915,7 +1096,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const lesson = await findLessonForUser(db, id, active.user.id);
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
     const resources = await listResourcesForLessonForStudent(db, lesson.id, active.user.id);
-    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div><a class="button secondary" href="/learn/student/resources/${encodeURIComponent(resource.id)}/download">${resource.content_type === "application/pdf" ? "Open" : "Download"}</a></article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
+    return appPage(active.user, csrfToken, "Lesson", `<p class="eyebrow">MY LESSON</p><h1>${escapeHtml(formatLessonTime(lesson))}</h1><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${lesson.external_url ? `<a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${escapeHtml(lesson.external_url)}</a>` : "Not provided"}</p></section><section class="card resource-section"><div class="section-heading"><div><p class="eyebrow">LESSON MATERIALS</p><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }

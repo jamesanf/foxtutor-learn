@@ -23,3 +23,7 @@ Query parameters are convenience only. The Worker resolves the lesson and studen
 ## Upload surface
 
 The file is the visual centre of the workflow. A keyboard-accessible styled dropzone supports click-to-browse, drag-and-drop, explicit accepted formats and the 25 MB limit. After selection it shows filename, derived type, human-readable size and a Change file action. Submission disables the primary action and reports `Uploading…`; successful uploads show a concise success page with View resource and context-appropriate return navigation.
+
+## Phase 3.3 follow-on
+
+The subsequent resource-manager refinement keeps this upload boundary unchanged. Filtering, page-scoped selection, bulk deletion, icon actions and explicit Open/Download/Details controls are implemented on the admin/list surfaces, while private R2 authorization and the contextual Add Resource workflow remain the Phase 3.1/3.2 foundation.

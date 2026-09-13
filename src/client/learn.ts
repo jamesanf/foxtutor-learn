@@ -152,6 +152,85 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     updateEndPreview();
   });
 
+  document.querySelectorAll<HTMLFormElement>(".resource-filter-form").forEach((form) => {
+    type FilterSelect = Element & { value: string; options: HTMLCollectionOf<HTMLOptionElement> };
+    const isFilterSelect = (element: Element | null): element is FilterSelect => element?.tagName === "SELECT";
+    const studentElement = form.querySelector("#resource-student-filter");
+    const lessonElement = form.querySelector("#resource-lesson-filter");
+    const student = isFilterSelect(studentElement) ? studentElement : null;
+    const lesson = isFilterSelect(lessonElement) ? lessonElement : null;
+    const submitFilters = () => {
+      const page = form.querySelector<HTMLInputElement>('input[name="page"]');
+      page?.remove();
+      form.submit();
+    };
+    Array.from(form.querySelectorAll("[data-resource-filter]")).filter(isFilterSelect).forEach((control) => {
+      control.addEventListener("change", () => {
+        if (control === student && lesson) {
+          for (const option of Array.from(lesson.options)) {
+            if (!option.dataset.studentId) continue;
+            const allowed = !student.value || option.dataset.studentId === student.value;
+            option.hidden = !allowed;
+            option.disabled = !allowed;
+            if (!allowed && option.selected) lesson.value = "";
+          }
+        }
+        submitFilters();
+      });
+    });
+    form.querySelector<HTMLInputElement>('input[type="search"]')?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitFilters();
+      }
+    });
+    form.querySelector<HTMLButtonElement>("[data-resource-filter-clear]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.location.href = form.getAttribute("action") ?? "/learn/admin/resources";
+    });
+  });
+
+  const resourceSelectionToolbar = document.querySelector<HTMLElement>("[data-resource-selection-toolbar]");
+  const resourceSelection = Array.from(document.querySelectorAll<HTMLInputElement>("[data-resource-select]"));
+  const selectAll = document.querySelector<HTMLInputElement>("[data-resource-select-all]");
+  const bulkDeleteForm = document.querySelector<HTMLFormElement>("#resource-bulk-delete-form");
+  const updateResourceSelection = () => {
+    const selected = resourceSelection.filter((checkbox) => checkbox.checked);
+    if (resourceSelectionToolbar) {
+      resourceSelectionToolbar.hidden = selected.length === 0;
+      const count = resourceSelectionToolbar.querySelector("[data-resource-selection-count]");
+      if (count) count.textContent = `${selected.length} resource${selected.length === 1 ? "" : "s"} selected`;
+    }
+    if (selectAll) {
+      selectAll.checked = selected.length > 0 && selected.length === resourceSelection.length;
+      selectAll.indeterminate = selected.length > 0 && selected.length < resourceSelection.length;
+    }
+    for (const checkbox of resourceSelection) {
+      checkbox.closest("tr")?.classList.toggle("is-selected", checkbox.checked);
+    }
+  };
+  selectAll?.addEventListener("change", () => {
+    for (const checkbox of resourceSelection) checkbox.checked = selectAll.checked;
+    updateResourceSelection();
+  });
+  resourceSelection.forEach((checkbox) => checkbox.addEventListener("change", updateResourceSelection));
+  bulkDeleteForm?.addEventListener("submit", (event) => {
+    const selected = resourceSelection.filter((checkbox) => checkbox.checked);
+    if (!selected.length) {
+      event.preventDefault();
+      return;
+    }
+    if (!confirm(`Delete ${selected.length} resource${selected.length === 1 ? "" : "s"}? These files will be removed from the resource library.`)) event.preventDefault();
+  });
+  document.querySelectorAll<HTMLButtonElement>("[data-resource-delete-trigger]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!confirm(button.dataset.resourceDeleteConfirm ?? "Delete this resource?")) return;
+      const formId = button.dataset.resourceDeleteTrigger;
+      const form = formId ? document.getElementById(formId) : null;
+      if (form instanceof HTMLFormElement) form.submit();
+    });
+  });
+
   document.querySelectorAll<HTMLFormElement>(".resource-upload-form").forEach((form) => {
     const student = form.elements.namedItem("studentId");
     const lessonElement = form.querySelector("[data-resource-lesson-select]");

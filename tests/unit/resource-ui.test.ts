@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const workerSource = readFileSync("src/worker/index.ts", "utf8");
 const clientSource = readFileSync("src/client/learn.ts", "utf8");
 const cssSource = readFileSync("public/learn.css", "utf8");
+const resourceDbSource = readFileSync("src/db/resources.ts", "utf8");
 
 describe("resource UX contract", () => {
   it("removes category from application code and resource surfaces", () => {
@@ -38,5 +39,25 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".resource-fields { display: grid; grid-template-columns: repeat(2");
     expect(cssSource).toContain(".resource-fields { grid-template-columns: 1fr; gap: 0; }");
     expect(cssSource).toContain("overflow: hidden");
+  });
+
+  it("provides server-side filtering, page-scoped selection and deliberate actions", () => {
+    expect(workerSource).toContain('name="student"');
+    expect(workerSource).toContain('name="lesson"');
+    expect(workerSource).toContain('name="type"');
+    expect(workerSource).toContain('name="added"');
+    expect(workerSource).toContain("resourceFilterHiddenInputs");
+    expect(workerSource).toContain("/learn/admin/resources/bulk-delete");
+    expect(workerSource).toContain("Select all visible resources");
+    expect(workerSource).toContain('aria-label="Open ${filename}"');
+    expect(workerSource).toContain('aria-label="Download ${filename}"');
+    expect(workerSource).toContain('aria-label="View details for ${filename}"');
+    expect(workerSource).toContain('aria-label="Delete ${filename}"');
+    expect(workerSource).toContain('target="_blank" rel="noopener noreferrer"');
+    expect(clientSource).toContain("data-resource-selection-toolbar");
+    expect(clientSource).toContain("Delete ${selected.length} resource");
+    expect(resourceDbSource).toContain("r.content_type IN");
+    expect(resourceDbSource).toContain("r.created_at >= ?");
+    expect(resourceDbSource).toContain("LOWER(r.original_filename)");
   });
 });

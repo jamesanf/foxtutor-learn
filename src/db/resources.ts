@@ -25,6 +25,11 @@ export interface ResourceListOptions {
   limit: number;
   offset: number;
   search?: string;
+  studentId?: string;
+  lessonId?: string;
+  contentTypes?: string[];
+  createdAfter?: string;
+  sort?: "newest" | "oldest" | "filename-asc" | "filename-desc";
 }
 
 const resourceColumns = `
@@ -35,13 +40,36 @@ const resourceColumns = `
 `;
 
 export async function listResources(db: D1Database, options: ResourceListOptions): Promise<Resource[]> {
-  const clauses = ["r.deleted_at IS NULL"];
+  const clauses = ["r.deleted_at IS NULL", "r.status = 'available'"];
   const bindings: (string | number)[] = [];
   if (options.search) {
-    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) OR LOWER(s.name) LIKE LOWER(?))");
-    const search = `%${options.search}%`;
+    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\')");
+    const search = `%${options.search.replace(/[%_]/g, (character) => `\\${character}`)}%`;
     bindings.push(search, search);
   }
+  if (options.studentId) {
+    clauses.push("r.student_id = ?");
+    bindings.push(options.studentId);
+  }
+  if (options.lessonId) {
+    clauses.push("r.lesson_id = ?");
+    bindings.push(options.lessonId);
+  }
+  if (options.contentTypes?.length) {
+    clauses.push(`r.content_type IN (${options.contentTypes.map(() => "?").join(", ")})`);
+    bindings.push(...options.contentTypes);
+  }
+  if (options.createdAfter) {
+    clauses.push("r.created_at >= ?");
+    bindings.push(options.createdAfter);
+  }
+  const orderBy = options.sort === "oldest"
+    ? "r.created_at ASC, r.id ASC"
+    : options.sort === "filename-asc"
+      ? "LOWER(r.original_filename) ASC, r.id ASC"
+      : options.sort === "filename-desc"
+        ? "LOWER(r.original_filename) DESC, r.id DESC"
+        : "r.created_at DESC, r.id DESC";
   bindings.push(options.limit, options.offset);
   const result = await db
     .prepare(
@@ -50,7 +78,7 @@ export async function listResources(db: D1Database, options: ResourceListOptions
        LEFT JOIN students s ON s.id = r.student_id
        LEFT JOIN lessons l ON l.id = r.lesson_id
        WHERE ${clauses.join(" AND ")}
-       ORDER BY r.created_at DESC, r.id DESC
+       ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`
     )
     .bind(...bindings)
@@ -58,13 +86,29 @@ export async function listResources(db: D1Database, options: ResourceListOptions
   return result.results;
 }
 
-export async function countResources(db: D1Database, options: Pick<ResourceListOptions, "search">): Promise<number> {
-  const clauses = ["r.deleted_at IS NULL"];
+export async function countResources(db: D1Database, options: Omit<ResourceListOptions, "limit" | "offset" | "sort">): Promise<number> {
+  const clauses = ["r.deleted_at IS NULL", "r.status = 'available'"];
   const bindings: string[] = [];
   if (options.search) {
-    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) OR LOWER(s.name) LIKE LOWER(?))");
-    const search = `%${options.search}%`;
+    clauses.push("(LOWER(r.original_filename) LIKE LOWER(?) ESCAPE '\\' OR LOWER(s.name) LIKE LOWER(?) ESCAPE '\\')");
+    const search = `%${options.search.replace(/[%_]/g, (character) => `\\${character}`)}%`;
     bindings.push(search, search);
+  }
+  if (options.studentId) {
+    clauses.push("r.student_id = ?");
+    bindings.push(options.studentId);
+  }
+  if (options.lessonId) {
+    clauses.push("r.lesson_id = ?");
+    bindings.push(options.lessonId);
+  }
+  if (options.contentTypes?.length) {
+    clauses.push(`r.content_type IN (${options.contentTypes.map(() => "?").join(", ")})`);
+    bindings.push(...options.contentTypes);
+  }
+  if (options.createdAfter) {
+    clauses.push("r.created_at >= ?");
+    bindings.push(options.createdAfter);
   }
   const result = await db
     .prepare(
@@ -76,6 +120,14 @@ export async function countResources(db: D1Database, options: Pick<ResourceListO
     .bind(...bindings)
     .first<{ count: number | string }>();
   return Number(result?.count ?? 0);
+}
+
+export async function activeResourceBytesForLesson(db: D1Database, lessonId: string): Promise<number> {
+  const result = await db
+    .prepare("SELECT COALESCE(SUM(size_bytes), 0) AS bytes FROM resources WHERE lesson_id = ? AND deleted_at IS NULL AND status IN ('uploading', 'available')")
+    .bind(lessonId)
+    .first<{ bytes: number | string }>();
+  return Number(result?.bytes ?? 0);
 }
 
 export async function listResourcesForStudent(db: D1Database, userId: string): Promise<Resource[]> {

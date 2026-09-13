@@ -500,6 +500,14 @@ The master implementation adds `0004_resources.sql`, the private `RESOURCES_BUCK
 
 The resource infrastructure remains the Phase 3.1 baseline. The Add Resource workflow now uses server-validated lesson/student context, a generic two-column metadata grid, a styled keyboard-accessible file dropzone, selected-file metadata, upload progress, recoverable errors and context-aware success navigation. Category is removed from application code, requests, filters, lists and detail views. The `category` column from `0004_resources.sql` is retained unused for schema compatibility; no destructive migration was created. Commit `74e9ddd266e69cee3c6bf6d1245f02d17572c755` is deployed as Worker `86417b0e-3656-4087-b787-a0c5cb1014f5`. Authenticated browser verification, controlled fixture cleanup and the `phase-3.2-complete` tag remain pending.
 
+### Phase 3.3 current state — 2026-09-13
+
+The admin resource manager now supports server-side filename/student search, active-student and student-dependent lesson filters, derived type and recent-added filters, compact sorting, filter-preserving pagination, page-scoped selection and bulk deletion. Row actions are accessible icon controls with explicit Open, Download, Details and Delete semantics; Open uses an authenticated new tab and Download forces an attachment response. Student and lesson resource surfaces retain read-only Open/Download access.
+
+The hard per-file limit remains 25 MiB and a single configured 25 MiB active-resource allowance is enforced per lesson before upload. PDF compression is **DEFERRED WITH DOCUMENTED TECHNICAL REASON**: this Worker-only repository has no verified Cloudflare-native asynchronous private PDF processor or approved processing credentials, and a synchronous CPU-heavy or external public-document service would violate the privacy and execution-boundary requirements. Retention housekeeping is also deliberately **DEFERRED WITH DOCUMENTED OPERATIONAL DECISION**: `retention_until` records a review horizon, but active learning material is not automatically deleted. Student deactivation remains non-destructive and existing SQL ownership predicates prevent inactive students from accessing resources.
+
+Local implementation gates are covered by the resource policy, migration, authorization and UI contracts. Authenticated production browser acceptance, controlled fixture cleanup, screenshots, deployment of the final commit and any Phase 3 completion tag remain open.
+
 ### Objective
 
 Make the lesson the student's permanent learning record while preventing the application from becoming a general-purpose file drive.

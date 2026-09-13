@@ -27,3 +27,7 @@ The resource UX contract asserts that application code contains no active catego
 | Security | Existing admin-only mutation and student ownership tests remain green |
 
 Production acceptance still requires an authenticated browser session and controlled fixture cleanup; no real user content is used for that verification.
+
+## Phase 3.3 follow-on
+
+Phase 3.3 adds separate contracts for server-side resource filters, filter-preserving pagination, page-scoped selection, bulk deletion, icon accessibility, authenticated new-tab Open, explicit Download behavior and student read-only actions. The Phase 3.2 uploader regression matrix remains required and is not replaced by the manager work.

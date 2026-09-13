@@ -32,3 +32,7 @@ Production acceptance is not claimed by this record until the authenticated brow
 - R2: existing private `foxtutor-learn-resources` binding preserved
 - Public smoke: PASS after deployment
 - Authenticated Add Resource, screenshot review, resource security regression and controlled fixture cleanup: pending because this environment has no authenticated production browser session or Chromium runtime
+
+## Phase 3.3 handoff
+
+Phase 3.3 is a local follow-on to this deployed boundary. It does not claim the Phase 3.2 authenticated gate, does not alter the existing private bucket or migration, and must be deployed and accepted as one exact final commit before any Phase 3 completion tag is considered.

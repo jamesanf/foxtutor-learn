@@ -19,6 +19,7 @@ export type LearnRoute =
   | "admin-resource-form"
   | "admin-resource"
   | "admin-resource-delete"
+  | "admin-resource-bulk-delete"
   | "admin-resource-download"
   | "admin-student-form"
   | "admin-student"
@@ -51,6 +52,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin/resources") return "admin-resources";
   if (path === "/learn/admin/resources/new") return "admin-resource-form";
   if (/^\/learn\/admin\/resources\/[^/]+\/download$/.test(path)) return "admin-resource-download";
+  if (path === "/learn/admin/resources/bulk-delete") return "admin-resource-bulk-delete";
   if (/^\/learn\/admin\/resources\/[^/]+\/delete$/.test(path)) return "admin-resource-delete";
   if (/^\/learn\/admin\/resources\/[^/]+$/.test(path)) return "admin-resource";
   if (path === "/learn/admin/students/new") return "admin-student-form";
