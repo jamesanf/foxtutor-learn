@@ -10,7 +10,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 - Removed the separate report attachment upload action and success-page redirect.
 - Reused the existing D1/R2 resource validation, idempotency and `RESOURCE_ADDED` notification flow before completing Send report; Save draft remains report-only.
 - Preserved the report draft and displayed an inline error when attachment processing fails.
-- Committed as `11507c6` and deployed as Worker `62c8590c-bf1d-4370-803c-a25eddbfa378`.
+- Initial implementation committed as `11507c6` and deployed as Worker `62c8590c-bf1d-4370-803c-a25eddbfa378`; the send-only correction is committed as `5a795be` and deployed as Worker `5194a769-d6cd-4edb-83c4-9e911ddbff6d`.
 
 ### 2026-09-13 — Phase 4 documentation reconciliation
 

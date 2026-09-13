@@ -28,9 +28,9 @@ migrations through `0007_notifications.sql`. No `phase-4-complete` tag existed.
 
 Migrations `0008_structured_lesson_reports.sql` and
 `0009_international_students.sql` were applied to the production database on
-`2026-09-13`. The current deployed source commit is `11507c6`, synchronized
+`2026-09-13`. The current deployed source commit is `5a795be`, synchronized
 with `origin/main`, and is deployed as Worker version
-`62c8590c-bf1d-4370-803c-a25eddbfa378`. A remote migration check reports no
+`5194a769-d6cd-4edb-83c4-9e911ddbff6d`. A remote migration check reports no
 migrations pending. The release includes the report editor refinements,
 start-only report time, compact auto-growing fields and lesson attachments
 submitted with the report action through the existing resource/R2 pipeline.

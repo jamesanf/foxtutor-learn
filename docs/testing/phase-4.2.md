@@ -36,8 +36,8 @@ git diff --check         PASS
 ```
 
 Production D1 reports no migrations pending after applying `0009`. The
-current source commit `11507c6` is deployed as Worker
-`62c8590c-bf1d-4370-803c-a25eddbfa378`. Production deployment and
+current source commit `5a795be` is deployed as Worker
+`5194a769-d6cd-4edb-83c4-9e911ddbff6d`. Production deployment and
 unauthenticated smoke are confirmed, but the acceptance matrix below still
 requires authenticated browser, Fox Mail, PDF visual and no-storage evidence
 before closure.
