@@ -861,6 +861,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       const selected = selectedFiles[0];
       form.classList.toggle("has-file", Boolean(selected));
       dropzone.classList.toggle("has-file", Boolean(selected));
+      if (preview instanceof HTMLOutputElement) preview.hidden = selectedFiles.length === 0;
       if (submit?.hasAttribute("data-upload-submit")) submit.hidden = !selected;
       if (!selectedFiles.length) {
         preview.replaceChildren();

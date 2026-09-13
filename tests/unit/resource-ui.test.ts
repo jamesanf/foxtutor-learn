@@ -52,11 +52,13 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain("if (uploadResponse.status !== 204)");
     expect(workerSource).toContain("data-report-resource-delete");
     expect(workerSource).toContain("/learn/admin/resources/${encodeURIComponent(resource.id)}/delete");
+    expect(workerSource).toContain('data-file-preview hidden aria-live="polite"');
     expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
     expect(clientSource).toContain('".resource-upload-form, [data-report-attachment-form]"');
     expect(clientSource).toContain('form.elements.namedItem("attachments")');
     expect(clientSource).toContain("data-report-resource-delete");
     expect(clientSource).toContain("Removing attachment");
+    expect(clientSource).toContain("preview.hidden = selectedFiles.length === 0");
     expect(cssSource).toContain(".report-attachments-grid.has-files");
     expect(cssSource).toContain("align-items: start");
     expect(cssSource).toContain(".report-attachment-list .file-preview { margin-top: 0; }");
