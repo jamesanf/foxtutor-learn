@@ -142,9 +142,9 @@ function navigation(role: Role): string {
 
 function appPage(user: AppUser, csrfToken: string, title: string, content: string): Response {
   const identity = user.role === "ADMIN"
-    ? `<span class="identity-role">ADMIN</span>`
+    ? `<span class="header-control identity-role">ADMIN</span>`
     : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
-  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div>`;
+  const body = `<div class="app-shell"><header class="topbar"><a class="brand" href="/learn"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor Learn</strong></span></a><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div></div>`;
   return htmlDocument(title, body);
 }
 

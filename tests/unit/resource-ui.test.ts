@@ -90,12 +90,13 @@ describe("resource UX contract", () => {
 
   it("uses a minimal, non-duplicated product header", () => {
     expect(workerSource).toContain('<strong>FoxTutor Learn</strong>');
-    expect(workerSource).toContain('class="identity-role">ADMIN</span>');
-    expect(workerSource).toContain(">Log out</button>");
+    expect(workerSource).toContain('class="header-control identity-role">ADMIN</span>');
+    expect(workerSource).toContain('class="header-control link-button">Log out</button>');
     expect(workerSource).toContain('<div class="identity">${identity}<form');
     expect(workerSource).not.toContain('<strong>James Fox</strong>');
     expect(workerSource).not.toContain("FoxTutor Learn Admin");
     expect(cssSource).toContain(".identity { display: flex; min-height: 38px; align-items: center");
+    expect(cssSource).toContain(".header-control { display: inline-flex; min-height: 38px; align-items: center; font-family: inherit; font-size: .78rem; font-weight: 700; line-height: 1");
     expect(cssSource).toContain(".identity-role { display: inline-flex; min-height: 38px; align-items: center");
     expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center");
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
