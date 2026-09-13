@@ -399,7 +399,7 @@ function notificationList(
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, pageCount);
   const hrefForPage = (nextPage: number): string => `/learn/admin/notifications?page=${nextPage}&size=${pageSize}${statusQuery}`;
-  const pagination = `<footer class="list-footer notification-pagination"><span class="notification-pagination-spacer"></span><nav class="notification-pagination-nav pagination" aria-label="Notification delivery pagination"><a class="pagination-link pagination-nav-link notification-page-link${safePage <= 1 ? " is-disabled" : ""}"${safePage <= 1 ? ' aria-disabled="true"' : ` href="${hrefForPage(safePage - 1)}"`} aria-label="Previous page">‹</a><span class="notification-page-label">Page ${safePage} of ${pageCount}</span><a class="pagination-link pagination-nav-link notification-page-link${safePage >= pageCount ? " is-disabled" : ""}"${safePage >= pageCount ? ' aria-disabled="true"' : ` href="${hrefForPage(safePage + 1)}"`} aria-label="Next page">›</a></nav><form class="page-size-form" method="get" action="/learn/admin/notifications"><label for="notification-page-size">Show per page</label><select id="notification-page-size" class="page-size-select notification-page-size" name="size">${sizeOptions}</select><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}<noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  const pagination = `<footer class="list-footer notification-pagination"><span class="notification-pagination-spacer"></span>${paginationControls(safePage, pageCount, "Notification delivery", hrefForPage, "notification-page-link")}<form class="page-size-form" method="get" action="/learn/admin/notifications"><label for="notification-page-size">Show per page</label><select id="notification-page-size" class="page-size-select notification-page-size" name="size">${sizeOptions}</select><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}<noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
   return `${summary}${notificationControls(settings, csrfToken)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false" aria-label="Filter delivery log" title="Filter delivery log"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg></button></div></div><div class="notification-filter-panel notification-filter-bar" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div>${body}${pagination}</section>`;
 }
 
@@ -610,33 +610,19 @@ function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, 
   return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
-function paginationPageNumbers(page: number, pageCount: number, hrefForPage: (page: number) => string): string {
-  const numbers = pageCount <= 7
-    ? Array.from({ length: pageCount }, (_, index) => index + 1)
-    : Array.from(new Set([1, Math.max(2, page - 1), page, Math.min(pageCount - 1, page + 1), pageCount])).sort((a, b) => a - b);
-  const output: string[] = [];
-  let previous = 0;
-  for (const number of numbers) {
-    if (number - previous > 1) output.push(`<span class="pagination-ellipsis" aria-hidden="true">…</span>`);
-    output.push(number === page
-      ? `<span class="pagination-link pagination-page-link is-current" aria-current="page">${number}</span>`
-      : `<a class="pagination-link pagination-page-link" href="${hrefForPage(number)}">${number}</a>`);
-    previous = number;
-  }
-  return output.join("");
-}
-
 function paginationControls(
   page: number,
   pageCount: number,
   label: string,
-  hrefForPage: (page: number) => string
+  hrefForPage: (page: number) => string,
+  extraLinkClass = ""
 ): string {
-  const link = (nextPage: number, text: string, disabled: boolean) =>
+  const linkClass = extraLinkClass ? ` ${extraLinkClass}` : "";
+  const link = (nextPage: number, text: string, ariaLabel: string, disabled: boolean) =>
     disabled
-      ? `<span class="pagination-link pagination-nav-link is-disabled" aria-disabled="true">${text}</span>`
-      : `<a class="pagination-link pagination-nav-link" href="${hrefForPage(nextPage)}">${text}</a>`;
-  return `<nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹ Previous", page <= 1)}<span class="pagination-pages">${pageCount > 1 ? paginationPageNumbers(page, pageCount, hrefForPage) : ""}</span>${link(page + 1, "Next ›", page >= pageCount)}</nav>`;
+      ? `<span class="pagination-link pagination-nav-link${linkClass} is-disabled" aria-disabled="true" aria-label="${ariaLabel}">${text}</span>`
+      : `<a class="pagination-link pagination-nav-link${linkClass}" href="${hrefForPage(nextPage)}" aria-label="${ariaLabel}">${text}</a>`;
+  return `<nav class="pagination" aria-label="${escapeHtml(label)} pagination">${link(page - 1, "‹", "Previous page", page <= 1)}<span class="pagination-page-label">Page ${page} of ${pageCount}</span>${link(page + 1, "›", "Next page", page >= pageCount)}</nav>`;
 }
 
 function lessonPagination(page: number, pageSize: number, total: number, path: string, label: string): string {

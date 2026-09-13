@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-13 — Shared compact pagination
+
+- Replaced the oversized numbered pager used by Learn lists with the compact
+  notification-log design: small arrow controls and a `Page X of Y` label.
+- Centralised the markup in the shared `paginationControls` helper so bookings,
+  past lessons, resources, student sections and notifications stay consistent.
+- Preserved the notification log’s dynamic page loading and responsive layout.
+
 ### 2026-09-13 — Student profile manager
 
 - **Status:** deployed as Worker

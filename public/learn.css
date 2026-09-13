@@ -270,15 +270,13 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .lesson-table th:nth-child(4), .lesson-table td:nth-child(4) { width: 14%; }
 .list-footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
 .result-range { color: var(--muted); font-size: .86rem; }
-.pagination { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
-.pagination-pages { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
-.pagination-link { display: inline-flex; min-height: 30px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--action); text-align: center; text-decoration: none; font-size: .78rem; font-weight: 600; line-height: 1.2; }
-.pagination-nav-link { min-height: 32px; padding: 4px 7px; font-size: .74rem; }
-.pagination-page-link { min-width: 30px; padding: 5px 7px; }
-.pagination-link:hover, .pagination-link.is-current { border-color: var(--action); color: white; background: var(--action); }
-.pagination-link.is-disabled { color: #94a3b8; background: var(--soft); cursor: not-allowed; }
+.pagination { display: inline-flex; width: max-content; max-width: 100%; flex: 0 0 auto; align-items: center; justify-content: center; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); }
+.pagination-link { display: inline-flex; min-height: 25px; align-items: center; justify-content: center; border: 0; border-radius: 50%; color: var(--action); text-align: center; text-decoration: none; font-size: .78rem; font-weight: 600; line-height: 1.2; }
+.pagination-nav-link { width: 25px; height: 25px; min-height: 25px; padding: 0; font-size: .95rem; line-height: 1; }
+.pagination-page-label { min-width: 78px; padding: 0 6px; color: var(--muted); text-align: center; font-size: .76rem; line-height: 25px; white-space: nowrap; }
+.pagination-link:hover { color: white; background: var(--action); }
+.pagination-link.is-disabled, .pagination-link.is-disabled:hover { color: #94a3b8; background: transparent; cursor: not-allowed; }
 .pagination-link:focus-visible { border-color: var(--primary); outline: 3px solid var(--primary); outline-offset: 3px; }
-.pagination-ellipsis { display: inline-flex; min-width: 16px; min-height: 34px; align-items: center; justify-content: center; color: var(--muted); font-size: .78rem; }
 .page-size-form { display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--muted); font-size: .86rem; }
 .page-size-form label { margin: 0; color: var(--muted); font-weight: 500; }
 .page-size-select { width: auto; min-width: 72px; margin: 0; padding: 7px 28px 7px 9px; }
@@ -382,12 +380,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .notification-filter-toggle, .notification-filter-option, .notification-preview-link, .notification-save { min-height: 32px; padding: 6px 10px; font-size: .78rem; }
 .notification-filter-toggle { padding: 7px; }
 .notification-pagination { display: flex; justify-content: center; gap: 12px; margin-top: 14px; }
-.notification-pagination-nav { display: inline-flex; width: max-content; max-width: 100%; flex: 0 0 auto; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); }
-.notification-pagination .pagination-link { min-height: 0; border: 0; }
-.notification-pagination .pagination-link:hover { color: white; background: var(--action); }
-.notification-pagination .pagination-nav-link { width: 25px; height: 25px; min-height: 25px; padding: 0; border-radius: 50%; color: var(--action); font-size: .95rem; line-height: 1; }
-.notification-pagination .pagination-nav-link.is-disabled, .notification-pagination .pagination-nav-link.is-disabled:hover { color: #94a3b8; background: transparent; }
-.notification-page-label { min-width: 78px; padding: 0 6px; color: var(--muted); text-align: center; font-size: .76rem; line-height: 25px; white-space: nowrap; }
 .notification-pagination-spacer { display: none; }
 .notification-pagination .page-size-form { margin-left: 8px; }
 .notification-pagination .page-size-form label { font-size: .78rem; }
@@ -558,8 +550,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .report-submit-actions { justify-content: flex-end; }
   .resource-student-item { align-items: flex-start; flex-direction: column; }
   .resource-student-item .resource-actions { width: 100%; justify-content: flex-start; }
-  .pagination { flex-wrap: wrap; }
-  .pagination-pages { width: auto; }
   .notification-settings-header { display: none; }
   .notification-setting-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; padding: 14px; }
   .notification-setting-row .notification-setting-name { grid-column: 1 / -1; }

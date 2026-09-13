@@ -78,6 +78,15 @@ The database unique constraint on `idempotency_key` is the final duplicate
 protection. Provider delivery uses `notification:<notification-id>` and never
 generates a new key for an attempt.
 
+## Shared pagination
+
+Learn list views use the same server-rendered `paginationControls` helper and
+compact pager styling. It presents only previous/next arrow controls and a
+`Page X of Y` label, with the notification delivery log using the same markup
+and adding its existing no-reload fragment behavior. This keeps pagination
+consistent across bookings, past lessons, resources, student records and
+notifications.
+
 ## Reminders
 
 The current product policy is one reminder, 15 minutes before a scheduled lesson,
