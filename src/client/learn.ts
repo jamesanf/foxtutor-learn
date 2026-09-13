@@ -53,6 +53,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     const url = new URL(window.location.href);
     const deleted = Number(url.searchParams.get("deleted") ?? 0);
     const failed = Number(url.searchParams.get("failed") ?? 0);
+    const cleanReportDelivery = pathname.endsWith("/report") && url.searchParams.has("delivery");
     if (deleted || failed) {
       const message = deleted && failed
         ? `${deleted} resource${deleted === 1 ? "" : "s"} deleted; ${failed} could not be deleted`
@@ -62,8 +63,12 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       showNotification(message, failed ? "error" : "success");
       url.searchParams.delete("deleted");
       url.searchParams.delete("failed");
-      window.history.replaceState({}, "", url);
     }
+    if (cleanReportDelivery) {
+      url.searchParams.delete("delivery");
+      url.searchParams.delete("reason");
+    }
+    if (deleted || failed || cleanReportDelivery) window.history.replaceState({}, "", url);
   };
   showPageNotification();
 
@@ -801,6 +806,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     const file = form.elements.namedItem("file") ?? form.elements.namedItem("attachment") ?? form.elements.namedItem("attachments");
     const preview = form.querySelector("[data-file-preview]");
     const dropzone = form.querySelector<HTMLElement>("[data-file-dropzone]");
+    const attachmentGrid = form.querySelector<HTMLElement>("[data-attachment-grid]");
+    const attachmentList = form.querySelector<HTMLElement>("[data-report-attachment-list]");
     const status = form.querySelector<HTMLElement>("[data-upload-status]");
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
     const reportAttachmentForm = form.hasAttribute("data-report-attachment-form");
@@ -844,6 +851,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       file.files = transfer.files;
       return true;
     };
+    const updateAttachmentLayout = () => {
+      const hasSelectedFiles = reportAttachmentForm && selectedReportFiles.length > 0;
+      const hasStoredFiles = Boolean(attachmentList?.querySelector("[data-report-resource-chip]"));
+      attachmentGrid?.classList.toggle("has-files", Boolean(hasSelectedFiles || hasStoredFiles));
+    };
     const renderSelectedFile = () => {
       const selectedFiles = reportAttachmentForm ? selectedReportFiles : Array.from(file.files ?? []).slice(0, 1);
       const selected = selectedFiles[0];
@@ -852,19 +864,22 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       if (submit?.hasAttribute("data-upload-submit")) submit.hidden = !selected;
       if (!selectedFiles.length) {
         preview.replaceChildren();
+        updateAttachmentLayout();
         return;
       }
       const items = selectedFiles.map((selectedFile, index) => {
         const item = document.createElement("span");
-        item.className = "file-preview-item";
+        item.className = "file-preview-item report-attachment-chip";
         const details = document.createElement("span");
         details.textContent = `${selectedFile.name} · ${formatFileType(selectedFile)} · ${formatFileSize(selectedFile.size)}`;
         item.appendChild(details);
         if (reportAttachmentForm) {
           const remove = document.createElement("button");
           remove.type = "button";
-          remove.className = "file-change";
-          remove.textContent = "Remove";
+          remove.className = "report-attachment-remove";
+          remove.textContent = "×";
+          remove.title = "Remove attachment";
+          remove.setAttribute("aria-label", `Remove ${selectedFile.name}`);
           remove.addEventListener("click", (event) => {
             event.stopPropagation();
             selectedReportFiles = selectedReportFiles.filter((_, fileIndex) => fileIndex !== index);
@@ -884,8 +899,36 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         file.click();
       });
       preview.replaceChildren(...items, add);
+      updateAttachmentLayout();
     };
     const openPicker = () => file.click();
+
+    form.querySelectorAll<HTMLButtonElement>("[data-report-resource-delete]").forEach((remove) => {
+      remove.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const url = remove.dataset.reportResourceDelete;
+        const csrf = form.querySelector<HTMLInputElement>('input[name="csrf"]')?.value;
+        const chip = remove.closest<HTMLElement>("[data-report-resource-chip]");
+        if (!url || !csrf || !chip) return;
+        remove.disabled = true;
+        if (status) status.textContent = "Removing attachment…";
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ csrf }).toString()
+          });
+          if (!response.ok) throw new Error("Attachment removal failed");
+          chip.remove();
+          updateAttachmentLayout();
+          if (status) status.textContent = "";
+        } catch {
+          remove.disabled = false;
+          if (status) status.textContent = "The attachment could not be removed. Try again.";
+        }
+      });
+    });
 
     dropzone.addEventListener("click", (event) => {
       if (event.target instanceof HTMLButtonElement) return;
@@ -908,9 +951,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       if (!dropped.length || typeof DataTransfer === "undefined") return;
       if (reportAttachmentForm) {
         const existing = new Set(selectedReportFiles.map((selectedFile) => `${selectedFile.name}:${selectedFile.size}:${selectedFile.lastModified}`));
-        selectedReportFiles = [...selectedReportFiles, ...dropped.filter((droppedFile) => !existing.has(`${droppedFile.name}:${droppedFile.size}:${droppedFile.lastModified}`))].slice(0, 5);
+        const additions = dropped.filter((droppedFile) => !existing.has(`${droppedFile.name}:${droppedFile.size}:${droppedFile.lastModified}`));
+        const nextFiles = [...selectedReportFiles, ...additions];
+        selectedReportFiles = nextFiles.slice(0, 5);
         assignFiles(selectedReportFiles);
-        if (dropped.length + selectedReportFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
+        if (nextFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
         renderSelectedFile();
         return;
       }
@@ -922,8 +967,9 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         const existing = new Set(selectedReportFiles.map((selectedFile) => `${selectedFile.name}:${selectedFile.size}:${selectedFile.lastModified}`));
         const incoming = Array.from(file.files ?? []);
         const additions = incoming.filter((incomingFile) => !existing.has(`${incomingFile.name}:${incomingFile.size}:${incomingFile.lastModified}`));
-        selectedReportFiles = [...selectedReportFiles, ...additions].slice(0, 5);
-        if (additions.length + selectedReportFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
+        const nextFiles = [...selectedReportFiles, ...additions];
+        selectedReportFiles = nextFiles.slice(0, 5);
+        if (nextFiles.length > 5 && status) status.textContent = "You can attach up to 5 files.";
         assignFiles(selectedReportFiles);
       }
       renderSelectedFile();

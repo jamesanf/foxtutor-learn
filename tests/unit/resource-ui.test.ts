@@ -50,11 +50,23 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain('multiple accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"');
     expect(workerSource).toContain("resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true)");
     expect(workerSource).toContain("if (uploadResponse.status !== 204)");
+    expect(workerSource).toContain("data-report-resource-delete");
+    expect(workerSource).toContain("/learn/admin/resources/${encodeURIComponent(resource.id)}/delete");
     expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
     expect(clientSource).toContain('".resource-upload-form, [data-report-attachment-form]"');
     expect(clientSource).toContain('form.elements.namedItem("attachments")');
+    expect(clientSource).toContain("data-report-resource-delete");
+    expect(clientSource).toContain("Removing attachment");
+    expect(cssSource).toContain(".report-attachments-grid.has-files");
+    expect(cssSource).toContain(".report-attachment-chip");
     expect(clientSource).toContain("Add another file");
     expect(clientSource).toContain("if (reportAttachmentForm) return;");
+  });
+
+  it("cleans report delivery query details from the visible URL", () => {
+    expect(clientSource).toContain('const cleanReportDelivery = pathname.endsWith("/report") && url.searchParams.has("delivery")');
+    expect(clientSource).toContain('url.searchParams.delete("reason")');
+    expect(clientSource).toContain('window.history.replaceState({}, "", url)');
   });
 
   it("provides server-side filtering, page-scoped selection and deliberate actions", () => {
