@@ -98,7 +98,9 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".identity { display: flex; min-height: 38px; align-items: center");
     expect(cssSource).toContain(".header-control { display: inline-flex; min-height: 38px; align-items: center; font-family: inherit; font-size: .78rem; font-weight: 700; line-height: 1");
     expect(cssSource).toContain(".identity-role { display: inline-flex; min-height: 38px; align-items: center");
-    expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center");
+    expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center; border: 0; padding: 0 0 2px");
+    expect(cssSource).toContain(".topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px clamp(20px, 5vw, 64px) 12px 16px");
+    expect(cssSource).toContain(".topbar { gap: 12px; padding-inline: 14px 14px; padding-inline-start: 12px");
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
   });
 
