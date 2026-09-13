@@ -122,8 +122,8 @@ function buildDocument(pages: string[]): ArrayBuffer {
   const pageObjectNumbers: number[] = [];
   objects.push("<< /Type /Catalog /Pages 2 0 R >>");
   objects.push("<< /Type /Pages /Kids [] /Count 0 >>");
-  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
   for (const page of pages) {
     const stream = `${page}\n`;
     const contentObject = objects.length + 1;
