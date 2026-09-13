@@ -209,6 +209,12 @@ export async function undoStudentCancellation(
            SELECT 1 FROM lesson_history h
            WHERE h.lesson_id = ? AND h.student_id = ? AND h.event_type = 'STUDENT_CANCELLED'
              AND h.actor_role = 'STUDENT' AND h.initiated_by_user_id = ?
+             AND NOT EXISTS (
+               SELECT 1 FROM lesson_history later
+               WHERE later.lesson_id = h.lesson_id
+                 AND later.event_type IN ('ADMIN_CANCELLED', 'CANCELLATION_APPROVED')
+                 AND later.created_at >= h.created_at
+             )
          )`
     ).bind(input.now, input.lessonId, input.studentId, input.lessonId, input.studentId, input.actorUserId),
     db.prepare(

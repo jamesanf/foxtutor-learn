@@ -2118,7 +2118,10 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const lesson = await findLessonForUser(db, id, active.user.id);
     if (!lesson || lesson.status !== "cancelled") return messagePage("Undo unavailable", "That lesson is not currently cancelled.", 409);
     const history = await listLessonHistory(db, lesson.id);
-    const canUndo = history.some((event) => event.event_type === "STUDENT_CANCELLED" && event.actor_role === "STUDENT" && event.initiated_by_user_id === active.user.id);
+    const latestCancellation = history.find((event) => ["STUDENT_CANCELLED", "ADMIN_CANCELLED", "CANCELLATION_APPROVED"].includes(event.event_type));
+    const canUndo = latestCancellation?.event_type === "STUDENT_CANCELLED"
+      && latestCancellation.actor_role === "STUDENT"
+      && latestCancellation.initiated_by_user_id === active.user.id;
     if (!canUndo) return messagePage("Undo unavailable", "Only a student cancellation can be undone.", 403);
     if (request.method === "GET") return appPage(active.user, csrfToken, "Undo cancellation", undoCancellationConfirmation(csrfToken, lesson));
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -2229,8 +2232,11 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const history = await listLessonHistory(db, lesson.id);
     const now = new Date().toISOString();
     const pending = await findPendingRescheduleRequestForLesson(db, lesson.id);
+    const latestCancellation = history.find((event) => ["STUDENT_CANCELLED", "ADMIN_CANCELLED", "CANCELLATION_APPROVED"].includes(event.event_type));
     const canUndo = lesson.status === "cancelled"
-      && history.some((event) => event.event_type === "STUDENT_CANCELLED" && event.actor_role === "STUDENT" && event.initiated_by_user_id === active.user.id);
+      && latestCancellation?.event_type === "STUDENT_CANCELLED"
+      && latestCancellation.actor_role === "STUDENT"
+      && latestCancellation.initiated_by_user_id === active.user.id;
     if (lesson.status === "cancelled") {
       return appPage(active.user, csrfToken, "Cancelled lesson", `<section class="card cancellation-result"><p class="eyebrow">MY LESSON</p><h1>Lesson cancelled</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This lesson is no longer scheduled.</p>${studentLessonActions(lesson, csrfToken, pending, canUndo, now)}</section>`);
     }
