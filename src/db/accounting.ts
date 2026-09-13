@@ -88,6 +88,19 @@ export interface AccountingRetryAudit {
   created_at: string;
 }
 
+export interface AccountingBillingSettings {
+  id: "FREEAGENT";
+  amount: string;
+  item_type: string;
+  category_url: string;
+  payment_terms_days: number;
+  currency: "GBP";
+  sales_tax_rate: string;
+  updated_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 const outboxSelect = `SELECT a.*, s.name AS student_name, l.start_at AS lesson_start_at,
   l.end_at AS lesson_end_at, l.timezone AS lesson_timezone
   FROM accounting_outbox a
@@ -454,6 +467,48 @@ export async function removeExternalAccountingLink(db: D1Database, studentId: st
 
 export async function findAccountingConnection(db: D1Database): Promise<AccountingConnection | null> {
   return db.prepare("SELECT * FROM accounting_connections WHERE id = 'FREEAGENT'").first<AccountingConnection>();
+}
+
+export async function findAccountingBillingSettings(db: D1Database): Promise<AccountingBillingSettings | null> {
+  return db.prepare("SELECT * FROM accounting_billing_settings WHERE id = 'FREEAGENT'").first<AccountingBillingSettings>();
+}
+
+export async function saveAccountingBillingSettings(
+  db: D1Database,
+  input: {
+    amount: string;
+    itemType: string;
+    categoryUrl: string;
+    paymentTermsDays: number;
+    salesTaxRate: string;
+    updatedByUserId: string | null;
+    now: string;
+  }
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO accounting_billing_settings
+     (id, amount, item_type, category_url, payment_terms_days, currency,
+      sales_tax_rate, updated_by_user_id, created_at, updated_at)
+     VALUES ('FREEAGENT', ?, ?, ?, ?, 'GBP', ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       amount = excluded.amount,
+       item_type = excluded.item_type,
+       category_url = excluded.category_url,
+       payment_terms_days = excluded.payment_terms_days,
+       currency = 'GBP',
+       sales_tax_rate = excluded.sales_tax_rate,
+       updated_by_user_id = excluded.updated_by_user_id,
+       updated_at = excluded.updated_at`
+  ).bind(
+    input.amount,
+    input.itemType,
+    input.categoryUrl,
+    input.paymentTermsDays,
+    input.salesTaxRate,
+    input.updatedByUserId,
+    input.now,
+    input.now
+  ).run();
 }
 
 export async function saveAccountingConnection(

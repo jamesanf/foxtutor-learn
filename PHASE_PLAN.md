@@ -789,9 +789,13 @@ Accounting consequences can be passed to FreeAgent reliably without making the t
 
 ### Phase 6 current state
 
-The application-side Phase 6 implementation is complete and hardened. Normal
-lesson accounting is fixed at 55.00 GBP with no VAT charged, represented in
-FreeAgent invoice items by an explicit `sales_tax_rate` of `0`. The
+The application-side Phase 6 implementation is complete and hardened. The
+initial normal lesson accounting setting is 55.00 GBP with no VAT charged.
+Admins can change the amount, item type, category, payment terms and explicit
+sales-tax rate in `/learn/admin/accounting/settings`; GBP remains enforced and
+saved settings are used for future invoices. The current non-VAT setting is
+represented in FreeAgent invoice items by an explicit `sales_tax_rate` of `0`.
+The
 `ADMIN_CANCELLED` accounting consequence remains explicitly unresolved and
 must not be inferred from the normal lesson value. The current evidence
 matrix, architecture, security controls, test boundary, deployment

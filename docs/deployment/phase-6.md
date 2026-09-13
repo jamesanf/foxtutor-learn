@@ -6,7 +6,7 @@
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Schedule: `*/5 * * * *`
 - D1: `foxtutor-learn`
-- D1 migration state: through `0018_accounting_unresolved_action.sql`; no pending
+- D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
 - Repository HEAD at executable deployment: `7bdb8bf51d9f14b2557bb68e3364f727c0afcadb`
@@ -28,9 +28,11 @@ runtime deployment.
    state.
 5. Run perimeter smoke and authenticated admin/student checks where credentials
    are available.
-6. Configure sandbox secrets through the approved secret store only. The
-   normal lesson payload is fixed at 55.00 GBP with explicit zero tax; do not
-   configure a VAT rate or rely on FreeAgent defaults.
+6. Configure sandbox secrets through the approved secret store only. Confirm
+   the initial 55.00 GBP settings in the admin billing-management page. GBP
+   cannot be changed; any other setting change must be explicit and approved.
+   The current non-VAT setting is an explicit zero tax rate; never rely on
+   FreeAgent defaults.
 7. Complete the sandbox acceptance runbook.
 8. Configure production only after sandbox evidence and commercial approval.
 9. Run exactly one approved controlled production accounting event.

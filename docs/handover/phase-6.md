@@ -8,8 +8,10 @@ channel.
 
 1. Configure the sandbox FreeAgent environment, client ID, client secret,
    encryption key, exact registered callback URI, company subdomain and
-   approved provider mapping values. The normal lesson payload is fixed at
-   55.00 GBP with an explicit invoice-item sales tax rate of `0`.
+   approved provider mapping values. Review the admin billing-management page:
+   the initial normal lesson setting is 55.00 GBP, GBP is immutable, and the
+   item type, category, payment terms and explicit sales-tax rate are editable.
+   Keep the sales-tax rate at `0` for the current non-VAT contract.
 2. Decide the `ADMIN_CANCELLED` accounting consequence before creating or
    processing an administrative-cancellation invoice event. The system will
    not infer invoice creation or no action.

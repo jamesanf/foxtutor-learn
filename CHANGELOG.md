@@ -1,5 +1,19 @@
 # Changelog
 
+### 2026-09-14 - Add admin billing management
+
+- Added persisted `accounting_billing_settings` configuration through
+  migration `0019_accounting_billing_settings.sql`.
+- Added the admin-only `/learn/admin/accounting/settings` page with CSRF
+  protection, fixed-decimal validation, immutable GBP enforcement, explicit
+  tax validation and actor/timestamp persistence.
+- Invoice processing now bootstraps valid environment values once and consumes
+  the persisted settings for future attempts; existing outbox snapshots are
+  unchanged.
+- The current approved initial setting remains 55.00 GBP with explicit zero
+  tax. `ADMIN_CANCELLED` remains unresolved and is not coupled to these
+  normal-lesson settings.
+
 ### 2026-09-14 - Apply approved normal lesson accounting values
 
 - Set the normal lesson accounting model to exactly `55.00` GBP.

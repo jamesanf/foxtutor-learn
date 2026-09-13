@@ -51,6 +51,13 @@ export function formatMinorUnits(value: bigint, scale = 2): string {
   return `${negative ? "-" : ""}${digits.slice(0, splitAt)}.${digits.slice(splitAt)}`;
 }
 
+export function normalizeSalesTaxRate(value: string): string | null {
+  const minorUnits = parseMinorUnits(value, 2);
+  if (minorUnits === null || minorUnits < 0n || minorUnits > 10000n) return null;
+  const formatted = formatMinorUnits(minorUnits);
+  return formatted.replace(/(?:\.00|(\.\d)0)$/, "$1").replace(/\.$/, "");
+}
+
 const accountingTransitions: Record<AccountingStatus, readonly AccountingStatus[]> = {
   PENDING: ["PROCESSING"],
   PROCESSING: ["SUCCEEDED", "RETRYABLE", "FAILED", "UNKNOWN"],

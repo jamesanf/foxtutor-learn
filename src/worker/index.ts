@@ -70,6 +70,7 @@ import {
   accountingOutboxCounts,
   consumeAccountingOAuthState,
   createAccountingOAuthState,
+  findAccountingBillingSettings,
   findAccountingOutbox,
   findExternalAccountingLink,
   listAccountingOutbox,
@@ -78,6 +79,7 @@ import {
   makeAccountingRetryable,
   recordAccountingRetryAudit,
   removeExternalAccountingLink,
+  saveAccountingBillingSettings,
   updateExternalAccountingLinkStatus
 } from "../db/accounting";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
@@ -142,7 +144,7 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatus, connectFreeAgent, processAccountingOutbox, reconcileAccountingOutbox, verifyFreeAgentContactMapping } from "../accounting/service";
+import { accountingIntegrationStatus, configuredInvoice, connectFreeAgent, processAccountingOutbox, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
 import { freeAgentAuthorizationUrl, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
@@ -479,11 +481,25 @@ function accountingList(
   csrfToken: string
 ): string {
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Retryable</span><strong>${counts.RETRYABLE}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Succeeded</span><strong>${counts.SUCCEEDED}</strong></section></div>`;
-  const connection = `<section class="card"><div class="section-heading"><div><h2>FreeAgent</h2><p class="lede">${escapeHtml(status.label)} · ${escapeHtml(status.environment)}</p></div><div class="form-actions">${status.configured && !status.connected ? buttonLink("/learn/admin/accounting/connect", "Connect FreeAgent") : ""}<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span></div></div>${status.errorMessage ? `<p class="form-error">${escapeHtml(status.errorMessage)}</p>` : ""}${status.lastSuccessAt ? `<p class="muted">Last successful sync: ${escapeHtml(notificationTimestamp(status.lastSuccessAt))}</p>` : ""}</section>`;
+  const connection = `<section class="card"><div class="section-heading"><div><h2>FreeAgent</h2><p class="lede">${escapeHtml(status.label)} · ${escapeHtml(status.environment)}</p></div><div class="form-actions">${buttonLink("/learn/admin/accounting/settings", "Billing settings")}${status.configured && !status.connected ? buttonLink("/learn/admin/accounting/connect", "Connect FreeAgent") : ""}<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span></div></div>${status.errorMessage ? `<p class="form-error">${escapeHtml(status.errorMessage)}</p>` : ""}${status.lastSuccessAt ? `<p class="muted">Last successful sync: ${escapeHtml(notificationTimestamp(status.lastSuccessAt))}</p>` : ""}</section>`;
   const body = rows.length
     ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Event</th><th>Student</th><th>Consequence</th><th>Status</th><th>External reference</th><th>Action</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Date">${escapeHtml(notificationTimestamp(row.created_at))}</td><td data-label="Event">${escapeHtml(accountingLabel(row.event_type))}</td><td data-label="Student">${escapeHtml(row.student_name ?? "Pupil")}</td><td data-label="Consequence">${escapeHtml(accountingLabel(row.billing_consequence))}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(accountingLabel(row.status))}</span>${row.safe_error_message ? `<small>${escapeHtml(row.safe_error_message)}</small>` : ""}</td><td data-label="External reference">${row.external_url ? `<a href="${escapeHtml(row.external_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.external_reference ?? "Open in FreeAgent")}</a>` : escapeHtml(row.external_reference ?? "—")}</td><td data-label="Action">${row.status === "UNKNOWN" ? `<a class="button secondary" href="/learn/admin/accounting/${encodeURIComponent(row.id)}/reconcile">Reconcile</a>` : ["FAILED", "RETRYABLE"].includes(row.status) ? `<form method="post" action="/learn/admin/accounting/${encodeURIComponent(row.id)}/retry">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Retry</button></form>` : "—"}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No accounting events</h2><p>Phase 5 commercial decisions will appear here when they require an accounting boundary.</p></div>`;
   return `${connection}${summary}${accountingContactList(students, links, csrfToken)}<section class="card"><div class="section-heading"><div><h2>Accounting outbox</h2><p class="muted">FreeAgent actions are processed separately from lesson and email delivery.</p></div></div>${body}</section>`;
+}
+
+function accountingBillingSettingsPage(
+  csrfToken: string,
+  values: {
+    amount: string;
+    itemType: string;
+    categoryUrl: string;
+    paymentTermsDays: string;
+    salesTaxRate: string;
+  },
+  error?: string
+): string {
+  return `<section class="card form-card"><div class="page-heading"><div><h1>Billing settings</h1><p class="lede">Configure the values used for future FreeAgent lesson invoices.</p></div><a class="button secondary" href="/learn/admin/accounting">Back to accounting</a></div>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<p class="muted">GBP is enforced for every invoice. Every other field is explicit and editable here; a blank or unsupported tax value is rejected rather than delegated to FreeAgent defaults.</p><form method="post" action="/learn/admin/accounting/settings"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Use pounds and pence, for example 55.00.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required></label><label>FreeAgent category URL<input name="categoryUrl" type="url" value="${escapeHtml(values.categoryUrl)}" required></label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required></label><label>Sales tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0 means no VAT charged. An explicit rate is always sent to FreeAgent.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save billing settings</button></div></form></section>`;
 }
 
 function lessonReportForm(
@@ -1666,6 +1682,38 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       listExternalAccountingLinks(db)
     ]);
     return appPage(active.user, csrfToken, "Accounting", `<div class="page-heading"><div><h1>Accounting</h1><p class="lede">Operational boundary between Learn and FreeAgent.</p></div></div>${accountingList(rows, counts, status, students, links, csrfToken)}`);
+  }
+  if (route === "admin-accounting-settings") {
+    const persisted = await findAccountingBillingSettings(db);
+    const fallback = configuredInvoice(env);
+    const values = {
+      amount: persisted?.amount ?? fallback?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "",
+      itemType: persisted?.item_type ?? fallback?.itemType ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "",
+      categoryUrl: persisted?.category_url ?? fallback?.categoryUrl ?? env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
+      paymentTermsDays: String(persisted?.payment_terms_days ?? fallback?.paymentTermsInDays ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? ""),
+      salesTaxRate: persisted?.sales_tax_rate ?? fallback?.salesTaxRate ?? env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? ""
+    };
+    if (request.method === "GET") {
+      return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values));
+    }
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const form = await parseForm(request);
+    if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
+    const result = validateBillingSettings({
+      amount: formText(form, "amount"),
+      itemType: formText(form, "itemType"),
+      categoryUrl: formText(form, "categoryUrl"),
+      paymentTermsDays: formText(form, "paymentTermsDays"),
+      currency: formText(form, "currency"),
+      salesTaxRate: formText(form, "salesTaxRate")
+    }, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : null);
+    if (!result.value) return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, result.error ?? "Billing settings are invalid."), false);
+    await saveAccountingBillingSettings(db, {
+      ...result.value,
+      updatedByUserId: active.user.id,
+      now: new Date().toISOString()
+    });
+    return redirect("/learn/admin/accounting/settings");
   }
   if (route === "admin-accounting-contact") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);

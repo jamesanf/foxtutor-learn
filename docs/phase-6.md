@@ -25,8 +25,10 @@ only current Phase 6 documents; historical release chronology is preserved in
 - Provider work is asynchronous and isolated behind the FreeAgent adapter.
 - Missing or ambiguous commercial mapping fails closed before provider
   mutation.
-- Normal lesson accounting is fixed at `55.00` GBP with no VAT charged;
-  invoice items explicitly send FreeAgent `sales_tax_rate: "0"`.
+- Normal lesson accounting bootstraps at `55.00` GBP with no VAT charged.
+  Admins can edit the amount, item type, category, payment terms and explicit
+  sales-tax rate in billing management; GBP remains immutable. The current
+  non-VAT setting sends FreeAgent `sales_tax_rate: "0"` explicitly.
 - `ADMIN_CANCELLED` is stored as an unresolved accounting action until the
   owner approves its consequence; it cannot default to invoice creation or
   no action.
@@ -50,7 +52,8 @@ only current Phase 6 documents; historical release chronology is preserved in
 | OAuth state and encrypted tokens | `src/accounting/credentials.ts`, `src/accounting/service.ts` | OAuth exchange/refresh and secret-boundary tests | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Environment/company pinning | `src/accounting/service.ts` | Configuration and company checks | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Contact mapping | `src/accounting/service.ts`, `src/db/accounting.ts` | Admin route, verification, replacement/removal guards | COMPLETE - HUMAN MAPPING REQUIRED |
-| Invoice mapping | `src/accounting/service.ts`, adapter payload | Fixed `55.00` GBP, explicit `sales_tax_rate: "0"`, category/payment/date validation | COMPLETE - PROVIDER MAPPING VALUES REQUIRED |
+| Invoice mapping | `src/accounting/service.ts`, `src/db/accounting.ts`, adapter payload | Persisted admin settings, immutable GBP, fixed-decimal amount, explicit tax, category/payment/date validation | COMPLETE - PROVIDER MAPPING VALUES REQUIRED |
+| Billing management | `/learn/admin/accounting/settings`, `accounting_billing_settings` | Admin GET/POST form, CSRF, validation, actor/timestamp persistence and invoice consumption | COMPLETE |
 | Reconciliation | `src/accounting/service.ts`, admin reconcile route | Unknown-state and provider-reference seams | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Manual retry audit | `migrations/0017_accounting_operations.sql`, `src/db/accounting.ts` | Additive actor/state audit path | COMPLETE |
 | Authorization and CSRF | `src/auth/authorization.ts`, `src/worker/index.ts` | Admin/student route classification and CSRF checks | COMPLETE |
@@ -68,7 +71,7 @@ These values must always be reported separately:
 - **Deployed source commit:** `7bdb8bf51d9f14b2557bb68e3364f727c0afcadb`.
 - **Deployed Worker version:** `946d2de3-8bb1-4880-bf16-ea41a47f016a`.
 - **D1 state:** production migrations through
-  `0018_accounting_unresolved_action.sql`, with no pending migration reported
+  `0019_accounting_billing_settings.sql`, with no pending migration reported
   after deployment of the executable change.
 
 Wrangler reports the deployment source metadata as `Unknown`; the deployed
@@ -87,8 +90,9 @@ Only the following external actions remain:
    55.00 GBP no-VAT invoice, another accounting consequence, or a
    compensating/credit action.
 2. If `ADMIN_CANCELLED` produces a provider action, approve its payer/contact
-   authority, item/category, payment terms and effective-date policy. The
-   normal lesson amount is already 55.00 GBP and its VAT rate is explicitly 0.
+   authority, item/category, payment terms and effective-date policy. Review
+   the current billing-management values; GBP is always enforced and the
+   initial normal lesson amount is 55.00 GBP with an explicit zero tax rate.
 3. Supply sandbox FreeAgent client credentials and the encryption key through
    the approved secret channel.
 4. Complete sandbox OAuth and verify the pinned company.

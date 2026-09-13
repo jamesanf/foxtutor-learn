@@ -27,10 +27,11 @@ authorized by navigation visibility.
 
 ## Financial safety
 
-Missing commercial configuration, any amount other than 55.00 GBP, any
-currency other than GBP, any VAT/tax value other than explicit zero, invalid
-date data, missing or unverified contact mappings, company/environment drift
-and unsupported or unresolved action types fail closed. A timeout, network
+Missing commercial configuration, any currency other than GBP, blank or
+unsupported billing settings, invalid date data, missing or unverified contact
+mappings, company/environment drift and unsupported or unresolved action types
+fail closed. Billing changes are admin-only, CSRF-protected, validated
+server-side and attributed to the saving admin. A timeout, network
 failure or uncertain provider response becomes `UNKNOWN` and requires
 reconciliation.
 

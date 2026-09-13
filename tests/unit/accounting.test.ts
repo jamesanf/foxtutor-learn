@@ -21,7 +21,7 @@ import {
   FreeAgentClient,
   refreshAccessToken
 } from "../../src/accounting/freeagent/client";
-import { configuredInvoice, invoiceConfigurationIssue } from "../../src/accounting/service";
+import { configuredInvoice, invoiceConfigurationIssue, validateBillingSettings } from "../../src/accounting/service";
 
 function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
   const responseHeaders = new Headers(headers);
@@ -87,14 +87,50 @@ describe("invoice configuration", () => {
       currency: NORMAL_LESSON_CURRENCY,
       salesTaxRate: NON_VAT_SALES_TAX_RATE
     });
-    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_AMOUNT: "55.01" })).toContain("55.00 GBP");
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_AMOUNT: "55.01" })).toBeNull();
     expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_CURRENCY: "USD" })).toContain("must be GBP");
-    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_SALES_TAX_RATE: "20" })).toContain("must be 0");
-    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_SALES_TAX_RATE: "EXEMPT" })).toContain("must be 0");
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_SALES_TAX_RATE: "20" })).toBeNull();
+    expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_SALES_TAX_RATE: "EXEMPT" })).toContain("missing or invalid");
     expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS: "14days" })).toContain("payment terms");
     expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_CURRENCY: undefined })).toContain("currency");
     expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_SALES_TAX_RATE: undefined })).toContain("VAT/tax");
     expect(invoiceConfigurationIssue({ ...valid, FREEAGENT_INVOICE_CATEGORY_URL: "https://api.freeagent.com/v2/categories/1" })).toContain("environment");
+  });
+
+  it("validates editable settings while keeping GBP and explicit tax mandatory", () => {
+    expect(validateBillingSettings({
+      amount: "72.50",
+      itemType: "Hours",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/2",
+      paymentTermsDays: "30",
+      currency: "GBP",
+      salesTaxRate: "0"
+    }, "sandbox")).toEqual({
+      value: {
+        amount: "72.50",
+        itemType: "Hours",
+        categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/2",
+        paymentTermsDays: 30,
+        salesTaxRate: "0"
+      },
+      error: null
+    });
+    expect(validateBillingSettings({
+      amount: "72.50",
+      itemType: "Hours",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/2",
+      paymentTermsDays: "30",
+      currency: "USD",
+      salesTaxRate: "0"
+    }, "sandbox").error).toContain("must be GBP");
+    expect(validateBillingSettings({
+      amount: "72.50",
+      itemType: "Hours",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/2",
+      paymentTermsDays: "30",
+      currency: "GBP",
+      salesTaxRate: ""
+    }, "sandbox").error).toContain("VAT/tax");
   });
 });
 

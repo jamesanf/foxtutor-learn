@@ -36,6 +36,7 @@ export type LearnRoute =
   | "admin-notifications"
   | "admin-notification"
   | "admin-accounting"
+  | "admin-accounting-settings"
   | "admin-accounting-connect"
   | "admin-accounting-callback"
   | "admin-accounting-contact"
@@ -94,6 +95,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/notifications\/[^/]+\/preview$/.test(path)) return "admin-notification";
   if (/^\/learn\/admin\/notifications\/[^/]+$/.test(path)) return "admin-notification";
   if (path === "/learn/admin/accounting") return "admin-accounting";
+  if (path === "/learn/admin/accounting/settings") return "admin-accounting-settings";
   if (path === "/learn/admin/accounting/connect") return "admin-accounting-connect";
   if (path === "/learn/admin/accounting/oauth/callback") return "admin-accounting-callback";
   if (/^\/learn\/admin\/accounting\/contacts\/[^/]+(?:\/remove)?$/.test(path)) return "admin-accounting-contact";

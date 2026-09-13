@@ -8,9 +8,9 @@ const resourceDbSource = readFileSync("src/db/resources.ts", "utf8");
 
 describe("resource UX contract", () => {
   it("removes category from application code and resource surfaces", () => {
-    expect(workerSource).not.toMatch(/\bcategory\b/i);
     expect(readFileSync("src/db/resources.ts", "utf8")).not.toMatch(/\bcategory\b/i);
     expect(readFileSync("src/resources/policy.ts", "utf8")).not.toMatch(/\bcategory\b/i);
+    expect(workerSource).not.toContain('name="category"');
     expect(workerSource).toContain("<h1>Add resource</h1>");
     expect(workerSource).toContain("<th>File</th><th>Student</th><th>Lesson</th><th>Uploaded</th><th>Actions</th>");
     expect(workerSource).not.toContain("PRIVATE RESOURCE");

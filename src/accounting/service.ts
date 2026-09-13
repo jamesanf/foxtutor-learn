@@ -1,5 +1,6 @@
 import {
   claimAccountingOutbox,
+  findAccountingBillingSettings,
   findAccountingConnection,
   findAccountingOutbox,
   findExternalAccountingLink,
@@ -8,6 +9,7 @@ import {
   upsertExternalAccountingLink,
   reconcileAccountingReference,
   saveAccountingConnection,
+  saveAccountingBillingSettings,
   hasActiveAccountingDependency,
   updateAccountingConnectionStatus,
   type AccountingOutbox
@@ -22,9 +24,8 @@ import {
 } from "./freeagent/client";
 import {
   formatMinorUnits,
+  normalizeSalesTaxRate,
   NORMAL_LESSON_CURRENCY,
-  NORMAL_LESSON_PRICE_MINOR_UNITS,
-  NON_VAT_SALES_TAX_RATE,
   nextAccountingRetryAt,
   parseMinorUnits,
   type AccountingErrorCode
@@ -64,7 +65,16 @@ export interface InvoiceConfiguration {
   categoryUrl: string;
   paymentTermsInDays: number;
   currency: typeof NORMAL_LESSON_CURRENCY;
-  salesTaxRate: typeof NON_VAT_SALES_TAX_RATE;
+  salesTaxRate: string;
+}
+
+export interface BillingSettingsInput {
+  amount: string;
+  itemType: string;
+  categoryUrl: string;
+  paymentTermsDays: string;
+  currency: string;
+  salesTaxRate: string;
 }
 
 function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvironment | null {
@@ -80,44 +90,125 @@ function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
 }
 
-export function invoiceConfigurationIssue(env: AccountingEnvironment, environment = configuredEnvironment(env)): string | null {
+function invoiceConfigurationIssueForValues(
+  values: BillingSettingsInput,
+  environment: FreeAgentEnvironment | null
+): string | null {
   if (!environment) return "FreeAgent environment is not configured.";
-  const amount = env.FREEAGENT_INVOICE_AMOUNT?.trim();
-  const itemType = env.FREEAGENT_INVOICE_ITEM_TYPE?.trim();
-  const categoryUrl = env.FREEAGENT_INVOICE_CATEGORY_URL?.trim();
-  const paymentTermsText = env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?.trim();
-  const currency = env.FREEAGENT_INVOICE_CURRENCY?.trim();
-  const salesTax = env.FREEAGENT_INVOICE_SALES_TAX_RATE?.trim();
+  const amount = values.amount.trim();
+  const itemType = values.itemType.trim();
+  const categoryUrl = values.categoryUrl.trim();
+  const paymentTermsText = values.paymentTermsDays.trim();
+  const currency = values.currency.trim();
+  const salesTax = values.salesTaxRate.trim();
   const amountMinorUnits = amount ? parseMinorUnits(amount) : null;
   if (amountMinorUnits === null || amountMinorUnits <= 0n) return "FreeAgent invoice amount is missing or invalid.";
-  if (amountMinorUnits !== NORMAL_LESSON_PRICE_MINOR_UNITS) return "FreeAgent invoice amount must be 55.00 GBP.";
-  if (!itemType) return "FreeAgent invoice item type is missing.";
+  if (amountMinorUnits > 999999999999n) return "FreeAgent invoice amount is outside the supported range.";
+  if (!itemType || itemType.length > 240) return "FreeAgent invoice item type is missing or too long.";
   if (!categoryUrl) return "FreeAgent invoice category is missing.";
   if (!/^https:\/\/api(?:\.sandbox)?\.freeagent\.com\/v2\/categories\/[^/]+$/.test(categoryUrl)) return "FreeAgent invoice category URL is invalid.";
   if (!paymentTermsText || !/^\d+$/.test(paymentTermsText)) return "FreeAgent invoice payment terms are missing or invalid.";
   const paymentTerms = Number(paymentTermsText);
   if (!Number.isInteger(paymentTerms) || paymentTerms < 0 || paymentTerms > 365) return "FreeAgent invoice payment terms are outside the supported range.";
-  if (!currency) return "FreeAgent invoice currency is missing.";
   if (currency !== NORMAL_LESSON_CURRENCY) return "FreeAgent invoice currency must be GBP.";
-  if (!salesTax) return "FreeAgent invoice VAT/tax mapping is missing.";
-  if (salesTax !== NON_VAT_SALES_TAX_RATE) return "FreeAgent invoice VAT/tax mapping must be 0 for the non-VAT-registered business.";
+  if (!salesTax || normalizeSalesTaxRate(salesTax) === null) return "FreeAgent invoice VAT/tax mapping is missing or invalid.";
   if (!categoryUrl.startsWith(`https://api${environment === "sandbox" ? ".sandbox" : ""}.freeagent.com/`)) return "FreeAgent invoice category does not match the configured environment.";
   return null;
 }
 
-export function configuredInvoice(env: AccountingEnvironment): InvoiceConfiguration | null {
-  const environment = configuredEnvironment(env);
-  if (invoiceConfigurationIssue(env, environment)) return null;
-  const amountMinorUnits = parseMinorUnits(env.FREEAGENT_INVOICE_AMOUNT!)!;
+function invoiceConfigurationFromValues(
+  values: BillingSettingsInput,
+  environment: FreeAgentEnvironment | null
+): InvoiceConfiguration | null {
+  if (invoiceConfigurationIssueForValues(values, environment)) return null;
+  const amountMinorUnits = parseMinorUnits(values.amount.trim())!;
   return {
     amount: formatMinorUnits(amountMinorUnits),
     amountMinorUnits,
-    itemType: env.FREEAGENT_INVOICE_ITEM_TYPE!.trim(),
-    categoryUrl: env.FREEAGENT_INVOICE_CATEGORY_URL!.trim(),
-    paymentTermsInDays: Number(env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS),
+    itemType: values.itemType.trim(),
+    categoryUrl: values.categoryUrl.trim(),
+    paymentTermsInDays: Number(values.paymentTermsDays),
     currency: NORMAL_LESSON_CURRENCY,
-    salesTaxRate: NON_VAT_SALES_TAX_RATE
+    salesTaxRate: normalizeSalesTaxRate(values.salesTaxRate.trim())!
   };
+}
+
+export function invoiceConfigurationIssue(env: AccountingEnvironment, environment = configuredEnvironment(env)): string | null {
+  return invoiceConfigurationIssueForValues({
+    amount: env.FREEAGENT_INVOICE_AMOUNT ?? "",
+    itemType: env.FREEAGENT_INVOICE_ITEM_TYPE ?? "",
+    categoryUrl: env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
+    paymentTermsDays: env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "",
+    currency: env.FREEAGENT_INVOICE_CURRENCY ?? "",
+    salesTaxRate: env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? ""
+  }, environment);
+}
+
+export function configuredInvoice(env: AccountingEnvironment): InvoiceConfiguration | null {
+  return invoiceConfigurationFromValues({
+    amount: env.FREEAGENT_INVOICE_AMOUNT ?? "",
+    itemType: env.FREEAGENT_INVOICE_ITEM_TYPE ?? "",
+    categoryUrl: env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
+    paymentTermsDays: env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "",
+    currency: env.FREEAGENT_INVOICE_CURRENCY ?? "",
+    salesTaxRate: env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? ""
+  }, configuredEnvironment(env));
+}
+
+export function validateBillingSettings(input: BillingSettingsInput, environment: FreeAgentEnvironment | null): {
+  value: { amount: string; itemType: string; categoryUrl: string; paymentTermsDays: number; salesTaxRate: string } | null;
+  error: string | null;
+} {
+  const error = invoiceConfigurationIssueForValues(input, environment);
+  if (error) return { value: null, error };
+  return {
+    value: {
+      amount: formatMinorUnits(parseMinorUnits(input.amount.trim())!),
+      itemType: input.itemType.trim(),
+      categoryUrl: input.categoryUrl.trim(),
+      paymentTermsDays: Number(input.paymentTermsDays.trim()),
+      salesTaxRate: normalizeSalesTaxRate(input.salesTaxRate.trim())!
+    },
+    error: null
+  };
+}
+
+async function ensureAccountingBillingSettings(
+  db: D1Database,
+  env: AccountingEnvironment,
+  now: string
+): Promise<Awaited<ReturnType<typeof findAccountingBillingSettings>>> {
+  const existing = await findAccountingBillingSettings(db);
+  if (existing) return existing;
+  const initial = configuredInvoice(env);
+  if (!initial) return null;
+  await saveAccountingBillingSettings(db, {
+    amount: initial.amount,
+    itemType: initial.itemType,
+    categoryUrl: initial.categoryUrl,
+    paymentTermsDays: initial.paymentTermsInDays,
+    salesTaxRate: initial.salesTaxRate,
+    updatedByUserId: null,
+    now
+  });
+  return findAccountingBillingSettings(db);
+}
+
+export async function configuredInvoiceFromDatabase(
+  db: D1Database,
+  env: AccountingEnvironment,
+  now: string
+): Promise<InvoiceConfiguration | null> {
+  const settings = await ensureAccountingBillingSettings(db, env, now);
+  if (!settings) return null;
+  return invoiceConfigurationFromValues({
+    amount: settings.amount,
+    itemType: settings.item_type,
+    categoryUrl: settings.category_url,
+    paymentTermsDays: String(settings.payment_terms_days),
+    currency: settings.currency,
+    salesTaxRate: settings.sales_tax_rate
+  }, configuredEnvironment(env));
 }
 
 async function accessToken(
@@ -203,7 +294,26 @@ async function providerCall<T>(
 export async function accountingIntegrationStatus(db: D1Database, env: AccountingEnvironment): Promise<AccountingIntegrationStatus> {
   const connection = await findAccountingConnection(db);
   const environment = configuredEnvironment(env);
-  const configurationMessage = invoiceConfigurationIssue(env, environment);
+  const persistedSettings = await findAccountingBillingSettings(db);
+  const configurationMessage = persistedSettings
+    ? invoiceConfigurationFromValues({
+      amount: persistedSettings.amount,
+      itemType: persistedSettings.item_type,
+      categoryUrl: persistedSettings.category_url,
+      paymentTermsDays: String(persistedSettings.payment_terms_days),
+      currency: persistedSettings.currency,
+      salesTaxRate: persistedSettings.sales_tax_rate
+    }, environment)
+      ? null
+      : invoiceConfigurationIssueForValues({
+        amount: persistedSettings.amount,
+        itemType: persistedSettings.item_type,
+        categoryUrl: persistedSettings.category_url,
+        paymentTermsDays: String(persistedSettings.payment_terms_days),
+        currency: persistedSettings.currency,
+        salesTaxRate: persistedSettings.sales_tax_rate
+      }, environment)
+    : invoiceConfigurationIssue(env, environment);
   const configured = Boolean(
     environment &&
     env.FREEAGENT_CLIENT_ID &&
@@ -315,9 +425,20 @@ export async function processAccountingOutbox(
     await markAccountingOutcome(db, id, "FAILED", "CONFIGURATION", "This accounting action is not supported.", null, "NOT_ATTEMPTED", now);
     return findAccountingOutbox(db, id);
   }
-  const invoiceConfig = configuredInvoice(env);
+  const invoiceConfig = await configuredInvoiceFromDatabase(db, env, now);
   if (!invoiceConfig) {
-    await markAccountingOutcome(db, id, "FAILED", "CONFIGURATION", invoiceConfigurationIssue(env) ?? "FreeAgent invoice mapping is not configured.", null, "NOT_ATTEMPTED", now);
+    const settings = await findAccountingBillingSettings(db);
+    const issue = settings
+      ? invoiceConfigurationIssueForValues({
+        amount: settings.amount,
+        itemType: settings.item_type,
+        categoryUrl: settings.category_url,
+        paymentTermsDays: String(settings.payment_terms_days),
+        currency: settings.currency,
+        salesTaxRate: settings.sales_tax_rate
+      }, configuredEnvironment(env))
+      : invoiceConfigurationIssue(env);
+    await markAccountingOutcome(db, id, "FAILED", "CONFIGURATION", issue ?? "FreeAgent invoice mapping is not configured.", null, "NOT_ATTEMPTED", now);
     return findAccountingOutbox(db, id);
   }
   if (!claimed.student_id) {

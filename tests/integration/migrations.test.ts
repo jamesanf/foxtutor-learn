@@ -147,4 +147,12 @@ describe("D1 foundation", () => {
     expect(migration).toContain("INSERT INTO accounting_outbox_phase6_unresolved");
     expect(migration).toContain("ALTER TABLE accounting_outbox_phase6_unresolved RENAME TO accounting_outbox");
   });
+
+  it("adds admin-managed billing settings with an immutable GBP currency", () => {
+    const migration = readFileSync("migrations/0019_accounting_billing_settings.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_billing_settings");
+    expect(migration).toContain("payment_terms_days INTEGER NOT NULL CHECK (payment_terms_days BETWEEN 0 AND 365)");
+    expect(migration).toContain("currency TEXT NOT NULL CHECK (currency = 'GBP')");
+    expect(migration).toContain("updated_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL");
+  });
 });

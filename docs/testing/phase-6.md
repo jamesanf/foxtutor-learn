@@ -11,13 +11,15 @@ The automated suite covers:
 - encrypted credential helpers without credential output;
 - provider host, scheme, path and response-URL restrictions;
 - invoice payload shape, currency/tax configuration and malformed config;
-- exact 55.00 GBP minor-unit representation and explicit zero-tax payloads;
+- exact 55.00 GBP bootstrap value, editable fixed-decimal amounts, immutable GBP
+  validation and explicit tax payloads;
 - unresolved `ADMIN_CANCELLED` classification with no invoice/no-action
   default;
 - authentication, authorization, rate-limit, validation, timeout and unknown
   provider outcomes;
-- admin-only route classification and CSRF-protected accounting actions;
-- migration structure through `0018_accounting_unresolved_action.sql`;
+- admin-only route classification, billing-settings persistence and
+  CSRF-protected accounting actions;
+- migration structure through `0019_accounting_billing_settings.sql`;
 - browser shell accessibility and no-index contracts;
 - production perimeter smoke.
 

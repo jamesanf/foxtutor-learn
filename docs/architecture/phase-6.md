@@ -45,6 +45,15 @@ Removal is blocked under the same conditions.
 request result, resulting status, provider reference and safe outcome. It does
 not store credentials or raw provider responses.
 
+`accounting_billing_settings` is a single-row, admin-managed configuration
+record. It stores the amount, FreeAgent item type and category, payment terms
+and explicit sales-tax rate used for future invoice attempts, together with
+the last admin actor and timestamps. Existing outbox rows retain their
+classification and are not rewritten when settings change. GBP is enforced
+both by the application validator and the database constraint. If the record
+does not yet exist, a valid environment configuration is imported once as the
+bootstrap value; invalid or incomplete configuration remains fail-closed.
+
 ## Status model
 
 | From | Allowed next state |
@@ -67,14 +76,16 @@ rejects external request origins and unsafe provider response URLs, validates
 contact and invoice references, redacts authorization headers and stores
 encrypted OAuth material only in D1.
 
-Normal lesson invoice configuration requires exactly `55.00` GBP, an explicit
-item type, category URL and payment terms, and an explicit FreeAgent invoice
-line-item `sales_tax_rate` of `0`. The zero rate represents the
-non-VAT-registered business and prevents FreeAgent contact/company defaults
-from adding VAT. Missing or malformed values fail before a provider request.
-Amounts are parsed and formatted as fixed two-decimal minor units; no
-floating-point arithmetic is used. This follows FreeAgent's invoice sales-tax
-model: <https://dev.freeagent.com/docs/sales_tax>.
+Normal lesson invoice configuration starts at `55.00` GBP and is editable by
+an admin through the billing settings page. GBP is always enforced; amount,
+item type, category URL, payment terms and the explicit FreeAgent invoice
+line-item `sales_tax_rate` are validated before saving and before a provider
+request. The current zero rate represents the non-VAT-registered business and
+prevents FreeAgent contact/company defaults from adding VAT. Missing,
+malformed or implicit values fail before a provider request. Amounts are parsed
+and formatted as fixed two-decimal minor units; no floating-point arithmetic
+is used. This follows FreeAgent's invoice sales-tax model:
+<https://dev.freeagent.com/docs/sales_tax>.
 
 ## Non-scope
 
