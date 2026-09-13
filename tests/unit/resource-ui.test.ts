@@ -60,6 +60,7 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".report-attachments-grid.has-files");
     expect(cssSource).toContain("align-items: start");
     expect(cssSource).toContain(".report-attachment-list .file-preview { margin-top: 0; }");
+    expect(cssSource).toContain(".report-attachment-list > .file-preview:empty { display: none; }");
     expect(cssSource).toContain(".report-attachment-chip");
     expect(clientSource).toContain("Add another file");
     expect(clientSource).toContain("if (reportAttachmentForm) return;");
