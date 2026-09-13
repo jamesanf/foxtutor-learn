@@ -2,6 +2,13 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Final report spacing and attachment copy
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Tightened the feedback grid spacing and balanced the Notes disclosure placement.
+- Removed the redundant attachment heading and moved the attachment instruction into the dropzone copy.
+
 ### 2026-09-13 — Compact report fields and action placement
 
 **Status:** deployed; authenticated production acceptance pending
