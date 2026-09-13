@@ -66,6 +66,7 @@ import {
 } from "../db/calendar-feeds";
 import { findLessonReport, findSentLessonReportForStudent, upsertLessonReport, type LessonReport } from "../db/reports";
 import { countNotifications, findNotificationById, listNotifications, notificationCounts, updateNotificationSchedule } from "../db/notifications";
+import { accountingOutboxCounts, consumeAccountingOAuthState, createAccountingOAuthState, findAccountingOutbox, listAccountingOutbox, listDueAccountingOutbox, makeAccountingRetryable } from "../db/accounting";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
 import {
   cancelLesson,
@@ -128,6 +129,9 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
+import { accountingIntegrationStatus, connectFreeAgent, processAccountingOutbox, reconcileAccountingOutbox } from "../accounting/service";
+import { freeAgentAuthorizationUrl, type FreeAgentEnvironment } from "../accounting/freeagent/client";
+import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
   MAX_RESOURCE_SIZE_BYTES,
   MAX_LESSON_STORAGE_BYTES,
@@ -152,6 +156,18 @@ export interface Env {
   MAIL_API_FROM?: string;
   MAIL_API_ACCESS_CLIENT_ID?: string;
   MAIL_API_ACCESS_CLIENT_SECRET?: string;
+  FREEAGENT_ENVIRONMENT?: string;
+  FREEAGENT_CLIENT_ID?: string;
+  FREEAGENT_CLIENT_SECRET?: string;
+  FREEAGENT_OAUTH_REDIRECT_URI?: string;
+  FREEAGENT_TOKEN_ENCRYPTION_KEY?: string;
+  FREEAGENT_API_VERSION?: string;
+  FREEAGENT_ACCESS_LEVEL?: string;
+  FREEAGENT_INVOICE_AMOUNT?: string;
+  FREEAGENT_INVOICE_ITEM_TYPE?: string;
+  FREEAGENT_INVOICE_CATEGORY_URL?: string;
+  FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?: string;
+  FREEAGENT_INVOICE_CURRENCY?: string;
   RESOURCES_BUCKET?: R2Bucket;
 }
 
@@ -241,9 +257,9 @@ function navigation(role: Role): string {
     students: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3ZM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm8 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5ZM8 13c-2.33 0-7 1.17-7 3.5V19h5v-2.5c0-1.03.42-1.91 1.09-2.63C6.98 13.32 7.5 13.12 8 13Z"
   } as const;
   const icon = (name: keyof typeof icons): string => `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
-  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Students: "students", "My lessons": "lessons" };
+  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "notifications", Students: "students", "My lessons": "lessons" };
   const links: Array<[string, string]> = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/students", "Students"]]
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/resources", "Resources"]];
   return links.map(([href, label]) => `<a href="${href}">${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
@@ -419,6 +435,24 @@ function notificationDetail(notification: Awaited<ReturnType<typeof findNotifica
     ? `<form method="post" action="/learn/admin/notifications/${encodeURIComponent(notification.id)}">${hiddenCsrf(csrfToken)}<label>Send at (UK time)<input type="datetime-local" name="scheduledAt" value="${escapeHtml(scheduled)}" required></label>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<div class="form-actions"><button class="button" type="submit">Update schedule</button></div></form>`
     : `<p class="muted">Scheduling is locked because this notification is ${notificationStatusLabel(notification.status).toLowerCase()}.</p>`;
   return `<section class="card notification-detail"><div class="page-heading"><div><h1>${escapeHtml(notification.event_type.replaceAll("_", " "))}</h1><p class="lede">${escapeHtml(notificationStatusLabel(notification.status))} · ${escapeHtml(notification.recipient_email ?? "Unknown")}</p></div><div class="form-actions"><a class="button secondary" href="/learn/admin/notifications/${encodeURIComponent(notification.id)}/preview" target="_blank" rel="noopener">Preview email</a><a class="button secondary" href="/learn/admin/notifications">Back to notifications</a></div></div><dl class="detail-grid"><div><dt>Created</dt><dd>${escapeHtml(notificationTimestamp(notification.created_at))}</dd></div><div><dt>Scheduled</dt><dd>${escapeHtml(notificationTimestamp(notification.scheduled_at))}</dd></div><div><dt>Attempts</dt><dd>${notification.attempt_count}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(notification.provider_reference ?? "—")}</dd></div></dl><h2>Subject</h2><p>${escapeHtml(notification.subject)}</p><h2>Plain-text content</h2><pre class="notification-content">${escapeHtml(notification.text_body)}</pre><h2>HTML content</h2><pre class="notification-content">${escapeHtml(notification.html_body)}</pre><h2>Schedule</h2>${scheduleControl}</section>`;
+}
+
+function accountingLabel(value: string): string {
+  return value.split("_").map((part) => part.charAt(0) + part.slice(1).toLowerCase()).join(" ");
+}
+
+function accountingList(
+  rows: Awaited<ReturnType<typeof listAccountingOutbox>>,
+  counts: Awaited<ReturnType<typeof accountingOutboxCounts>>,
+  status: Awaited<ReturnType<typeof accountingIntegrationStatus>>,
+  csrfToken: string
+): string {
+  const summary = `<div class="summary-grid"><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Retryable</span><strong>${counts.RETRYABLE}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Succeeded</span><strong>${counts.SUCCEEDED}</strong></section></div>`;
+  const connection = `<section class="card"><div class="section-heading"><div><h2>FreeAgent</h2><p class="lede">${escapeHtml(status.label)} · ${escapeHtml(status.environment)}</p></div><div class="form-actions">${status.configured && !status.connected ? buttonLink("/learn/admin/accounting/connect", "Connect FreeAgent") : ""}<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span></div></div>${status.errorMessage ? `<p class="form-error">${escapeHtml(status.errorMessage)}</p>` : ""}${status.lastSuccessAt ? `<p class="muted">Last successful sync: ${escapeHtml(notificationTimestamp(status.lastSuccessAt))}</p>` : ""}</section>`;
+  const body = rows.length
+    ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Event</th><th>Student</th><th>Consequence</th><th>Status</th><th>External reference</th><th>Action</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Date">${escapeHtml(notificationTimestamp(row.created_at))}</td><td data-label="Event">${escapeHtml(accountingLabel(row.event_type))}</td><td data-label="Student">${escapeHtml(row.student_name ?? "Pupil")}</td><td data-label="Consequence">${escapeHtml(accountingLabel(row.billing_consequence))}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(accountingLabel(row.status))}</span>${row.safe_error_message ? `<small>${escapeHtml(row.safe_error_message)}</small>` : ""}</td><td data-label="External reference">${row.external_url ? `<a href="${escapeHtml(row.external_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.external_reference ?? "Open in FreeAgent")}</a>` : escapeHtml(row.external_reference ?? "—")}</td><td data-label="Action">${row.status === "UNKNOWN" ? `<a class="button secondary" href="/learn/admin/accounting/${encodeURIComponent(row.id)}/reconcile">Reconcile</a>` : ["FAILED", "RETRYABLE"].includes(row.status) ? `<form method="post" action="/learn/admin/accounting/${encodeURIComponent(row.id)}/retry">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Retry</button></form>` : "—"}</td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="empty-state compact-empty"><h2>No accounting events</h2><p>Phase 5 commercial decisions will appear here when they require an accounting boundary.</p></div>`;
+  return `${connection}${summary}<section class="card"><div class="section-heading"><div><h2>Accounting outbox</h2><p class="muted">FreeAgent actions are processed separately from lesson and email delivery.</p></div></div>${body}</section>`;
 }
 
 function lessonReportForm(
@@ -1289,6 +1323,11 @@ function notificationIdFromPath(pathname: string): string | null {
   return match ? decodePathSegment(match[1]) : null;
 }
 
+function accountingOutboxIdFromPath(pathname: string): string | null {
+  const match = /^\/learn\/admin\/accounting\/([^/]+)(?:\/(?:retry|reconcile))?$/.exec(pathname.replace(/\/+$/, ""));
+  return match ? decodePathSegment(match[1]) : null;
+}
+
 function lessonRouteId(id: string): string {
   return encodeURIComponent(lessonUrlKey(id));
 }
@@ -1546,6 +1585,81 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   const url = new URL(request.url);
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
+  if (route === "admin-accounting-connect") {
+    if (request.method !== "GET") return messagePage("Method not allowed", "Use the FreeAgent connection link from the accounting page.", 405);
+    if (!env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_OAUTH_REDIRECT_URI) return messagePage("FreeAgent unavailable", "FreeAgent OAuth configuration is incomplete.", 503);
+    const environment: FreeAgentEnvironment = env.FREEAGENT_ENVIRONMENT === "production" ? "production" : "sandbox";
+    const state = randomOAuthState();
+    const now = new Date().toISOString();
+    await createAccountingOAuthState(db, {
+      stateHash: await hashOAuthState(state),
+      adminUserId: active.user.id,
+      environment,
+      expiresAt: new Date(Date.parse(now) + 10 * 60_000).toISOString(),
+      createdAt: now
+    });
+    return redirect(freeAgentAuthorizationUrl(environment, {
+      clientId: env.FREEAGENT_CLIENT_ID,
+      redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI,
+      state,
+      accessLevel: env.FREEAGENT_ACCESS_LEVEL ?? "4"
+    }));
+  }
+  if (route === "admin-accounting-callback") {
+    const state = url.searchParams.get("state");
+    const code = url.searchParams.get("code");
+    if (!state || !code) return messagePage("FreeAgent connection failed", "FreeAgent did not return an authorization code.", 400);
+    const consumed = await consumeAccountingOAuthState(db, await hashOAuthState(state), new Date().toISOString());
+    if (!consumed || consumed.admin_user_id !== active.user.id) return messagePage("FreeAgent connection failed", "That authorization request is invalid or expired.", 403);
+    try {
+      await connectFreeAgent(db, env, {
+        code,
+        environment: consumed.environment,
+        redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI ?? "",
+        now: new Date().toISOString()
+      });
+      return redirect("/learn/admin/accounting");
+    } catch {
+      return messagePage("FreeAgent connection failed", "FreeAgent could not verify the configured company connection.", 502);
+    }
+  }
+  if (route === "admin-accounting") {
+    if (request.method !== "GET") return messagePage("Method not allowed", "Accounting monitoring is read-only.", 405);
+    const [rows, counts, status] = await Promise.all([
+      listAccountingOutbox(db, undefined, 100, 0),
+      accountingOutboxCounts(db),
+      accountingIntegrationStatus(db, env)
+    ]);
+    return appPage(active.user, csrfToken, "Accounting", `<div class="page-heading"><div><h1>Accounting</h1><p class="lede">Operational boundary between Learn and FreeAgent.</p></div></div>${accountingList(rows, counts, status, csrfToken)}`);
+  }
+  if (route === "admin-accounting-retry") {
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const id = accountingOutboxIdFromPath(url.pathname);
+    if (!id) return messagePage("Not found", "That accounting event does not exist.", 404);
+    const changed = await makeAccountingRetryable(db, id, new Date().toISOString());
+    if (!changed) return messagePage("Retry unavailable", "This event is not safe to retry in its current state.", 409);
+    return redirect("/learn/admin/accounting");
+  }
+  if (route === "admin-accounting-reconcile") {
+    const id = accountingOutboxIdFromPath(url.pathname);
+    if (!id) return messagePage("Not found", "That accounting event does not exist.", 404);
+    const outbox = await findAccountingOutbox(db, id);
+    if (!outbox) return messagePage("Not found", "That accounting event does not exist.", 404);
+    if (outbox.status !== "UNKNOWN") return redirect("/learn/admin/accounting");
+    if (request.method === "GET") {
+      return appPage(active.user, csrfToken, "Reconcile accounting event", `<section class="card form-card"><h1>Reconcile accounting event</h1><p class="lede">Do not create a second invoice. Enter the FreeAgent invoice ID only after checking the configured company.</p><form method="post" action="${url.pathname}">${hiddenCsrf(csrfToken)}<label>FreeAgent invoice ID<input name="externalReference" inputmode="numeric" pattern="[0-9]+" required></label><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Reconcile</button></div></form></section>`);
+    }
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const form = await parseForm(request);
+    const externalReference = formText(form ?? new FormData(), "externalReference").trim();
+    if (!/^\d+$/.test(externalReference)) return messagePage("Invalid reference", "Enter a numeric FreeAgent invoice ID.", 400);
+    try {
+      const reconciled = await reconcileAccountingOutbox(db, env, outbox, externalReference, new Date().toISOString());
+      return reconciled ? redirect("/learn/admin/accounting") : messagePage("Reconciliation unavailable", "The event could not be reconciled.", 409);
+    } catch {
+      return messagePage("Reconciliation failed", "FreeAgent could not confirm that invoice.", 502);
+    }
+  }
   if (route === "admin-notifications") {
     const previewMatch = url.pathname.match(/^\/learn\/admin\/notifications\/preview\/([^/]+)$/);
     if (previewMatch) {
@@ -2645,9 +2759,11 @@ export default {
     const now = new Date(controller.scheduledTime).toISOString();
     context.waitUntil((async () => {
       await markElapsedScheduledLessonsCompleted(db, now);
+      const dueAccounting = await listDueAccountingOutbox(db, now, 10);
       await Promise.all([
         runReminderScheduler(db, env, now),
-        runDstWarningScheduler(db, env, now)
+        runDstWarningScheduler(db, env, now),
+        ...dueAccounting.map((event) => processAccountingOutbox(db, env, event.id, now))
       ]);
     })());
   }

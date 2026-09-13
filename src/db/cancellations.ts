@@ -1,4 +1,5 @@
 import type { BillingConsequence } from "../domain/cancellations";
+import { accountingOutboxStatement } from "./accounting";
 
 export type CancellationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type LessonHistoryEventType =
@@ -156,6 +157,17 @@ export async function cancelLesson(
     previousTimezone: string;
   }
 ): Promise<boolean> {
+  const historyId = crypto.randomUUID();
+  const accountingStatement = accountingOutboxStatement(db, {
+    id: crypto.randomUUID(),
+    historyId,
+    historyEventType: input.eventType,
+    lessonId: input.lessonId,
+    studentId: input.studentId,
+    billingConsequence: input.billingConsequence,
+    accountingEffectiveDate: input.now.slice(0, 10),
+    now: input.now
+  });
   const results = await db.batch([
     db.prepare("UPDATE lessons SET status = 'cancelled', updated_at = ? WHERE id = ? AND status = 'scheduled'")
       .bind(input.now, input.lessonId),
@@ -167,7 +179,7 @@ export async function cancelLesson(
        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'cancelled', ?
        WHERE changes() > 0`
     ).bind(
-      crypto.randomUUID(),
+      historyId,
       input.lessonId,
       input.studentId,
       input.requestId ?? null,
@@ -183,7 +195,8 @@ export async function cancelLesson(
       input.previousEndAt,
       input.previousTimezone,
       input.now
-    )
+    ),
+    ...(accountingStatement ? [accountingStatement] : [])
   ]);
   return Boolean(results[0]?.meta.changes);
 }
@@ -244,6 +257,19 @@ export async function decideCancellationRequest(
     now: string;
   }
 ): Promise<boolean> {
+  const historyId = crypto.randomUUID();
+  const accountingStatement = input.decision === "APPROVED"
+    ? accountingOutboxStatement(db, {
+      id: crypto.randomUUID(),
+      historyId,
+      historyEventType: "CANCELLATION_APPROVED",
+      lessonId: input.lessonId,
+      studentId: input.studentId,
+      billingConsequence: input.billingConsequence ?? "EXCEPTION_WAIVED",
+      accountingEffectiveDate: input.now.slice(0, 10),
+      now: input.now
+    })
+    : null;
   const results = await db.batch([
     db.prepare(
       `UPDATE lesson_cancellation_requests
@@ -264,7 +290,7 @@ export async function decideCancellationRequest(
         WHERE r.id = ? AND r.status = ? AND changes() > 0
         ON CONFLICT DO NOTHING`
     ).bind(
-      crypto.randomUUID(),
+      historyId,
       input.lessonId,
       input.studentId,
       input.requestId,
@@ -280,7 +306,8 @@ export async function decideCancellationRequest(
       input.now,
       input.requestId,
       input.decision
-    )
+    ),
+    ...(accountingStatement ? [accountingStatement] : [])
   ]);
   return Boolean(results[0]?.meta.changes);
 }
@@ -302,6 +329,17 @@ export async function rescheduleLesson(
     now: string;
   }
 ): Promise<boolean> {
+  const historyId = crypto.randomUUID();
+  const accountingStatement = accountingOutboxStatement(db, {
+    id: crypto.randomUUID(),
+    historyId,
+    historyEventType: "RESCHEDULED",
+    lessonId: input.lessonId,
+    studentId: input.studentId,
+    billingConsequence: "RESCHEDULED",
+    accountingEffectiveDate: input.now.slice(0, 10),
+    now: input.now
+  });
   const results = await db.batch([
     db.prepare(
       `UPDATE lessons
@@ -320,10 +358,11 @@ export async function rescheduleLesson(
        SELECT ?, ?, ?, ?, ?, 'RESCHEDULED', ?, 'RESCHEDULED', ?, ?, ?, ?, ?, ?, 'scheduled', ?
        WHERE changes() > 0`
     ).bind(
-      crypto.randomUUID(), input.lessonId, input.studentId, input.actorUserId, input.actorRole, input.reason,
+      historyId, input.lessonId, input.studentId, input.actorUserId, input.actorRole, input.reason,
       input.previousStartAt, input.previousEndAt, input.previousTimezone,
       input.startAt, input.endAt, input.timezone, input.now
-    )
+    ),
+    ...(accountingStatement ? [accountingStatement] : [])
   ]);
   return Boolean(results[0]?.meta.changes);
 }

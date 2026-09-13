@@ -35,6 +35,11 @@ export type LearnRoute =
   | "admin-lesson-report-pdf"
   | "admin-notifications"
   | "admin-notification"
+  | "admin-accounting"
+  | "admin-accounting-connect"
+  | "admin-accounting-callback"
+  | "admin-accounting-retry"
+  | "admin-accounting-reconcile"
   | "admin-reschedules"
   | "admin-reschedule-approve"
   | "admin-reschedule-reject"
@@ -87,6 +92,11 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin/notifications" || path === "/learn/admin/notifications/settings" || path.startsWith("/learn/admin/notifications/preview/")) return "admin-notifications";
   if (/^\/learn\/admin\/notifications\/[^/]+\/preview$/.test(path)) return "admin-notification";
   if (/^\/learn\/admin\/notifications\/[^/]+$/.test(path)) return "admin-notification";
+  if (path === "/learn/admin/accounting") return "admin-accounting";
+  if (path === "/learn/admin/accounting/connect") return "admin-accounting-connect";
+  if (path === "/learn/admin/accounting/oauth/callback") return "admin-accounting-callback";
+  if (/^\/learn\/admin\/accounting\/[^/]+\/retry$/.test(path)) return "admin-accounting-retry";
+  if (/^\/learn\/admin\/accounting\/[^/]+\/reconcile$/.test(path)) return "admin-accounting-reconcile";
   if (path === "/learn/admin/reschedules") return "admin-reschedules";
   if (/^\/learn\/admin\/reschedules\/[^/]+\/approve$/.test(path)) return "admin-reschedule-approve";
   if (/^\/learn\/admin\/reschedules\/[^/]+\/reject$/.test(path)) return "admin-reschedule-reject";

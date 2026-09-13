@@ -8,11 +8,11 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 5.1 deployed; student profile manager deployed
+**Phase:** Phase 6.1 accounting boundary implemented; external FreeAgent acceptance pending
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Learn branding and legal pages (current main)
 **Worker:** `28a5e1c3-b2ea-4289-88ea-75228a3749ce`
-**D1 migrations:** `0001_foundation.sql` through `0015_parent_name.sql`
+**D1 migrations:** `0001_foundation.sql` through `0016_accounting_outbox.sql`
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -25,8 +25,11 @@ for consistent recipient engagement. Brevo-controlled tracking and
 unsubscribe headers remain outside Learn's control.
 Phase 4 is closed at the preserved `phase-4-complete` baseline. Phase 5 adds
 server-authoritative cancellation, late exception requests, admin decisions,
-rescheduling history and operational billing classification. FreeAgent and
-other accounting actions remain outside this release.
+rescheduling history and operational billing classification. Phase 6.1 adds a separate, idempotent accounting outbox, encrypted FreeAgent
+OAuth connection storage, sandbox/production adapter, bounded Worker delivery,
+admin retry/reconciliation and accounting-history retention. Live FreeAgent
+financial actions remain disabled until the commercial mapping, credentials and
+authenticated sandbox/production acceptance are supplied.
 
 ## Architecture
 
@@ -41,7 +44,8 @@ other accounting actions remain outside this release.
 - Fox Mail is accessed only through the server-side `mail.foxtutor.org`
   adapter.
 - Lesson files use the existing D1 metadata and private R2 resource pipeline.
-- Phase 6 FreeAgent integration is deferred.
+- FreeAgent remains the accounting authority; Learn stores only integration
+  identity, delivery state and external references.
 - The authenticated shell uses the Learn logo, shared FoxTutor footer, and
   legal pages generated as an exact mirror of the public site's canonical
   terms and privacy source.

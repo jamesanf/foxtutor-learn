@@ -1,5 +1,15 @@
 # Changelog
 
+### 2026-09-13 — Phase 6.1 accounting integration boundary
+
+- Added the Phase 5-to-accounting contract and dedicated D1 outbox with stable
+  idempotency keys and deletion-safe references.
+- Added encrypted FreeAgent OAuth storage, sandbox/production API handling,
+  token refresh, bounded scheduled delivery, safe retry and unknown-outcome
+  reconciliation.
+- Added the admin accounting monitor and explicit FreeAgent connection status.
+- Live accounting acceptance remains pending business mapping and credentials.
+
 ### 2026-09-13 — Shared legal source and header logo treatment
 
 - Added a white rounded panel around the centered Learn logo so its pale

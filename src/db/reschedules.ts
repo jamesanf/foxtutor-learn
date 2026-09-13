@@ -1,3 +1,5 @@
+import { accountingOutboxStatement } from "./accounting";
+
 export type RescheduleRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface RescheduleRequest {
@@ -90,6 +92,17 @@ export async function decideRescheduleRequest(
     now: string;
   }
 ): Promise<boolean> {
+  const historyId = crypto.randomUUID();
+  const accountingStatement = accountingOutboxStatement(db, {
+    id: crypto.randomUUID(),
+    historyId,
+    historyEventType: "RESCHEDULED",
+    lessonId: input.lessonId,
+    studentId: input.studentId,
+    billingConsequence: "RESCHEDULED",
+    accountingEffectiveDate: input.now.slice(0, 10),
+    now: input.now
+  });
   const approvalStatements = input.decision === "APPROVED"
     ? [
       db.prepare(
@@ -127,10 +140,11 @@ export async function decideRescheduleRequest(
          WHERE id = ? AND status = 'APPROVED' AND changes() > 0
          ON CONFLICT DO NOTHING`
       ).bind(
-        crypto.randomUUID(), input.lessonId, input.studentId, input.adminUserId,
+        historyId, input.lessonId, input.studentId, input.adminUserId,
         input.previousStartAt, input.previousEndAt, input.previousTimezone,
         input.now, input.requestId
-      )
+      ),
+      ...(accountingStatement ? [accountingStatement] : [])
     ]
     : [
       db.prepare(
