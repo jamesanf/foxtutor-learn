@@ -10,7 +10,7 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 - Reconciled the 4.1 fields explicitly: `summary` to This Lesson's Focus, `homework` to Home Learning Task and `additional_notes` to Notes.
 - Added shared report projections for server-rendered HTML, Fox Mail and on-demand Worker-generated PDF output. PDFs use private/no-store responses and are never stored in R2 or D1.
 - Added admin level editing, structured draft/send workflow, immutable sent report views, student-owned report HTML/PDF routes and report actions in admin/student lesson history.
-- Added route, migration, projection and PDF regression coverage. Migration `0008` is applied and Worker version `810f6525-257f-4914-916b-2589fe150258` is deployed from commit `704bec0daccd085025adf6aa5c50e63dc8261497`; Phase 4 remains open until controlled production mail, browser, PDF visual and no-storage evidence is available.
+- Added route, migration, projection and PDF regression coverage. Migration `0008` is applied and Worker version `50fe8696-610d-499e-90fa-57cf1194586b` is deployed from commit `71645829d48ad24f80b5f449459fa752bfd837fc`; Phase 4 remains open until controlled production mail, browser, PDF visual and no-storage evidence is available.
 
 ### 2026-09-13 — Phase 4.1 notifications, reminders and lesson reporting
 

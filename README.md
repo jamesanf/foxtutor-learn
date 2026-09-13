@@ -198,7 +198,7 @@ docs/                 Architecture, security, deployment, API and evidence
 | 2.11 | Definitive calendar UI remediation, measurable visual contracts and production acceptance | In progress |
 | 3.1 | Lesson resources, private R2, document metadata and admin file manager | Deployed as Worker `dfebaca6-f1e4-4019-bb5a-37f92344c161`; authenticated acceptance pending |
 | 3.2 | Contextual Add Resource UX, dropzone selection and category removal from application code | Local implementation; production acceptance pending |
-| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `810f6525-257f-4914-916b-2589fe150258`; authenticated/Fox Mail acceptance pending |
+| 4 | Mail notifications and reports | Phase 4.2 deployed as Worker `50fe8696-610d-499e-90fa-57cf1194586b`; authenticated/Fox Mail acceptance pending |
 | 5 | Cancellation automation | Deferred |
 | 6 | FreeAgent boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |
