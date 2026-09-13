@@ -8,11 +8,11 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 4.2 deployed; formal Phase 4 closure remains pending authenticated acceptance
+**Phase:** Phase 5.1 implementation ready for production deployment
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** `92d5e50`
-**Worker:** `d69ed1e5-5fd0-4dab-89e8-1a8c462b4b5f`
-**D1 migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no migration is pending
+**Application/runtime release:** pending deployment
+**Worker:** pending deployment
+**D1 migrations:** `0001_foundation.sql` through `0011_phase5_notification_types.sql`
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -23,9 +23,10 @@ delivery.
 Production notifications also use `james@foxtutor.org` as their reply address
 for consistent recipient engagement. Brevo-controlled tracking and
 unsubscribe headers remain outside Learn's control.
-Phase 4 remains open until authenticated student/admin, real Fox Mail, PDF
-visual and no-storage acceptance evidence is recorded. There is no
-`phase-4-complete` tag.
+Phase 4 is closed at the preserved `phase-4-complete` baseline. Phase 5 adds
+server-authoritative cancellation, late exception requests, admin decisions,
+rescheduling history and operational billing classification. FreeAgent and
+other accounting actions remain outside this release.
 
 ## Architecture
 
@@ -40,8 +41,7 @@ visual and no-storage acceptance evidence is recorded. There is no
 - Fox Mail is accessed only through the server-side `mail.foxtutor.org`
   adapter.
 - Lesson files use the existing D1 metadata and private R2 resource pipeline.
-- Phase 5 cancellation automation and Phase 6 FreeAgent integration are
-  deferred.
+- Phase 6 FreeAgent integration is deferred.
 
 ## Local development
 
@@ -68,9 +68,8 @@ git diff --check
 ```
 
 Use `npm run deploy` only for an authorised production deployment. Apply
-forward-only migrations before deploying code that depends on them. The
-current Phase 4.2 release and acceptance procedure is documented in
-[`docs/deployment/phase-4.2.md`](docs/deployment/phase-4.2.md).
+forward-only migrations before deploying code that depends on them. The Phase 5.1 release and acceptance procedure is documented in
+[`docs/deployment/phase-5.1.md`](docs/deployment/phase-5.1.md).
 
 ## Repository map
 
@@ -92,17 +91,17 @@ CHANGELOG.md         Material implementation history
 | `PHASE_PLAN.md` | Current phase scope and acceptance gates |
 | `PROJECT_STRUCTURE.md` | Filesystem and separation-of-concerns rules |
 | `CHANGELOG.md` | Material implementation history |
-| `docs/architecture/phase-4.2.md` | Structured report and delivery architecture |
-| `docs/testing/phase-4.2.md` | Current tests and Phase 4 acceptance matrix |
-| `docs/deployment/phase-4.2.md` | Current release and deployment record |
-| `docs/security/phase-4.2.md` | Report, attachment and privacy controls |
+| `docs/architecture/phase-5.1.md` | Cancellation, exception, rescheduling and billing boundary |
+| `docs/testing/phase-5.1.md` | Phase 5.1 tests and acceptance matrix |
+| `docs/deployment/phase-5.1.md` | Phase 5.1 release and deployment record |
+| `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/architecture/` | Earlier phase architecture records |
 | `docs/testing/` | Earlier phase validation and acceptance records |
 | `docs/deployment/` | Earlier phase deployment records |
 
 Historical documents retain the evidence for their own release. The current
-status above and the latest Phase 4.2 documents are authoritative for this
+status above and the latest Phase 5.1 documents are authoritative for this
 working tree.
 
 ## Phase map
@@ -112,8 +111,8 @@ working tree.
 | 1 | Private Learn, Access identity, roles and anti-indexing | Complete |
 | 2 | Students, lessons, ownership, calendar and lifecycle | Complete |
 | 3 | Private lesson resources and R2 storage | Deployed; acceptance recorded in phase documents |
-| 4 | Notifications and structured lesson reports | Phase 4.2 deployed; closure pending acceptance |
-| 5 | Cancellation automation | Deferred |
+| 4 | Notifications and structured lesson reports | Complete |
+| 5 | Cancellation and rescheduling automation | In progress |
 | 6 | FreeAgent/accounting boundary | Deferred |
 | 7 | Optional billing visibility and hardening | Deferred |
 

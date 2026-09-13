@@ -621,7 +621,7 @@ Access Service Auth path must be restored before a real send can be claimed.
 `CANCELLATION_REQUESTED` is contract-ready but dormant; cancellation rules and
 rescheduling remain Phase 5.
 
-### Phase 4.2 current state — 2026-09-13
+### Phase 4.2 current state — closed baseline
 
 Structured reports now follow the supplied template rather than the generic
 4.1 summary/homework model. Migrations `0008_structured_lesson_reports.sql`
@@ -653,9 +653,9 @@ pending.
 Generated lesson/report links use compact base64url route keys while existing
 UUID links remain compatible. Report HTML titles use
 `YY/MM/DD - FoxTutor Lesson Report`, and downloaded PDFs use
-`YY-MM-DD FoxTutor Lesson Report.pdf`. Automated checks and unauthenticated
-production smoke pass; authenticated mail/browser/PDF/no-storage acceptance
-remains required before Phase 4 is formally closed.
+`YY-MM-DD FoxTutor Lesson Report.pdf`. The exact baseline commit is preserved
+by the `phase-4-complete` tag. Phase 5 consumes the completed notification
+outbox and Fox Mail boundary without reopening Phase 4 scope.
 
 ### Must achieve
 
@@ -706,6 +706,19 @@ Default policy:
 - More than 24 hours before the lesson: student may cancel directly.
 - Less than or equal to 24 hours: student cannot self-cancel without an exception path.
 
+### Phase 5.1 policy decisions
+
+- Exactly 24 hours is treated as late and requires the exception path.
+- Started, completed and already-cancelled lessons cannot be student-cancelled.
+- Student rescheduling uses the same strict `>24h` window; admin
+  rescheduling is available for future scheduled lessons.
+- Normal student cancellation is classified `NO_CHARGE`.
+- A pending exception is `CANCELLATION_PENDING_DECISION`; an approved
+  exception is `EXCEPTION_WAIVED`; an administrative cancellation is
+  `ADMIN_CANCELLED`; a reschedule is `RESCHEDULED`.
+- These classifications stop at the Phase 6 boundary and are not sent to
+  FreeAgent in Phase 5.
+
 ### Must achieve
 
 - Server-side cancellation eligibility calculation.
@@ -732,10 +745,14 @@ Default policy:
 - Repeated cancellation submission is idempotent.
 - Rescheduling preserves historical lesson record if that is the chosen policy.
 - Admin can see who initiated and approved a cancellation.
+- Calendar feeds reflect cancellation and the current rescheduled occurrence.
+- Existing lesson, resource, report and join-link relationships remain coherent.
 
 ### Exit criteria
 
-The 24-hour rule is enforced automatically and consistently without manual intervention for normal cases.
+The 24-hour rule is enforced automatically and consistently without manual
+intervention for normal cases, and exception decisions are visible and
+auditable to the tutor.
 
 ---
 

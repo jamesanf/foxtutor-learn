@@ -65,4 +65,22 @@ describe("D1 foundation", () => {
     expect(migration).toContain("ALTER TABLE students ADD COLUMN international INTEGER NOT NULL DEFAULT 0");
     expect(migration).toContain("CHECK (international IN (0, 1))");
   });
+
+  it("adds immutable cancellation requests and lesson history", () => {
+    const cancellation = readFileSync("migrations/0010_phase5_cancellations.sql", "utf8");
+    expect(cancellation).toContain("CREATE TABLE IF NOT EXISTS lesson_cancellation_requests");
+    expect(cancellation).toContain("idx_one_pending_cancellation_request");
+    expect(cancellation).toContain("CREATE TABLE IF NOT EXISTS lesson_history");
+    expect(cancellation).toContain("CANCELLATION_APPROVED");
+    expect(cancellation).toContain("RESCHEDULED");
+  });
+
+  it("extends the existing notification outbox rather than adding a second one", () => {
+    const migration = readFileSync("migrations/0011_phase5_notification_types.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE notifications RENAME TO notifications_phase4");
+    expect(migration).toContain("'CANCELLATION_APPROVED'");
+    expect(migration).toContain("'CANCELLATION_REJECTED'");
+    expect(migration).toContain("'LESSON_RESCHEDULED'");
+    expect(migration).toContain("INSERT INTO notifications");
+  });
 });

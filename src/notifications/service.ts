@@ -124,8 +124,9 @@ export async function runReminderScheduler(
   for (const lesson of dueLessons) {
     const scheduledAt = reminderDueAt(lesson.start_at);
     if (!scheduledAt || Date.parse(scheduledAt) > Date.parse(now)) continue;
-    const key = reminderIdempotencyKey(lesson.id);
-    const existing = await findNotificationByIdempotencyKey(db, key);
+    const key = reminderIdempotencyKey(lesson.id, lesson.start_at);
+    const existing = await findNotificationByIdempotencyKey(db, key)
+      ?? await findNotificationByIdempotencyKey(db, reminderIdempotencyKey(lesson.id));
     if (existing?.status === "SENT") continue;
     const content = renderEmail("LESSON_REMINDER", {
       studentName: lesson.student_name,

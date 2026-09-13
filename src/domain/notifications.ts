@@ -6,6 +6,9 @@ export const NOTIFICATION_TYPES = [
   "RESOURCE_ADDED",
   "CANCELLATION_PROCESSED",
   "CANCELLATION_REQUESTED",
+  "CANCELLATION_APPROVED",
+  "CANCELLATION_REJECTED",
+  "LESSON_RESCHEDULED",
   "LESSON_REPORT",
   "DST_WARNING"
 ] as const;
@@ -28,8 +31,10 @@ export function reminderDueAt(startAt: string, intervalMinutes = REMINDER_INTERV
   return new Date(start - intervalMinutes * 60_000).toISOString();
 }
 
-export function reminderIdempotencyKey(lessonId: string): string {
-  return `lesson-reminder:${lessonId}:24h`;
+export function reminderIdempotencyKey(lessonId: string, startAt?: string): string {
+  return startAt
+    ? `lesson-reminder:${lessonId}:${startAt}:24h`
+    : `lesson-reminder:${lessonId}:24h`;
 }
 
 export function eventIdempotencyKey(type: NotificationType, eventId: string): string {

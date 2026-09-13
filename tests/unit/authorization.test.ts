@@ -25,7 +25,13 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/report")).toBe("admin-lesson-report");
     expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/report.pdf")).toBe("admin-lesson-report-pdf");
     expect(classifyLearnRoute("/learn/admin/notifications")).toBe("admin-notifications");
+    expect(classifyLearnRoute("/learn/admin/cancellations")).toBe("admin-cancellations");
+    expect(classifyLearnRoute("/learn/admin/cancellations/request-1/approve")).toBe("admin-cancellation-approve");
+    expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/reschedule")).toBe("admin-lesson-reschedule");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1")).toBe("student-lesson");
+    expect(classifyLearnRoute("/learn/student/lessons/lesson-1/cancel")).toBe("student-lesson-cancel");
+    expect(classifyLearnRoute("/learn/student/lessons/lesson-1/request-cancellation")).toBe("student-lesson-cancellation-request");
+    expect(classifyLearnRoute("/learn/student/lessons/lesson-1/reschedule")).toBe("student-lesson-reschedule");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1/report")).toBe("student-lesson-report");
     expect(classifyLearnRoute("/learn/student/lessons/lesson-1/report.pdf")).toBe("student-lesson-report-pdf");
     expect(classifyLearnRoute("/learn/assets/learn.css")).toBe("asset");

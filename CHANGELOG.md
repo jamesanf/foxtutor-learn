@@ -1,5 +1,17 @@
 # Changelog
 
+### Phase 5.1 — Cancellation, exceptions and rescheduling
+
+- Added server-authoritative `>24h` student cancellation and rescheduling
+  eligibility, with the exact 24-hour boundary blocked.
+- Added immediate student cancellation, late cancellation requests, admin
+  approval/rejection, direct admin cancellation and immutable lesson history.
+- Added same-lesson rescheduling with overlap validation, calendar continuity
+  and deterministic notification/reminder identities.
+- Added operational billing-consequence classification without FreeAgent or
+  payment integration.
+- Added Phase 5.1 architecture, testing, security and deployment records.
+
 ### 2026-09-13 — Simplified lesson report PDF filenames
 
 - **Status:** deployed as Worker

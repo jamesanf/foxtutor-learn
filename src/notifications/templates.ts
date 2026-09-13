@@ -48,6 +48,10 @@ export interface DstWarningEmailData {
   direction: ClockChangeDirection;
 }
 
+export interface CancellationDecisionEmailData extends LessonEmailData {
+  decision?: "approved" | "rejected";
+}
+
 function requireFields(data: Record<string, unknown>, fields: string[]): void {
   for (const field of fields) {
     if (typeof data[field] !== "string" || !(data[field] as string).trim()) throw new Error(`Missing notification template field: ${field}`);
@@ -156,6 +160,34 @@ export function renderCancellationProcessed(data: LessonEmailData, origin: strin
   };
 }
 
+export function renderCancellationRequested(data: LessonEmailData, origin: string): EmailContent {
+  const details = lessonDetails(data, origin);
+  return {
+    subject: `Cancellation request received — ${lessonDate(data)}`,
+    text: `Your cancellation request has been sent for review.\n\n${details.text}`,
+    html: frame("Cancellation request received", "FoxTutor Learn", `<p>Your cancellation request has been sent for review.</p>${details.html}`)
+  };
+}
+
+export function renderCancellationDecision(data: CancellationDecisionEmailData, origin: string): EmailContent {
+  const details = lessonDetails(data, origin);
+  const approved = data.decision === "approved";
+  return {
+    subject: `${approved ? "Cancellation approved" : "Cancellation request declined"} — ${lessonDate(data)}`,
+    text: `${approved ? "Your cancellation request was approved." : "Your cancellation request was not approved."}\n\n${details.text}`,
+    html: frame(approved ? "Cancellation approved" : "Cancellation request declined", "FoxTutor Learn", `<p>${approved ? "Your cancellation request was approved." : "Your cancellation request was not approved."}</p>${details.html}`)
+  };
+}
+
+export function renderLessonRescheduled(data: LessonEmailData, origin: string): EmailContent {
+  const details = lessonDetails(data, origin);
+  return {
+    subject: `Lesson rescheduled — ${lessonDate(data)}`,
+    text: `Your lesson has been rescheduled.\n\n${details.text}`,
+    html: frame("Lesson rescheduled", "FoxTutor Learn", `<p>Your lesson has been rescheduled.</p>${details.html}`)
+  };
+}
+
 export function renderLessonReport(data: ReportEmailData, origin: string): EmailContent {
   const date = lessonDate(data);
   const time = lessonTime(data);
@@ -202,7 +234,7 @@ export function renderEmail(type: NotificationType, data: Record<string, unknown
     requireFields(data, ["studentName", "origin"]);
     return renderStudentInvitation(data as unknown as { studentName: string; origin: string });
   }
-  if (type === "LESSON_CREATED" || type === "LESSON_CHANGED" || type === "LESSON_REMINDER" || type === "CANCELLATION_PROCESSED" || type === "CANCELLATION_REQUESTED") {
+  if (type === "LESSON_CREATED" || type === "LESSON_CHANGED" || type === "LESSON_REMINDER" || type === "CANCELLATION_PROCESSED" || type === "CANCELLATION_REQUESTED" || type === "CANCELLATION_APPROVED" || type === "CANCELLATION_REJECTED" || type === "LESSON_RESCHEDULED") {
     requireFields(data, ["studentName", "startAt", "endAt", "timezone", "lessonPath"]);
   }
   if (type === "LESSON_CREATED") return renderLessonCreated(data as unknown as LessonEmailData, origin);
@@ -212,7 +244,11 @@ export function renderEmail(type: NotificationType, data: Record<string, unknown
     requireFields(data, ["studentName", "filename", "resourcePath"]);
     return renderResourceAdded(data as unknown as ResourceEmailData, origin);
   }
-  if (type === "CANCELLATION_PROCESSED" || type === "CANCELLATION_REQUESTED") return renderCancellationProcessed(data as unknown as LessonEmailData, origin);
+  if (type === "CANCELLATION_PROCESSED") return renderCancellationProcessed(data as unknown as LessonEmailData, origin);
+  if (type === "CANCELLATION_REQUESTED") return renderCancellationRequested(data as unknown as LessonEmailData, origin);
+  if (type === "CANCELLATION_APPROVED") return renderCancellationDecision({ ...(data as unknown as LessonEmailData), decision: "approved" }, origin);
+  if (type === "CANCELLATION_REJECTED") return renderCancellationDecision({ ...(data as unknown as LessonEmailData), decision: "rejected" }, origin);
+  if (type === "LESSON_RESCHEDULED") return renderLessonRescheduled(data as unknown as LessonEmailData, origin);
   if (type === "DST_WARNING") {
     requireFields(data, ["studentName", "changeDate", "direction"]);
     if (data.direction !== "forward" && data.direction !== "backward") throw new Error("Invalid DST warning direction");

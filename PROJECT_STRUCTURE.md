@@ -20,7 +20,9 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   │   └── middleware/
 │   ├── auth/
 │   ├── db/
+│   │   └── cancellations.ts
 │   ├── domain/
+│   │   └── cancellations.ts
 │   ├── security/
 │   ├── mail/
 │   ├── notifications/
