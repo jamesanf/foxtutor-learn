@@ -154,8 +154,8 @@ export function renderLessonReport(data: ReportEmailData, origin: string): Email
     ["Notes", data.notes],
     ["Even Better If", data.evenBetterIf]
   ];
-  const textFields = fields.filter(([, value]) => value).map(([label, value]) => `\n\n${label}:\n${value}`).join("");
-  const htmlFields = fields.filter(([, value]) => value).map(([label, value]) => `<h2>${escapeHtml(label)}</h2><p>${lineBreaks(value)}</p>`).join("");
+  const textFields = fields.map(([label, value]) => `\n\n${label}:\n${value || "—"}`).join("");
+  const htmlFields = fields.map(([label, value]) => `<h2>${escapeHtml(label)}</h2><p>${value ? lineBreaks(value) : "—"}</p>`).join("");
   const reportLink = learnLink(origin, data.reportPath);
   return {
     subject: `Your lesson report — ${date}`,
