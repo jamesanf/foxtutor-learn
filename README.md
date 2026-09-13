@@ -11,10 +11,12 @@ replacement, payment system or accounting ledger.
 **Phase:** Engineering-complete; Phase 6 remains externally acceptance-blocked
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6 accounting boundary hardening
-**Deployed source:** recorded separately from repository HEAD in
-[`docs/deployment/phase-6.md`](docs/deployment/phase-6.md)
-**Worker version:** recorded in the latest deployment changelog entry
+**Deployed source:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`
+**Worker version:** `cfaa9a46-e64a-4ef0-a672-6a926de205ba`
 **D1 migrations:** `0001_foundation.sql` through `0017_accounting_operations.sql`
+
+The deployed source commit and current repository HEAD are tracked separately;
+the deployment record notes that Wrangler did not report source metadata.
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,

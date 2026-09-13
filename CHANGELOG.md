@@ -14,6 +14,10 @@
 - Current automated result: 26 test files and 124 tests passed; build, check,
   local migration validation, browser contract and production-perimeter smoke
   passed.
+- Deployed the executable commit `02b75403e2474aec4b693ed86eefa70cc8b8e195`;
+  Wrangler returned Worker version
+  `cfaa9a46-e64a-4ef0-a672-6a926de205ba`. Production D1 remains through
+  `0017_accounting_operations.sql` with no pending migrations.
 - Added the current Phase 6 status/evidence matrix, architecture, security,
   testing, deployment and exact human acceptance runbook. Historical 6.1-6.3
   records remain available as release evidence.

@@ -58,13 +58,16 @@ are historical release evidence.
 
 These values must always be reported separately:
 
-- **Repository HEAD:** recorded in the final release entry and `git rev-parse
-  HEAD`.
-- **Deployed source commit:** the exact executable commit passed to Wrangler.
-- **Deployed Worker version:** the UUID returned by Wrangler deployment
-  inspection.
+- **Repository HEAD at executable deployment:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`.
+- **Deployed source commit:** `02b75403e2474aec4b693ed86eefa70cc8b8e195`.
+- **Deployed Worker version:** `cfaa9a46-e64a-4ef0-a672-6a926de205ba`.
 - **D1 state:** production migrations through
   `0017_accounting_operations.sql`, with no pending migration reported.
+
+Wrangler reports the deployment source metadata as `Unknown`; the deployed
+source commit is the reviewed executable commit from which the deployment was
+run. The repository HEAD may move after this deployment for documentation-only
+reconciliation and must not be conflated with the deployed source commit.
 
 Documentation-only commits after an executable deployment do not change the
 deployed source commit.

@@ -9,10 +9,14 @@
 - D1 migration state: through `0017_accounting_operations.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
+- Repository HEAD at executable deployment: `02b75403e2474aec4b693ed86eefa70cc8b8e195`
+- Deployed source commit: `02b75403e2474aec4b693ed86eefa70cc8b8e195`
+- Deployed Worker version: `cfaa9a46-e64a-4ef0-a672-6a926de205ba`
 - Production FreeAgent configuration: absent until human acceptance
 
-The deployed source commit and Worker version are recorded separately in the
-latest release entry. A documentation-only commit does not constitute a
+Wrangler reported the deployment source metadata as `Unknown`; the deployed
+source commit above is the reviewed executable commit from which
+`npm run deploy` was run. A documentation-only commit does not constitute a
 runtime deployment.
 
 ## Safe rollout order
