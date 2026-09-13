@@ -24,6 +24,16 @@ The rollout order is:
 4. Verify the Worker, migration state and admin route authorization.
 5. Stop for the human commercial and FreeAgent configuration handover below.
 
+## Release record
+
+- Source commit: `11a0a065b8e4252cfca0c23cada236703c5390a5`
+- Remote `main`: `11a0a065b8e4252cfca0c23cada236703c5390a5`
+- Production Worker: `009e6eb2-c40e-4026-bbb3-214e38e3d7ba`
+- Production D1: `0017_accounting_operations.sql` applied; no migrations
+  pending
+- FreeAgent secrets, OAuth connection, contact mappings and invoice mapping
+  remain absent
+
 ## Human handover — required before Phase 6 closure
 
 The system owner must provide and approve, outside source control:

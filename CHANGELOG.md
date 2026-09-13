@@ -17,8 +17,10 @@
 - Recorded the official FreeAgent documentation check and the remaining
   sandbox/production acceptance and human commercial-approval gates in the
   Phase 6.2 architecture, testing, deployment and security documents.
-- **Status:** Phase 6 remains open; no FreeAgent credentials or financial
-  mutation are configured.
+- **Status:** deployed as Worker
+  `009e6eb2-c40e-4026-bbb3-214e38e3d7ba` from commit `11a0a06`; Phase 6
+  remains open because no FreeAgent credentials or financial mutation are
+  configured.
 
 ### 2026-09-13 — Phase 6.1 accounting integration boundary
 
