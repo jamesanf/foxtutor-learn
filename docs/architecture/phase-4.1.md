@@ -116,7 +116,8 @@ The notification console keeps the delivery log paginated and supports
 authenticated, rendered HTML previews for both notification templates and
 individual historical outbox rows. Delivery timestamps shown in the console
 are formatted in the configured UK calendar timezone; stored UTC values remain
-the source of truth.
+the source of truth. The delivery log pager is intentionally compact and
+renders as a small responsive capsule with in-place page updates.
 
 HTML template values are escaped; private lesson notes, tokens, IDs and
 provider credentials are not included in student messages.

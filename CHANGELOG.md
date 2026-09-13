@@ -886,6 +886,7 @@ tagging and pushing Phase 1 completion.
 **Closure decision:** all required visual, authorization, privacy, responsive, lifecycle, timezone, overlap, regression, cleanup, documentation, Git and deployment gates passed. Phase 2.1 is closed. Calendar, availability, recurrence, notifications, resources, billing and reporting remain deferred.
 ## Unreleased
 
+- Refined notification delivery pagination into a compact responsive capsule control.
 - Improved the notification console with readable UK-local timestamps, dynamic pagination, rendered historical-email previews, and collapsed notification controls.
 - Added persistent admin notification controls for enabling/disabling future notification types, adjusting reminder/delivery timing, and adding subject or body wording.
 - Improved the notification console with 12/24/48-page pagination, suppressed delivery visibility, and a less crowded delivery log.

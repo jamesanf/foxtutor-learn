@@ -375,11 +375,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .notification-filter-option.is-active, .notification-filter-option.is-active:hover, .notification-filter-option.is-active:focus, .notification-filter-option.is-active:active { border-color: var(--action); color: white; background: var(--action); }
 .notification-filter-toggle, .notification-filter-option, .notification-preview-link, .notification-save { min-height: 32px; padding: 6px 10px; font-size: .78rem; }
 .notification-filter-toggle { padding: 7px; }
-.notification-pagination { display: flex; grid-template-columns: none; justify-content: center; gap: 12px; margin-top: 16px; }
-.notification-pagination .pagination { flex: 0 0 auto; justify-content: center; gap: 5px; }
-.notification-pagination .pagination-link { min-height: 28px; }
-.notification-pagination .pagination-nav-link { width: 28px; min-height: 28px; padding: 0; border-radius: 7px; font-size: 1rem; line-height: 1; }
-.notification-page-label { min-width: 82px; color: var(--muted); text-align: center; font-size: .78rem; white-space: nowrap; }
+.notification-pagination { display: flex; justify-content: center; gap: 12px; margin-top: 14px; }
+.notification-pagination-nav { display: inline-flex; width: max-content; max-width: 100%; flex: 0 0 auto; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); }
+.notification-pagination .pagination-link { min-height: 0; border: 0; }
+.notification-pagination .pagination-link:hover { color: white; background: var(--action); }
+.notification-pagination .pagination-nav-link { width: 25px; height: 25px; min-height: 25px; padding: 0; border-radius: 50%; color: var(--action); font-size: .95rem; line-height: 1; }
+.notification-pagination .pagination-nav-link.is-disabled, .notification-pagination .pagination-nav-link.is-disabled:hover { color: #94a3b8; background: transparent; }
+.notification-page-label { min-width: 78px; padding: 0 6px; color: var(--muted); text-align: center; font-size: .76rem; line-height: 25px; white-space: nowrap; }
 .notification-pagination-spacer { display: none; }
 .notification-pagination .page-size-form { margin-left: 8px; }
 .notification-pagination .page-size-form label { font-size: .78rem; }
