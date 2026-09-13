@@ -2,7 +2,8 @@
 
 ### 2026-09-13 — Simplified lesson report PDF filenames
 
-- **Status:** pending deployment from the current working tree.
+- **Status:** deployed as Worker
+  `d69ed1e5-5fd0-4dab-89e8-1a8c462b4b5f` from commit `92d5e50`.
 - Removed the separator hyphen before `FoxTutor Lesson Report` in downloaded
   filenames: `26-09-13 FoxTutor Lesson Report.pdf`.
 

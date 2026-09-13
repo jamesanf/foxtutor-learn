@@ -647,8 +647,8 @@ persisted D1 projection; no PDF is written to R2 or D1. Student level is
 canonical on `students.level` and duplicated only as a report snapshot.
 
 Migrations through `0009_international_students.sql` are applied to
-production. The current deployed runtime commit is `b7e9a1a`, deployed as
-Worker `1601099f-35d8-4803-9846-4c95b58af122`; no remote migrations are
+production. The current deployed runtime commit is `92d5e50`, deployed as
+Worker `d69ed1e5-5fd0-4dab-89e8-1a8c462b4b5f`; no remote migrations are
 pending.
 Generated lesson/report links use compact base64url route keys while existing
 UUID links remain compatible. Report HTML titles use
