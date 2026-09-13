@@ -54,6 +54,7 @@ The state machine is:
 PENDING -> SENDING -> SENT
                     -> FAILED
                     -> UNKNOWN
+PENDING -> SUPPRESSED
 ```
 
 `UNKNOWN` means the request may have reached Fox Mail (for example, a timeout).
@@ -62,6 +63,15 @@ reconciliation. `FAILED` is used when Learn knows the provider rejected or did
 not accept the request. Retryable categories are rate limit, provider
 unavailable and timeout; permanent categories remain visible to the admin.
 Stale `SENDING` claims become `UNKNOWN` rather than creating another event.
+`SUPPRESSED` records a notification disabled by an administrator. It remains in
+the same outbox so the operational log explains why an expected message was
+not sent.
+
+The `notification_settings` table is the forward-looking control plane for the
+outbox. Admins can enable or suppress future event types, adjust reminder lead
+time or delivery delay, prepend a subject prefix, and append a short message
+note. Settings are applied when a future row is created; historical rows keep
+their original rendered subject and body.
 
 The database unique constraint on `idempotency_key` is the final duplicate
 protection. Provider delivery uses `notification:<notification-id>` and never
@@ -69,7 +79,8 @@ generates a new key for an attempt.
 
 ## Reminders
 
-The current product policy is one reminder, 15 minutes before a scheduled lesson.
+The current product policy is one reminder, 15 minutes before a scheduled lesson,
+configurable from the admin notification controls.
 Cloudflare invokes the Worker every five minutes. The scheduler queries only
 active, linked students and upcoming scheduled lessons inside a seven-day
 pipeline window, creates the deterministic reminder row with an indexed unique key, and
