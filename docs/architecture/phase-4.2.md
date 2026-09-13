@@ -53,9 +53,9 @@ only when the existing provider acceptance path marks the notification `SENT`.
 Failed/unknown mail retains the draft and the notification state.
 
 The report workflow includes a contextual drag-and-drop attachment area inside
-the primary report form. The selected file is submitted with the report
-action; the Worker waits for the existing multipart validation, D1 metadata
-and R2 storage pipeline to complete before saving or sending the report.
+the primary report form. The selected file is submitted with the Send report action; the Worker waits
+for the existing multipart validation, D1 metadata and R2 storage pipeline to
+complete before sending the report.
 The same resource notification and idempotency behavior is retained, and the
 file appears in the existing admin and student lesson resource views without
 a second attachment system or a separate upload page.

@@ -1396,7 +1396,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       ));
     }
     const attachment = form.get("attachment");
-    if (attachment instanceof File && attachment.size > 0) {
+    if (wantsSend && attachment instanceof File && attachment.size > 0) {
       const uploadForm = new FormData();
       uploadForm.set("csrf", formText(form, "csrf"));
       uploadForm.set("studentId", studentRecord.id);

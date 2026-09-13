@@ -46,6 +46,7 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain('name="attachment"');
     expect(workerSource).toContain("const attachment = form.get(\"attachment\")");
     expect(workerSource).toContain("attachment instanceof File");
+    expect(workerSource).toContain("if (wantsSend && attachment instanceof File && attachment.size > 0)");
     expect(workerSource).toContain("resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true)");
     expect(workerSource).toContain("if (uploadResponse.status !== 204)");
     expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
