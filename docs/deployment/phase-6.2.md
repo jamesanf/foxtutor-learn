@@ -26,8 +26,8 @@ The rollout order is:
 
 ## Release record
 
-- Source commit: `b5a213f`
-- Remote `main`: `b5a213f`
+- Runtime source commit: `b5a213f`
+- Repository `main` (documentation-only follow-up): `891f69e`
 - Production Worker: `26463610-92d2-490a-8e0f-c067cf45b846`
 - Production D1: `0017_accounting_operations.sql` applied; no migrations
   pending
