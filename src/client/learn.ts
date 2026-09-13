@@ -1048,8 +1048,17 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           credentials: "same-origin",
           headers: { Accept: "application/json", "X-Report-Fragment": "1" }
         });
+        const current = form.closest<HTMLElement>("section.report-form, section.report-document");
         const contentType = response.headers.get("content-type") ?? "";
         if (!contentType.includes("application/json")) {
+          const html = await response.text();
+          const replacement = new DOMParser().parseFromString(html, "text/html")
+            .querySelector<HTMLElement>("section.report-form, section.report-document");
+          if (replacement && current) {
+            current.replaceWith(replacement);
+            showNotification(action === "resend" ? "Report resent successfully." : "Report updated.");
+            return;
+          }
           throw new Error(response.status === 403
             ? "Your session has expired. Refresh the page and try again."
             : "The report action returned an unexpected response. Refresh the page and try again.");
@@ -1058,7 +1067,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
         if (!response.ok || !payload.ok) throw new Error(payload.message || "The report action could not be completed.");
         if (payload.reportHtml) {
           const replacement = document.createRange().createContextualFragment(payload.reportHtml).firstElementChild;
-          const current = form.closest<HTMLElement>("section.report-form, section.report-document");
           if (!(replacement instanceof HTMLElement) || !current) throw new Error("The report view could not be updated.");
           current.replaceWith(replacement);
         } else if (payload.action === "save") {
