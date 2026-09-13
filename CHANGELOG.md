@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-13 — Brevo deliverability consistency
+
+- Configured production notification delivery with
+  `MAIL_API_REPLY_TO=james@foxtutor.org`, matching the support address shown
+  in report emails and providing a direct reply path.
+- Documented the Learn-side deliverability boundary: Brevo-controlled
+  tracking, return-path, unsubscribe and classification headers remain
+  provider-managed.
+
 ### 2026-09-13 — Report email and PDF branding refinement
 
 - Simplified the report email header to FoxTutor and Lesson Report, removed
@@ -18,8 +27,8 @@
   removed duplicate pupil/footer content, added the support contact and
   copyright footer, and changed the CTA to “View this report on FoxTutor
   Learn”.
-- Normalised duplicate rich-text bullet markers and added a self-contained
-  vector FoxTutor mark to the one-page PDF header.
+- Normalised duplicate rich-text bullet markers and added the supplied FoxTutor
+  logo asset to the one-page PDF header.
 
 ### 2026-09-13 — Resend lesson reports
 

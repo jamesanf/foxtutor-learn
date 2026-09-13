@@ -40,6 +40,12 @@ query, fixing the ambiguous-column path behind the student report 1101;
 humanises sent timestamps, keeps ordinary reports on one PDF page and adds
 inline FoxTutor email branding with structured feedback panels.
 
+The deliverability refinement configures production notifications with
+`MAIL_API_REPLY_TO=james@foxtutor.org`, so replies to Brevo-delivered
+notifications reach the same support address shown in the report body. This
+does not suppress Brevo-added tracking or unsubscribe infrastructure; those
+remain provider-controlled.
+
 Sent reports now have an admin-only Resend report action. Each resend uses a
 new notification event while retaining the persisted report content and
 attachments; an accepted resend updates the report's `sent_at` snapshot shown
@@ -51,7 +57,7 @@ redirect fallback, including a disabled spinner state and site notification.
 Report email uses a spacious metadata panel, omits empty feedback sections,
 removes duplicate pupil/footer content, adds the support contact and copyright
 footer, and uses a FoxTutor Learn text link. Generated PDFs remain
-single-page and now include a vector FoxTutor mark in the header.
+single-page and now include the supplied FoxTutor logo asset in the header.
 
 The first authenticated report-send attempt reached Fox Mail but failed with
 `400 invalid_recipient`. Production D1 inspection confirmed that both the

@@ -78,6 +78,7 @@ export async function deliverNotification(
   if (!claimed) return null;
   const result = await sendMailDetailed(env, {
     to: claimed.recipient_email ?? "",
+    ...(env.MAIL_API_REPLY_TO ? { replyTo: env.MAIL_API_REPLY_TO } : {}),
     subject: claimed.subject,
     text: claimed.text_body,
     html: claimed.html_body,

@@ -45,16 +45,21 @@ describe("mail boundary", () => {
         ENVIRONMENT: "production",
         MAIL_API_URL: "https://mail.foxtutor.org",
         MAIL_API_TOKEN: "test-token",
-        MAIL_API_FROM: "hello@foxtutor.org"
+        MAIL_API_FROM: "hello@foxtutor.org",
+        MAIL_API_REPLY_TO: "james@foxtutor.org"
       },
-      { to: "student@example.com", subject: "Report", text: "Report", html: "<p>Report</p>", idempotencyKey: "notification-test-message-1" },
+      { to: "student@example.com", subject: "Report", text: "Report", html: "<p>Report</p>", idempotencyKey: "notification-test-message-1", replyTo: "james@foxtutor.org" },
       async (input, init) => {
         calls.push(new Request(input, init));
         return new Response(JSON.stringify({ id: "provider-1" }), { status: 202, headers: { "Content-Type": "application/json" } });
       }
     );
     expect(result).toEqual({ kind: "accepted", providerStatus: 202, providerReference: "provider-1" });
-    await expect(calls[0].json()).resolves.toMatchObject({ html: "<p>Report</p>", to: ["student@example.com"] });
+    await expect(calls[0].json()).resolves.toMatchObject({
+      html: "<p>Report</p>",
+      replyTo: "james@foxtutor.org",
+      to: ["student@example.com"]
+    });
   });
 
   it("classifies a request timeout as unknown rather than a permanent failure", async () => {

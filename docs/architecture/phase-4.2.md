@@ -92,8 +92,8 @@ PDF from the persisted report, uses `Content-Type: application/pdf`,
 same authorization predicates as the HTML route. It never writes an R2 object
 or D1 blob.
 
-The renderer uses an explicit fixed `© 2026 Fox Learning Ltd. All rights
-reserved.` footer policy matching the supplied template. Long text is wrapped within the
+The renderer uses a dynamically dated `© <current year> Fox Learning Ltd. All
+rights reserved.` footer matching the supplied template. Long text is wrapped within the
 feedback cells and the renderer reduces the line scale when needed to retain
 the one-page format. The supplied FoxTutor logo asset is embedded in the
 top-left header as a JPEG XObject loaded from the Worker asset bundle; PDFs do
@@ -107,4 +107,16 @@ use a single spacious metadata panel; the recipient's pupil name is not
 repeated in that panel. Empty feedback fields are omitted, duplicate bullet prefixes are normalised, and the
 call to action is the text link “View this report on FoxTutor Learn”. The
 support sentence appears in the main content rather than the footer, while the
-footer contains one dynamically dated copyright line.
+footer contains one dynamically dated copyright line. Notification delivery
+also supplies `Reply-To: james@foxtutor.org`, matching the support address in
+the message body and giving recipients a direct reply path.
+
+### Brevo deliverability boundary
+
+The production mail path remains Fox Mail with Brevo as the required outbound
+provider. Brevo may add its own return-path, tracking, unsubscribe and
+provider-classification headers; Learn does not attempt unsupported header
+overrides. Learn-side mitigations are limited to authenticated domain
+alignment, a consistent sender/reply address, a plain-text alternative, and
+the minimum application links required by the report. Gmail inbox placement
+remains reputation- and recipient-dependent.

@@ -19,6 +19,9 @@ level snapshots, report attachments through the existing R2 resource pipeline,
 admin report resend, humanised delivery timestamps, reactive report
 save/send/resend actions, branded inline-styled email, empty-section omission,
 one-page PDFs with a FoxTutor logo mark, and idempotent notification delivery.
+Production notifications also use `james@foxtutor.org` as their reply address
+for consistent recipient engagement. Brevo-controlled tracking and
+unsubscribe headers remain outside Learn's control.
 Phase 4 remains open until authenticated student/admin, real Fox Mail, PDF
 visual and no-storage acceptance evidence is recorded. There is no
 `phase-4-complete` tag.

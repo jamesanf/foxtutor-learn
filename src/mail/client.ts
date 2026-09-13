@@ -1,5 +1,6 @@
 export interface MailMessage {
   to: string;
+  replyTo?: string;
   subject: string;
   text: string;
   html?: string;
@@ -10,6 +11,7 @@ export interface MailEnvironment {
   MAIL_API_URL?: string;
   MAIL_API_TOKEN?: string;
   MAIL_API_FROM?: string;
+  MAIL_API_REPLY_TO?: string;
   MAIL_API_ACCESS_CLIENT_ID?: string;
   MAIL_API_ACCESS_CLIENT_SECRET?: string;
   ENVIRONMENT?: string;
@@ -80,6 +82,7 @@ export async function sendMailDetailed(
           cc: [],
           bcc: [],
           subject: message.subject,
+          ...(message.replyTo ? { replyTo: message.replyTo } : {}),
           text: message.text,
           ...(message.html ? { html: message.html } : {})
         }),

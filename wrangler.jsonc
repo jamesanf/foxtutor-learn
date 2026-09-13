@@ -27,7 +27,8 @@
 		"ENVIRONMENT": "production",
 		"PUBLIC_ORIGIN": "https://foxtutor.org/learn",
 		"MAIL_API_URL": "https://mail.foxtutor.org",
-		"MAIL_API_FROM": "hello@foxtutor.org"
+		"MAIL_API_FROM": "hello@foxtutor.org",
+		"MAIL_API_REPLY_TO": "james@foxtutor.org"
 	},
 	"observability": {
 		"enabled": true,
