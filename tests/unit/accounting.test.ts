@@ -131,6 +131,16 @@ describe("FreeAgent adapter", () => {
     })).rejects.toMatchObject({ shape: { code: "MALFORMED_RESPONSE", unknown: true } });
   });
 
+  it("rejects credential-bearing requests with an external request origin", async () => {
+    const client = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async () => jsonResponse({})
+    });
+    await expect(client.requestJson("token", "//evil.example.test/v2/company")).rejects.toMatchObject({
+      shape: { code: "CONFIGURATION", retryable: false }
+    });
+  });
+
   it("exchanges and refreshes OAuth tokens without exposing raw provider errors", async () => {
     const calls: Array<{ url: string; body: string; authorization: string | null }> = [];
     const fetcher: typeof fetch = async (input, init) => {

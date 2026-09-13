@@ -20,7 +20,13 @@ This is the current canonical structure. Agents may refine it when implementatio
 │   │   └── middleware/
 │   ├── auth/
 │   ├── db/
+│   │   ├── accounting.ts
 │   │   └── cancellations.ts
+│   ├── accounting/
+│   │   ├── credentials.ts
+│   │   ├── service.ts
+│   │   └── freeagent/
+│   │       └── client.ts
 │   ├── domain/
 │   │   └── cancellations.ts
 │   ├── security/

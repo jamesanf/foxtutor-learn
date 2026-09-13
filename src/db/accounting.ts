@@ -62,8 +62,29 @@ export interface ExternalAccountingLink {
   external_resource_type: "CONTACT";
   external_reference: string;
   external_url: string;
+  status: "UNVERIFIED" | "VERIFIED" | "INVALID";
+  verified_at: string | null;
+  verified_environment: "sandbox" | "production" | null;
+  verified_company_subdomain: string | null;
+  last_error_code: string | null;
+  last_error_message: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AccountingRetryAudit {
+  id: string;
+  outbox_id: string | null;
+  business_event_id: string | null;
+  actor_user_id: string | null;
+  actor_role: "ADMIN";
+  prior_status: AccountingStatus;
+  request_result: "ACCEPTED" | "REJECTED";
+  resulting_status: AccountingStatus | null;
+  provider_reference: string | null;
+  safe_error_code: string | null;
+  safe_error_message: string | null;
+  created_at: string;
 }
 
 const outboxSelect = `SELECT a.*, s.name AS student_name, l.start_at AS lesson_start_at,
@@ -243,6 +264,53 @@ export async function makeAccountingRetryable(db: D1Database, id: string, now: s
   return Boolean(result.meta.changes);
 }
 
+export async function recordAccountingRetryAudit(
+  db: D1Database,
+  input: {
+    id: string;
+    outboxId: string;
+    businessEventId: string | null;
+    actorUserId: string;
+    priorStatus: AccountingStatus;
+    requestResult: "ACCEPTED" | "REJECTED";
+    resultingStatus: AccountingStatus | null;
+    providerReference: string | null;
+    safeErrorCode: string | null;
+    safeErrorMessage: string | null;
+    now: string;
+  }
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO accounting_retry_audit
+     (id, outbox_id, business_event_id, actor_user_id, actor_role, prior_status,
+      request_result, resulting_status, provider_reference, safe_error_code,
+      safe_error_message, created_at)
+     VALUES (?, ?, ?, ?, 'ADMIN', ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    input.id,
+    input.outboxId,
+    input.businessEventId,
+    input.actorUserId,
+    input.priorStatus,
+    input.requestResult,
+    input.resultingStatus,
+    input.providerReference,
+    input.safeErrorCode,
+    input.safeErrorMessage?.slice(0, 240) ?? null,
+    input.now
+  ).run();
+}
+
+export async function listAccountingRetryAudit(db: D1Database, outboxId: string, limit = 20): Promise<AccountingRetryAudit[]> {
+  const result = await db.prepare(
+    `SELECT * FROM accounting_retry_audit
+     WHERE outbox_id = ?
+     ORDER BY created_at DESC, id DESC
+     LIMIT ?`
+  ).bind(outboxId, Math.max(1, Math.min(limit, 100))).all<AccountingRetryAudit>();
+  return result.results;
+}
+
 export async function reconcileAccountingReference(
   db: D1Database,
   id: string,
@@ -267,20 +335,93 @@ export async function findExternalAccountingLink(db: D1Database, studentId: stri
   ).bind(studentId).first<ExternalAccountingLink>();
 }
 
+export async function listExternalAccountingLinks(db: D1Database): Promise<ExternalAccountingLink[]> {
+  const result = await db.prepare(
+     `SELECT * FROM external_accounting_links
+      WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT'
+      ORDER BY updated_at DESC, id DESC`
+  ).all<ExternalAccountingLink>();
+  return result.results;
+}
+
 export async function upsertExternalAccountingLink(
   db: D1Database,
-  input: { id: string; studentId: string; externalReference: string; externalUrl: string; now: string }
+  input: {
+     id: string;
+     studentId: string;
+     externalReference: string;
+     externalUrl: string;
+     status?: "UNVERIFIED" | "VERIFIED" | "INVALID";
+     verifiedAt?: string | null;
+     verifiedEnvironment?: "sandbox" | "production" | null;
+     verifiedCompanySubdomain?: string | null;
+     lastErrorCode?: string | null;
+     lastErrorMessage?: string | null;
+     now: string;
+  }
 ): Promise<void> {
   await db.prepare(
-    `INSERT INTO external_accounting_links
-     (id, provider, local_entity_type, local_entity_id, external_resource_type,
-      external_reference, external_url, created_at, updated_at)
-     VALUES (?, 'FREEAGENT', 'STUDENT', ?, 'CONTACT', ?, ?, ?, ?)
-     ON CONFLICT(provider, local_entity_type, local_entity_id) DO UPDATE SET
-       external_reference = excluded.external_reference,
-       external_url = excluded.external_url,
-       updated_at = excluded.updated_at`
-  ).bind(input.id, input.studentId, input.externalReference, input.externalUrl, input.now, input.now).run();
+     `INSERT INTO external_accounting_links
+      (id, provider, local_entity_type, local_entity_id, external_resource_type,
+       external_reference, external_url, status, verified_at, verified_environment,
+       verified_company_subdomain, last_error_code, last_error_message, created_at, updated_at)
+      VALUES (?, 'FREEAGENT', 'STUDENT', ?, 'CONTACT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(provider, local_entity_type, local_entity_id) DO UPDATE SET
+        external_reference = excluded.external_reference,
+        external_url = excluded.external_url,
+        status = excluded.status,
+        verified_at = excluded.verified_at,
+        verified_environment = excluded.verified_environment,
+        verified_company_subdomain = excluded.verified_company_subdomain,
+        last_error_code = excluded.last_error_code,
+        last_error_message = excluded.last_error_message,
+        updated_at = excluded.updated_at`
+  ).bind(
+     input.id,
+     input.studentId,
+     input.externalReference,
+     input.externalUrl,
+     input.status ?? "UNVERIFIED",
+     input.verifiedAt ?? null,
+     input.verifiedEnvironment ?? null,
+     input.verifiedCompanySubdomain ?? null,
+     input.lastErrorCode ?? null,
+     input.lastErrorMessage?.slice(0, 240) ?? null,
+     input.now,
+     input.now
+  ).run();
+}
+
+export async function updateExternalAccountingLinkStatus(
+  db: D1Database,
+  studentId: string,
+  input: {
+     status: "UNVERIFIED" | "VERIFIED" | "INVALID";
+     verifiedAt?: string | null;
+     verifiedEnvironment?: "sandbox" | "production" | null;
+     verifiedCompanySubdomain?: string | null;
+     lastErrorCode?: string | null;
+     lastErrorMessage?: string | null;
+     now: string;
+  }
+): Promise<boolean> {
+  const result = await db.prepare(
+     `UPDATE external_accounting_links
+      SET status = ?, verified_at = ?, verified_environment = ?,
+          verified_company_subdomain = ?, last_error_code = ?,
+          last_error_message = ?, updated_at = ?
+      WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND local_entity_id = ?`
+  ).bind(
+     input.status,
+     input.verifiedAt ?? null,
+     input.verifiedEnvironment ?? null,
+     input.verifiedCompanySubdomain ?? null,
+     input.lastErrorCode ?? null,
+     input.lastErrorMessage?.slice(0, 240) ?? null,
+     input.now,
+     studentId
+  ).run();
+  return Boolean(result.meta.changes);
 }
 
 export async function findAccountingConnection(db: D1Database): Promise<AccountingConnection | null> {

@@ -5,6 +5,7 @@ import {
   findExternalAccountingLink,
   markAccountingOutcome,
   markAccountingSucceeded,
+  upsertExternalAccountingLink,
   reconcileAccountingReference,
   saveAccountingConnection,
   updateAccountingConnectionStatus,
@@ -33,6 +34,7 @@ export interface AccountingEnvironment {
   FREEAGENT_INVOICE_CATEGORY_URL?: string;
   FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS?: string;
   FREEAGENT_INVOICE_CURRENCY?: string;
+  FREEAGENT_COMPANY_SUBDOMAIN?: string;
 }
 
 export interface AccountingIntegrationStatus {
@@ -80,11 +82,22 @@ async function accessToken(
   forceRefresh = false
 ): Promise<string> {
   const connection = await findAccountingConnection(db);
+  const environment = configuredEnvironment(env);
   if (!connection?.refresh_token_ciphertext || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
       status: null,
       message: "FreeAgent OAuth connection is not configured.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  if (connection.environment !== environment) {
+    throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent environment does not match the stored connection.",
       retryable: false,
       unknown: false,
       retryAfterSeconds: null
@@ -134,15 +147,24 @@ async function providerCall<T>(
 export async function accountingIntegrationStatus(db: D1Database, env: AccountingEnvironment): Promise<AccountingIntegrationStatus> {
   const connection = await findAccountingConnection(db);
   const environment = configuredEnvironment(env);
-  const configured = Boolean(env.FREEAGENT_CLIENT_ID && env.FREEAGENT_CLIENT_SECRET && env.FREEAGENT_TOKEN_ENCRYPTION_KEY && env.FREEAGENT_OAUTH_REDIRECT_URI);
+  const configured = Boolean(
+    (env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production") &&
+    env.FREEAGENT_CLIENT_ID &&
+    env.FREEAGENT_CLIENT_SECRET &&
+    env.FREEAGENT_TOKEN_ENCRYPTION_KEY &&
+    env.FREEAGENT_OAUTH_REDIRECT_URI &&
+    env.FREEAGENT_COMPANY_SUBDOMAIN
+  );
   if (!configured || !connection) {
     return { configured, connected: false, environment, label: configured ? "Connection requires attention" : "Not configured", lastSuccessAt: connection?.last_success_at ?? null, errorCode: connection?.last_error_code ?? null, errorMessage: connection?.last_error_message ?? null };
   }
+  const identityMatches = connection.environment === environment &&
+    (!env.FREEAGENT_COMPANY_SUBDOMAIN || connection.company_subdomain === env.FREEAGENT_COMPANY_SUBDOMAIN);
   return {
     configured,
-    connected: connection.status === "CONNECTED",
+    connected: connection.status === "CONNECTED" && identityMatches,
     environment: connection.environment,
-    label: connection.status === "CONNECTED" ? "Connected to FreeAgent" : "Connection requires attention",
+    label: connection.status === "CONNECTED" && identityMatches ? "Connected to FreeAgent" : "Connection requires attention",
     lastSuccessAt: connection.last_success_at,
     errorCode: connection.last_error_code,
     errorMessage: connection.last_error_message
@@ -155,7 +177,14 @@ export async function connectFreeAgent(
   input: { code: string; environment: FreeAgentEnvironment; redirectUri: string; now: string },
   fetcher: typeof fetch = fetch
 ): Promise<void> {
-  if (!env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY) {
+  if (
+    !env.FREEAGENT_CLIENT_ID ||
+    !env.FREEAGENT_CLIENT_SECRET ||
+    !env.FREEAGENT_TOKEN_ENCRYPTION_KEY ||
+    !env.FREEAGENT_COMPANY_SUBDOMAIN ||
+    (env.FREEAGENT_ENVIRONMENT !== "sandbox" && env.FREEAGENT_ENVIRONMENT !== "production") ||
+    input.environment !== env.FREEAGENT_ENVIRONMENT
+  ) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
       status: null,
@@ -173,6 +202,27 @@ export async function connectFreeAgent(
   }, fetcher);
   const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
   const company = await client.company(tokens.accessToken);
+  if (env.FREEAGENT_COMPANY_SUBDOMAIN && company.subdomain !== env.FREEAGENT_COMPANY_SUBDOMAIN) {
+    throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent authenticated company does not match the configured company.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  const existing = await findAccountingConnection(db);
+  if (existing && existing.environment !== input.environment) {
+    throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent environment cannot be changed without replacing the stored connection.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
   await saveAccountingConnection(db, {
     environment: input.environment,
     companySubdomain: company.subdomain ?? null,
@@ -207,8 +257,17 @@ export async function processAccountingOutbox(
     return findAccountingOutbox(db, id);
   }
   const link = await findExternalAccountingLink(db, claimed.student_id);
-  if (!link) {
+  if (!link || link.status !== "VERIFIED") {
     await markAccountingOutcome(db, id, "FAILED", "CONTACT_MAPPING_REQUIRED", "An accounting contact must be mapped before invoicing.", null, "NOT_ATTEMPTED", now);
+    return findAccountingOutbox(db, id);
+  }
+  const connection = await findAccountingConnection(db);
+  if (
+    !connection ||
+    link.verified_environment !== connection.environment ||
+    (connection.company_subdomain && link.verified_company_subdomain !== connection.company_subdomain)
+  ) {
+    await markAccountingOutcome(db, id, "FAILED", "CONTACT_MAPPING_REQUIRED", "The accounting contact mapping is not valid for the connected FreeAgent company.", null, "NOT_ATTEMPTED", now);
     return findAccountingOutbox(db, id);
   }
   try {
@@ -223,6 +282,7 @@ export async function processAccountingOutbox(
       await updateAccountingConnectionStatus(db, "CONNECTED", { lastSuccessAt: now, now });
       return findAccountingOutbox(db, id);
     }
+
     const invoice = await providerCall(db, env, now, fetcher, (client, token) => client.createDraftInvoice(token, {
       contactUrl: link.external_url,
       reference: claimed.accounting_reference,
@@ -259,6 +319,59 @@ export async function processAccountingOutbox(
     await markAccountingOutcome(db, id, status, code as AccountingErrorCode, message, retryAt, shape?.status ? String(shape.status) : "ERROR", now);
   }
   return findAccountingOutbox(db, id);
+}
+
+export async function verifyFreeAgentContactMapping(
+  db: D1Database,
+  env: AccountingEnvironment,
+  input: { studentId: string; externalReference: string; now: string },
+  fetcher: typeof fetch = fetch
+): Promise<void> {
+  if (!/^\d+$/.test(input.externalReference)) {
+    throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The FreeAgent contact ID must be numeric.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  const connection = await findAccountingConnection(db);
+  if (!connection) {
+    throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "Connect the intended FreeAgent company before mapping contacts.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  const contact = await providerCall(db, env, input.now, fetcher, (client, token) =>
+    client.findContact(token, input.externalReference)
+  );
+  if (!contact) {
+    throw new FreeAgentApiError({
+      code: "NOT_FOUND",
+      status: 404,
+      message: "The FreeAgent contact was not found.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  await upsertExternalAccountingLink(db, {
+    id: crypto.randomUUID(),
+    studentId: input.studentId,
+    externalReference: input.externalReference,
+    externalUrl: contact.url,
+    status: "VERIFIED",
+    verifiedAt: input.now,
+    verifiedEnvironment: connection.environment,
+    verifiedCompanySubdomain: connection.company_subdomain,
+    now: input.now
+  });
 }
 
 export async function reconcileAccountingOutbox(

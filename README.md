@@ -8,11 +8,11 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 6.1 accounting boundary implemented; external FreeAgent acceptance pending
+**Phase:** Phase 6.2 accounting hardening implemented; commercial approval and external FreeAgent acceptance pending
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** Learn branding and legal pages (current main)
-**Worker:** `28a5e1c3-b2ea-4289-88ea-75228a3749ce`
-**D1 migrations:** `0001_foundation.sql` through `0016_accounting_outbox.sql`
+**Application/runtime release:** Phase 6.2 accounting operations hardening
+**Worker:** `5f07214e-bb8f-4f69-8826-5ae34ef199c0` (Phase 6.1 baseline; Phase 6.2 release pending)
+**D1 migrations:** `0001_foundation.sql` through `0017_accounting_operations.sql` locally; production through `0016_accounting_outbox.sql` until the safe release is deployed
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -27,9 +27,11 @@ Phase 4 is closed at the preserved `phase-4-complete` baseline. Phase 5 adds
 server-authoritative cancellation, late exception requests, admin decisions,
 rescheduling history and operational billing classification. Phase 6.1 adds a separate, idempotent accounting outbox, encrypted FreeAgent
 OAuth connection storage, sandbox/production adapter, bounded Worker delivery,
-admin retry/reconciliation and accounting-history retention. Live FreeAgent
-financial actions remain disabled until the commercial mapping, credentials and
-authenticated sandbox/production acceptance are supplied.
+admin retry/reconciliation and accounting-history retention. Phase 6.2 adds
+verified admin contact mappings, pinned company/environment identity and
+additive manual-retry audit records. Live FreeAgent financial actions remain
+disabled until the commercial policy, credentials and authenticated
+sandbox/production acceptance are supplied.
 
 ## Architecture
 
@@ -109,13 +111,17 @@ CHANGELOG.md         Material implementation history
 | `docs/testing/phase-6.1.md` | Accounting integration acceptance matrix |
 | `docs/deployment/phase-6.1.md` | Accounting release and deployment record |
 | `docs/security/phase-6.1.md` | Accounting credential and retention controls |
+| `docs/architecture/phase-6.2.md` | Commercial boundary and accounting operations |
+| `docs/testing/phase-6.2.md` | Phase 6.2 automated and external acceptance state |
+| `docs/deployment/phase-6.2.md` | Phase 6.2 release and human handover |
+| `docs/security/phase-6.2.md` | Phase 6.2 security and operational controls |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/architecture/` | Earlier phase architecture records |
 | `docs/testing/` | Earlier phase validation and acceptance records |
 | `docs/deployment/` | Earlier phase deployment records |
 
 Historical documents retain the evidence for their own release. The current
-status above and the latest Phase 6.1 documents are authoritative for this
+status above and the latest Phase 6.2 documents are authoritative for this
 working tree.
 
 ## Phase map
@@ -127,7 +133,7 @@ working tree.
 | 3 | Private lesson resources and R2 storage | Deployed; acceptance recorded in phase documents |
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
-| 6 | FreeAgent/accounting boundary | Deferred |
+| 6 | FreeAgent/accounting boundary | Phase 6.2 hardening deployed only; sandbox/commercial/production acceptance pending |
 | 7 | Optional billing visibility and hardening | Deferred |
 
 ## Security model

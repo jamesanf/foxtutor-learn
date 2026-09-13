@@ -129,4 +129,15 @@ describe("D1 foundation", () => {
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_connections");
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_oauth_states");
   });
+
+  it("adds auditable retry records and verified contact mapping metadata", () => {
+    const migration = readFileSync("migrations/0017_accounting_operations.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE external_accounting_links ADD COLUMN status");
+    expect(migration).toContain("'VERIFIED'");
+    expect(migration).toContain("verified_company_subdomain");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_retry_audit");
+    expect(migration).toContain("actor_user_id TEXT REFERENCES users(id) ON DELETE SET NULL");
+    expect(migration).toContain("outbox_id TEXT REFERENCES accounting_outbox(id) ON DELETE SET NULL");
+    expect(migration).toContain("request_result IN ('ACCEPTED', 'REJECTED')");
+  });
 });

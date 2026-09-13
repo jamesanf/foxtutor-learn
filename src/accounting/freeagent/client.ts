@@ -58,10 +58,6 @@ export function freeAgentAuthorizationUrl(
   return url.toString();
 }
 
-function safeMessage(value: string): string {
-  return value.replace(/\s+/g, " ").trim().slice(0, 240) || "FreeAgent returned an error.";
-}
-
 function classifyStatus(status: number, retryAfter: string | null): FreeAgentErrorShape {
   const retryAfterSeconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : null;
   if (status === 401) return { code: "AUTHENTICATION", status, message: "FreeAgent authentication failed.", retryable: false, unknown: false, retryAfterSeconds };
@@ -85,20 +81,6 @@ function canonicalProviderUrl(value: unknown, environment: FreeAgentEnvironment)
   }
 }
 
-async function responseMessage(response: Response): Promise<string> {
-  try {
-    const body = await response.text();
-    if (!body) return "";
-    const parsed = JSON.parse(body) as { errors?: string[] | Record<string, string[]>; error?: string };
-    if (typeof parsed.error === "string") return safeMessage(parsed.error);
-    if (Array.isArray(parsed.errors)) return safeMessage(parsed.errors.join("; "));
-    if (parsed.errors && typeof parsed.errors === "object") return safeMessage(Object.values(parsed.errors).flat().join("; "));
-    return safeMessage(body);
-  } catch {
-    return "";
-  }
-}
-
 export class FreeAgentClient {
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
@@ -114,17 +96,37 @@ export class FreeAgentClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
+      if (!path.startsWith("/") || path.startsWith("//")) {
+        throw new FreeAgentApiError({
+          code: "CONFIGURATION",
+          status: null,
+          message: "FreeAgent request path is invalid.",
+          retryable: false,
+          unknown: false,
+          retryAfterSeconds: null
+        });
+      }
+      const requestUrl = new URL(path, this.baseUrl);
+      if (requestUrl.origin !== this.baseUrl) {
+        throw new FreeAgentApiError({
+          code: "CONFIGURATION",
+          status: null,
+          message: "FreeAgent request origin is invalid.",
+          retryable: false,
+          unknown: false,
+          retryAfterSeconds: null
+        });
+      }
       const headers = new Headers(init.headers);
       headers.set("Authorization", `Bearer ${accessToken}`);
       headers.set("Accept", "application/json");
       headers.set("User-Agent", "Foxtutor Learn accounting integration");
       if (this.options.apiVersion) headers.set("X-Api-Version", this.options.apiVersion);
       if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-      const response = await this.fetcher(new URL(path, this.baseUrl), { ...init, headers, signal: controller.signal });
+      const response = await this.fetcher(requestUrl, { ...init, headers, signal: controller.signal });
       if (!response.ok) {
         const shape = classifyStatus(response.status, response.headers.get("Retry-After"));
-        const message = await responseMessage(response);
-        throw new FreeAgentApiError({ ...shape, message: message || shape.message });
+        throw new FreeAgentApiError(shape);
       }
       let data: T;
       try {
@@ -337,7 +339,19 @@ async function tokenRequest(
     const shape = classifyStatus(response.status, response.headers.get("Retry-After"));
     throw new FreeAgentApiError({ ...shape, message: "FreeAgent token request was rejected.", unknown: false });
   }
-  const body = await response.json() as { access_token?: string; refresh_token?: string; expires_in?: number; refresh_token_expires_in?: number };
+  let body: { access_token?: string; refresh_token?: string; expires_in?: number; refresh_token_expires_in?: number };
+  try {
+    body = await response.json() as { access_token?: string; refresh_token?: string; expires_in?: number; refresh_token_expires_in?: number };
+  } catch {
+    throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: response.status,
+      message: "FreeAgent token response was malformed.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
   if (!body.access_token || !body.refresh_token || !Number.isFinite(body.expires_in)) {
     throw new FreeAgentApiError({
       code: "MALFORMED_RESPONSE",

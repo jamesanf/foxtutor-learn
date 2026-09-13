@@ -1,5 +1,25 @@
 # Changelog
 
+### 2026-09-13 — Phase 6.2 accounting operations hardening
+
+- Added forward-only accounting operations migration `0017_accounting_operations.sql`
+  with verified/invalid FreeAgent contact mapping metadata and additive manual
+  retry audit records.
+- Added an authenticated admin-only contact mapping workflow that requires an
+  explicit numeric FreeAgent contact ID and provider verification; email
+  matching never creates a mapping.
+- Pinned the configured FreeAgent environment and company identity, rejected
+  environment/company drift, constrained provider request origins and stopped
+  persisting raw provider error bodies.
+- Preserved fail-closed behavior for the unresolved `ADMIN_CANCELLED` treatment
+  and all unapproved amount, payer, item/category, VAT/tax, currency and
+  effective-date semantics.
+- Recorded the official FreeAgent documentation check and the remaining
+  sandbox/production acceptance and human commercial-approval gates in the
+  Phase 6.2 architecture, testing, deployment and security documents.
+- **Status:** Phase 6 remains open; no FreeAgent credentials or financial
+  mutation are configured.
+
 ### 2026-09-13 — Phase 6.1 accounting integration boundary
 
 - Added the Phase 5-to-accounting contract and dedicated D1 outbox with stable

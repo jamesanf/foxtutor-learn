@@ -787,6 +787,17 @@ Connect Foxtutor's operational lesson/cancellation state to external accounting 
 
 Accounting consequences can be passed to FreeAgent reliably without making the tutoring application responsible for direct debit or payment processing.
 
+### Phase 6.2 current state
+
+The Phase 6.2 pass has hardened the accounting boundary with explicit
+admin-managed and provider-verified contact mappings, pinned FreeAgent
+environment/company identity and additive manual-retry audit records. Phase 6
+remains open because the business has not approved the `ADMIN_CANCELLED`
+commercial treatment or the amount, payer, item/category, VAT/tax, currency
+and effective-date contract, and no FreeAgent sandbox or production
+credentials are configured. No completion tag may be created until the
+documented sandbox and controlled production acceptance evidence exists.
+
 ---
 
 ## Phase 7 — Optional billing visibility and long-term operations hardening
