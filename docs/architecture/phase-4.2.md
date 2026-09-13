@@ -77,15 +77,15 @@ drafts or admin controls.
 ## PDF
 
 `src/reports/pdf.ts` is a small Worker-compatible deterministic renderer. It
-creates the branded header/Tutorial Feedback structure with a stable core
-font, borders, footer and page numbering. The report metadata displays the
-lesson start time only. The endpoint regenerates the
+creates a compact single-page branded header/Tutorial Feedback structure with
+a stable core font, borders, footer and page numbering. The report metadata
+displays the lesson start time only. The endpoint regenerates the
 PDF from the persisted report, uses `Content-Type: application/pdf`,
 `Content-Disposition: attachment`, `private, no-store`, `nosniff` and the
 same authorization predicates as the HTML route. It never writes an R2 object
 or D1 blob.
 
 The renderer uses an explicit fixed `© 2026 Fox Learning Ltd. All rights
-reserved.` footer policy matching the supplied template. Long text is wrapped
-inside the feedback cells; the implementation must be visually inspected
-before production closure.
+reserved.` footer policy matching the supplied template. Long text is wrapped within the
+feedback cells and the renderer reduces the line scale when needed to retain
+the one-page format.

@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-13 — Lesson report presentation and student access hardening
+
+- Fixed the student sent-report query by qualifying report columns across the
+  lesson, student and user ownership joins, removing the production
+  ambiguous-column 1101 path.
+- Humanised sent timestamps in admin report views, redesigned generated reports
+  as compact single-page PDFs, and added regression coverage for the PDF page
+  count.
+- Reworked lesson-report emails with inline FoxTutor branding, structured
+  feedback panels and a clear report CTA; normalised duplicate bullet prefixes
+  in plain-text projections.
+
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
 ### 2026-09-13 — Notification recipient resolution fix
