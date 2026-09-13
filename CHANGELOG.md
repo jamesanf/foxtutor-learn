@@ -2,7 +2,8 @@
 
 ### 2026-09-13 — Lesson report titles and compact lesson URLs
 
-- **Status:** pending deployment from the current working tree.
+- **Status:** deployed as Worker
+  `1601099f-35d8-4803-9846-4c95b58af122` from commit `b7e9a1a`.
 - Changed report document titles and downloaded filenames to
   `YY/MM/DD - FoxTutor Lesson Report`.
 - Replaced generated lesson/report links that exposed database UUIDs with
