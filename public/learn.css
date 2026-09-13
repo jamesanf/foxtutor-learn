@@ -333,6 +333,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .notification-log-table .status { white-space: nowrap; }
 .notification-controls { margin-bottom: var(--space-6); }
 .notification-settings-list { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-md); }
+.notification-group { border-top: 1px solid var(--line); }
+.notification-group:first-child { border-top: 0; }
+.notification-group > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; color: var(--foreground); cursor: pointer; list-style: none; }
+.notification-group > summary::-webkit-details-marker { display: none; }
+.notification-group > summary::after { color: var(--muted); content: "+"; font-size: 1.15rem; }
+.notification-group[open] > summary { background: var(--soft); }
+.notification-group[open] > summary::after { content: "−"; }
+.notification-group > summary strong, .notification-group > summary small { display: block; }
+.notification-group > summary small { margin-top: 3px; color: var(--muted); font-size: .8rem; font-weight: 400; }
+.notification-group-count { display: inline-grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: var(--muted); background: #e2e8f0; font-size: .76rem; font-weight: 700; }
+.notification-group-body { border-top: 1px solid var(--line); }
 .notification-settings-header, .notification-setting-row { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(110px, .8fr) minmax(170px, 1.15fr) 92px 72px; align-items: center; gap: 16px; }
 .notification-settings-header { padding: 10px 16px; color: var(--muted); background: var(--soft); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .notification-setting-row { min-height: 72px; margin: 0; padding: 12px 16px; border-top: 1px solid var(--line); }
@@ -353,9 +364,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .notification-filter-toggle { min-width: 98px; }
 .notification-filter-icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .notification-filter-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 5; width: min(420px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 12px 28px rgb(16 42 67 / 16%); }
+.notification-filter-bar { position: static; width: auto; margin: 0 0 16px; padding: 10px 0 0; border: 0; box-shadow: none; }
 .notification-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .notification-filter-grid .button { width: 100%; margin: 0; }
 .notification-filter-option.is-active { border-color: var(--action); color: white; background: var(--action); }
+.notification-filter-toggle, .notification-filter-option, .notification-preview-link, .notification-save { min-height: 32px; padding: 6px 10px; font-size: .78rem; }
 .page-size-control { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--muted); font-size: .86rem; font-weight: 500; }
 .page-size-control select { width: auto; min-width: 68px; margin: 0; padding: 7px 25px 7px 9px; }
 .secondary { border-color: var(--line); color: var(--foreground); background: var(--soft); }

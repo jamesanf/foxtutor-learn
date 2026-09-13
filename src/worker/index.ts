@@ -322,13 +322,24 @@ function notificationPreview(eventType: NotificationType, origin: string): { sub
   return { subject: content.subject, text: content.text, html: content.html };
 }
 
-function notificationControls(settings: NotificationSetting[], csrfToken: string, origin: string): string {
-  const rows = settings.map((setting) => {
+function notificationControls(settings: NotificationSetting[], csrfToken: string): string {
+  const groups: Array<{ label: string; description: string; types: NotificationType[] }> = [
+    { label: "Lessons", description: "Booking, changes, reminders and rescheduling.", types: ["LESSON_CREATED", "LESSON_CHANGED", "LESSON_REMINDER", "LESSON_RESCHEDULED"] },
+    { label: "Cancellations", description: "Cancellation outcomes and student requests.", types: ["CANCELLATION_PROCESSED", "CANCELLATION_REQUESTED", "CANCELLATION_APPROVED", "CANCELLATION_REJECTED"] },
+    { label: "Students and reports", description: "Student access, lesson reports and clock-change notices.", types: ["STUDENT_INVITED", "LESSON_REPORT", "DST_WARNING"] },
+    { label: "Resources", description: "New lesson resources.", types: ["RESOURCE_ADDED"] }
+  ];
+  const settingByType = new Map(settings.map((setting) => [setting.event_type, setting]));
+  const rowForSetting = (setting: NotificationSetting): string => {
     const reminder = setting.event_type === "LESSON_REMINDER";
     const timingLabel = reminder ? "Minutes before lesson" : "Delivery delay (minutes)";
     return `<form class="notification-setting-row" method="post" action="/learn/admin/notifications/settings">${hiddenCsrf(csrfToken)}<input type="hidden" name="eventType" value="${escapeHtml(setting.event_type)}"><div class="notification-setting-name"><strong>${escapeHtml(notificationEventLabel(setting.event_type))}</strong></div><label class="toggle-control"><input type="checkbox" name="enabled" value="1"${setting.enabled ? " checked" : ""}><span>${setting.enabled ? "Enabled" : "Disabled"}</span></label><label class="notification-timing">${escapeHtml(timingLabel)}<input type="number" name="timingMinutes" min="${reminder ? "1" : "-10080"}" max="10080" step="1" value="${setting.timing_minutes ?? 0}"></label><a class="button secondary notification-preview-link" href="/learn/admin/notifications/preview/${encodeURIComponent(setting.event_type)}" target="_blank" rel="noopener">Preview</a><button class="button secondary notification-save" type="submit">Save</button></form>`;
+  };
+  const groupMarkup = groups.map((group, index) => {
+    const rows = group.types.map((type) => settingByType.get(type)).filter((setting): setting is NotificationSetting => Boolean(setting)).map(rowForSetting).join("");
+    return `<details class="notification-group"${index === 0 ? " open" : ""}><summary><span><strong>${escapeHtml(group.label)}</strong><small>${escapeHtml(group.description)}</small></span><span class="notification-group-count">${group.types.length}</span></summary><div class="notification-group-body"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></details>`;
   }).join("");
-  return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Enable or disable future notifications and adjust when scheduled messages are sent.</p></div></div><div class="notification-settings-list"><div class="notification-settings-header"><span>Notification</span><span>Status</span><span>Timing</span><span>Preview</span><span>Save</span></div>${rows}</div></section>`;
+  return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Enable or disable future notifications and adjust when scheduled messages are sent.</p></div></div><div class="notification-settings-list">${groupMarkup}</div></section>`;
 }
 
 function notificationList(
@@ -336,7 +347,6 @@ function notificationList(
   counts: Awaited<ReturnType<typeof notificationCounts>>,
   settings: NotificationSetting[],
   csrfToken: string,
-  origin: string,
   selectedStatus?: string,
   page = 1,
   pageSize = 12,
@@ -353,7 +363,7 @@ function notificationList(
   const statusQuery = selectedStatus ? `&status=${encodeURIComponent(selectedStatus)}` : "";
   const sizeOptions = [12, 24, 48].map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("");
   const pagination = `<div class="list-footer"><span>${page > 1 ? `<a class="button secondary" href="/learn/admin/notifications?page=${page - 1}&size=${pageSize}${statusQuery}">Previous</a>` : ""}</span><label class="page-size-control">Per page <select onchange="this.form.submit()" form="notification-page-size" name="size">${sizeOptions}</select></label><form id="notification-page-size" method="get" action="/learn/admin/notifications"><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}</form><span class="muted">Page ${page}</span><span>${hasNext ? `<a class="button secondary" href="/learn/admin/notifications?page=${page + 1}&size=${pageSize}${statusQuery}">Next</a>` : ""}</span></div>`;
-  return `${summary}${notificationControls(settings, csrfToken, origin)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg>Filter</button><div class="notification-filter-panel" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div></div></div>${body}${pagination}</section>`;
+  return `${summary}${notificationControls(settings, csrfToken)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg>Filter</button></div></div><div class="notification-filter-panel notification-filter-bar" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div>${body}${pagination}</section>`;
 }
 
 function notificationDetail(notification: Awaited<ReturnType<typeof findNotificationById>>, csrfToken: string, error?: string): string {
@@ -1463,7 +1473,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const requestedSize = Number.parseInt(url.searchParams.get("size") ?? "12", 10);
     const pageSize = [12, 24, 48].includes(requestedSize) ? requestedSize : 12;
     const listedRows = await listNotifications(db, status, pageSize + 1, (page - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor outbound email, inspect its content, and control future delivery.</p></div></div>${notificationList(listedRows.slice(0, pageSize), await notificationCounts(db), await listNotificationSettings(db), csrfToken, canonicalLearnOrigin(env.PUBLIC_ORIGIN), status, page, pageSize, listedRows.length > pageSize)}`);
+    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor outbound email, inspect its content, and control future delivery.</p></div></div>${notificationList(listedRows.slice(0, pageSize), await notificationCounts(db), await listNotificationSettings(db), csrfToken, status, page, pageSize, listedRows.length > pageSize)}`);
   }
   if (route === "admin-notification") {
     const id = notificationIdFromPath(url.pathname);
