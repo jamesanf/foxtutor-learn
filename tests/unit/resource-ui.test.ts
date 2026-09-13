@@ -163,9 +163,24 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".identity-role { display: inline-flex; min-height: 38px; align-items: center");
     expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center; border: 0; padding: 0 0 2px");
     expect(cssSource).toContain(".topbar { min-height: 76px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)");
-    expect(cssSource).toContain(".topbar-center-logo { display: inline-flex; align-items: center; justify-content: center; justify-self: center; width: 140px; height: 64px; padding: 4px 8px; border: 1px solid #d8e5e8; border-radius: 12px; background: #ffffff");
+    expect(cssSource).toContain(".topbar-center-logo { display: inline-flex; align-items: center; justify-content: center; justify-self: center; width: 140px; height: 64px; padding: 4px 8px; border: 1px solid #9bd6e2; border-radius: 12px; background: #e8f7fa");
     expect(cssSource).toContain(".topbar { gap: 8px; padding-inline: 12px");
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
+  });
+
+  it("keeps the header hit area limited to the dashboard logo and controls", () => {
+    expect(workerSource).toContain('<div class="brand"><img class="brand-logo"');
+    expect(workerSource).toContain('<div class="topbar-center-logo"><a class="topbar-center-logo-link" href="/learn"');
+    expect(workerSource).not.toContain('<a class="brand" href="/learn"');
+    expect(cssSource).toContain(".topbar-center-logo-link { display: inline-flex; width: 120px; height: 58px");
+  });
+
+  it("makes the admin dashboard summary cards useful navigation", () => {
+    expect(workerSource).toContain('href="${nextLessonHref}"');
+    expect(workerSource).toContain('href="/learn/admin/bookings"><span>Upcoming Bookings</span>');
+    expect(workerSource).toContain('href="/learn/admin/students"><span>Active Students</span>');
+    expect(workerSource).toContain('href="/learn/admin/reschedules"><span>Reschedule requests</span>');
+    expect(cssSource).toContain(".summary-card:hover, .summary-card:focus-visible");
   });
 
   it("defines an in-place resource application boundary", () => {
