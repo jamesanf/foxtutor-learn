@@ -153,8 +153,8 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain("pagination-page-link");
     expect(workerSource).toContain("function paginationControls(");
     expect(workerSource.match(/<nav class="pagination"/g)?.length).toBe(1);
-    expect(cssSource).toContain(".pagination-link { display: inline-flex; min-height: 34px; align-items: center");
-    expect(cssSource).toContain(".pagination-nav-link { padding: 5px 9px; }");
+    expect(cssSource).toContain(".pagination-link { display: inline-flex; min-height: 30px; align-items: center");
+    expect(cssSource).toContain(".pagination-nav-link { min-height: 32px; padding: 4px 7px; font-size: .74rem; }");
     expect(cssSource).toContain(".pagination-page-link { min-width: 30px; padding: 5px 7px; }");
     expect(cssSource).toContain(".pagination { display: flex; align-items: center; justify-content: center; gap: 4px");
     expect(cssSource).toContain(".pagination-link:focus-visible");

@@ -263,8 +263,8 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .result-range { color: var(--muted); font-size: .86rem; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
 .pagination-pages { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
-.pagination-link { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--action); text-align: center; text-decoration: none; font-size: .78rem; font-weight: 600; line-height: 1.2; }
-.pagination-nav-link { padding: 5px 9px; }
+.pagination-link { display: inline-flex; min-height: 30px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--action); text-align: center; text-decoration: none; font-size: .78rem; font-weight: 600; line-height: 1.2; }
+.pagination-nav-link { min-height: 32px; padding: 4px 7px; font-size: .74rem; }
 .pagination-page-link { min-width: 30px; padding: 5px 7px; }
 .pagination-link:hover, .pagination-link.is-current { border-color: var(--action); color: white; background: var(--action); }
 .pagination-link.is-disabled { color: #94a3b8; background: var(--soft); cursor: not-allowed; }
