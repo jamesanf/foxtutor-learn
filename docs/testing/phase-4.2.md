@@ -30,8 +30,10 @@
 - Email presentation coverage verifies that empty fields are omitted, pupil
   metadata is not duplicated, duplicate bullet prefixes are normalised, the
   contact/copyright footer is present and the FoxTutor Learn text link is used.
-- PDF coverage verifies the supplied transparent FoxTutor logo, PDF soft mask
-  and dynamically dated copyright footer in the single-page header/footer.
+- PDF coverage verifies the supplied transparent FoxTutor logo, PDF soft mask,
+  matching header title typography, readable feedback text, clickable report
+  URI footer link, omitted single-page counter and dynamically dated copyright
+  footer.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
 - UK clock-change date/time detection and the `DST_WARNING` email projection

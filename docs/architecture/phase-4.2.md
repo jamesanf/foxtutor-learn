@@ -96,8 +96,11 @@ The renderer uses a dynamically dated `© <current year> Fox Learning Ltd. All
 rights reserved.` footer matching the supplied template. Long text is wrapped within the
 feedback cells and the renderer reduces the line scale when needed to retain
 the one-page format. The supplied transparent FoxTutor logo asset is embedded
-in the top-left header with a PDF soft mask loaded from Worker assets; PDFs do
-not use a separate R2 object.
+in the top-left header with a PDF soft mask loaded from Worker assets. The
+header title uses matching 17-point bold white typography, feedback labels and
+values use readable metadata-scale typography, and the footer contains a
+clickable “View this report on FoxTutor Learn” URI link. PDFs do not use a
+separate R2 object or display a page counter for the single-page document.
 
 ## Email presentation
 

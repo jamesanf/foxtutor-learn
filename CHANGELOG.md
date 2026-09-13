@@ -19,6 +19,15 @@
   a PDF soft mask so the mark sits cleanly on the blue header bar.
 - Added regression coverage for the soft mask and current-year PDF footer.
 
+### 2026-09-13 — PDF report typography and footer link
+
+- Matched the top-right “Lesson Report” title to the FoxTutor Learn header
+  title in size, bolding and colour.
+- Increased feedback labels and values to metadata-scale readability,
+  normalised duplicate bullet prefixes in PDF text and removed the unnecessary
+  “Page 1 of 1” counter.
+- Added a clickable “View this report on FoxTutor Learn” footer link.
+
 ### 2026-09-13 — Report email and PDF branding refinement
 
 - Simplified the report email header to FoxTutor and Lesson Report, removed

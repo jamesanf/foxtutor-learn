@@ -93,16 +93,25 @@ describe("structured lesson reports", () => {
     expect(text).toContain("ESOL N5/H");
     expect((text.match(/\/Type \/Page\b/g) ?? []).length).toBe(1);
     const brandedPdf = new TextDecoder().decode(generateLessonReportPdf(reportViewModel(report), {
-      width: 2,
-      height: 2,
-      rgb: Uint8Array.from([0x78, 0x9c, 0x63, 0x60, 0x64, 0x62, 0x06, 0x00, 0x00, 0x0b, 0x00, 0x05]),
-      alpha: Uint8Array.from([0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0x00, 0x00, 0x00, 0x04, 0x00, 0x01])
+      logo: {
+        width: 2,
+        height: 2,
+        rgb: Uint8Array.from([0x78, 0x9c, 0x63, 0x60, 0x64, 0x62, 0x06, 0x00, 0x00, 0x0b, 0x00, 0x05]),
+        alpha: Uint8Array.from([0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0x00, 0x00, 0x00, 0x04, 0x00, 0x01])
+      },
+      reportUrl: "https://foxtutor.org/learn/student/lessons/lesson-1/report"
     }));
     expect(brandedPdf).toContain("/Subtype /Image");
     expect(brandedPdf).toContain("/ColorSpace /DeviceGray");
     expect(brandedPdf).toContain("/SMask");
     expect(brandedPdf).toContain("/Filter /FlateDecode");
     expect(brandedPdf).toContain("/Im1 Do");
+    expect(brandedPdf).toContain("Lesson Report");
+    expect(brandedPdf).toContain("10.5 Tf");
+    expect(brandedPdf).toContain("View this report on FoxTutor Learn");
+    expect(brandedPdf).toContain("/Subtype /Link");
+    expect(brandedPdf).toContain("/S /URI");
+    expect(brandedPdf).not.toContain("Page 1 of 1");
     expect(brandedPdf).toContain(`${new Date().getFullYear()} Fox Learning Ltd. All rights reserved.`);
   });
 

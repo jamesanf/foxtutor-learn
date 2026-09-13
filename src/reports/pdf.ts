@@ -1,4 +1,5 @@
 import type { StudentLessonReportViewModel } from "./view";
+import { richTextToPlainText } from "./rich-text";
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
@@ -12,6 +13,11 @@ export interface PdfLogo {
   height: number;
   rgb: Uint8Array;
   alpha: Uint8Array;
+}
+
+export interface PdfOptions {
+  logo?: PdfLogo;
+  reportUrl?: string;
 }
 
 function pdfSafe(value: string): string {
@@ -64,10 +70,10 @@ function rect(commands: string[], x: number, y: number, width: number, height: n
   commands.push(`${fill ? "0.97 0.985 0.99 rg " : ""}${LINE} RG 0.7 w ${x} ${y} ${width} ${height} re ${fill ? "B" : "S"}`);
 }
 
-function footer(commands: string[]): void {
+function footer(commands: string[], reportUrl?: string): void {
   commands.push(`${LINE} RG 0.6 w ${MARGIN} 30 m ${PAGE_WIDTH - MARGIN} 30 l S`);
   text(commands, MARGIN, 18, `© ${new Date().getFullYear()} Fox Learning Ltd. All rights reserved.`, 7, "0.35 0.4 0.45");
-  text(commands, PAGE_WIDTH - 78, 18, "Page 1 of 1", 7, "0.35 0.4 0.45");
+  if (reportUrl) text(commands, 378, 18, "View this report on FoxTutor Learn", 7, BLUE);
 }
 
 function reportHeader(commands: string[], report: StudentLessonReportViewModel, hasLogo: boolean): number {
@@ -78,7 +84,7 @@ function reportHeader(commands: string[], report: StudentLessonReportViewModel, 
   commands.push(`${BLUE} rg ${MARGIN} ${top - 42} ${width} 42 re f`);
   if (hasLogo) commands.push(`q 31 0 0 30 ${MARGIN + 12} ${top - 36} cm /Im1 Do Q`);
   text(commands, MARGIN + 50, top - 27, "FoxTutor Learn", 17, "1 1 1", true);
-  text(commands, MARGIN + width - 112, top - 27, "Lesson Report", 9, "1 1 1");
+  text(commands, MARGIN + width - 120, top - 27, "Lesson Report", 17, "1 1 1", true);
   rect(commands, MARGIN, top - height, width, height - 42, true);
   for (let index = 1; index < 4; index++) {
     const x = MARGIN + columnWidth * index;
@@ -118,14 +124,15 @@ function feedbackField(
   lineHeight: number
 ): void {
   rect(commands, x, y, width, height, true);
-  text(commands, x + 11, y + height - 21, label, 8.5, BLUE, true);
-  const lines = wrap(String(report[key] ?? ""), Math.max(28, Math.floor(width / 5.1)));
-  lines.forEach((line, index) => text(commands, x + 11, y + height - 39 - index * lineHeight, line, Math.max(5.5, lineHeight - 1.5)));
+  text(commands, x + 11, y + height - 23, label, 10.5, BLUE, true);
+  const value = richTextToPlainText(String(report[key] ?? "")).replace(/^• /gm, "- ");
+  const lines = wrap(value, Math.max(28, Math.floor(width / 5.1)));
+  lines.forEach((line, index) => text(commands, x + 11, y + height - 45 - index * lineHeight, line, Math.max(10, lineHeight - 2.5)));
 }
 
-function singlePage(report: StudentLessonReportViewModel, hasLogo: boolean): string[] {
+function singlePage(report: StudentLessonReportViewModel, options: PdfOptions): string[] {
   const commands: string[] = ["q"];
-  const feedbackTop = reportHeader(commands, report, hasLogo);
+  const feedbackTop = reportHeader(commands, report, Boolean(options.logo));
   text(commands, MARGIN, feedbackTop, "Tutorial Feedback", 13, BLUE, true);
   const gap = 9;
   const halfWidth = (PAGE_WIDTH - 2 * MARGIN - gap) / 2;
@@ -133,12 +140,12 @@ function singlePage(report: StudentLessonReportViewModel, hasLogo: boolean): str
   const widths = [halfWidth, halfWidth, halfWidth, halfWidth, fullWidth];
   const lineSets = feedbackFields.map(([, key], index) => wrap(String(report[key] ?? ""), Math.max(28, Math.floor(widths[index] / 5.1))));
   const availableHeight = feedbackTop - 22 - 58;
-  let lineHeight = 9;
+  let lineHeight = 13;
   const calculateHeights = (lineSize: number): [number, number, number] => {
     const height = (lines: string[]) => Math.max(60, lines.length * lineSize + 39);
     return [Math.max(height(lineSets[0]), height(lineSets[1])), Math.max(height(lineSets[2]), height(lineSets[3])), height(lineSets[4])];
   };
-  while (lineHeight > 3.5) {
+  while (lineHeight > 10.5) {
     const heights = calculateHeights(lineHeight);
     if (heights[0] + heights[1] + heights[2] + gap * 2 <= availableHeight) break;
     lineHeight -= 0.5;
@@ -151,23 +158,27 @@ function singlePage(report: StudentLessonReportViewModel, hasLogo: boolean): str
   feedbackField(commands, report, feedbackFields[2][0], feedbackFields[2][1], MARGIN, secondRowY, halfWidth, secondRowHeight, lineHeight);
   feedbackField(commands, report, feedbackFields[3][0], feedbackFields[3][1], MARGIN + halfWidth + gap, secondRowY, halfWidth, secondRowHeight, lineHeight);
   feedbackField(commands, report, feedbackFields[4][0], feedbackFields[4][1], MARGIN, secondRowY - gap - fullRowHeight, fullWidth, fullRowHeight, lineHeight);
-  footer(commands);
+  footer(commands, options.reportUrl);
   commands.push("Q");
   return commands;
 }
 
-function buildDocument(pages: string[], logo?: PdfLogo): ArrayBuffer {
+function buildDocument(pages: string[], options: PdfOptions): ArrayBuffer {
   const objects: string[] = [];
   const pageObjectNumbers: number[] = [];
   objects.push("<< /Type /Catalog /Pages 2 0 R >>");
   objects.push("<< /Type /Pages /Kids [] /Count 0 >>");
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
-  const logoObjectNumber = logo ? objects.length + 1 : undefined;
-  const logoAlphaObjectNumber = logo ? objects.length + 2 : undefined;
-  if (logo && logoAlphaObjectNumber) {
-    objects.push(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /SMask ${logoAlphaObjectNumber} 0 R /Length ${logo.rgb.byteLength} >>\nstream\n${binaryString(logo.rgb)}\nendstream`);
-    objects.push(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length ${logo.alpha.byteLength} >>\nstream\n${binaryString(logo.alpha)}\nendstream`);
+  const logoObjectNumber = options.logo ? objects.length + 1 : undefined;
+  const logoAlphaObjectNumber = options.logo ? objects.length + 2 : undefined;
+  if (options.logo && logoAlphaObjectNumber) {
+    objects.push(`<< /Type /XObject /Subtype /Image /Width ${options.logo.width} /Height ${options.logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /SMask ${logoAlphaObjectNumber} 0 R /Length ${options.logo.rgb.byteLength} >>\nstream\n${binaryString(options.logo.rgb)}\nendstream`);
+    objects.push(`<< /Type /XObject /Subtype /Image /Width ${options.logo.width} /Height ${options.logo.height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length ${options.logo.alpha.byteLength} >>\nstream\n${binaryString(options.logo.alpha)}\nendstream`);
+  }
+  const linkObjectNumber = options.reportUrl ? objects.length + 1 : undefined;
+  if (options.reportUrl) {
+    objects.push(`<< /Type /Annot /Subtype /Link /Rect [378 12 555 30] /Border [0 0 0] /A << /Type /Action /S /URI /URI (${pdfSafe(options.reportUrl)}) >> >>`);
   }
   for (const page of pages) {
     const stream = `${page}\n`;
@@ -175,7 +186,8 @@ function buildDocument(pages: string[], logo?: PdfLogo): ArrayBuffer {
     objects.push(`<< /Length ${pdfBytes(stream).byteLength} >>\nstream\n${stream}endstream`);
     const pageObject = objects.length + 1;
     const imageResources = logoObjectNumber ? ` /XObject << /Im1 ${logoObjectNumber} 0 R >>` : "";
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${imageResources} >> /Contents ${contentObject} 0 R >>`);
+    const annotations = linkObjectNumber ? ` /Annots [${linkObjectNumber} 0 R]` : "";
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${imageResources} >> /Contents ${contentObject} 0 R${annotations} >>`);
     pageObjectNumbers.push(pageObject);
   }
   objects[1] = `<< /Type /Pages /Kids [${pageObjectNumbers.map((number) => `${number} 0 R`).join(" ")}] /Count ${pageObjectNumbers.length} >>`;
@@ -195,6 +207,6 @@ function buildDocument(pages: string[], logo?: PdfLogo): ArrayBuffer {
   return result;
 }
 
-export function generateLessonReportPdf(report: StudentLessonReportViewModel, logo?: PdfLogo): ArrayBuffer {
-  return buildDocument([singlePage(report, Boolean(logo)).join("\n")], logo);
+export function generateLessonReportPdf(report: StudentLessonReportViewModel, options: PdfOptions = {}): ArrayBuffer {
+  return buildDocument([singlePage(report, options).join("\n")], options);
 }

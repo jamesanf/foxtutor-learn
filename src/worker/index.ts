@@ -1141,7 +1141,9 @@ async function downloadLessonReportPdf(request: Request, env: Env, report: Lesso
         alpha: new Uint8Array(await logoAlphaResponse.arrayBuffer())
       }
     : undefined;
-  const pdf = generateLessonReportPdf(reportViewModel(report), logo);
+  const reportUrl = new URL(request.url);
+  reportUrl.pathname = reportUrl.pathname.replace(/\.pdf$/, "");
+  const pdf = generateLessonReportPdf(reportViewModel(report), { logo, reportUrl: reportUrl.toString() });
   const headers = privateHeaders("application/pdf");
   headers.set("Content-Disposition", `attachment; filename="${reportPdfFilename(report)}"`);
   headers.set("Cache-Control", "private, no-store");
