@@ -284,14 +284,54 @@ function notificationEventLabel(eventType: string): string {
   return eventType.split("_").map((part) => part.charAt(0) + part.slice(1).toLowerCase()).join(" ");
 }
 
-function notificationControls(settings: NotificationSetting[], csrfToken: string): string {
-  const rows = settings.map((setting) => {
+function notificationPreview(eventType: NotificationType, origin: string): { subject: string; text: string } {
+  const lesson = {
+    studentName: "Alex Taylor",
+    startAt: "2026-09-15T19:00:00.000Z",
+    endAt: "2026-09-15T19:55:00.000Z",
+    timezone: CALENDAR_TIMEZONE,
+    lessonPath: "/learn/student/lessons/example",
+    externalUrl: null,
+    reminderLeadMinutes: 15
+  };
+  const content = eventType === "STUDENT_INVITED"
+    ? renderEmail(eventType, { studentName: "Alex Taylor", origin }, origin)
+    : eventType === "RESOURCE_ADDED"
+      ? renderEmail(eventType, { studentName: "Alex Taylor", filename: "Lesson resource.pdf", resourcePath: "/learn/student/resources/example" }, origin)
+      : eventType === "DST_WARNING"
+        ? renderEmail(eventType, { studentName: "Alex Taylor", changeDate: "2026-10-25", direction: "backward" }, origin)
+        : eventType === "LESSON_REPORT"
+          ? renderEmail(eventType, {
+            ...lesson,
+            pupilName: "Alex Taylor",
+            level: "GCSE English",
+            reportPath: "/learn/student/lessons/example/report",
+            thisLessonsFocus: "Reading comprehension",
+            nextLessonsFocus: "Written response",
+            homeLearningTask: "",
+            notes: "",
+            evenBetterIf: "",
+            resources: []
+          }, origin)
+          : renderEmail(eventType, {
+            ...lesson,
+            ...(eventType === "CANCELLATION_PROCESSED" ? { undoPath: "/learn/student/lessons/example/undo-cancellation" } : {}),
+            ...(eventType === "CANCELLATION_APPROVED" ? { decision: "approved" } : {}),
+            ...(eventType === "CANCELLATION_REJECTED" ? { decision: "rejected" } : {})
+          }, origin);
+  return { subject: content.subject, text: content.text };
+}
+
+function notificationControls(settings: NotificationSetting[], csrfToken: string, origin: string): string {
+  const rows = settings.map((setting, index) => {
     const reminder = setting.event_type === "LESSON_REMINDER";
     const timingLabel = reminder ? "Minutes before lesson" : "Delivery delay (minutes)";
     const timingHelp = reminder ? "How long before the lesson the reminder is sent." : "Use 0 for immediate delivery; positive values delay delivery.";
-    return `<form class="notification-control" method="post" action="/learn/admin/notifications/settings">${hiddenCsrf(csrfToken)}<input type="hidden" name="eventType" value="${escapeHtml(setting.event_type)}"><div class="notification-control-heading"><div><h3>${escapeHtml(notificationEventLabel(setting.event_type))}</h3><p class="muted">${escapeHtml(timingHelp)}</p></div><label class="toggle-control"><input type="checkbox" name="enabled" value="1"${setting.enabled ? " checked" : ""}> Enabled</label></div><div class="notification-control-fields"><label>${escapeHtml(timingLabel)}<input type="number" name="timingMinutes" min="${reminder ? "1" : "-10080"}" max="10080" step="1" value="${setting.timing_minutes ?? ""}" placeholder="${reminder ? "15" : "0"}"></label><label>Subject prefix <input type="text" name="subjectPrefix" maxlength="120" value="${escapeHtml(setting.subject_prefix)}" placeholder="Optional"></label><label class="notification-note-field">Additional message <textarea name="bodyNote" rows="2" maxlength="1000" placeholder="Optional note appended to this email">${escapeHtml(setting.body_note)}</textarea></label></div><div class="form-actions"><button class="button secondary" type="submit">Save ${escapeHtml(notificationEventLabel(setting.event_type))}</button></div></form>`;
+    const preview = notificationPreview(setting.event_type, origin);
+    const open = index === 0 ? " open" : "";
+    return `<form class="notification-control" method="post" action="/learn/admin/notifications/settings">${hiddenCsrf(csrfToken)}<input type="hidden" name="eventType" value="${escapeHtml(setting.event_type)}"><details${open}><summary><span class="notification-control-summary"><strong>${escapeHtml(notificationEventLabel(setting.event_type))}</strong><span class="status status-${setting.enabled ? "sent" : "suppressed"}">${setting.enabled ? "Enabled" : "Disabled"}</span></span><span class="notification-control-summary-meta">${escapeHtml(reminder ? `${setting.timing_minutes ?? 15} minutes before` : setting.timing_minutes ? `${setting.timing_minutes} minutes after` : "Immediate")}</span></summary><div class="notification-control-body"><div class="notification-current-wording"><div><span class="field-caption">Current subject</span><strong>${escapeHtml(preview.subject)}</strong></div><div><span class="field-caption">Current message</span><pre>${escapeHtml(preview.text)}</pre></div><button type="button" class="button secondary notification-preview-toggle" data-notification-preview aria-expanded="false">Preview current email</button><div class="notification-preview-panel" data-notification-preview-panel hidden><p class="field-caption">Preview</p><p><strong>${escapeHtml(preview.subject)}</strong></p><pre>${escapeHtml(preview.text)}</pre></div></div><div class="notification-control-fields"><label>${escapeHtml(timingLabel)}<input type="number" name="timingMinutes" min="${reminder ? "1" : "-10080"}" max="10080" step="1" value="${setting.timing_minutes ?? ""}" placeholder="${reminder ? "15" : "0"}"><span class="field-help">${escapeHtml(timingHelp)}</span></label><label>Subject prefix<input type="text" name="subjectPrefix" maxlength="120" value="${escapeHtml(setting.subject_prefix)}" placeholder="Optional prefix before the current subject"></label><label class="notification-note-field">Additional message<textarea name="bodyNote" rows="2" maxlength="1000" placeholder="Optional note appended after the current message">${escapeHtml(setting.body_note)}</textarea></label></div><label class="toggle-control"><input type="checkbox" name="enabled" value="1"${setting.enabled ? " checked" : ""}> Send this notification</label><div class="form-actions"><button class="button secondary" type="submit">Save changes</button></div></div></details></form>`;
   }).join("");
-  return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Control future outbound emails. Existing delivery records and sent messages are not changed.</p></div></div>${rows}</section>`;
+  return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2><p class="lede">Open a notification to see the exact current wording before changing its timing or message.</p></div></div>${rows}</section>`;
 }
 
 function notificationList(
@@ -299,6 +339,7 @@ function notificationList(
   counts: Awaited<ReturnType<typeof notificationCounts>>,
   settings: NotificationSetting[],
   csrfToken: string,
+  origin: string,
   selectedStatus?: string,
   page = 1,
   pageSize = 12,
@@ -306,17 +347,16 @@ function notificationList(
 ): string {
   const filters = ["", "PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT", "SUPPRESSED"].map((status) => {
     const label = status ? notificationStatusLabel(status) : "All";
-    const href = status ? `/learn/admin/notifications?status=${status}&size=${pageSize}` : `/learn/admin/notifications?size=${pageSize}`;
-    return `<a class="button${selectedStatus === status || (!selectedStatus && !status) ? "" : " secondary"}" href="${href}">${label}</a>`;
+    return `<button type="button" class="button notification-filter-option${selectedStatus === status || (!selectedStatus && !status) ? "" : " secondary"}" data-notification-filter="${status}" aria-pressed="${selectedStatus === status || (!selectedStatus && !status) ? "true" : "false"}">${label}</button>`;
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Suppressed</span><strong>${counts.SUPPRESSED}</strong></section></div>`;
   const body = rows.length
-    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Event"><a href="/learn/admin/notifications/${encodeURIComponent(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(row.scheduled_at ?? "Immediate")}</td><td data-label="Created">${escapeHtml(row.created_at)}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Lesson</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${encodeURIComponent(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Lesson">${row.lesson_id ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(row.student_name ?? "Lesson")}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(row.scheduled_at ?? "Immediate")}</td><td data-label="Created">${escapeHtml(row.created_at)}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
   const statusQuery = selectedStatus ? `&status=${encodeURIComponent(selectedStatus)}` : "";
   const sizeOptions = [12, 24, 48].map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("");
   const pagination = `<div class="list-footer"><span>${page > 1 ? `<a class="button secondary" href="/learn/admin/notifications?page=${page - 1}&size=${pageSize}${statusQuery}">Previous</a>` : ""}</span><label class="page-size-control">Per page <select onchange="this.form.submit()" form="notification-page-size" name="size">${sizeOptions}</select></label><form id="notification-page-size" method="get" action="/learn/admin/notifications"><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}</form><span class="muted">Page ${page}</span><span>${hasNext ? `<a class="button secondary" href="/learn/admin/notifications?page=${page + 1}&size=${pageSize}${statusQuery}">Next</a>` : ""}</span></div>`;
-  return `${summary}${notificationControls(settings, csrfToken)}<section class="card"><div class="section-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="form-actions">${filters}</div></div>${body}${pagination}</section>`;
+  return `${summary}${notificationControls(settings, csrfToken, origin)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg>Filter</button><div class="notification-filter-panel" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div></div></div>${body}${pagination}</section>`;
 }
 
 function notificationDetail(notification: Awaited<ReturnType<typeof findNotificationById>>, csrfToken: string, error?: string): string {
@@ -1416,7 +1456,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const requestedSize = Number.parseInt(url.searchParams.get("size") ?? "12", 10);
     const pageSize = [12, 24, 48].includes(requestedSize) ? requestedSize : 12;
     const listedRows = await listNotifications(db, status, pageSize + 1, (page - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor outbound email, inspect its content, and control future delivery.</p></div></div>${notificationList(listedRows.slice(0, pageSize), await notificationCounts(db), await listNotificationSettings(db), csrfToken, status, page, pageSize, listedRows.length > pageSize)}`);
+    return appPage(active.user, csrfToken, "Notifications", `<div class="page-heading"><div><h1>Notifications</h1><p class="lede">Monitor outbound email, inspect its content, and control future delivery.</p></div></div>${notificationList(listedRows.slice(0, pageSize), await notificationCounts(db), await listNotificationSettings(db), csrfToken, canonicalLearnOrigin(env.PUBLIC_ORIGIN), status, page, pageSize, listedRows.length > pageSize)}`);
   }
   if (route === "admin-notification") {
     const id = notificationIdFromPath(url.pathname);

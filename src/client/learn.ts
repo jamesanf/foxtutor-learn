@@ -1019,6 +1019,44 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     renderSelectedFile();
   });
 
+  const setupNotificationConsole = () => {
+    const filterToggle = document.querySelector<HTMLButtonElement>("[data-notification-filter-toggle]");
+    const filterPanel = document.querySelector<HTMLElement>("[data-notification-filter-panel]");
+    const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-notification-row]"));
+    const filterOptions = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-notification-filter]"));
+    filterToggle?.addEventListener("click", () => {
+      if (!filterPanel || !filterToggle) return;
+      filterPanel.hidden = !filterPanel.hidden;
+      filterToggle.setAttribute("aria-expanded", String(!filterPanel.hidden));
+    });
+    filterOptions.forEach((option) => option.addEventListener("click", () => {
+      const value = option.dataset.notificationFilter ?? "";
+      filterOptions.forEach((candidate) => {
+        const active = candidate === option;
+        candidate.classList.toggle("is-active", active);
+        candidate.classList.toggle("secondary", !active);
+        candidate.setAttribute("aria-pressed", String(active));
+      });
+      rows.forEach((row) => {
+        row.hidden = Boolean(value && row.dataset.notificationStatus !== value);
+      });
+      if (filterPanel && filterToggle) {
+        filterPanel.hidden = true;
+        filterToggle.setAttribute("aria-expanded", "false");
+      }
+    }));
+    document.querySelectorAll<HTMLButtonElement>("[data-notification-preview]").forEach((button) => {
+      const panel = button.parentElement?.querySelector<HTMLElement>("[data-notification-preview-panel]");
+      if (!panel) return;
+      button.addEventListener("click", () => {
+        panel.hidden = !panel.hidden;
+        button.setAttribute("aria-expanded", String(!panel.hidden));
+        button.textContent = panel.hidden ? "Preview current email" : "Hide preview";
+      });
+    });
+  };
+  setupNotificationConsole();
+
   type ReportActionPayload = { ok?: boolean; action?: string; message?: string; reportHtml?: string };
   document.addEventListener("submit", (event) => {
     const form = event.target;

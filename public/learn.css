@@ -332,16 +332,38 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .notification-log-table th:nth-child(6), .notification-log-table td:nth-child(6) { width: 12%; }
 .notification-log-table .status { white-space: nowrap; }
 .notification-controls { margin-bottom: var(--space-6); }
-.notification-control { padding: 18px 0; border-top: 1px solid var(--line); }
-.notification-control:first-of-type { border-top: 0; }
-.notification-control-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
-.notification-control-heading h3 { margin: 0; font-size: 1rem; }
-.notification-control-heading p { margin: 4px 0 0; }
+.notification-control { margin: 10px 0; padding: 0; }
+.notification-control details { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.notification-control summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 18px; color: var(--foreground); cursor: pointer; list-style: none; }
+.notification-control summary::-webkit-details-marker { display: none; }
+.notification-control summary::after { color: var(--muted); content: "+"; font-size: 1.2rem; font-weight: 400; }
+.notification-control details[open] summary { border-bottom: 1px solid var(--line); background: var(--soft); }
+.notification-control details[open] summary::after { content: "−"; }
+.notification-control-summary { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.notification-control-summary strong { overflow-wrap: anywhere; }
+.notification-control-summary-meta { flex: 0 0 auto; color: var(--muted); font-size: .82rem; }
+.notification-control-body { padding: 18px; }
+.notification-current-wording { display: grid; gap: 12px; margin-bottom: 18px; padding: 14px; border: 1px solid #d8e5e8; border-radius: var(--radius-sm); background: #f7fbfc; }
+.notification-current-wording strong { display: block; margin-top: 5px; }
+.notification-current-wording pre, .notification-preview-panel pre { max-height: 12rem; margin: 7px 0 0; padding: 10px 12px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font: .82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.field-caption { color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.notification-preview-panel { padding-top: 4px; }
 .notification-control-fields { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(180px, 1fr) minmax(240px, 1.5fr); gap: 0 16px; }
 .notification-control-fields label { margin-bottom: 0; }
 .notification-note-field { grid-column: 3; }
-.toggle-control { display: flex; align-items: center; gap: 8px; margin: 0; white-space: nowrap; }
-.toggle-control input { width: auto; margin: 0; }
+.toggle-control { display: flex; align-items: center; gap: 9px; margin: 0; white-space: nowrap; }
+.toggle-control input { position: relative; width: 38px; height: 22px; margin: 0; border: 0; border-radius: 999px; background: #cbd5e1; appearance: none; cursor: pointer; }
+.toggle-control input::after { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; content: ""; transition: transform .16s ease; }
+.toggle-control input:checked { background: var(--action); }
+.toggle-control input:checked::after { transform: translateX(16px); }
+.notification-log-heading { align-items: start; }
+.notification-filter { position: relative; flex: 0 0 auto; }
+.notification-filter-toggle { min-width: 98px; }
+.notification-filter-icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.notification-filter-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 5; width: min(420px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 12px 28px rgb(16 42 67 / 16%); }
+.notification-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.notification-filter-grid .button { width: 100%; margin: 0; }
+.notification-filter-option.is-active { border-color: var(--action); color: white; background: var(--action); }
 .page-size-control { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--muted); font-size: .86rem; font-weight: 500; }
 .page-size-control select { width: auto; min-width: 68px; margin: 0; padding: 7px 25px 7px 9px; }
 .secondary { border-color: var(--line); color: var(--foreground); background: var(--soft); }
@@ -494,9 +516,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .resource-student-item .resource-actions { width: 100%; justify-content: flex-start; }
   .pagination { flex-wrap: wrap; }
   .pagination-pages { width: auto; }
-  .notification-control-heading { flex-direction: column; }
+  .notification-control summary { align-items: flex-start; flex-wrap: wrap; }
+  .notification-control-summary-meta { flex-basis: 100%; order: 3; }
   .notification-control-fields { grid-template-columns: 1fr; }
   .notification-note-field { grid-column: auto; }
+  .notification-filter-panel { right: auto; left: 0; }
+  .notification-filter-grid { grid-template-columns: 1fr 1fr; }
   .notification-log-table { overflow-x: visible; }
   .notification-log-table table { min-width: 0; }
   .table-wrap { overflow: visible; border: 0; background: transparent; }
