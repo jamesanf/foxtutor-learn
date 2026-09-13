@@ -13,6 +13,8 @@
 
 ### 2026-09-13 — Transparent PDF logo
 
+- **Status:** deployed as Worker
+  `3ad03ca5-7ea1-42d1-bac5-e1c2b299bacd` from commit `64a50e5`.
 - Replaced the JPEG PDF logo embedding with the supplied transparent logo and
   a PDF soft mask so the mark sits cleanly on the blue header bar.
 - Added regression coverage for the soft mask and current-year PDF footer.
