@@ -49,11 +49,15 @@ export interface NotificationInsert {
 }
 
 export async function findNotificationById(db: D1Database, id: string): Promise<Notification | null> {
-  return db.prepare("SELECT * FROM notifications WHERE id = ?").bind(id).first<Notification>();
+  return db.prepare(
+    "SELECT n.*, u.email AS recipient_email FROM notifications n JOIN users u ON u.id = n.recipient_user_id WHERE n.id = ?"
+  ).bind(id).first<Notification>();
 }
 
 export async function findNotificationByIdempotencyKey(db: D1Database, key: string): Promise<Notification | null> {
-  return db.prepare("SELECT * FROM notifications WHERE idempotency_key = ?").bind(key).first<Notification>();
+  return db.prepare(
+    "SELECT n.*, u.email AS recipient_email FROM notifications n JOIN users u ON u.id = n.recipient_user_id WHERE n.idempotency_key = ?"
+  ).bind(key).first<Notification>();
 }
 
 export async function insertNotification(db: D1Database, input: NotificationInsert): Promise<Notification> {

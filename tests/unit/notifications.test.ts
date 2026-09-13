@@ -8,8 +8,37 @@ import {
 } from "../../src/domain/notifications";
 import { learnLink } from "../../src/notifications/links";
 import { renderDstWarning, renderEmail, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
+import { findNotificationById } from "../../src/db/notifications";
+
+function mockNotificationDb(firstResult: unknown): D1Database {
+  let query = "";
+  const statement = {
+    bind() {
+      return statement;
+    },
+    first() {
+      return Promise.resolve(firstResult);
+    }
+  };
+  return {
+    prepare(sql: string) {
+      query = sql;
+      return statement;
+    },
+    get query() {
+      return query;
+    }
+  } as unknown as D1Database;
+}
 
 describe("notification domain", () => {
+  it("reloads claimed notifications with the linked recipient email", async () => {
+    const db = mockNotificationDb({ id: "notification-1", recipient_email: "student@example.com" });
+    await expect(findNotificationById(db, "notification-1")).resolves.toMatchObject({ recipient_email: "student@example.com" });
+    expect((db as D1Database & { query: string }).query).toContain("u.email AS recipient_email");
+    expect((db as D1Database & { query: string }).query).toContain("JOIN users u ON u.id = n.recipient_user_id");
+  });
+
   it("uses finite event types and deterministic business keys", () => {
     expect(isNotificationType("LESSON_REPORT")).toBe(true);
     expect(isNotificationType("DST_WARNING")).toBe(true);
