@@ -10,8 +10,8 @@ payments or direct debits.
 ## Current state
 
 - Local build, type-check and existing tests pass.
-- Source commit: `3251e3b2d3049d59c642b35df851f0fe924c0262`.
-- Production Worker version: `2915300b-35ad-44b2-895d-bbc4d6c49454`.
+- Source commit: `9589df4`.
+- Production Worker version: `c035283c-e386-4ddf-bb2e-d51233b29783`.
 - Migration `0016_accounting_outbox.sql` is applied in production D1; no
   migrations are pending.
 - No FreeAgent secret or token is configured in the deployed Worker.
