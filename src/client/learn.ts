@@ -1040,7 +1040,9 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       try {
         const body = new FormData(form);
         if (submitter.name) body.set(submitter.name, submitter.value);
-        const response = await fetch(form.action, {
+        const requestUrl = new URL(form.action, window.location.href);
+        requestUrl.searchParams.set("fragment", "1");
+        const response = await fetch(requestUrl, {
           method: "POST",
           body,
           credentials: "same-origin",

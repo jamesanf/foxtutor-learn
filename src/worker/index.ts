@@ -318,7 +318,10 @@ function calendarFragmentResponse(subscriptionHtml: string, message: string): Re
 }
 
 function reportActionResponse(request: Request, payload: Record<string, unknown>, status = 200): Response | null {
-  if (request.headers.get("X-Report-Fragment") !== "1") return null;
+  const fragmentHeader = request.headers.get("X-Report-Fragment") === "1";
+  const fragmentQuery = new URL(request.url).searchParams.get("fragment") === "1";
+  const acceptsJson = request.headers.get("Accept")?.includes("application/json") ?? false;
+  if (!fragmentHeader && !fragmentQuery && !acceptsJson) return null;
   const headers = privateHeaders("application/json; charset=utf-8");
   headers.set("Cache-Control", "no-store");
   return new Response(JSON.stringify(payload), { status, headers });
