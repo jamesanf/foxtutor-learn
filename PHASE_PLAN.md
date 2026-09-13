@@ -624,7 +624,8 @@ rescheduling remain Phase 5.
 ### Phase 4.2 current state — 2026-09-13
 
 Structured reports now follow the supplied template rather than the generic
-4.1 summary/homework model. Migration `0008_structured_lesson_reports.sql`
+4.1 summary/homework model. Migrations `0008_structured_lesson_reports.sql`
+and `0009_international_students.sql`
 adds nullable `students.level`, report-time header snapshots and the six
 Tutorial Feedback fields. Existing 4.1 content is reconciled as
 `summary -> This Lesson's Focus`, `homework -> Home Learning Task` and
@@ -637,7 +638,7 @@ The PDF is generated on demand in the Worker from the persisted D1 projection;
 no PDF is written to R2 or D1. Student level is canonical on `students.level`
 and duplicated only as a report snapshot. Migration `0008` is applied to
 production and the final pushed commit is deployed as Worker
-`289e3b10-a2e6-49c0-a035-714df13c18c9`. Automated checks and unauthenticated
+`2135c248-bc26-4024-8fbe-d31a54951bc6`. Automated checks and unauthenticated
 production smoke pass; authenticated mail/browser/PDF acceptance remains
 required before Phase 4 is formally closed.
 

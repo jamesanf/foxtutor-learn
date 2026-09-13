@@ -25,18 +25,27 @@ reconciled by migration `0008_structured_lesson_reports.sql`:
 
 ## Snapshots and lifecycle
 
-`students.level` is the nullable canonical current level. A report snapshots
+`students.level` is the nullable canonical current level. `students.international`
+is an opt-in communication preference and is not used for authorization. A
+report snapshots
 the pupil name, level, lesson local date, lesson start/end instants and IANA
 timezone when its row is first created. Drafts can be edited; a sent report is
 not editable through the normal route. Only completed lessons are reportable,
 and one report is allowed per lesson.
 
 Save Draft persists structured content without student visibility or a report
-notification. Send validates the level and lesson focus, persists the final
-content, creates the deterministic `lesson-report:<report-id>` notification,
-and changes the report to `SENT` only when the existing provider acceptance
-path marks the notification `SENT`. Failed/unknown mail retains the draft and
-the notification state.
+notification. Once a lesson's UK start time has passed and it is not
+cancelled, the report action is available; the scheduled Worker also marks
+lessons completed after their end time. Send validates the level and lesson
+focus, persists the final content, creates the deterministic
+`lesson-report:<report-id>` notification, and changes the report to `SENT`
+only when the existing provider acceptance path marks the notification `SENT`.
+Failed/unknown mail retains the draft and the notification state.
+
+The scheduled Worker sends one idempotent `DST_WARNING` notification at 09:00
+UK time on the last Sunday in March and October to active students with the
+international preference enabled. The message says that all lessons remain
+scheduled in UK time and asks the recipient to check their own time difference.
 
 ## Views and access
 

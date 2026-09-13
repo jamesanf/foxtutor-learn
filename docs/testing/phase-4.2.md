@@ -2,8 +2,9 @@
 
 ## Automated coverage
 
-- Migration `0008` adds nullable `students.level`, structured report fields,
-  snapshot columns, reconciliation updates and report indexes.
+- Migrations `0008` and `0009` add nullable `students.level`, the opt-in
+  `students.international` preference, structured report fields, snapshot
+  columns, reconciliation updates and report indexes.
 - Route classification covers admin/student report HTML and PDF endpoints.
 - The report projection uses persisted pupil, level, date/time and all six
   feedback fields.
@@ -13,13 +14,15 @@
   deterministic report data.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests
   remain unchanged and pass.
+- UK clock-change date/time detection and the `DST_WARNING` email projection
+  are covered by unit tests.
 
 ## Executed validation
 
 The final pushed tree passed:
 
 ```text
-npm test                 75 tests across 18 files
+npm test                 79 tests across 19 files
 npm run build            PASS
 npm run check            PASS
 npm run test:browser     PASS (static shell contract)
@@ -27,7 +30,7 @@ npm run test:production  PASS (public/unauthenticated smoke)
 git diff --check         PASS
 ```
 
-Production D1 reports no migrations pending after applying `0008`. Production
+Production D1 reports no migrations pending after applying `0009`. Production
 deployment and unauthenticated smoke are confirmed, but the acceptance matrix
 below still requires authenticated browser, Fox Mail, PDF visual and
 no-storage evidence before closure.
@@ -41,6 +44,10 @@ no-storage evidence before closure.
 | Report send | One notification, provider acceptance, `SENT` and `sent_at` |
 | Student history | Completed lessons show only sent report actions |
 | Admin history | Create/Edit/View actions appear in Past Lessons |
+| Admin report queue | Started lessons appear on the admin Dashboard with Create/Edit report actions |
+| Automatic lifecycle | Scheduled lessons become completed after their end time; report entry is available from lesson start |
+| International preference | Admin can opt a student in/out; default is off |
+| DST warning | One 09:00 UK-time reminder on each UK clock-change date, with idempotent delivery |
 | Student isolation | Student A cannot open Student B HTML or PDF |
 | PDF | Genuine two-page visual output, no R2/D1 PDF storage |
 | Long content | No clipping, overlap or truncation in HTML/email/PDF |

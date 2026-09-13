@@ -2,6 +2,16 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Phase 4.2 report workflow and UK clock-change reminders
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Report entry is now visible on the admin Dashboard for lessons whose UK start time has passed, with Create/Edit report actions also available from Past Lessons and lesson detail.
+- Scheduled lessons are automatically marked completed after their end time; cancelled lessons never become reportable.
+- Added migration `0009_international_students.sql` and an admin-editable, default-off International student flag.
+- Added idempotent `DST_WARNING` notifications at 09:00 UK time on the last Sunday in March and October, reminding opted-in students that lessons remain scheduled in UK time.
+- Deployed Worker version `2135c248-bc26-4024-8fbe-d31a54951bc6` from commit `71688dfb8f05baa112bdde68de154f5d7521d40b`.
+
 ### 2026-09-13 — Phase 4.2 structured lesson reports
 
 **Status:** deployed; authenticated production acceptance pending
