@@ -13,6 +13,10 @@
 - The current approved initial setting remains 55.00 GBP with explicit zero
   tax. `ADMIN_CANCELLED` remains unresolved and is not coupled to these
   normal-lesson settings.
+- Applied migration `0019_accounting_billing_settings.sql` to production D1
+  and deployed commit `49c08ec8ed1cc6623404620fa080c1dad64a10c8` as Worker
+  version `5e9bc089-8e4d-4f12-9f40-ce5539c6eb4f`. Post-deployment D1 reports
+  no pending migrations.
 
 ### 2026-09-14 - Apply approved normal lesson accounting values
 
