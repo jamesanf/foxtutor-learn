@@ -534,10 +534,10 @@ Make the lesson the student's permanent learning record while preventing the app
 - Prefer smaller normal operating limit (target approximately 10 MB per lesson where practical).
 - Separate teacher and student upload permissions.
 - Short-lived authenticated download mechanism.
-- Upload state machine: pending, processing, ready, failed, deleted.
+- Upload state machine: uploading, available, failed, deleted; compression processing is deferred with the PDF pipeline.
 - PDF inspection.
 - PDF compression decision recorded; implementation is deferred to a future phase.
-- Clear user-facing compression/upload progress.
+- Clear user-facing upload progress; compression-specific progress is deferred with the PDF pipeline.
 - Reject unsupported formats safely.
 - Retention metadata, default at least 12 months for lesson resources.
 - Retention housekeeping decision recorded; automated deletion is deferred to a future phase.
@@ -592,7 +592,7 @@ Heavy CPU work must not become a synchronous, fragile Worker request. Use an ext
 
 ### Exit criteria
 
-Teacher can upload lesson slides and homework; student can access them from the relevant lesson; large PDFs are automatically handled; files remain private; admin can clean storage without touching the command line.
+Teacher can upload lesson slides and homework; student can access them from the relevant lesson; large PDFs are safely bounded or rejected; files remain private; admin can clean storage without touching the command line. Automatic compression and retention deletion are future-phase capabilities.
 
 ---
 
