@@ -10,8 +10,8 @@ replacement or accounting system.
 
 **Phase:** Phase 4.2 deployed; formal Phase 4 closure remains pending authenticated acceptance
 **Production URL:** <https://foxtutor.org/learn>
-**Application release:** `e153389` on `main` and `origin/main`
-**Worker:** `a674e5fa-13c6-43bb-8cc5-1e7861d36a65`
+**Application release:** `282a2ba` on `main` and `origin/main`
+**Worker:** `1d7584ea-a230-47d9-b367-88fb9035621d`
 **D1 migrations:** `0001_foundation.sql` through `0009_international_students.sql`; no migration is pending
 
 The current release includes structured D1 lesson reports, historical student
