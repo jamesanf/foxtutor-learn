@@ -96,11 +96,20 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     let mode = (editor.dataset.listMode as ListMode | undefined) ?? "bullet";
     updateListButtons(mode);
     if (textarea.value.trim()) textarea.value = applyListMode(textarea.value, mode);
+    const resizeTextarea = () => {
+      textarea.style.height = "auto";
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+    textarea.addEventListener("input", resizeTextarea);
+    resizeTextarea();
     const clearEmptyListMarker = () => {
       if (/^\s*(?:[-*]|\d+[.)])\s*$/.test(textarea.value)) textarea.value = "";
     };
     textarea.addEventListener("focus", () => {
-      if (!textarea.value.trim() && mode !== "off") textarea.value = mode === "numbered" ? "1. " : "- ";
+      if (!textarea.value.trim() && mode !== "off") {
+        textarea.value = mode === "numbered" ? "1. " : "- ";
+        resizeTextarea();
+      }
     });
     textarea.closest("form")?.addEventListener("submit", clearEmptyListMarker);
 
@@ -112,6 +121,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           mode = mode === selectedMode ? "off" : selectedMode;
           textarea.value = applyListMode(textarea.value, mode);
           updateListButtons(mode);
+          resizeTextarea();
           textarea.focus();
           return;
         }
@@ -122,6 +132,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
           const marker = format === "bold" ? "**" : "==";
           const replacement = `${marker}${selected || "text"}${marker}`;
           textarea.setRangeText(replacement, start, end, selected ? "select" : "end");
+          resizeTextarea();
         }
         textarea.focus();
       });
@@ -137,6 +148,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       if (!/^\s*(?:[-*]|\d+[.)])\s+/.test(currentLine) && !currentLine.trim()) return;
       event.preventDefault();
       textarea.setRangeText(`\n${prefix}`, cursor, cursor, "end");
+      resizeTextarea();
     });
   });
 

@@ -2,6 +2,14 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Compact report fields and action placement
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Moved Cancel, Save draft and Send report below the lesson attachment area.
+- Reduced the default report field height and added automatic textarea growth as content is entered.
+- Slimmed the attachment dropzone while retaining the inline upload action after file selection.
+
 ### 2026-09-13 — Inline lesson attachment upload action
 
 **Status:** deployed; authenticated production acceptance pending
