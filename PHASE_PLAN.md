@@ -798,6 +798,21 @@ and effective-date contract, and no FreeAgent sandbox or production
 credentials are configured. No completion tag may be created until the
 documented sandbox and controlled production acceptance evidence exists.
 
+### Phase 6.3 current state
+
+The 2026-09-13 preflight verified repository `cef0591`, deployed Worker
+`26463610-92d2-490a-8e0f-c067cf45b846`, runtime release `b5a213f`, production
+D1 migrations through `0017_accounting_operations.sql`, no pending
+migrations, and zero production accounting configuration rows. The complete
+local suite contains 26 test files and 123 passing tests; build, check,
+browser-contract and production-perimeter smoke commands pass.
+
+Phase 6.3 is blocked, not complete. Commercial approval, sandbox credentials,
+OAuth connection, company identity, contact mapping, invoice/tax mapping,
+sandbox acceptance and controlled production acceptance are absent. No
+financial mutation was attempted and no `phase-6-complete` tag may be
+created.
+
 ---
 
 ## Phase 7 — Optional billing visibility and long-term operations hardening

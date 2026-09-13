@@ -8,7 +8,7 @@ replacement or accounting system.
 
 ## Current status
 
-**Phase:** Phase 6.2 accounting hardening implemented; commercial approval and external FreeAgent acceptance pending
+**Phase:** Phase 6.3 preflight blocked; commercial approval and external FreeAgent acceptance pending
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6.2 accounting operations hardening
 **Worker:** `26463610-92d2-490a-8e0f-c067cf45b846`
@@ -32,6 +32,10 @@ verified admin contact mappings, pinned company/environment identity and
 additive manual-retry audit records. Live FreeAgent financial actions remain
 disabled until the commercial policy, credentials and authenticated
 sandbox/production acceptance are supplied.
+The Phase 6.3 preflight confirmed the repository/runtime/D1 baseline, reran
+the complete local and perimeter gates, rechecked official FreeAgent
+documentation, and stopped without configuring credentials or creating a
+financial action.
 
 ## Architecture
 
@@ -115,6 +119,10 @@ CHANGELOG.md         Material implementation history
 | `docs/testing/phase-6.2.md` | Phase 6.2 automated and external acceptance state |
 | `docs/deployment/phase-6.2.md` | Phase 6.2 release and human handover |
 | `docs/security/phase-6.2.md` | Phase 6.2 security and operational controls |
+| `docs/architecture/phase-6.3.md` | Phase 6.3 commercial and provider preflight |
+| `docs/testing/phase-6.3.md` | Phase 6.3 baseline and acceptance handover |
+| `docs/deployment/phase-6.3.md` | Phase 6.3 runtime and handover record |
+| `docs/security/phase-6.3.md` | Phase 6.3 security preflight |
 | `docs/api/mail-boundary.md` | Fox Mail integration contract |
 | `docs/architecture/` | Earlier phase architecture records |
 | `docs/testing/` | Earlier phase validation and acceptance records |
@@ -133,7 +141,7 @@ working tree.
 | 3 | Private lesson resources and R2 storage | Deployed; acceptance recorded in phase documents |
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
-| 6 | FreeAgent/accounting boundary | Phase 6.2 hardening deployed only; sandbox/commercial/production acceptance pending |
+| 6 | FreeAgent/accounting boundary | Phase 6.3 preflight blocked; sandbox/commercial/production acceptance pending |
 | 7 | Optional billing visibility and hardening | Deferred |
 
 ## Security model

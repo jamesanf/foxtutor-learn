@@ -1,5 +1,26 @@
 # Changelog
 
+### 2026-09-13 — Phase 6.3 commercial and provider acceptance preflight
+
+- Verified `main` and `origin/main` at `cef0591`, the Phase 6.2 runtime release
+  at `b5a213f`, the deployed Worker version
+  `26463610-92d2-490a-8e0f-c067cf45b846`, production D1 through
+  `0017_accounting_operations.sql`, no pending migrations and the configured
+  production routes/bindings.
+- Confirmed production accounting tables are present but empty: no outbox
+  event, OAuth connection, contact mapping or retry-audit record exists.
+- Re-ran `npm test` (26 files, 123 tests), `npm run build`, `npm run check`,
+  `npm run test:browser`, `npm run test:production` and `git diff --check`;
+  all passed.
+- Rechecked the official FreeAgent API, OAuth, company, contacts, invoices,
+  sales-tax and currency documentation on 2026-09-13. No provider mutation
+  was attempted because the commercial contract and credentials are absent.
+- Ran a repository secret inspection without exposing values. No production
+  FreeAgent secret, token, encryption key or raw provider payload was found.
+- **Status:** blocked at the explicit commercial and provider handover gate.
+  No sandbox acceptance, production financial event, completion tag or
+  completion claim is made.
+
 ### 2026-09-13 — Phase 6.2 accounting operations hardening
 
 - Added forward-only accounting operations migration `0017_accounting_operations.sql`
