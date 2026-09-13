@@ -1040,7 +1040,9 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       try {
         const body = new FormData(form);
         if (submitter.name) body.set(submitter.name, submitter.value);
-        const requestUrl = new URL(form.action, window.location.href);
+        const formAction = form.getAttribute("action");
+        if (!formAction) throw new Error("The report action is unavailable. Refresh the page and try again.");
+        const requestUrl = new URL(formAction, window.location.href);
         requestUrl.searchParams.set("fragment", "1");
         const response = await fetch(requestUrl, {
           method: "POST",

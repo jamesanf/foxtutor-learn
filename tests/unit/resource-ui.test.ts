@@ -86,6 +86,8 @@ describe("resource UX contract", () => {
     expect(clientSource).toContain('reportForm.addEventListener("change", markReportDirty)');
     expect(clientSource).toContain('headers: { Accept: "application/json", "X-Report-Fragment": "1" }');
     expect(clientSource).toContain('requestUrl.searchParams.set("fragment", "1")');
+    expect(clientSource).toContain('const formAction = form.getAttribute("action")');
+    expect(clientSource).not.toContain('new URL(form.action, window.location.href)');
     expect(clientSource).toContain('new DOMParser().parseFromString(html, "text/html")');
     expect(clientSource).toContain('submitter.classList.add("is-loading")');
     expect(cssSource).toContain(".report-form-actions { justify-content: space-between");
