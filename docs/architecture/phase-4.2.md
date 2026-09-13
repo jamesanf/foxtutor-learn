@@ -52,11 +52,13 @@ focus, persists the final content, creates the deterministic
 only when the existing provider acceptance path marks the notification `SENT`.
 Failed/unknown mail retains the draft and the notification state.
 
-The report workflow includes a contextual drag-and-drop attachment form. It
-submits to `/learn/admin/resources/new` with the lesson and student context,
-uses the existing multipart validation, D1 metadata and R2 storage pipeline,
-and therefore makes the file appear in the existing admin and student lesson
-resource views without a second attachment system.
+The report workflow includes a contextual drag-and-drop attachment area inside
+the primary report form. The selected file is submitted with the report
+action; the Worker waits for the existing multipart validation, D1 metadata
+and R2 storage pipeline to complete before saving or sending the report.
+The same resource notification and idempotency behavior is retained, and the
+file appears in the existing admin and student lesson resource views without
+a second attachment system or a separate upload page.
 
 The scheduled Worker sends one idempotent `DST_WARNING` notification at 09:00
 UK time on the last Sunday in March and October to active students with the

@@ -795,14 +795,15 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     else if (loadStudentResourceUrl && document.querySelector("[data-student-resource-finder]")) loadStudentResourceUrl(new URL(window.location.href), false);
   });
 
-  document.querySelectorAll<HTMLFormElement>(".resource-upload-form").forEach((form) => {
+  document.querySelectorAll<HTMLFormElement>(".resource-upload-form, [data-report-attachment-form]").forEach((form) => {
     const student = form.elements.namedItem("studentId");
     const lessonElement = form.querySelector("[data-resource-lesson-select]");
-    const file = form.elements.namedItem("file");
+    const file = form.elements.namedItem("file") ?? form.elements.namedItem("attachment");
     const preview = form.querySelector("[data-file-preview]");
     const dropzone = form.querySelector<HTMLElement>("[data-file-dropzone]");
     const status = form.querySelector<HTMLElement>("[data-upload-status]");
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const reportAttachmentForm = form.hasAttribute("data-report-attachment-form");
     const lesson = lessonElement instanceof HTMLSelectElement ? lessonElement : null;
 
     if (student instanceof HTMLSelectElement && lesson) {
@@ -886,6 +887,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     });
     file.addEventListener("change", renderSelectedFile);
     form.addEventListener("submit", () => {
+      if (reportAttachmentForm) return;
       if (submit) {
         submit.disabled = true;
         submit.textContent = "Uploading…";

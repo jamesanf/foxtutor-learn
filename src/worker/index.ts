@@ -244,12 +244,12 @@ function lessonReportForm(
   const levelControl = `<div class="report-level-combobox" data-level-combobox><label for="report-level">Level<input id="report-level" name="level" value="${escapeHtml(level)}" maxlength="120" required autocomplete="off" aria-autocomplete="list" aria-controls="report-level-options"></label><div id="report-level-options" class="report-level-options" role="listbox" hidden>${levelOptions}</div></div>`;
   const editor = (label: string, name: string, content: string, required = false, toolbarLabel = label || "Notes"): string => `<div class="report-editor" data-report-editor data-list-mode="bullet"><label>${label ? escapeHtml(label) : ""}<textarea name="${name}" rows="3" maxlength="12000"${required ? " required" : ""}>${escapeHtml(content)}</textarea></label><div class="report-toolbar" role="toolbar" aria-label="${escapeHtml(toolbarLabel)} formatting"><button type="button" class="report-tool report-list-mode is-active" data-report-format="list-bullet" aria-pressed="true" title="Bullet points"><svg class="report-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v2H5V5h2Zm4 0v2h10V5H11ZM7 11v2H5v-2h2Zm4 0v2h10v-2H11ZM7 17v2H5v-2h2Zm4 0v2h10v-2H11Z"/></svg></button><button type="button" class="report-tool report-list-mode" data-report-format="list-numbered" aria-pressed="false" title="Numbered list"><svg class="report-tool-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 13V11H21V13H7M7 19V17H21V19H7M7 7V5H21V7H7M3 8V5H2V4H4V8H3M2 17V16H5V20H2V19H4V18.5H3V17.5H4V17H2M4.25 10A.75.75 0 0 1 5 10.75C5 10.95 4.92 11.14 4.79 11.27L3.12 13H5V14H2V13.08L4 11H2V10H4.25Z"/></svg></button><button type="button" class="report-tool" data-report-format="bold" title="Bold"><strong>B</strong></button><button type="button" class="report-tool report-tool-highlight" data-report-format="highlight" title="Yellow highlight">A</button></div></div>`;
   const notes = value("notes") || value("additional_notes");
-  return `<section class="card form-card report-form"><h1>Lesson Report</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form id="lesson-report-form" method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(reportDate(lesson))}</p><p><strong>Pupil</strong><br>${escapeHtml(pupil)}</p><p><strong>Time</strong><br>${escapeHtml(reportTime(lesson))}</p>${levelControl}</div><div class="report-feedback-form">${editor("This Lesson's Focus", "thisLessonsFocus", value("this_lessons_focus") || value("summary"), true)}${editor("Next Lesson's Focus", "nextLessonsFocus", value("next_lessons_focus"))}${editor("Even Better If", "evenBetterIf", value("even_better_if"))}${editor("Home Learning Task", "homeLearningTask", value("home_learning_task") || value("homework"))}<details class="report-notes-details"${notes ? " open" : ""}><summary>Notes</summary>${editor("", "notes", notes, false, "Notes")}</details></div></form>${reportAttachmentUploadForm(csrfToken, lesson, student)}<div class="form-actions report-form-actions"><a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Cancel</a><button class="button secondary" type="submit" form="lesson-report-form" name="action" value="save">Save draft</button><button class="button" type="submit" form="lesson-report-form" name="action" value="send">Send report</button></div></section>`;
+  return `<section class="card form-card report-form"><h1>Lesson Report</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form id="lesson-report-form" method="post" action="${action}" enctype="multipart/form-data" data-report-attachment-form>${hiddenCsrf(csrfToken)}<div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(reportDate(lesson))}</p><p><strong>Pupil</strong><br>${escapeHtml(pupil)}</p><p><strong>Time</strong><br>${escapeHtml(reportTime(lesson))}</p>${levelControl}</div><div class="report-feedback-form">${editor("This Lesson's Focus", "thisLessonsFocus", value("this_lessons_focus") || value("summary"), true)}${editor("Next Lesson's Focus", "nextLessonsFocus", value("next_lessons_focus"))}${editor("Even Better If", "evenBetterIf", value("even_better_if"))}${editor("Home Learning Task", "homeLearningTask", value("home_learning_task") || value("homework"))}<details class="report-notes-details"${notes ? " open" : ""}><summary>Notes</summary>${editor("", "notes", notes, false, "Notes")}</details></div>${reportAttachmentUploadForm(lesson)}</form><div class="form-actions report-form-actions"><a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Cancel</a><button class="button secondary" type="submit" form="lesson-report-form" name="action" value="save">Save draft</button><button class="button" type="submit" form="lesson-report-form" name="action" value="send">Send report</button></div></section>`;
 }
 
-function reportAttachmentUploadForm(csrfToken: string, lesson: Lesson, student: Student): string {
+function reportAttachmentUploadForm(lesson: Lesson): string {
   const id = `report-attachment-${lesson.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  return `<section class="report-attachments"><form class="resource-upload-form report-attachment-form" method="post" action="/learn/admin/resources/new" enctype="multipart/form-data" data-return-context="lesson">${hiddenCsrf(csrfToken)}<input type="hidden" name="idempotencyKey" value="${escapeHtml(crypto.randomUUID())}"><input type="hidden" name="returnContext" value="lesson"><input type="hidden" name="studentId" value="${escapeHtml(student.id)}"><input type="hidden" name="lessonId" value="${escapeHtml(lesson.id)}"><div class="resource-file-dropzone" data-file-dropzone tabindex="0" role="button" aria-labelledby="${id}-label" aria-describedby="${id}-help"><span class="resource-file-icon" aria-hidden="true">↥</span><strong id="${id}-label">Drop a file here or <span class="resource-browse">Browse</span> to add a lesson attachment</strong><span id="${id}-help" class="field-help">PDF · DOCX · TXT · PNG · JPEG · WEBP · Up to 25 MB</span><input id="${id}" type="file" name="file" aria-label="Choose lesson attachment" required accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"><output class="file-preview" data-file-preview aria-live="polite"></output></div><p class="upload-status" data-upload-status aria-live="polite"></p><div class="form-actions"><button class="button" type="submit" data-upload-submit hidden>Upload attachment</button></div></form></section>`;
+  return `<section class="report-attachments"><input type="hidden" name="attachmentIdempotencyKey" value="${escapeHtml(crypto.randomUUID())}"><div class="resource-file-dropzone" data-file-dropzone tabindex="0" role="button" aria-labelledby="${id}-label" aria-describedby="${id}-help"><span class="resource-file-icon" aria-hidden="true">↥</span><strong id="${id}-label">Drop a file here or <span class="resource-browse">Browse</span> to add a lesson attachment</strong><span id="${id}-help" class="field-help">PDF · DOCX · TXT · PNG · JPEG · WEBP · Up to 25 MB</span><input id="${id}" type="file" name="attachment" aria-label="Choose lesson attachment" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"><output class="file-preview" data-file-preview aria-live="polite"></output></div><p class="upload-status" data-upload-status aria-live="polite"></p></section>`;
 }
 
 function calendarFeedUrl(request: Request, env: Env, token: string): string {
@@ -830,11 +830,13 @@ function lessonForm(
 
 async function parseForm(request: Request): Promise<FormData | null> {
   const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/x-www-form-urlencoded")) return null;
-  const body = await request.clone().arrayBuffer();
-  if (body.byteLength > 96_000) return null;
+  const isUrlEncoded = contentType.includes("application/x-www-form-urlencoded");
+  const isMultipart = contentType.includes("multipart/form-data");
+  if (!isUrlEncoded && !isMultipart) return null;
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > (isMultipart ? MAX_RESOURCE_SIZE_BYTES + 1_048_576 : 96_000)) return null;
   try {
-    return await new Response(body, { headers: { "Content-Type": contentType } }).formData();
+    return await request.clone().formData();
   } catch (error) {
     if (error instanceof TypeError) return null;
     throw error;
@@ -928,17 +930,23 @@ async function resourceUpload(
   env: Env,
   active: ActiveSession,
   students: Student[],
-  lessons: Lesson[]
+  lessons: Lesson[],
+  submittedForm?: FormData,
+  inline = false
 ): Promise<Response> {
   if (!env.RESOURCES_BUCKET) return messagePage("Service unavailable", "Resource storage is not configured for this environment.", 503);
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_RESOURCE_SIZE_BYTES + 1_048_576) return messagePage("Upload too large", "This file is too large. The maximum is 25 MB.", 413);
   let form: FormData;
-  try {
-    form = await request.formData();
-  } catch (error) {
-    if (error instanceof TypeError) return messagePage("Invalid upload", "The submitted upload could not be read.", 400);
-    throw error;
+  if (submittedForm) {
+    form = submittedForm;
+  } else {
+    try {
+      form = await request.formData();
+    } catch (error) {
+      if (error instanceof TypeError) return messagePage("Invalid upload", "The submitted upload could not be read.", 400);
+      throw error;
+    }
   }
   const studentId = formText(form, "studentId");
   const lessonId = formText(form, "lessonId") || null;
@@ -951,7 +959,7 @@ async function resourceUpload(
   const existing = await findResourceByIdempotencyKey(env.DB as D1Database, idempotencyKey);
   if (existing) {
     if (existing.uploaded_by_user_id !== active.user.id) return messagePage("Conflict", "This upload could not be completed.", 409);
-    if (existing.status === "available") return resourceSuccessPage(active.user, active.csrfToken, existing.id, context);
+    if (existing.status === "available") return inline ? new Response(null, { status: 204 }) : resourceSuccessPage(active.user, active.csrfToken, existing.id, context);
     if (existing.status === "uploading") return messagePage("Upload in progress", "This upload is already being processed. Try again shortly.", 409);
     return appPage(active.user, active.csrfToken, "Add resource", resourceUploadForm(active.csrfToken, students, lessons, context, "This upload has already failed. Choose the file again to start a new upload.", { ...values, idempotencyKey: crypto.randomUUID() }));
   }
@@ -1036,7 +1044,7 @@ async function resourceUpload(
       content
     });
   }
-  return resourceSuccessPage(active.user, active.csrfToken, resourceId, context);
+  return inline ? new Response(null, { status: 204 }) : resourceSuccessPage(active.user, active.csrfToken, resourceId, context);
 }
 
 async function downloadResource(request: Request, env: Env, resource: Resource): Promise<Response> {
@@ -1376,15 +1384,37 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const evenBetterIf = formText(form, "evenBetterIf").trim();
     const tooLong = [level, thisLessonsFocus, nextLessonsFocus, homeLearningTask, notes, evenBetterIf].some((value) => value.length > 12_000);
     const wantsSend = formText(form, "action") === "send";
+    const draftReport = { ...existing, level, this_lessons_focus: thisLessonsFocus, next_lessons_focus: nextLessonsFocus, home_learning_task: homeLearningTask, notes, even_better_if: evenBetterIf } as LessonReport;
     if (!level || tooLong || (wantsSend && !thisLessonsFocus)) {
       return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
         csrfToken,
         url.pathname,
         lesson,
         studentRecord,
-        { ...existing, level, this_lessons_focus: thisLessonsFocus, next_lessons_focus: nextLessonsFocus, home_learning_task: homeLearningTask, notes, even_better_if: evenBetterIf } as LessonReport,
+        draftReport,
         wantsSend && !thisLessonsFocus ? "Enter This Lesson's Focus before sending the report." : "Level is required and each report field must be 12,000 characters or fewer."
       ));
+    }
+    const attachment = form.get("attachment");
+    if (attachment instanceof File && attachment.size > 0) {
+      const uploadForm = new FormData();
+      uploadForm.set("csrf", formText(form, "csrf"));
+      uploadForm.set("studentId", studentRecord.id);
+      uploadForm.set("lessonId", lesson.id);
+      uploadForm.set("returnContext", "lesson");
+      uploadForm.set("idempotencyKey", formText(form, "attachmentIdempotencyKey") || crypto.randomUUID());
+      uploadForm.set("file", attachment);
+      const uploadResponse = await resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true);
+      if (uploadResponse.status !== 204) {
+        return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
+          csrfToken,
+          url.pathname,
+          lesson,
+          studentRecord,
+          draftReport,
+          "The attachment could not be uploaded. Check the file type and size, then try again."
+        ));
+      }
     }
     const reportId = existing?.id ?? crypto.randomUUID();
     const now = new Date().toISOString();

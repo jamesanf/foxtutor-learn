@@ -357,17 +357,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-level-option { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 0; color: var(--foreground); background: transparent; cursor: pointer; text-align: left; font: inherit; }
 .report-level-option:hover, .report-level-option:focus-visible { color: var(--action); background: #edf5f8; }
 .report-tool.is-active { color: var(--action); background: #d8ebf0; }
-.report-attachments { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
-.report-attachments .section-heading { margin-bottom: 14px; }
-.report-attachments .section-heading h2 { margin: 0; }
-.report-attachment-form { display: grid; gap: 8px; }
-.report-attachment-form .resource-file-dropzone { min-height: 104px; padding: 14px 16px; border-radius: 0; }
-.report-attachment-form .resource-file-dropzone.has-file { min-height: 92px; padding: 14px 16px; }
-.report-attachment-form .upload-status { min-height: 0; margin: 0; }
-.report-attachment-form .form-actions { display: none; justify-content: flex-start; margin: 0; }
-.report-attachment-form.has-file { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-.report-attachment-form.has-file .form-actions { display: flex; grid-column: 2; grid-row: 1; }
-.report-attachment-form.has-file .upload-status { grid-column: 1 / -1; }
+.report-attachments { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.report-attachments .resource-file-dropzone { min-height: 104px; padding: 14px 16px; border-radius: 0; }
+.report-attachments .resource-file-dropzone.has-file { min-height: 92px; padding: 14px 16px; }
+.report-attachments .upload-status { min-height: 0; margin: 0; }
 .report-form-actions { margin-top: 18px; }
 .report-delivery { margin-top: 22px; color: var(--muted); }
 .report-document { break-inside: avoid; }

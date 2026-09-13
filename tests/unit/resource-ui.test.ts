@@ -41,6 +41,18 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain("overflow: hidden");
   });
 
+  it("submits report attachments through the report action without a second upload page", () => {
+    expect(workerSource).toContain('enctype="multipart/form-data" data-report-attachment-form');
+    expect(workerSource).toContain('name="attachment"');
+    expect(workerSource).toContain("const attachment = form.get(\"attachment\")");
+    expect(workerSource).toContain("attachment instanceof File");
+    expect(workerSource).toContain("resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true)");
+    expect(workerSource).toContain("if (uploadResponse.status !== 204)");
+    expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
+    expect(clientSource).toContain('".resource-upload-form, [data-report-attachment-form]"');
+    expect(clientSource).toContain("if (reportAttachmentForm) return;");
+  });
+
   it("provides server-side filtering, page-scoped selection and deliberate actions", () => {
     expect(workerSource).toContain('name="student"');
     expect(workerSource).toContain('name="lesson"');
