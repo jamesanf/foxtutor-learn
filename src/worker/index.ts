@@ -12,6 +12,7 @@ import {
   insertStudent,
   listStudents,
   listActiveStudentsForResourceFilter,
+  updateStudentLevel,
   updateStudent,
   type Student
 } from "../db/students";
@@ -90,6 +91,7 @@ import { decryptFeedToken, encryptFeedToken, feedTokenLast4, generateFeedToken, 
 import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
+import { renderRichTextHtml } from "../reports/rich-text";
 import {
   MAX_RESOURCE_SIZE_BYTES,
   MAX_LESSON_STORAGE_BYTES,
@@ -237,7 +239,12 @@ function lessonReportForm(
   const pupil = value("pupil_name") || student.name;
   const level = value("level") || student.level || "";
   if (sent && report) return reportDocument(report, true);
-  return `<section class="card form-card report-form"><p class="eyebrow">LESSON REPORT</p><h1>Lesson Report</h1><p class="lede">${escapeHtml(reportDate(lesson))} · ${escapeHtml(reportTime(lesson))} (${escapeHtml(lesson.timezone)})</p>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="report-meta"><p><strong>Lesson Date</strong><br>${escapeHtml(reportDate(lesson))}</p><p><strong>Pupil</strong><br>${escapeHtml(pupil)}</p><label>Level<input name="level" value="${escapeHtml(level)}" maxlength="120" required></label></div><h2>Tutorial Feedback</h2><label>This Lesson's Focus<textarea name="thisLessonsFocus" rows="5" maxlength="12000">${escapeHtml(value("this_lessons_focus") || value("summary"))}</textarea></label><label>Next Lesson's Focus<textarea name="nextLessonsFocus" rows="5" maxlength="12000">${escapeHtml(value("next_lessons_focus"))}</textarea></label><label>Writing Practice<textarea name="writingPractice" rows="5" maxlength="12000">${escapeHtml(value("writing_practice"))}</textarea></label><label>Home Learning Task<textarea name="homeLearningTask" rows="5" maxlength="12000">${escapeHtml(value("home_learning_task") || value("homework"))}</textarea></label><label>Notes<textarea name="notes" rows="5" maxlength="12000">${escapeHtml(value("notes") || value("additional_notes"))}</textarea></label><label>Even Better If<textarea name="evenBetterIf" rows="5" maxlength="12000">${escapeHtml(value("even_better_if"))}</textarea></label><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Cancel</a><button class="button secondary" type="submit" name="action" value="save">Save draft</button><button class="button" type="submit" name="action" value="send">Send report</button></div></form></section>`;
+  const levelSuggestions = ["KS2", "KS3", "GCSE English", "A Level Literature", "A Level Language", "N5 English", "Higher English", "N5 ESOL", "Higher ESOL", "EAL", "CAE/CPE", "11+", "13+"];
+  const levelOptions = levelSuggestions.map((suggestion) => `<button type="button" role="option" class="report-level-option" data-level-option="${escapeHtml(suggestion)}">${escapeHtml(suggestion)}</button>`).join("");
+  const levelControl = `<div class="report-level-combobox" data-level-combobox><label for="report-level">Level<input id="report-level" name="level" value="${escapeHtml(level)}" maxlength="120" required autocomplete="off" aria-autocomplete="list" aria-controls="report-level-options"></label><div id="report-level-options" class="report-level-options" role="listbox" hidden>${levelOptions}</div><span class="field-help">Choose a suggestion or type a different level. Saving the report updates the student profile.</span></div>`;
+  const editor = (label: string, name: string, content: string, required = false): string => `<div class="report-editor"><label>${escapeHtml(label)}<textarea name="${name}" rows="5" maxlength="12000"${required ? " required" : ""}>${escapeHtml(content)}</textarea></label><div class="report-toolbar" role="toolbar" aria-label="${escapeHtml(label)} formatting"><button type="button" class="report-tool" data-report-format="bold" title="Bold"><strong>B</strong></button><button type="button" class="report-tool" data-report-format="bullet" title="Bullet points">•</button><button type="button" class="report-tool report-tool-highlight" data-report-format="highlight" title="Yellow highlight">A</button></div></div>`;
+  const notes = value("notes") || value("additional_notes");
+  return `<section class="card form-card report-form"><p class="eyebrow">LESSON REPORT</p><h1>Lesson Report</h1><p class="lede">${escapeHtml(reportDate(lesson))} · ${escapeHtml(reportTime(lesson))} (${escapeHtml(lesson.timezone)})</p>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="report-meta"><p><strong>Lesson Date</strong><br>${escapeHtml(reportDate(lesson))}</p><p><strong>Pupil</strong><br>${escapeHtml(pupil)}</p>${levelControl}</div><h2>Tutorial Feedback</h2><div class="report-feedback-form">${editor("This Lesson's Focus", "thisLessonsFocus", value("this_lessons_focus") || value("summary"), true)}${editor("Next Lesson's Focus", "nextLessonsFocus", value("next_lessons_focus"))}${editor("Even Better If", "evenBetterIf", value("even_better_if"))}${editor("Home Learning Task", "homeLearningTask", value("home_learning_task") || value("homework"))}<details class="report-notes-details"${notes ? " open" : ""}><summary>Notes <span>(optional)</span></summary>${editor("Notes", "notes", notes)}</details></div><p class="field-help">Formatting is added as you type: bold, bullet points, and yellow highlight.</p><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">Cancel</a><button class="button secondary" type="submit" name="action" value="save">Save draft</button><button class="button" type="submit" name="action" value="send">Send report</button></div></form></section>`;
 }
 
 function calendarFeedUrl(request: Request, env: Env, token: string): string {
@@ -305,12 +312,12 @@ function reportTime(lesson: Lesson): string {
 }
 
 function reportField(label: string, value: string): string {
-  return `<section class="report-field"><h2>${escapeHtml(label)}</h2>${value ? `<p>${escapeHtml(value).replace(/\n/g, "<br>")}</p>` : `<p class="muted">—</p>`}</section>`;
+  return `<section class="report-field"><h2>${escapeHtml(label)}</h2>${renderRichTextHtml(value)}</section>`;
 }
 
 function reportDocument(report: LessonReport, admin: boolean): string {
   const view = reportViewModel(report);
-  return `<section class="card report-document"><div class="report-heading"><div><p class="eyebrow">LESSON REPORT</p><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Lesson Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p><p><strong>Lesson time</strong><br>${escapeHtml(view.lessonTime)} (${escapeHtml(view.lessonTimezone)})</p></div><div class="report-feedback"><h2>Tutorial Feedback</h2>${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Writing Practice", view.writingPractice)}${reportField("Home Learning Task", view.homeLearningTask)}${reportField("Notes", view.notes)}${reportField("Even Better If", view.evenBetterIf)}</div>${admin ? `<p class="report-delivery"><strong>${report.status === "SENT" ? "Sent" : "Draft"}</strong>${report.sent_at ? ` · ${escapeHtml(report.sent_at)}` : ""}</p>` : ""}</section>`;
+  return `<section class="card report-document"><div class="report-heading"><div><p class="eyebrow">LESSON REPORT</p><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Lesson Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p><p><strong>Lesson time</strong><br>${escapeHtml(view.lessonTime)} (${escapeHtml(view.lessonTimezone)})</p></div><div class="report-feedback"><h2>Tutorial Feedback</h2>${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<p class="report-delivery"><strong>${report.status === "SENT" ? "Sent" : "Draft"}</strong>${report.sent_at ? ` · ${escapeHtml(report.sent_at)}` : ""}</p>` : ""}</section>`;
 }
 
 function formatCalendarLessonTime(lesson: Lesson): string {
@@ -820,7 +827,7 @@ async function parseForm(request: Request): Promise<FormData | null> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/x-www-form-urlencoded")) return null;
   const body = await request.clone().arrayBuffer();
-  if (body.byteLength > 32_768) return null;
+  if (body.byteLength > 96_000) return null;
   try {
     return await new Response(body, { headers: { "Content-Type": contentType } }).formData();
   } catch (error) {
@@ -1359,11 +1366,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const level = formText(form, "level").trim();
     const thisLessonsFocus = formText(form, "thisLessonsFocus").trim();
     const nextLessonsFocus = formText(form, "nextLessonsFocus").trim();
-    const writingPractice = formText(form, "writingPractice").trim();
     const homeLearningTask = formText(form, "homeLearningTask").trim();
     const notes = formText(form, "notes").trim();
     const evenBetterIf = formText(form, "evenBetterIf").trim();
-    const tooLong = [level, thisLessonsFocus, nextLessonsFocus, writingPractice, homeLearningTask, notes, evenBetterIf].some((value) => value.length > 12_000);
+    const tooLong = [level, thisLessonsFocus, nextLessonsFocus, homeLearningTask, notes, evenBetterIf].some((value) => value.length > 12_000);
     const wantsSend = formText(form, "action") === "send";
     if (!level || tooLong || (wantsSend && !thisLessonsFocus)) {
       return appPage(active.user, csrfToken, "Lesson report", lessonReportForm(
@@ -1371,7 +1377,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         url.pathname,
         lesson,
         studentRecord,
-        { ...existing, level, this_lessons_focus: thisLessonsFocus, next_lessons_focus: nextLessonsFocus, writing_practice: writingPractice, home_learning_task: homeLearningTask, notes, even_better_if: evenBetterIf } as LessonReport,
+        { ...existing, level, this_lessons_focus: thisLessonsFocus, next_lessons_focus: nextLessonsFocus, home_learning_task: homeLearningTask, notes, even_better_if: evenBetterIf } as LessonReport,
         wantsSend && !thisLessonsFocus ? "Enter This Lesson's Focus before sending the report." : "Level is required and each report field must be 12,000 characters or fewer."
       ));
     }
@@ -1390,13 +1396,13 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       lesson_timezone: existing?.lesson_timezone || lesson.timezone,
       this_lessons_focus: thisLessonsFocus,
       next_lessons_focus: nextLessonsFocus,
-      writing_practice: writingPractice,
       home_learning_task: homeLearningTask,
       notes,
       even_better_if: evenBetterIf,
       status: "DRAFT",
       now
     });
+    await updateStudentLevel(db, studentRecord.id, level, now);
     if (!wantsSend) return redirect(url.pathname);
     const savedReport = await findLessonReport(db, lesson.id);
     if (!savedReport) return messagePage("Report unavailable", "The report could not be saved.", 500);
@@ -1416,7 +1422,6 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       level: savedReport.level,
       thisLessonsFocus: savedReport.this_lessons_focus,
       nextLessonsFocus: savedReport.next_lessons_focus,
-      writingPractice: savedReport.writing_practice,
       homeLearningTask: savedReport.home_learning_task,
       notes: savedReport.notes,
       evenBetterIf: savedReport.even_better_if,

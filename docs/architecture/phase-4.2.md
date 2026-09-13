@@ -13,7 +13,6 @@ projections of that record.
 | Level | `level` snapshot |
 | This Lesson's Focus | `this_lessons_focus` |
 | Next Lesson's Focus | `next_lessons_focus` |
-| Writing Practice | `writing_practice` |
 | Home Learning Task | `home_learning_task` |
 | Notes | `notes` |
 | Even Better If | `even_better_if` |
@@ -22,6 +21,13 @@ The 4.1 fields remain in the schema for forward compatibility and are
 reconciled by migration `0008_structured_lesson_reports.sql`:
 `summary -> this_lessons_focus`, `homework -> home_learning_task` and
 `additional_notes -> notes`.
+
+The report form uses a custom type-and-suggest level control with the current
+student level as its initial value. Saving a draft or sending a report writes
+the selected level back to `students.level`; arbitrary new levels are allowed.
+Feedback fields support bold (`**text**`), bullet lines (`- item`) and yellow
+highlight (`==text==`) through a contextual toolbar that appears while a field
+is focused. Notes are optional and collapsed by default.
 
 ## Snapshots and lifecycle
 

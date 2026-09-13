@@ -13,7 +13,6 @@ export interface LessonReport {
   lesson_timezone: string;
   this_lessons_focus: string;
   next_lessons_focus: string;
-  writing_practice: string;
   home_learning_task: string;
   notes: string;
   even_better_if: string;
@@ -28,7 +27,7 @@ export interface LessonReport {
 
 const reportColumns = `id, lesson_id, student_id, created_by_user_id,
   pupil_name, level, lesson_date, lesson_start_at, lesson_end_at, lesson_timezone,
-  this_lessons_focus, next_lessons_focus, writing_practice, home_learning_task, notes, even_better_if,
+  this_lessons_focus, next_lessons_focus, home_learning_task, notes, even_better_if,
   summary, homework, additional_notes, status, created_at, updated_at, sent_at`;
 
 export async function findLessonReport(db: D1Database, lessonId: string): Promise<LessonReport | null> {
@@ -54,7 +53,6 @@ export async function upsertLessonReport(
     lesson_timezone: string;
     this_lessons_focus: string;
     next_lessons_focus: string;
-    writing_practice: string;
     home_learning_task: string;
     notes: string;
     even_better_if: string;
@@ -65,20 +63,19 @@ export async function upsertLessonReport(
   await db.prepare(
     `INSERT INTO lesson_reports(
        id, lesson_id, student_id, created_by_user_id, pupil_name, level, lesson_date, lesson_start_at, lesson_end_at, lesson_timezone,
-       this_lessons_focus, next_lessons_focus, writing_practice, home_learning_task, notes, even_better_if,
+       this_lessons_focus, next_lessons_focus, home_learning_task, notes, even_better_if,
        summary, homework, additional_notes, status, created_at, updated_at, sent_at
      )
-     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(lesson_id) DO UPDATE SET
        pupil_name = CASE WHEN lesson_reports.pupil_name = '' THEN excluded.pupil_name ELSE lesson_reports.pupil_name END,
-       level = CASE WHEN lesson_reports.level = '' THEN excluded.level ELSE lesson_reports.level END,
+       level = excluded.level,
        lesson_date = CASE WHEN lesson_reports.lesson_date = '' THEN excluded.lesson_date ELSE lesson_reports.lesson_date END,
        lesson_start_at = CASE WHEN lesson_reports.lesson_start_at = '' THEN excluded.lesson_start_at ELSE lesson_reports.lesson_start_at END,
        lesson_end_at = CASE WHEN lesson_reports.lesson_end_at = '' THEN excluded.lesson_end_at ELSE lesson_reports.lesson_end_at END,
        lesson_timezone = CASE WHEN lesson_reports.lesson_timezone = '' THEN excluded.lesson_timezone ELSE lesson_reports.lesson_timezone END,
        this_lessons_focus = excluded.this_lessons_focus,
        next_lessons_focus = excluded.next_lessons_focus,
-       writing_practice = excluded.writing_practice,
        home_learning_task = excluded.home_learning_task,
        notes = excluded.notes,
        even_better_if = excluded.even_better_if,
@@ -87,7 +84,7 @@ export async function upsertLessonReport(
   ).bind(
     report.id, report.lesson_id, report.student_id, report.created_by_user_id,
     report.pupil_name, report.level, report.lesson_date, report.lesson_start_at, report.lesson_end_at, report.lesson_timezone,
-    report.this_lessons_focus, report.next_lessons_focus, report.writing_practice, report.home_learning_task, report.notes, report.even_better_if,
+    report.this_lessons_focus, report.next_lessons_focus, report.home_learning_task, report.notes, report.even_better_if,
     report.this_lessons_focus, report.home_learning_task, report.notes, report.status, report.now, report.now
   ).run();
 }

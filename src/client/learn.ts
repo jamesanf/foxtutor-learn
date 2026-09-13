@@ -67,6 +67,56 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   };
   showPageNotification();
 
+  const reportEditors = document.querySelectorAll<HTMLElement>("[data-report-format]");
+  reportEditors.forEach((button) => {
+    button.addEventListener("click", () => {
+      const editor = button.closest<HTMLElement>(".report-editor");
+      const textarea = editor?.querySelector<HTMLTextAreaElement>("textarea");
+      if (!textarea) return;
+      const format = button.dataset.reportFormat;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.slice(start, end);
+      if (format === "bullet") {
+        const source = selected || "List item";
+        const replacement = source.split("\n").map((line) => line.startsWith("- ") ? line : `- ${line}`).join("\n");
+        textarea.setRangeText(replacement, start, end, "select");
+      } else if (format === "bold" || format === "highlight") {
+        const marker = format === "bold" ? "**" : "==";
+        const replacement = `${marker}${selected || "text"}${marker}`;
+        textarea.setRangeText(replacement, start, end, selected ? "select" : "end");
+      }
+      textarea.focus();
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-level-combobox]").forEach((combobox) => {
+    const input = combobox.querySelector<HTMLInputElement>("input[name='level']");
+    const options = Array.from(combobox.querySelectorAll<HTMLButtonElement>("[data-level-option]"));
+    if (!input || !options.length) return;
+    const menu = combobox.querySelector<HTMLElement>(".report-level-options");
+    const render = () => {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+      options.forEach((option) => {
+        const matches = !query || option.textContent?.toLowerCase().includes(query);
+        option.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      if (menu) menu.hidden = visible === 0;
+    };
+    input.addEventListener("focus", render);
+    input.addEventListener("input", render);
+    options.forEach((option) => option.addEventListener("click", () => {
+      input.value = option.dataset.levelOption ?? option.textContent ?? "";
+      if (menu) menu.hidden = true;
+      input.focus();
+    }));
+    document.addEventListener("click", (event) => {
+      if (!combobox.contains(event.target as Node) && menu) menu.hidden = true;
+    });
+  });
+
   document.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".copy-link");
     if (!button) return;

@@ -8,10 +8,9 @@ export interface StudentLessonReportViewModel {
   lessonTimezone: string;
   thisLessonsFocus: string;
   nextLessonsFocus: string;
-  writingPractice: string;
+  evenBetterIf: string;
   homeLearningTask: string;
   notes: string;
-  evenBetterIf: string;
 }
 
 function dateFromSnapshot(value: string): string {
@@ -41,9 +40,8 @@ export function reportViewModel(report: LessonReport): StudentLessonReportViewMo
     lessonTimezone: report.lesson_timezone,
     thisLessonsFocus: report.this_lessons_focus || report.summary,
     nextLessonsFocus: report.next_lessons_focus,
-    writingPractice: report.writing_practice,
+    evenBetterIf: report.even_better_if,
     homeLearningTask: report.home_learning_task || report.homework,
-    notes: report.notes || report.additional_notes,
-    evenBetterIf: report.even_better_if
+    notes: report.notes || report.additional_notes
   };
 }

@@ -88,10 +88,9 @@ function headerPage(report: StudentLessonReportViewModel, total: number): string
 const feedbackFields: Array<[string, keyof StudentLessonReportViewModel]> = [
   ["This Lesson's Focus", "thisLessonsFocus"],
   ["Next Lesson's Focus", "nextLessonsFocus"],
-  ["Writing Practice", "writingPractice"],
+  ["Even Better If", "evenBetterIf"],
   ["Home Learning Task", "homeLearningTask"],
-  ["Notes", "notes"],
-  ["Even Better If", "evenBetterIf"]
+  ["Notes", "notes"]
 ];
 
 function feedbackPage(report: StudentLessonReportViewModel, page: number, total: number, chunks: string[][]): string[] {
@@ -99,13 +98,16 @@ function feedbackPage(report: StudentLessonReportViewModel, page: number, total:
   text(commands, MARGIN, PAGE_HEIGHT - 52, "Tutorial Feedback", 17, BLUE, true);
   text(commands, MARGIN, PAGE_HEIGHT - 72, `${report.lessonDate} · ${report.pupilName}`, 9, "0.35 0.4 0.45");
   const gap = 12;
-  const width = (PAGE_WIDTH - 2 * MARGIN - gap) / 2;
+  const halfWidth = (PAGE_WIDTH - 2 * MARGIN - gap) / 2;
+  const fullWidth = PAGE_WIDTH - 2 * MARGIN;
   const height = 208;
   const startY = PAGE_HEIGHT - 102;
   for (let index = 0; index < feedbackFields.length; index++) {
-    const row = Math.floor(index / 2);
-    const column = index % 2;
-    const x = MARGIN + column * (width + gap);
+    const fullRow = index === feedbackFields.length - 1;
+    const row = fullRow ? 2 : Math.floor(index / 2);
+    const column = fullRow ? 0 : index % 2;
+    const width = fullRow ? fullWidth : halfWidth;
+    const x = MARGIN + column * (halfWidth + gap);
     const y = startY - row * (height + gap) - height;
     rect(commands, x, y, width, height, true);
     text(commands, x + 12, y + height - 24, feedbackFields[index][0], 9, BLUE, true);

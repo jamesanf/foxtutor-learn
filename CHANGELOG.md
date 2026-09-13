@@ -2,6 +2,15 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Structured report editor refinement
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Removed Writing Practice from the active report form, email and PDF projections while retaining the legacy database column for forward compatibility.
+- Reorganised feedback into This Lesson's Focus / Next Lesson's Focus and Even Better If / Home Learning Task grid rows, with optional collapsed Notes.
+- Added a custom level type-and-suggest control with free-text levels; saving a report now updates the student's profile level for future reports.
+- Added contextual formatting buttons for bold, bullet points and yellow highlighting with safe HTML/email rendering.
+
 ### 2026-09-13 — Phase 4.2 report workflow and UK clock-change reminders
 
 **Status:** deployed; authenticated production acceptance pending

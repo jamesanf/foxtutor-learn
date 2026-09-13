@@ -110,6 +110,10 @@ export async function updateStudent(
     .run();
 }
 
+export async function updateStudentLevel(db: D1Database, id: string, level: string, now: string): Promise<void> {
+  await db.prepare("UPDATE students SET level = ?, updated_at = ? WHERE id = ?").bind(level || null, now, id).run();
+}
+
 export async function deactivateStudent(db: D1Database, id: string, now: string): Promise<void> {
   await db.prepare("UPDATE students SET status = 'INACTIVE', updated_at = ? WHERE id = ?").bind(now, id).run();
 }

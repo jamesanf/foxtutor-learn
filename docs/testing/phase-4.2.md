@@ -6,10 +6,12 @@
   `students.international` preference, structured report fields, snapshot
   columns, reconciliation updates and report indexes.
 - Route classification covers admin/student report HTML and PDF endpoints.
-- The report projection uses persisted pupil, level, date/time and all six
+- The report projection uses persisted pupil, level, date/time and all five
   feedback fields.
 - Email templates use the exact template labels, escaped values and the
   authenticated report link.
+- Rich report formatting is escaped and projected for bold, bullets and yellow
+  highlights; Writing Practice is not rendered.
 - PDF tests verify `%PDF-1.4`, the header, Tutorial Feedback labels and
   deterministic report data.
 - Existing notification, Fox Mail, reminder, ownership and privacy tests

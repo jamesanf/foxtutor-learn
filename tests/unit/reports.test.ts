@@ -16,7 +16,6 @@ const report: LessonReport = {
   lesson_timezone: "Europe/London",
   this_lessons_focus: "Tourism: speaking and listening",
   next_lessons_focus: "Continue travel and tourism",
-  writing_practice: "Travel writing",
   home_learning_task: "1st / 2nd conditional grammar practice",
   notes: "Good participation",
   even_better_if: "Develop phrases of fluency",
@@ -37,6 +36,7 @@ describe("structured lesson reports", () => {
     expect(view.pupilName).toBe("Brian");
     expect(view.level).toBe("ESOL N5/H");
     expect(view.evenBetterIf).toContain("fluency");
+    expect("writingPractice" in view).toBe(false);
   });
 
   it("generates a genuine PDF containing the report structure", () => {

@@ -44,9 +44,8 @@ describe("notification domain", () => {
       externalUrl: null,
       pupilName: "A <Student>",
       level: "ESOL N5/H",
-      thisLessonsFocus: "<script>alert(1)</script>",
+      thisLessonsFocus: "**Speaking** ==practice== <script>alert(1)</script>\n- Ask a question",
       nextLessonsFocus: "Read & practise",
-      writingPractice: "Write three sentences.",
       homeLearningTask: "Complete the worksheet.",
       notes: "Good progress.",
       evenBetterIf: "Use more precise vocabulary.",
@@ -55,9 +54,13 @@ describe("notification domain", () => {
     expect(rendered.html).not.toContain("<script>");
     expect(rendered.html).toContain("&lt;script&gt;");
     expect(rendered.html).toContain("A &lt;worksheet&gt;.pdf");
-    for (const label of ["This Lesson&#39;s Focus", "Next Lesson&#39;s Focus", "Writing Practice", "Home Learning Task", "Notes", "Even Better If"]) {
+    for (const label of ["This Lesson&#39;s Focus", "Next Lesson&#39;s Focus", "Home Learning Task", "Notes", "Even Better If"]) {
       expect(rendered.html).toContain(label);
     }
+    expect(rendered.html).toContain("<strong>Speaking</strong>");
+    expect(rendered.html).toContain('<mark class="report-highlight">practice</mark>');
+    expect(rendered.html).toContain("<li>Ask a question</li>");
+    expect(rendered.html).not.toContain("Writing Practice");
     expect(rendered.html).toContain("/learn/student/lessons/lesson-1/report");
     expect(rendered.html).not.toContain("Summary");
   });

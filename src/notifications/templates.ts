@@ -1,6 +1,7 @@
 import type { NotificationType } from "../domain/notifications";
 import type { ClockChangeDirection } from "../domain/dst";
 import { learnLink } from "./links";
+import { renderRichTextHtml, richTextToPlainText } from "../reports/rich-text";
 
 export interface EmailContent {
   subject: string;
@@ -35,7 +36,6 @@ export interface ReportEmailData extends LessonEmailData {
   reportPath: string;
   thisLessonsFocus: string;
   nextLessonsFocus: string;
-  writingPractice: string;
   homeLearningTask: string;
   notes: string;
   evenBetterIf: string;
@@ -56,10 +56,6 @@ function requireFields(data: Record<string, unknown>, fields: string[]): void {
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
-}
-
-function lineBreaks(value: string): string {
-  return escapeHtml(value).replace(/\n/g, "<br>");
 }
 
 function lessonDate(data: LessonEmailData): string {
@@ -156,13 +152,12 @@ export function renderLessonReport(data: ReportEmailData, origin: string): Email
   const fields: Array<[string, string]> = [
     ["This Lesson's Focus", data.thisLessonsFocus],
     ["Next Lesson's Focus", data.nextLessonsFocus],
-    ["Writing Practice", data.writingPractice],
     ["Home Learning Task", data.homeLearningTask],
     ["Notes", data.notes],
     ["Even Better If", data.evenBetterIf]
   ];
-  const textFields = fields.map(([label, value]) => `\n\n${label}:\n${value || "—"}`).join("");
-  const htmlFields = fields.map(([label, value]) => `<h2>${escapeHtml(label)}</h2><p>${value ? lineBreaks(value) : "—"}</p>`).join("");
+  const textFields = fields.map(([label, value]) => `\n\n${label}:\n${value ? richTextToPlainText(value) : "—"}`).join("");
+  const htmlFields = fields.map(([label, value]) => `<h2>${escapeHtml(label)}</h2><div>${renderRichTextHtml(value)}</div>`).join("");
   const reportLink = learnLink(origin, data.reportPath);
   return {
     subject: `Your lesson report — ${date}`,
