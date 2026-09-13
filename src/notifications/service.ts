@@ -20,6 +20,8 @@ import {
 } from "../domain/notifications";
 import { renderEmail, type EmailContent } from "./templates";
 import { canonicalLearnOrigin } from "./links";
+import { dstWarningForInstant } from "../domain/dst";
+import { listInternationalStudentRecipients } from "../db/students";
 
 export interface NotificationEnvironment extends MailEnvironment {
   PUBLIC_ORIGIN?: string;
@@ -140,6 +142,49 @@ export async function runReminderScheduler(
       htmlBody: content.html,
       createdAt: now,
       scheduledAt,
+      nextAttemptAt: now
+    });
+    if (notification.status !== "SENT") {
+      await deliverNotification(db, env, notification.id, now, fetcher);
+      processed++;
+    }
+
+  }
+  return processed;
+}
+
+export async function runDstWarningScheduler(
+  db: D1Database,
+  env: NotificationEnvironment,
+  now = new Date().toISOString(),
+  fetcher: typeof fetch = fetch
+): Promise<number> {
+  const warning = dstWarningForInstant(now);
+  if (!warning) return 0;
+  const origin = canonicalLearnOrigin(env.PUBLIC_ORIGIN);
+  const recipients = await listInternationalStudentRecipients(db);
+  let processed = 0;
+  for (const student of recipients) {
+    if (!student.learn_user_id) continue;
+    const eventId = `${student.id}:${warning.localDate}`;
+    const key = eventIdempotencyKey("DST_WARNING", eventId);
+    const content = renderEmail("DST_WARNING", {
+      studentName: student.name,
+      changeDate: warning.localDate,
+      direction: warning.direction
+    }, origin);
+    const notification = await insertNotification(db, {
+      id: crypto.randomUUID(),
+      eventType: "DST_WARNING",
+      eventId,
+      recipientUserId: student.learn_user_id,
+      studentId: student.id,
+      idempotencyKey: key,
+      subject: content.subject,
+      textBody: content.text,
+      htmlBody: content.html,
+      createdAt: now,
+      scheduledAt: now,
       nextAttemptAt: now
     });
     if (notification.status !== "SENT") {

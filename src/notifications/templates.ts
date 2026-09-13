@@ -1,4 +1,5 @@
 import type { NotificationType } from "../domain/notifications";
+import type { ClockChangeDirection } from "../domain/dst";
 import { learnLink } from "./links";
 
 export interface EmailContent {
@@ -39,6 +40,12 @@ export interface ReportEmailData extends LessonEmailData {
   notes: string;
   evenBetterIf: string;
   resources: ReportResourceData[];
+}
+
+export interface DstWarningEmailData {
+  studentName: string;
+  changeDate: string;
+  direction: ClockChangeDirection;
 }
 
 function requireFields(data: Record<string, unknown>, fields: string[]): void {
@@ -164,6 +171,22 @@ export function renderLessonReport(data: ReportEmailData, origin: string): Email
   };
 }
 
+export function renderDstWarning(data: DstWarningEmailData): EmailContent {
+  const date = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/London"
+  }).format(new Date(`${data.changeDate}T12:00:00Z`));
+  const movement = data.direction === "forward" ? "forward" : "backward";
+  return {
+    subject: "UK clocks changed — check your lesson time",
+    text: `Hello ${data.studentName},\n\nThe UK clocks moved ${movement} today (${date}). All FoxTutor lessons are scheduled in UK time. Please check the time difference yourself so you join at the correct local time.\n\nThis is a reminder only; no lesson time has been changed.`,
+    html: frame("UK clock-change reminder", "FoxTutor Learn", `<p>Hello ${escapeHtml(data.studentName)},</p><p>The UK clocks moved <strong>${movement}</strong> today (${escapeHtml(date)}).</p><p>All FoxTutor lessons are scheduled in UK time. Please check the time difference yourself so you join at the correct local time.</p><p>This is a reminder only; no lesson time has been changed.</p>`)
+  };
+}
+
 export function renderEmail(type: NotificationType, data: Record<string, unknown>, origin: string): EmailContent {
   if (type === "STUDENT_INVITED") {
     requireFields(data, ["studentName", "origin"]);
@@ -180,6 +203,11 @@ export function renderEmail(type: NotificationType, data: Record<string, unknown
     return renderResourceAdded(data as unknown as ResourceEmailData, origin);
   }
   if (type === "CANCELLATION_PROCESSED" || type === "CANCELLATION_REQUESTED") return renderCancellationProcessed(data as unknown as LessonEmailData, origin);
+  if (type === "DST_WARNING") {
+    requireFields(data, ["studentName", "changeDate", "direction"]);
+    if (data.direction !== "forward" && data.direction !== "backward") throw new Error("Invalid DST warning direction");
+    return renderDstWarning(data as unknown as DstWarningEmailData);
+  }
   requireFields(data, ["studentName", "startAt", "endAt", "timezone", "lessonPath", "pupilName", "level", "reportPath", "thisLessonsFocus"]);
   return renderLessonReport(data as unknown as ReportEmailData, origin);
 }

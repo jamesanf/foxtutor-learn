@@ -6,7 +6,8 @@ export const NOTIFICATION_TYPES = [
   "RESOURCE_ADDED",
   "CANCELLATION_PROCESSED",
   "CANCELLATION_REQUESTED",
-  "LESSON_REPORT"
+  "LESSON_REPORT",
+  "DST_WARNING"
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

@@ -59,4 +59,10 @@ describe("D1 foundation", () => {
     expect(migration).toContain("additional_notes");
     expect(migration).toContain("idx_lesson_reports_student_status");
   });
+
+  it("adds the opt-in international student preference", () => {
+    const migration = readFileSync("migrations/0009_international_students.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE students ADD COLUMN international INTEGER NOT NULL DEFAULT 0");
+    expect(migration).toContain("CHECK (international IN (0, 1))");
+  });
 });

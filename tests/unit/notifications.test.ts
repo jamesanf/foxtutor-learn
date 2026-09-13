@@ -7,11 +7,12 @@ import {
   reminderIdempotencyKey
 } from "../../src/domain/notifications";
 import { learnLink } from "../../src/notifications/links";
-import { renderEmail, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
+import { renderDstWarning, renderEmail, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
 
 describe("notification domain", () => {
   it("uses finite event types and deterministic business keys", () => {
     expect(isNotificationType("LESSON_REPORT")).toBe(true);
+    expect(isNotificationType("DST_WARNING")).toBe(true);
     expect(isNotificationType("ARBITRARY_EMAIL")).toBe(false);
     expect(eventIdempotencyKey("LESSON_CREATED", "lesson-1")).toBe("lesson-created:lesson-1");
     expect(reminderIdempotencyKey("lesson-1")).toBe("lesson-reminder:lesson-1:24h");
@@ -66,6 +67,14 @@ describe("notification domain", () => {
     expect(rendered.subject).toBe("Welcome to FoxTutor Learn");
     expect(rendered.text).toContain("https://foxtutor.org/learn");
     expect(rendered.text).not.toContain("/admin");
+  });
+
+  it("renders the UK clock-change warning without changing lesson times", () => {
+    const rendered = renderDstWarning({ studentName: "Jamie", changeDate: "2026-03-29", direction: "forward" });
+    expect(rendered.subject).toContain("UK clocks changed");
+    expect(rendered.text).toContain("moved forward");
+    expect(rendered.text).toContain("scheduled in UK time");
+    expect(rendered.text).toContain("no lesson time has been changed");
   });
 
   it("rejects incomplete untyped template projections", () => {

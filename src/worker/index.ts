@@ -23,6 +23,7 @@ import {
   countActiveStudents,
   countPastLessons,
   countUpcomingLessons,
+  listStartedLessonsNeedingReports,
   listLessons,
   listLessonsForResourceFilter,
   listPastLessons,
@@ -30,6 +31,7 @@ import {
   listLessonsForUserInRange,
   listLessonsInRange,
   listLessonsForUser,
+  markElapsedScheduledLessonsCompleted,
   updateLesson,
   updateLessonStatus,
   type Lesson
@@ -60,7 +62,7 @@ import {
 } from "../db/calendar-feeds";
 import { findLessonReport, findSentLessonReportForStudent, upsertLessonReport, type LessonReport } from "../db/reports";
 import { listNotifications, notificationCounts } from "../db/notifications";
-import { createAndDeliverNotification, runReminderScheduler } from "../notifications/service";
+import { createAndDeliverNotification, runDstWarningScheduler, runReminderScheduler } from "../notifications/service";
 import { canonicalLearnOrigin } from "../notifications/links";
 import { renderEmail } from "../notifications/templates";
 import { eventIdempotencyKey, hasMaterialLessonChange, reminderDueAt } from "../domain/notifications";
@@ -354,6 +356,10 @@ function bookingDuration(lesson: Lesson): string {
   return `${minutes} minutes`;
 }
 
+function lessonReportEligible(lesson: Lesson, now = Date.now()): boolean {
+  return lesson.status !== "cancelled" && Number.isFinite(Date.parse(lesson.start_at)) && Date.parse(lesson.start_at) <= now;
+}
+
 const LESSON_PAGE_SIZES = [12, 24, 48] as const;
 
 function parseLessonPagination(url: URL): { page: number; pageSize: number } {
@@ -366,7 +372,7 @@ function parseLessonPagination(url: URL): { page: number; pageSize: number } {
 
 function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, emptyAction?: string): string {
   if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? `<a class="button" href="/learn/admin/lessons/new">${escapeHtml(emptyAction)}</a>` : ""}</div>`;
-  return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${lesson.status !== "completed" ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function paginationPageNumbers(page: number, pageCount: number, hrefForPage: (page: number) => string): string {
@@ -738,7 +744,7 @@ function resourceSummary(resource: Resource, admin: boolean, csrfToken: string):
 }
 
 function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
-  const report = lesson.status !== "completed"
+  const report = !lessonReportEligible(lesson)
     ? "—"
     : lesson.report_status === "SENT"
       ? `<a href="${basePath}/${encodeURIComponent(lesson.id)}/report">View report</a>`
@@ -755,7 +761,7 @@ function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean):
 
 function studentRows(students: Student[]): string {
   if (!students.length) return `<p class="muted">No students yet.</p>`;
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Level</th><th>Status</th><th>Actions</th></tr></thead><tbody>${students.map((student) => `<tr><td data-label="Name"><a href="/learn/admin/students/${encodeURIComponent(student.id)}">${escapeHtml(student.name)}</a></td><td data-label="Email">${escapeHtml(student.email)}</td><td data-label="Level">${escapeHtml(student.level ?? "Not set")}</td><td data-label="Status"><span class="status status-${student.status.toLowerCase()}">${student.status === "ACTIVE" ? "Active" : "Inactive"}</span></td><td data-label="Actions"><a href="/learn/admin/students/${encodeURIComponent(student.id)}/edit">Edit</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Level</th><th>International</th><th>Status</th><th>Actions</th></tr></thead><tbody>${students.map((student) => `<tr><td data-label="Name"><a href="/learn/admin/students/${encodeURIComponent(student.id)}">${escapeHtml(student.name)}</a></td><td data-label="Email">${escapeHtml(student.email)}</td><td data-label="Level">${escapeHtml(student.level ?? "Not set")}</td><td data-label="International">${student.international ? "Yes" : "No"}</td><td data-label="Status"><span class="status status-${student.status.toLowerCase()}">${student.status === "ACTIVE" ? "Active" : "Inactive"}</span></td><td data-label="Actions"><a href="/learn/admin/students/${encodeURIComponent(student.id)}/edit">Edit</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function hiddenCsrf(csrfToken: string): string {
@@ -781,7 +787,8 @@ function derivedEndLabel(startTime: string): string {
 }
 
 function studentForm(csrfToken: string, action: string, student?: Student, error?: string): string {
-  return `<section class="card form-card"><p class="eyebrow">STUDENT RECORD</p><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}${inputField("Login email", "email", student?.email ?? "", "email", true)}${inputField("Level", "level", student?.level ?? "", "text") }<p class="help">This email is used for contact and Learn login. Level is optional until it is needed for a lesson report.</p><button class="button" type="submit">Save student</button> <a class="button secondary" href="/learn/admin/students">Cancel</a></form></section>`;
+  const international = student?.international ? " checked" : "";
+  return `<section class="card form-card"><p class="eyebrow">STUDENT RECORD</p><h1>${student ? "Edit student" : "Create student"}</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}${inputField("Name", "name", student?.name ?? "", "text", true)}${inputField("Login email", "email", student?.email ?? "", "email", true)}${inputField("Level", "level", student?.level ?? "", "text") }<label class="checkbox-field"><input type="checkbox" name="international" value="1"${international}> International student</label><p class="help">This email is used for contact and Learn login. Level is optional until it is needed for a lesson report. International students receive a UK clock-change reminder on the morning the clocks change.</p><button class="button" type="submit">Save student</button> <a class="button secondary" href="/learn/admin/students">Cancel</a></form></section>`;
 }
 
 function lessonForm(
@@ -1049,13 +1056,19 @@ function downloadLessonReportPdf(request: Request, report: LessonReport): Respon
 }
 
 async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
-  const upcoming = await listUpcomingLessons(db, new Date().toISOString(), 5, 0);
-  const upcomingCount = await countUpcomingLessons(db, new Date().toISOString());
+  const now = new Date().toISOString();
+  await markElapsedScheduledLessonsCompleted(db, now);
+  const upcoming = await listUpcomingLessons(db, now, 5, 0);
+  const upcomingCount = await countUpcomingLessons(db, now);
+  const reportQueue = await listStartedLessonsNeedingReports(db, now, 5);
   const activeStudents = await countActiveStudents(db);
   const preview = upcoming.length
     ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
     : `<div class="dashboard-empty"><p>No upcoming bookings.</p><a class="button" href="/learn/admin/lessons/new">Add lesson</a></div>`;
-  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</section><section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section><section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section></div><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
+  const reportPreview = reportQueue.length
+    ? `<div class="dashboard-bookings">${reportQueue.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${encodeURIComponent(lesson.id)}/report"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.report_status === "DRAFT" ? "draft" : "scheduled"}">${lesson.report_status === "DRAFT" ? "Edit draft" : "Create report"}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/lessons">View past lessons</a>`
+    : `<div class="dashboard-empty"><p>No lesson reports waiting to be written.</p></div>`;
+  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><section class="summary-card"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</section><section class="summary-card"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></section><section class="summary-card"><span>Active Students</span><strong>${activeStudents}</strong></section></div><section class="card dashboard-section"><div class="section-heading"><h2>Reports to write</h2><a class="text-link" href="/learn/admin/lessons">Past Lessons</a></div>${reportPreview}</section><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -1205,6 +1218,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-lessons") {
     const { page, pageSize } = parseLessonPagination(url);
     const now = new Date().toISOString();
+    await markElapsedScheduledLessonsCompleted(db, now);
     const total = await countPastLessons(db, now);
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
@@ -1222,13 +1236,14 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const name = validName(formText(form, "name"));
     const email = validEmail(formText(form, "email"));
     const level = validLevel(formText(form, "level"));
+    const international = form.has("international");
     if (!name || !email || (formText(form, "level").trim() && level === null)) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "Enter valid student details; Level must be 120 characters or fewer."));
     const account = await findStudentAccount(db, email);
     if (!account) return appPage(active.user, csrfToken, "Create student", studentForm(csrfToken, "/learn/admin/students/new", undefined, "The login email must belong to an active STUDENT Learn account."));
     if (await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
     const now = new Date().toISOString();
     const studentId = crypto.randomUUID();
-    await insertStudent(db, { id: studentId, name, email, level, learnUserId: account.id, now });
+    await insertStudent(db, { id: studentId, name, email, level, international, learnUserId: account.id, now });
     const createdStudent = await findActiveStudentRecipient(db, studentId);
     if (createdStudent?.learn_user_id && createdStudent.learn_user_email) {
       const content = renderEmail("STUDENT_INVITED", { studentName: createdStudent.name, origin: canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin) }, canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
@@ -1250,7 +1265,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (route === "admin-student") {
       const lessons = (await listLessons(db)).filter((lesson) => lesson.student_id === student.id);
       const resources = await listResourcesForStudentRecord(db, student.id);
-      return appPage(active.user, csrfToken, "Student", `<p class="eyebrow">STUDENT RECORD</p><div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div>${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Level</strong><br>${escapeHtml(student.level ?? "Not set")}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p><strong>Created</strong><br>${escapeHtml(student.created_at)}</p><p><strong>Updated</strong><br>${escapeHtml(student.updated_at)}</p></section><div class="page-heading"><h2>Lessons</h2>${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}</div>${lessonTable(lessons, "/learn/admin/lessons", true)}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2><p class="muted">Documents for this student.</p></div>${student.status === "ACTIVE" ? buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource") : ""}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources for this student yet.</p>`}</section>${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
+      return appPage(active.user, csrfToken, "Student", `<p class="eyebrow">STUDENT RECORD</p><div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div>${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div><section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Level</strong><br>${escapeHtml(student.level ?? "Not set")}</p><p><strong>International</strong><br>${student.international ? "Yes" : "No"}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p><strong>Created</strong><br>${escapeHtml(student.created_at)}</p><p><strong>Updated</strong><br>${escapeHtml(student.updated_at)}</p></section><div class="page-heading"><h2>Lessons</h2>${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}</div>${lessonTable(lessons, "/learn/admin/lessons", true)}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2><p class="muted">Documents for this student.</p></div>${student.status === "ACTIVE" ? buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource") : ""}</div>${resources.length ? resourceRows(resources) : `<p class="muted">No resources for this student yet.</p>`}</section>${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
     }
     if (route === "admin-student-deactivate") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -1264,11 +1279,12 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const name = validName(formText(form, "name"));
     const email = validEmail(formText(form, "email"));
     const level = validLevel(formText(form, "level"));
+    const international = form.has("international");
     if (!name || !email || (formText(form, "level").trim() && level === null)) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "Enter valid student details; Level must be 120 characters or fewer."));
     const account = await findStudentAccount(db, email);
     if (!account) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "The login email must belong to an active STUDENT Learn account."));
     if (account.id !== student.learn_user_id && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
-    await updateStudent(db, { id: student.id, name, email, level, learnUserId: account.id, now: new Date().toISOString() });
+    await updateStudent(db, { id: student.id, name, email, level, international, learnUserId: account.id, now: new Date().toISOString() });
     return redirect(`/learn/admin/students/${encodeURIComponent(student.id)}`);
   }
   if (route === "admin-lesson-form") {
@@ -1319,9 +1335,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-lesson-report") {
     const id = lessonIdFromPath(url.pathname);
     if (!id) return messagePage("Not found", "That lesson does not exist.", 404);
+    await markElapsedScheduledLessonsCompleted(db, new Date().toISOString());
     const lesson = await findLesson(db, id);
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
-    if (lesson.status !== "completed") return messagePage("Report unavailable", "Lesson reports are available for completed lessons.", 409);
+    if (!lessonReportEligible(lesson)) return messagePage("Report unavailable", "The lesson report becomes available when the lesson start time has passed.", 409);
     const existing = await findLessonReport(db, lesson.id);
     const studentRecord = await findStudent(db, lesson.student_id);
     if (!studentRecord) return messagePage("Report unavailable", "The lesson student record does not exist.", 409);
@@ -1429,14 +1446,15 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-lesson" || route === "admin-lesson-edit" || route === "admin-lesson-status") {
     const id = lessonIdFromPath(url.pathname);
     if (!id) return messagePage("Not found", "That lesson does not exist.", 404);
+    if (route === "admin-lesson") await markElapsedScheduledLessonsCompleted(db, new Date().toISOString());
     const lesson = await findLesson(db, id);
     if (!lesson) return messagePage("Not found", "That lesson does not exist.", 404);
     if (route === "admin-lesson") {
       const resources = await listResourcesForLesson(db, lesson.id);
       const report = await findLessonReport(db, lesson.id);
-      const reportAction = lesson.status === "completed" ? buttonLink(`${url.pathname}/report`, report?.status === "SENT" ? "View report" : report?.status === "DRAFT" ? "Edit report" : "Create report") : "";
-      const reportDetails = lesson.status !== "completed"
-        ? "Available after the lesson is marked completed."
+      const reportAction = lessonReportEligible(lesson) ? buttonLink(`${url.pathname}/report`, report?.status === "SENT" ? "View report" : report?.status === "DRAFT" ? "Edit report" : "Create report") : "";
+      const reportDetails = !lessonReportEligible(lesson)
+        ? "Available when the lesson start time has passed."
         : report?.status === "SENT"
           ? `Sent ${escapeHtml(report.sent_at ?? "")} · <a href="${url.pathname}/report">View report</a> · <a href="${url.pathname}/report.pdf">Download PDF</a>`
           : report?.status === "DRAFT"
@@ -1652,7 +1670,15 @@ export default {
     return env.ASSETS.fetch(request);
   },
   async scheduled(controller: ScheduledController, env: Env, context: ExecutionContext): Promise<void> {
-    if (!env.DB) return;
-    context.waitUntil(runReminderScheduler(env.DB, env, new Date(controller.scheduledTime).toISOString()));
+    const db = env.DB;
+    if (!db) return;
+    const now = new Date(controller.scheduledTime).toISOString();
+    context.waitUntil((async () => {
+      await markElapsedScheduledLessonsCompleted(db, now);
+      await Promise.all([
+        runReminderScheduler(db, env, now),
+        runDstWarningScheduler(db, env, now)
+      ]);
+    })());
   }
 };

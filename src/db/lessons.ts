@@ -98,6 +98,29 @@ export async function countPastLessons(db: D1Database, now: string): Promise<num
   return Number(result?.count ?? 0);
 }
 
+export async function markElapsedScheduledLessonsCompleted(db: D1Database, now: string): Promise<number> {
+  const result = await db
+    .prepare("UPDATE lessons SET status = 'completed', updated_at = ? WHERE status = 'scheduled' AND end_at <= ?")
+    .bind(now, now)
+    .run();
+  return result.meta.changes;
+}
+
+export async function listStartedLessonsNeedingReports(db: D1Database, now: string, limit: number): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${lessonColumns}, s.name AS student_name, r.id AS report_id, r.status AS report_status
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
+       WHERE l.status != 'cancelled' AND l.start_at <= ? AND (r.id IS NULL OR r.status = 'DRAFT')
+       ORDER BY l.start_at DESC, l.id DESC
+       LIMIT ?`
+    )
+    .bind(now, limit)
+    .all<Lesson>();
+  return result.results;
+}
+
 export async function countActiveStudents(db: D1Database): Promise<number> {
   const result = await db.prepare("SELECT COUNT(*) AS count FROM students WHERE status = 'ACTIVE'").first<{ count: number | string }>();
   return Number(result?.count ?? 0);

@@ -8,6 +8,7 @@ export interface Student {
   name: string;
   email: string;
   level: string | null;
+  international: number;
   learn_user_email?: string | null;
   learn_user_id: string | null;
   status: StudentStatus;
@@ -16,7 +17,7 @@ export interface Student {
 }
 
 export async function listStudents(db: D1Database): Promise<Student[]> {
-  const result = await db.prepare("SELECT s.id, s.name, s.email, s.level, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at FROM students s LEFT JOIN users u ON u.id = s.learn_user_id ORDER BY s.status ASC, s.name ASC").all<Student>();
+  const result = await db.prepare("SELECT s.id, s.name, s.email, s.level, s.international, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at FROM students s LEFT JOIN users u ON u.id = s.learn_user_id ORDER BY s.status ASC, s.name ASC").all<Student>();
   return result.results;
 }
 
@@ -24,7 +25,7 @@ export async function listActiveStudentsForResourceFilter(db: D1Database, select
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const result = await db
     .prepare(
-      `SELECT s.id, s.name, s.email, s.level, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
+      `SELECT s.id, s.name, s.email, s.level, s.international, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
        FROM students s
        LEFT JOIN users u ON u.id = s.learn_user_id
        WHERE s.status = 'ACTIVE'
@@ -37,13 +38,13 @@ export async function listActiveStudentsForResourceFilter(db: D1Database, select
 }
 
 export async function findStudent(db: D1Database, id: string): Promise<Student | null> {
-  return db.prepare("SELECT s.id, s.name, s.email, s.level, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at FROM students s LEFT JOIN users u ON u.id = s.learn_user_id WHERE s.id = ?").bind(id).first<Student>();
+  return db.prepare("SELECT s.id, s.name, s.email, s.level, s.international, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at FROM students s LEFT JOIN users u ON u.id = s.learn_user_id WHERE s.id = ?").bind(id).first<Student>();
 }
 
 export async function findActiveStudentRecipient(db: D1Database, id: string): Promise<Student | null> {
   return db
     .prepare(
-      `SELECT s.id, s.name, s.email, s.level, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
+      `SELECT s.id, s.name, s.email, s.level, s.international, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
        FROM students s JOIN users u ON u.id = s.learn_user_id
        WHERE s.id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'`
     )
@@ -51,10 +52,22 @@ export async function findActiveStudentRecipient(db: D1Database, id: string): Pr
     .first<Student>();
 }
 
+export async function listInternationalStudentRecipients(db: D1Database): Promise<Student[]> {
+  const result = await db
+    .prepare(
+      `SELECT s.id, s.name, s.email, s.level, s.international, s.learn_user_id, u.email AS learn_user_email, s.status, s.created_at, s.updated_at
+       FROM students s JOIN users u ON u.id = s.learn_user_id
+       WHERE s.international = 1 AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
+       ORDER BY s.id ASC`
+    )
+    .all<Student>();
+  return result.results;
+}
+
 export async function findActiveStudentForUser(db: D1Database, userId: string): Promise<Student | null> {
   return db
     .prepare(
-      `SELECT s.id, s.name, s.email, s.level, s.learn_user_id, s.status, s.created_at, s.updated_at
+      `SELECT s.id, s.name, s.email, s.level, s.international, s.learn_user_id, s.status, s.created_at, s.updated_at
        FROM students s JOIN users u ON u.id = s.learn_user_id
        WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'`
     )
@@ -72,28 +85,28 @@ export async function findStudentAccount(db: D1Database, email: string): Promise
 }
 
 export async function findStudentLinkedToUser(db: D1Database, userId: string): Promise<Student | null> {
-  return db.prepare("SELECT id, name, email, level, learn_user_id, status, created_at, updated_at FROM students WHERE learn_user_id = ?").bind(userId).first<Student>();
+  return db.prepare("SELECT id, name, email, level, international, learn_user_id, status, created_at, updated_at FROM students WHERE learn_user_id = ?").bind(userId).first<Student>();
 }
 
 export async function insertStudent(
   db: D1Database,
-  student: { id: string; name: string; email: string; level?: string | null; learnUserId: string | null; now: string }
+  student: { id: string; name: string; email: string; level?: string | null; international?: boolean; learnUserId: string | null; now: string }
 ): Promise<void> {
   await db
     .prepare(
-      "INSERT INTO students(id, name, email, level, learn_user_id, status, created_at, updated_at) VALUES(?, ?, ?, ?, ?, 'ACTIVE', ?, ?)"
+      "INSERT INTO students(id, name, email, level, international, learn_user_id, status, created_at, updated_at) VALUES(?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)"
     )
-    .bind(student.id, student.name, student.email, student.level ?? null, student.learnUserId, student.now, student.now)
+    .bind(student.id, student.name, student.email, student.level ?? null, student.international ? 1 : 0, student.learnUserId, student.now, student.now)
     .run();
 }
 
 export async function updateStudent(
   db: D1Database,
-  student: { id: string; name: string; email: string; level?: string | null; learnUserId: string | null; now: string }
+  student: { id: string; name: string; email: string; level?: string | null; international?: boolean; learnUserId: string | null; now: string }
 ): Promise<void> {
   await db
-    .prepare("UPDATE students SET name = ?, email = ?, level = ?, learn_user_id = ?, updated_at = ? WHERE id = ?")
-    .bind(student.name, student.email, student.level ?? null, student.learnUserId, student.now, student.id)
+    .prepare("UPDATE students SET name = ?, email = ?, level = ?, international = ?, learn_user_id = ?, updated_at = ? WHERE id = ?")
+    .bind(student.name, student.email, student.level ?? null, student.international ? 1 : 0, student.learnUserId, student.now, student.id)
     .run();
 }
 
