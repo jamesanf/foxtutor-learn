@@ -29,6 +29,11 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/admin/notifications/preview/LESSON_CREATED")).toBe("admin-notifications");
     expect(classifyLearnRoute("/learn/admin/notifications/notification-1/preview")).toBe("admin-notification");
     expect(classifyLearnRoute("/learn/admin/notifications/notification-1")).toBe("admin-notification");
+    expect(classifyLearnRoute("/learn/admin/accounting")).toBe("admin-accounting");
+    expect(classifyLearnRoute("/learn/admin/accounting/event-1/retry")).toBe("admin-accounting-retry");
+    expect(classifyLearnRoute("/learn/admin/accounting/event-1/reconcile")).toBe("admin-accounting-reconcile");
+    expect(classifyLearnRoute("/learn/admin/accounting/connect")).toBe("admin-accounting-connect");
+    expect(classifyLearnRoute("/learn/admin/accounting/oauth/callback")).toBe("admin-accounting-callback");
     expect(classifyLearnRoute("/learn/admin/reschedules")).toBe("admin-reschedules");
     expect(classifyLearnRoute("/learn/admin/reschedules/request-1/approve")).toBe("admin-reschedule-approve");
     expect(classifyLearnRoute("/learn/admin/lessons/lesson-1/reschedule")).toBe("admin-lesson-reschedule");
@@ -55,6 +60,7 @@ describe("Learn route authorization", () => {
     expect(canAccess(admin, "student")).toBe(false);
     expect(canAccess(student, "admin-bookings")).toBe(false);
     expect(canAccess(student, "admin-resources")).toBe(false);
+    expect(canAccess(student, "admin-accounting")).toBe(false);
     expect(canAccess(student, "student")).toBe(true);
     expect(canAccess(student, "admin")).toBe(false);
     expect(requiredRole("admin")).toBe("ADMIN");

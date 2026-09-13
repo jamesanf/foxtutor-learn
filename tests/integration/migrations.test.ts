@@ -115,4 +115,18 @@ describe("D1 foundation", () => {
     const migration = readFileSync("migrations/0015_parent_name.sql", "utf8");
     expect(migration).toContain("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''");
   });
+
+  it("adds a separate idempotent accounting outbox with deletion-safe retention", () => {
+    const migration = readFileSync("migrations/0016_accounting_outbox.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_outbox");
+    expect(migration).toContain("idempotency_key TEXT NOT NULL UNIQUE");
+    expect(migration).toContain("UNIQUE(event_type, business_event_id)");
+    expect(migration).toContain("external_reference TEXT UNIQUE");
+    expect(migration).toContain("CHECK (status IN ('PENDING', 'PROCESSING', 'SUCCEEDED', 'RETRYABLE', 'FAILED', 'UNKNOWN', 'NOT_REQUIRED'))");
+    expect(migration).toContain("lesson_id TEXT REFERENCES lessons(id) ON DELETE SET NULL");
+    expect(migration).toContain("student_id TEXT REFERENCES students(id) ON DELETE SET NULL");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS external_accounting_links");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_connections");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_oauth_states");
+  });
 });
