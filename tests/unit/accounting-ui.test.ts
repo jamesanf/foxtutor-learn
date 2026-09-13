@@ -17,9 +17,8 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours"');
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"');
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"');
-    expect(workerSource).toContain("configure them as Cloudflare Worker secrets");
-    expect(workerSource).toContain("Secret values are never shown or stored in this form.");
-    expect(workerSource).toContain("category URL and contact mappings must come from the connected FreeAgent company");
+    expect(workerSource).toContain("FreeAgent credentials are managed as Cloudflare secrets.");
+    expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
   });
 
   it("keeps contact mappings readable on desktop and mobile", () => {
