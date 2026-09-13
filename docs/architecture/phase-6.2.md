@@ -62,6 +62,10 @@ or company identity no longer matches the active connection.
 The relationship is an integration control, not approval of the unresolved
 commercial payer policy.
 
+An admin may replace a mapping after re-verification or remove it when no
+pending, processing, retryable or unknown outbox event still depends on it.
+Succeeded accounting history and external references are retained.
+
 ## FreeAgent contract checked
 
 The official FreeAgent Developer documentation was checked on 2026-09-13:

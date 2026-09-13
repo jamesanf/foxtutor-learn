@@ -31,6 +31,7 @@ describe("Learn route authorization", () => {
     expect(classifyLearnRoute("/learn/admin/notifications/notification-1")).toBe("admin-notification");
     expect(classifyLearnRoute("/learn/admin/accounting")).toBe("admin-accounting");
     expect(classifyLearnRoute("/learn/admin/accounting/contacts/student-1")).toBe("admin-accounting-contact");
+    expect(classifyLearnRoute("/learn/admin/accounting/contacts/student-1/remove")).toBe("admin-accounting-contact");
     expect(classifyLearnRoute("/learn/admin/accounting/event-1/retry")).toBe("admin-accounting-retry");
     expect(classifyLearnRoute("/learn/admin/accounting/event-1/reconcile")).toBe("admin-accounting-reconcile");
     expect(classifyLearnRoute("/learn/admin/accounting/connect")).toBe("admin-accounting-connect");

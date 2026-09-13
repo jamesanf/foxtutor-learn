@@ -77,6 +77,7 @@ import {
   listDueAccountingOutbox,
   makeAccountingRetryable,
   recordAccountingRetryAudit,
+  removeExternalAccountingLink,
   updateExternalAccountingLinkStatus
 } from "../db/accounting";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
@@ -463,7 +464,7 @@ function accountingContactList(
   const rows = students.map((student) => {
     const link = byStudent.get(student.id);
     const status = link?.status ?? "UNVERIFIED";
-    return `<tr><td data-label="Payer">${escapeHtml(student.name)}</td><td data-label="Learn email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="FreeAgent contact">${escapeHtml(link?.external_reference ?? "Not mapped")}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Action"><form method="post" action="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="button secondary" type="submit">Verify and save</button></div></form></td></tr>`;
+    return `<tr><td data-label="Payer">${escapeHtml(student.name)}</td><td data-label="Learn email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="FreeAgent contact">${escapeHtml(link?.external_reference ?? "Not mapped")}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Action"><form method="post" action="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="button secondary" type="submit">Verify and save</button>${link ? `<button class="button secondary" formaction="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}/remove" type="submit">Remove</button>` : ""}</div></form></td></tr>`;
   }).join("");
   return `<section class="card"><div class="section-heading"><div><h2>FreeAgent contact mappings</h2><p class="muted">Explicit admin-managed Learn payer to FreeAgent contact references. Matching email addresses never create a mapping.</p></div></div>${students.length ? `<div class="table-wrap"><table><thead><tr><th>Payer</th><th>Learn email</th><th>FreeAgent contact</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty-state compact-empty"><p>No Learn students exist.</p></div>`}</section>`;
 }
@@ -1667,9 +1668,13 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-accounting-contact") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
-    const match = /^\/learn\/admin\/accounting\/contacts\/([^/]+)$/.exec(url.pathname);
+    const match = /^\/learn\/admin\/accounting\/contacts\/([^/]+)(\/remove)?$/.exec(url.pathname);
     const studentId = match ? decodePathSegment(match[1] ?? "") : null;
     if (!studentId || !(await findStudent(db, studentId))) return messagePage("Not found", "That Learn payer does not exist.", 404);
+    if (match?.[2] === "/remove") {
+      const removed = await removeExternalAccountingLink(db, studentId);
+      return removed ? redirect("/learn/admin/accounting") : messagePage("Mapping still in use", "Resolve the accounting event before removing this contact mapping.", 409);
+    }
     const form = await parseForm(request);
     const externalReference = formText(form ?? new FormData(), "externalReference").trim();
     if (!/^\d+$/.test(externalReference)) return messagePage("Invalid contact", "Enter a numeric FreeAgent contact ID.", 400);

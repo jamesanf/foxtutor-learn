@@ -96,7 +96,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin/accounting") return "admin-accounting";
   if (path === "/learn/admin/accounting/connect") return "admin-accounting-connect";
   if (path === "/learn/admin/accounting/oauth/callback") return "admin-accounting-callback";
-  if (/^\/learn\/admin\/accounting\/contacts\/[^/]+$/.test(path)) return "admin-accounting-contact";
+  if (/^\/learn\/admin\/accounting\/contacts\/[^/]+(?:\/remove)?$/.test(path)) return "admin-accounting-contact";
   if (/^\/learn\/admin\/accounting\/[^/]+\/retry$/.test(path)) return "admin-accounting-retry";
   if (/^\/learn\/admin\/accounting\/[^/]+\/reconcile$/.test(path)) return "admin-accounting-reconcile";
   if (path === "/learn/admin/reschedules") return "admin-reschedules";

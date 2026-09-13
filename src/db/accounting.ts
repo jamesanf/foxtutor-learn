@@ -424,6 +424,19 @@ export async function updateExternalAccountingLinkStatus(
   return Boolean(result.meta.changes);
 }
 
+export async function removeExternalAccountingLink(db: D1Database, studentId: string): Promise<boolean> {
+  const result = await db.prepare(
+    `DELETE FROM external_accounting_links
+     WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND local_entity_id = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM accounting_outbox
+         WHERE student_id = ?
+           AND status IN ('PENDING', 'PROCESSING', 'RETRYABLE', 'UNKNOWN')
+       )`
+  ).bind(studentId, studentId).run();
+  return Boolean(result.meta.changes);
+}
+
 export async function findAccountingConnection(db: D1Database): Promise<AccountingConnection | null> {
   return db.prepare("SELECT * FROM accounting_connections WHERE id = 'FREEAGENT'").first<AccountingConnection>();
 }
