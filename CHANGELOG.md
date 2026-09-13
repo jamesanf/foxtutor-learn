@@ -2,6 +2,14 @@
 
 All material changes to the Foxtutor Learn project are recorded here in chronological order. Entries are retained; do not rewrite history.
 
+### 2026-09-13 — Report lists, start-time metadata and lesson attachments
+
+**Status:** deployed; authenticated production acceptance pending
+
+- Report metadata now shows the lesson start time only, including in the shared report/PDF projection.
+- Added default bullet-list editing with numbered-list and plain-text toggles, including safe HTML and plain-text rendering for numbered lists.
+- Added a contextual drag-and-drop lesson attachment form to the report workflow, reusing the existing resource upload, D1 association and R2 storage pipeline so files appear on the lesson for students.
+
 ### 2026-09-13 — Structured report editor refinement
 
 **Status:** deployed; authenticated production acceptance pending

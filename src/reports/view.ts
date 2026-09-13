@@ -31,12 +31,11 @@ function timeFromInstant(value: string, timezone: string): string {
 
 export function reportViewModel(report: LessonReport): StudentLessonReportViewModel {
   const start = timeFromInstant(report.lesson_start_at, report.lesson_timezone);
-  const end = timeFromInstant(report.lesson_end_at, report.lesson_timezone);
   return {
     pupilName: report.pupil_name,
     level: report.level,
     lessonDate: dateFromSnapshot(report.lesson_date),
-    lessonTime: start && end ? `${start}–${end}` : "",
+    lessonTime: start,
     lessonTimezone: report.lesson_timezone,
     thisLessonsFocus: report.this_lessons_focus || report.summary,
     nextLessonsFocus: report.next_lessons_focus,

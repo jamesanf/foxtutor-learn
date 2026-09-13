@@ -12,24 +12,39 @@ function inlineHtml(value: string): string {
 export function renderRichTextHtml(value: string): string {
   const lines = value.replace(/\r\n/g, "\n").split("\n");
   const blocks: string[] = [];
-  let bullets: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let listItems: string[] = [];
 
-  const flushBullets = () => {
-    if (!bullets.length) return;
-    blocks.push(`<ul>${bullets.map((line) => `<li>${inlineHtml(line)}</li>`).join("")}</ul>`);
-    bullets = [];
+  const flushList = () => {
+    if (!listType || !listItems.length) return;
+    blocks.push(`<${listType}>${listItems.map((line) => `<li>${inlineHtml(line)}</li>`).join("")}</${listType}>`);
+    listType = null;
+    listItems = [];
   };
 
   for (const line of lines) {
     const bullet = /^\s*[-*]\s+(.+)$/.exec(line);
     if (bullet) {
-      bullets.push(bullet[1]);
+      if (listType !== "ul") {
+        flushList();
+        listType = "ul";
+      }
+      listItems.push(bullet[1]);
       continue;
     }
-    flushBullets();
+    const numbered = /^\s*\d+[.)]\s+(.+)$/.exec(line);
+    if (numbered) {
+      if (listType !== "ol") {
+        flushList();
+        listType = "ol";
+      }
+      listItems.push(numbered[1]);
+      continue;
+    }
+    flushList();
     if (line.trim()) blocks.push(`<p>${inlineHtml(line)}</p>`);
   }
-  flushBullets();
+  flushList();
   return blocks.join("") || '<p class="muted">—</p>';
 }
 
@@ -37,6 +52,7 @@ export function richTextToPlainText(value: string): string {
   return value
     .replace(/\r\n/g, "\n")
     .replace(/^\s*[-*]\s+/gm, "• ")
+    .replace(/^\s*\d+[.)]\s+/gm, (prefix) => `${prefix.trim()} `)
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/==(.+?)==/g, "$1");
 }

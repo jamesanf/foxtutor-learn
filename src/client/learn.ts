@@ -67,26 +67,75 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   };
   showPageNotification();
 
-  const reportEditors = document.querySelectorAll<HTMLElement>("[data-report-format]");
-  reportEditors.forEach((button) => {
-    button.addEventListener("click", () => {
-      const editor = button.closest<HTMLElement>(".report-editor");
-      const textarea = editor?.querySelector<HTMLTextAreaElement>("textarea");
-      if (!textarea) return;
-      const format = button.dataset.reportFormat;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selected = textarea.value.slice(start, end);
-      if (format === "bullet") {
-        const source = selected || "List item";
-        const replacement = source.split("\n").map((line) => line.startsWith("- ") ? line : `- ${line}`).join("\n");
-        textarea.setRangeText(replacement, start, end, "select");
-      } else if (format === "bold" || format === "highlight") {
-        const marker = format === "bold" ? "**" : "==";
-        const replacement = `${marker}${selected || "text"}${marker}`;
-        textarea.setRangeText(replacement, start, end, selected ? "select" : "end");
-      }
-      textarea.focus();
+  const reportEditors = document.querySelectorAll<HTMLElement>("[data-report-editor]");
+  reportEditors.forEach((editor) => {
+    const textarea = editor.querySelector<HTMLTextAreaElement>("textarea");
+    if (!textarea) return;
+
+    type ListMode = "bullet" | "numbered" | "off";
+    const stripListPrefix = (line: string): string => line.replace(/^\s*(?:[-*]|\d+[.)])\s+/, "");
+    const applyListMode = (value: string, mode: ListMode): string => {
+      const lines = value.split("\n");
+      if (mode === "off") return lines.map(stripListPrefix).join("\n");
+      let number = 1;
+      return lines.map((line) => {
+        const content = stripListPrefix(line);
+        if (!content.trim()) return "";
+        if (mode === "numbered") return `${number++}. ${content}`;
+        return `- ${content}`;
+      }).join("\n");
+    };
+    const updateListButtons = (mode: ListMode) => {
+      editor.dataset.listMode = mode;
+      editor.querySelectorAll<HTMLButtonElement>("[data-report-format^='list-']").forEach((button) => {
+        const active = button.dataset.reportFormat === `list-${mode}`;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    };
+    let mode = (editor.dataset.listMode as ListMode | undefined) ?? "bullet";
+    updateListButtons(mode);
+    if (textarea.value.trim()) textarea.value = applyListMode(textarea.value, mode);
+    const clearEmptyListMarker = () => {
+      if (/^\s*(?:[-*]|\d+[.)])\s*$/.test(textarea.value)) textarea.value = "";
+    };
+    textarea.addEventListener("focus", () => {
+      if (!textarea.value.trim() && mode !== "off") textarea.value = mode === "numbered" ? "1. " : "- ";
+    });
+    textarea.closest("form")?.addEventListener("submit", clearEmptyListMarker);
+
+    editor.querySelectorAll<HTMLButtonElement>("[data-report-format]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const format = button.dataset.reportFormat;
+        if (format === "list-bullet" || format === "list-numbered" || format === "list-off") {
+          mode = format === "list-bullet" ? "bullet" : format === "list-numbered" ? "numbered" : "off";
+          textarea.value = applyListMode(textarea.value, mode);
+          updateListButtons(mode);
+          textarea.focus();
+          return;
+        }
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.slice(start, end);
+        if (format === "bold" || format === "highlight") {
+          const marker = format === "bold" ? "**" : "==";
+          const replacement = `${marker}${selected || "text"}${marker}`;
+          textarea.setRangeText(replacement, start, end, selected ? "select" : "end");
+        }
+        textarea.focus();
+      });
+    });
+
+    textarea.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || mode === "off") return;
+      const cursor = textarea.selectionStart;
+      const lineStart = textarea.value.lastIndexOf("\n", cursor - 1) + 1;
+      const currentLine = textarea.value.slice(lineStart, cursor);
+      const currentNumber = /^\s*(\d+)[.)]\s+/.exec(currentLine)?.[1];
+      const prefix = mode === "numbered" ? `${currentNumber ? Number(currentNumber) + 1 : 1}. ` : "- ";
+      if (!/^\s*(?:[-*]|\d+[.)])\s+/.test(currentLine) && !currentLine.trim()) return;
+      event.preventDefault();
+      textarea.setRangeText(`\n${prefix}`, cursor, cursor, "end");
     });
   });
 

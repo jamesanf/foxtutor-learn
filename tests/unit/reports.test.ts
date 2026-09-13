@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateLessonReportPdf } from "../../src/reports/pdf";
+import { renderRichTextHtml, richTextToPlainText } from "../../src/reports/rich-text";
 import { reportViewModel } from "../../src/reports/view";
 import type { LessonReport } from "../../src/db/reports";
 
@@ -32,7 +33,7 @@ describe("structured lesson reports", () => {
   it("projects persisted snapshot data consistently", () => {
     const view = reportViewModel(report);
     expect(view.lessonDate).toBe("13/09/2026");
-    expect(view.lessonTime).toBe("1PM–1:55PM");
+    expect(view.lessonTime).toBe("1PM");
     expect(view.pupilName).toBe("Brian");
     expect(view.level).toBe("ESOL N5/H");
     expect(view.evenBetterIf).toContain("fluency");
@@ -48,5 +49,13 @@ describe("structured lesson reports", () => {
     expect(text).toContain("Home Learning Task");
     expect(text).toContain("Brian");
     expect(text).toContain("ESOL N5/H");
+  });
+
+  it("renders numbered and bulleted report content safely", () => {
+    const value = "1. **First step**\n2) ==Second step==\n\n- Final step";
+    expect(renderRichTextHtml(value)).toContain("<ol><li><strong>First step</strong></li><li><mark class=\"report-highlight\">Second step</mark></li></ol>");
+    expect(renderRichTextHtml(value)).toContain("<ul><li>Final step</li></ul>");
+    expect(richTextToPlainText(value)).toContain("1. First step");
+    expect(richTextToPlainText(value)).toContain("2) Second step");
   });
 });
