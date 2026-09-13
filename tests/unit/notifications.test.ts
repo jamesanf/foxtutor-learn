@@ -87,13 +87,15 @@ describe("notification domain", () => {
       expect(rendered.html).toContain(label);
     }
     expect(rendered.html).toContain("<strong>Speaking</strong>");
-    expect(rendered.html).toContain('<mark class="report-highlight">practice</mark>');
+    expect(rendered.html).toContain('<mark style="background:#fef08a;padding:1px 3px">practice</mark>');
     expect(rendered.html).toContain("<li>Ask a question</li>");
     expect(rendered.html).not.toContain("Writing Practice");
     expect(rendered.html).toContain("/learn/student/lessons/lesson-1/report");
     expect(rendered.html).not.toContain("Summary");
     expect(rendered.html).not.toContain("<!doctype");
-    expect(rendered.html).not.toContain("style=");
+    expect(rendered.html).toContain("background:#0e7490");
+    expect(rendered.html).toContain("Tutorial feedback");
+    expect(rendered.html).toContain("Open report");
   });
 
   it("builds a minimal invitation with the Learn entry link", () => {

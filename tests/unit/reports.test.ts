@@ -3,6 +3,7 @@ import { generateLessonReportPdf } from "../../src/reports/pdf";
 import { renderRichTextHtml, richTextToPlainText } from "../../src/reports/rich-text";
 import { reportViewModel } from "../../src/reports/view";
 import type { LessonReport } from "../../src/db/reports";
+import { findSentLessonReportForStudent } from "../../src/db/reports";
 
 const report: LessonReport = {
   id: "report-1",
@@ -30,6 +31,27 @@ const report: LessonReport = {
 };
 
 describe("structured lesson reports", () => {
+  it("qualifies report columns across the student ownership joins", async () => {
+    let query = "";
+    const statement = {
+      bind() {
+        return statement;
+      },
+      first() {
+        return Promise.resolve(report);
+      }
+    };
+    const db = {
+      prepare(sql: string) {
+        query = sql;
+        return statement;
+      }
+    } as unknown as D1Database;
+    await expect(findSentLessonReportForStudent(db, "lesson-1", "student-user-1")).resolves.toEqual(report);
+    expect(query).toContain("SELECT r.id, r.lesson_id");
+    expect(query).toContain("r.status = 'SENT'");
+  });
+
   it("projects persisted snapshot data consistently", () => {
     const view = reportViewModel(report);
     expect(view.lessonDate).toBe("13/09/2026");
@@ -49,6 +71,7 @@ describe("structured lesson reports", () => {
     expect(text).toContain("Home Learning Task");
     expect(text).toContain("Brian");
     expect(text).toContain("ESOL N5/H");
+    expect((text.match(/\/Type \/Page\b/g) ?? []).length).toBe(1);
   });
 
   it("renders numbered and bulleted report content safely", () => {
@@ -57,5 +80,6 @@ describe("structured lesson reports", () => {
     expect(renderRichTextHtml(value)).toContain("<ul><li>Final step</li></ul>");
     expect(richTextToPlainText(value)).toContain("1. First step");
     expect(richTextToPlainText(value)).toContain("2) Second step");
+    expect(richTextToPlainText("- - great work!")).toBe("• great work!");
   });
 });

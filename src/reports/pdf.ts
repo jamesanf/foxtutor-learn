@@ -51,38 +51,37 @@ function rect(commands: string[], x: number, y: number, width: number, height: n
   commands.push(`${fill ? "0.97 0.985 0.99 rg " : ""}${LINE} RG 0.7 w ${x} ${y} ${width} ${height} re ${fill ? "B" : "S"}`);
 }
 
-function footer(commands: string[], page: number, total: number): void {
+function footer(commands: string[]): void {
   commands.push(`${LINE} RG 0.6 w ${MARGIN} 30 m ${PAGE_WIDTH - MARGIN} 30 l S`);
   text(commands, MARGIN, 18, "© 2026 Fox Learning Ltd. All rights reserved.", 7, "0.35 0.4 0.45");
-  text(commands, PAGE_WIDTH - 78, 18, `Page ${page} of ${total}`, 7, "0.35 0.4 0.45");
+  text(commands, PAGE_WIDTH - 78, 18, "Page 1 of 1", 7, "0.35 0.4 0.45");
 }
 
-function headerPage(report: StudentLessonReportViewModel, total: number): string[] {
-  const commands: string[] = ["q"];
-  text(commands, MARGIN, PAGE_HEIGHT - 48, "FoxTutor Learn", 20, BLUE, true);
-  text(commands, MARGIN, PAGE_HEIGHT - 68, "Lesson Report", 10, "0.35 0.4 0.45");
-  const top = PAGE_HEIGHT - 100;
-  const height = 92;
-  const brandingWidth = 190;
-  const cellWidth = (PAGE_WIDTH - 2 * MARGIN - brandingWidth) / 3;
-  rect(commands, MARGIN, top - height, PAGE_WIDTH - 2 * MARGIN, height);
-  commands.push(`${LINE} RG 0.7 w ${MARGIN + brandingWidth} ${top - height} m ${MARGIN + brandingWidth} ${top} l S`);
-  for (let index = 1; index < 3; index++) {
-    const x = MARGIN + brandingWidth + cellWidth * index;
-    commands.push(`${LINE} RG 0.7 w ${x} ${top - height} m ${x} ${top} l S`);
+function reportHeader(commands: string[], report: StudentLessonReportViewModel): number {
+  const top = PAGE_HEIGHT - MARGIN;
+  const height = 112;
+  const width = PAGE_WIDTH - 2 * MARGIN;
+  const columnWidth = width / 4;
+  commands.push(`${BLUE} rg ${MARGIN} ${top - 42} ${width} 42 re f`);
+  text(commands, MARGIN + 16, top - 27, "FoxTutor Learn", 17, "1 1 1", true);
+  text(commands, MARGIN + width - 112, top - 27, "Lesson Report", 9, "1 1 1");
+  rect(commands, MARGIN, top - height, width, height - 42, true);
+  for (let index = 1; index < 4; index++) {
+    const x = MARGIN + columnWidth * index;
+    commands.push(`${LINE} RG 0.7 w ${x} ${top - height} m ${x} ${top - 42} l S`);
   }
-  text(commands, MARGIN + 18, top - 32, "FoxTutor", 17, BLUE, true);
-  text(commands, MARGIN + 18, top - 50, "Learn", 11, INK);
-  text(commands, MARGIN + brandingWidth + 12, top - 23, "Lesson Date", 8, "0.35 0.4 0.45", true);
-  text(commands, MARGIN + brandingWidth + 12, top - 48, report.lessonDate, 12, INK);
-  text(commands, MARGIN + brandingWidth + cellWidth + 12, top - 23, "Pupil", 8, "0.35 0.4 0.45", true);
-  text(commands, MARGIN + brandingWidth + cellWidth + 12, top - 48, report.pupilName, 12, INK);
-  text(commands, MARGIN + brandingWidth + cellWidth * 2 + 12, top - 23, "Level", 8, "0.35 0.4 0.45", true);
-  text(commands, MARGIN + brandingWidth + cellWidth * 2 + 12, top - 48, report.level, 12, INK);
-  text(commands, MARGIN, top - height - 35, report.lessonTime ? `${report.lessonTime} (${report.lessonTimezone})` : report.lessonTimezone, 9, "0.35 0.4 0.45");
-  footer(commands, 1, total);
-  commands.push("Q");
-  return commands;
+  const metadata: Array<[string, string]> = [
+    ["Date", report.lessonDate],
+    ["Pupil", report.pupilName],
+    ["Time", report.lessonTime],
+    ["Level", report.level]
+  ];
+  metadata.forEach(([label, value], index) => {
+    const x = MARGIN + columnWidth * index + 12;
+    text(commands, x, top - 68, label, 8, BLUE, true);
+    text(commands, x, top - 92, value, 10.5, INK);
+  });
+  return top - height - 24;
 }
 
 const feedbackFields: Array<[string, keyof StudentLessonReportViewModel]> = [
@@ -93,28 +92,52 @@ const feedbackFields: Array<[string, keyof StudentLessonReportViewModel]> = [
   ["Notes", "notes"]
 ];
 
-function feedbackPage(report: StudentLessonReportViewModel, page: number, total: number, chunks: string[][]): string[] {
+function feedbackField(
+  commands: string[],
+  report: StudentLessonReportViewModel,
+  label: string,
+  key: keyof StudentLessonReportViewModel,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  lineHeight: number
+): void {
+  rect(commands, x, y, width, height, true);
+  text(commands, x + 11, y + height - 21, label, 8.5, BLUE, true);
+  const lines = wrap(String(report[key] ?? ""), Math.max(28, Math.floor(width / 5.1)));
+  lines.forEach((line, index) => text(commands, x + 11, y + height - 39 - index * lineHeight, line, Math.max(5.5, lineHeight - 1.5)));
+}
+
+function singlePage(report: StudentLessonReportViewModel): string[] {
   const commands: string[] = ["q"];
-  text(commands, MARGIN, PAGE_HEIGHT - 52, "Tutorial Feedback", 17, BLUE, true);
-  text(commands, MARGIN, PAGE_HEIGHT - 72, `${report.lessonDate} · ${report.pupilName}`, 9, "0.35 0.4 0.45");
-  const gap = 12;
+  const feedbackTop = reportHeader(commands, report);
+  text(commands, MARGIN, feedbackTop, "Tutorial Feedback", 13, BLUE, true);
+  const gap = 9;
   const halfWidth = (PAGE_WIDTH - 2 * MARGIN - gap) / 2;
   const fullWidth = PAGE_WIDTH - 2 * MARGIN;
-  const height = 208;
-  const startY = PAGE_HEIGHT - 102;
-  for (let index = 0; index < feedbackFields.length; index++) {
-    const fullRow = index === feedbackFields.length - 1;
-    const row = fullRow ? 2 : Math.floor(index / 2);
-    const column = fullRow ? 0 : index % 2;
-    const width = fullRow ? fullWidth : halfWidth;
-    const x = MARGIN + column * (halfWidth + gap);
-    const y = startY - row * (height + gap) - height;
-    rect(commands, x, y, width, height, true);
-    text(commands, x + 12, y + height - 24, feedbackFields[index][0], 9, BLUE, true);
-    const lines = chunks[index] ?? [""];
-    lines.slice(0, 15).forEach((line, lineIndex) => text(commands, x + 12, y + height - 45 - lineIndex * 11, line, 8.5));
+  const widths = [halfWidth, halfWidth, halfWidth, halfWidth, fullWidth];
+  const lineSets = feedbackFields.map(([, key], index) => wrap(String(report[key] ?? ""), Math.max(28, Math.floor(widths[index] / 5.1))));
+  const availableHeight = feedbackTop - 22 - 58;
+  let lineHeight = 9;
+  const calculateHeights = (lineSize: number): [number, number, number] => {
+    const height = (lines: string[]) => Math.max(60, lines.length * lineSize + 39);
+    return [Math.max(height(lineSets[0]), height(lineSets[1])), Math.max(height(lineSets[2]), height(lineSets[3])), height(lineSets[4])];
+  };
+  while (lineHeight > 3.5) {
+    const heights = calculateHeights(lineHeight);
+    if (heights[0] + heights[1] + heights[2] + gap * 2 <= availableHeight) break;
+    lineHeight -= 0.5;
   }
-  footer(commands, page, total);
+  const [rowHeight, secondRowHeight, fullRowHeight] = calculateHeights(lineHeight);
+  const firstRowY = feedbackTop - 22 - rowHeight;
+  const secondRowY = firstRowY - gap - secondRowHeight;
+  feedbackField(commands, report, feedbackFields[0][0], feedbackFields[0][1], MARGIN, firstRowY, halfWidth, rowHeight, lineHeight);
+  feedbackField(commands, report, feedbackFields[1][0], feedbackFields[1][1], MARGIN + halfWidth + gap, firstRowY, halfWidth, rowHeight, lineHeight);
+  feedbackField(commands, report, feedbackFields[2][0], feedbackFields[2][1], MARGIN, secondRowY, halfWidth, secondRowHeight, lineHeight);
+  feedbackField(commands, report, feedbackFields[3][0], feedbackFields[3][1], MARGIN + halfWidth + gap, secondRowY, halfWidth, secondRowHeight, lineHeight);
+  feedbackField(commands, report, feedbackFields[4][0], feedbackFields[4][1], MARGIN, secondRowY - gap - fullRowHeight, fullWidth, fullRowHeight, lineHeight);
+  footer(commands);
   commands.push("Q");
   return commands;
 }
@@ -152,17 +175,5 @@ function buildDocument(pages: string[]): ArrayBuffer {
 }
 
 export function generateLessonReportPdf(report: StudentLessonReportViewModel): ArrayBuffer {
-  const fieldChunks = feedbackFields.map(([, key]) => {
-    const lines = wrap(String(report[key] ?? ""), 42);
-    const chunks: string[][] = [];
-    for (let index = 0; index < lines.length; index += 15) chunks.push(lines.slice(index, index + 15));
-    return chunks.length ? chunks : [[""]];
-  });
-  const feedbackPageCount = Math.max(...fieldChunks.map((chunks) => chunks.length), 1);
-  const total = feedbackPageCount + 1;
-  const pages = [headerPage(report, total).join("\n")];
-  for (let pageIndex = 0; pageIndex < feedbackPageCount; pageIndex++) {
-    pages.push(feedbackPage(report, pageIndex + 2, total, fieldChunks.map((chunks) => chunks[pageIndex] ?? [""])).join("\n"));
-  }
-  return buildDocument(pages);
+  return buildDocument([singlePage(report).join("\n")]);
 }

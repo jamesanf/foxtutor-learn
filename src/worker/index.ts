@@ -317,13 +317,18 @@ function reportTime(lesson: Lesson): string {
   return formatter.format(new Date(lesson.start_at)).replace(" ", "").toUpperCase().replace(/:00(AM|PM)$/, "$1");
 }
 
+function reportSentAt(value: string, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone });
+  return `Sent on ${formatter.format(new Date(value))}`;
+}
+
 function reportField(label: string, value: string): string {
   return `<section class="report-field"><h2>${escapeHtml(label)}</h2>${renderRichTextHtml(value)}</section>`;
 }
 
 function reportDocument(report: LessonReport, admin: boolean): string {
   const view = reportViewModel(report);
-  return `<section class="card report-document"><div class="report-heading"><div><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Time</strong><br>${escapeHtml(view.lessonTime)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p></div><div class="report-feedback">${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<p class="report-delivery"><strong>${report.status === "SENT" ? "Sent" : "Draft"}</strong>${report.sent_at ? ` · ${escapeHtml(report.sent_at)}` : ""}</p>` : ""}</section>`;
+  return `<section class="card report-document"><div class="report-heading"><div><h1>Lesson Report</h1></div><div class="form-actions"><a class="button secondary" href="${admin ? `/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}` : "/learn/student/lessons"}">Back</a><a class="button" href="/learn/${admin ? "admin" : "student"}/lessons/${encodeURIComponent(report.lesson_id)}/report.pdf">Download PDF</a>${admin ? `<a class="button secondary" href="/learn/admin/lessons/${encodeURIComponent(report.lesson_id)}/report">Edit</a>` : ""}</div></div><div class="report-meta"><p><strong>Date</strong><br>${escapeHtml(view.lessonDate)}</p><p><strong>Pupil</strong><br>${escapeHtml(view.pupilName)}</p><p><strong>Time</strong><br>${escapeHtml(view.lessonTime)}</p><p><strong>Level</strong><br>${escapeHtml(view.level)}</p></div><div class="report-feedback">${reportField("This Lesson's Focus", view.thisLessonsFocus)}${reportField("Next Lesson's Focus", view.nextLessonsFocus)}${reportField("Even Better If", view.evenBetterIf)}${reportField("Home Learning Task", view.homeLearningTask)}${view.notes ? reportField("Notes", view.notes) : ""}</div>${admin ? `<p class="report-delivery"><strong>${report.status === "SENT" ? "Sent" : "Draft"}</strong>${report.sent_at ? ` · ${escapeHtml(reportSentAt(report.sent_at, report.lesson_timezone))}` : ""}</p>` : ""}</section>`;
 }
 
 function formatCalendarLessonTime(lesson: Lesson): string {
@@ -1518,7 +1523,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const reportDetails = !lessonReportEligible(lesson)
         ? "Available when the lesson start time has passed."
         : report?.status === "SENT"
-          ? `Sent ${escapeHtml(report.sent_at ?? "")} · <a href="${url.pathname}/report">View report</a> · <a href="${url.pathname}/report.pdf">Download PDF</a>`
+          ? `${report.sent_at ? `${escapeHtml(reportSentAt(report.sent_at, report.lesson_timezone))} · ` : ""}<a href="${url.pathname}/report">View report</a> · <a href="${url.pathname}/report.pdf">Download PDF</a>`
           : report?.status === "DRAFT"
             ? `Draft · <a href="${url.pathname}/report">Edit report</a>`
             : `Not created · <a href="${url.pathname}/report">Create report</a>`;

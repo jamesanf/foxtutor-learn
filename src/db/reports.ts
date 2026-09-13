@@ -25,10 +25,14 @@ export interface LessonReport {
   sent_at: string | null;
 }
 
-const reportColumns = `id, lesson_id, student_id, created_by_user_id,
-  pupil_name, level, lesson_date, lesson_start_at, lesson_end_at, lesson_timezone,
-  this_lessons_focus, next_lessons_focus, home_learning_task, notes, even_better_if,
-  summary, homework, additional_notes, status, created_at, updated_at, sent_at`;
+const reportFieldNames = [
+  "id", "lesson_id", "student_id", "created_by_user_id",
+  "pupil_name", "level", "lesson_date", "lesson_start_at", "lesson_end_at", "lesson_timezone",
+  "this_lessons_focus", "next_lessons_focus", "home_learning_task", "notes", "even_better_if",
+  "summary", "homework", "additional_notes", "status", "created_at", "updated_at", "sent_at"
+] as const;
+const reportColumns = reportFieldNames.join(", ");
+const qualifiedReportColumns = reportFieldNames.map((field) => `r.${field}`).join(", ");
 
 export async function findLessonReport(db: D1Database, lessonId: string): Promise<LessonReport | null> {
   return db.prepare(`SELECT ${reportColumns} FROM lesson_reports WHERE lesson_id = ?`).bind(lessonId).first<LessonReport>();
@@ -95,7 +99,7 @@ export async function markLessonReportSent(db: D1Database, id: string, now: stri
 
 export async function findSentLessonReportForStudent(db: D1Database, lessonId: string, userId: string): Promise<LessonReport | null> {
   return db.prepare(
-    `SELECT ${reportColumns}
+    `SELECT ${qualifiedReportColumns}
      FROM lesson_reports r
      JOIN lessons l ON l.id = r.lesson_id AND l.student_id = r.student_id
      JOIN students s ON s.id = l.student_id AND s.learn_user_id = ?

@@ -51,6 +51,7 @@ export function renderRichTextHtml(value: string): string {
 export function richTextToPlainText(value: string): string {
   return value
     .replace(/\r\n/g, "\n")
+    .replace(/^(\s*[-*]\s+)[-*]\s+/gm, "$1")
     .replace(/^\s*[-*]\s+/gm, "• ")
     .replace(/^\s*\d+[.)]\s+/gm, (prefix) => `${prefix.trim()} `)
     .replace(/\*\*(.+?)\*\*/g, "$1")
