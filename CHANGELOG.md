@@ -1,5 +1,15 @@
 # Changelog
 
+### 2026-09-14 - Simplify billing settings guidance
+
+- Reduced the billing-page setup copy to concise defaults and provider mapping
+  guidance.
+- Kept FreeAgent credentials outside the application form and managed through
+  Cloudflare secrets.
+- Deployed executable commit
+  `be74998b6dc3b26ca75deecaa7db7008eea0a84e` as Worker version
+  `f29f346c-91e8-4f62-a6be-f6bf99514583`.
+
 ### 2026-09-14 - Use the main logo in the Learn footer
 
 - Replaced the footer-only Learn logo with the same square FoxTutor logo used
