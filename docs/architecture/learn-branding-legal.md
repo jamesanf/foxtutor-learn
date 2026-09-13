@@ -17,8 +17,9 @@ mirror of the canonical public-site source:
 - Learn generated mirror: `src/legal.ts` in
   `jamesanf/foxtutor-learn`.
 - Local commands: `npm run sync:legal` and `npm run check:legal`.
-- Scheduled guard: `.github/workflows/legal-sync.yml` checks both repositories
-  daily and on relevant changes, failing if the mirror drifts.
+- Release guard: `npm run check` runs the mirror check before the Worker
+  dry-run, so a Learn release cannot pass its normal release check with stale
+  legal content.
 
 This repository deliberately does not maintain a second portal-specific legal
 policy. The legal source remains in the main platform; Learn's extra

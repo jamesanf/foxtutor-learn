@@ -6,9 +6,9 @@
   artwork remains legible against the dark header.
 - Replaced the Learn-specific legal supplements with an exact HTML mirror of
   the public site's canonical Terms & Conditions and Privacy Policy.
-- Added `sync:legal` and `check:legal` tooling plus a scheduled GitHub Actions
-  drift check that compares `foxtutor/src/config/legal.tsx` with
-  `foxtutor-learn/src/legal.ts`.
+- Added `sync:legal` and `check:legal` tooling; the normal Learn release check
+  now verifies that `foxtutor/src/config/legal.tsx` and
+  `foxtutor-learn/src/legal.ts` match.
 
 ### 2026-09-13 — Learn shell branding and portal legal pages
 

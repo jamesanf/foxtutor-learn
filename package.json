@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit && npm run build:client",
     "build:client": "esbuild src/client/learn.ts --bundle --minify --outfile=public/learn.js",
-    "check": "npm run build && npx wrangler deploy --dry-run",
+    "check": "npm run check:legal && npm run build && npx wrangler deploy --dry-run",
     "check:legal": "node scripts/check-legal-sync.mjs",
     "sync:legal": "node scripts/check-legal-sync.mjs --write",
     "test": "vitest run",
