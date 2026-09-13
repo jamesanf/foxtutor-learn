@@ -44,7 +44,7 @@ function wrap(value: string, width: number): string[] {
 }
 
 function text(commands: string[], x: number, y: number, value: string, size = 10, color = INK, bold = false): void {
-  commands.push(`${color} rg /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${pdfSafe(value)}) Tj`);
+  commands.push(`BT ${color} rg /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${pdfSafe(value)}) Tj ET`);
 }
 
 function rect(commands: string[], x: number, y: number, width: number, height: number, fill = false): void {
