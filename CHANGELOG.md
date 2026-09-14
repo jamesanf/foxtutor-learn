@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-14 - Simplify dashboard summary cards
+
+- Removed redundant View bookings, View students and View reschedules helper
+  labels from the dashboard cards.
+- Deployed executable commit
+  `fcc2ae79eeafc425f5a53ee611daea57483ceca5` as Worker version
+  `a3e8f035-8977-4028-b771-e198e7128461`.
+
 ### 2026-09-14 - Refine dashboard and accounting controls
 
 - Replaced the accounting navigation question-mark glyph with a pound-style
