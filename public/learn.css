@@ -90,6 +90,19 @@ h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; }
 h2 { font-size: 1.3rem; font-weight: 650; }
 .lede { color: var(--muted); }
 .empty-state, .card { margin-top: 28px; padding: clamp(22px, 4vw, 32px); border: 1px solid #d6dee8; border-radius: 12px; background: var(--surface); box-shadow: 0 2px 5px rgb(16 42 67 / 7%); }
+.cancel-dialog { width: min(100% - 32px, 560px); max-width: 560px; padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; box-shadow: 0 18px 60px rgb(16 42 67 / 28%); }
+.cancel-dialog::backdrop { background: rgb(16 42 67 / 48%); }
+.cancel-dialog .card { position: relative; margin: 0; }
+.cancel-dialog .form-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.cancel-dialog .form-actions form { display: block; min-width: 0; margin: 0; }
+.cancel-dialog .form-actions .button { width: 100%; height: 66px; min-height: 66px; margin: 0; }
+.cancel-dialog .form-actions > .button { grid-column: 1 / -1; justify-self: center; width: calc(50% - 4px); }
+.cancel-dialog .button.danger { border-color: #fda4af; color: #9f1239; background: #fff1f2; }
+.cancel-dialog .button.danger:hover, .cancel-dialog .button.danger:focus-visible { border-color: var(--danger); color: white; background: var(--danger); }
+.cancel-dialog .button.secondary { border-color: #cbd5e1; color: #334e68; background: #f1f5f9; }
+.cancel-dialog .button.secondary:hover, .cancel-dialog .button.secondary:focus-visible { border-color: var(--action-hover); color: white; background: var(--action-hover); }
+.cancel-dialog-close { position: absolute; top: 12px; right: 14px; display: inline-grid; width: 32px; height: 32px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; font-size: 1.45rem; line-height: 1; }
+.cancel-dialog-close:hover, .cancel-dialog-close:focus-visible { color: var(--foreground); background: var(--soft); }
 .empty-state p, .card p { max-width: 62ch; color: var(--muted); }
 .direct-debit-card .lede, .direct-debit-card > p, .direct-debit-card > ol { max-width: none; }
 .direct-debit-card > ol { margin-top: 0; padding-left: 24px; color: var(--muted); }
@@ -691,6 +704,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .accounting-summary-grid .summary-card:last-child { grid-column: span 2; }
 }
 @media (max-width: 560px) {
+  .cancel-dialog .form-actions { grid-template-columns: 1fr; }
+  .cancel-dialog .form-actions > .button { grid-column: auto; width: 100%; }
   .accounting-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .accounting-summary-grid .summary-card:last-child { grid-column: 1 / -1; }
 }

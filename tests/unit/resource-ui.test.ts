@@ -51,7 +51,7 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain("resourceUpload(request, env, active, [studentRecord], [lesson], uploadForm, true)");
     expect(workerSource).toContain("if (uploadResponse.status !== 204)");
     expect(workerSource).toContain("data-report-resource-delete");
-    expect(workerSource).toContain("/learn/admin/resources/${encodeURIComponent(resource.id)}/delete");
+    expect(workerSource).toContain("/learn/admin/resources/${entityRouteId(resource.id)}/delete");
     expect(workerSource).toContain('data-file-preview hidden aria-live="polite"');
     expect(workerSource).not.toContain('data-upload-submit hidden>Upload attachment');
     expect(clientSource).toContain('".resource-upload-form, [data-report-attachment-form]"');

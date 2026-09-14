@@ -144,7 +144,7 @@ import {
   canStudentCancel,
   canStudentReschedule,
 } from "../domain/cancellations";
-import { lessonIdFromUrlKey, lessonUrlKey } from "../domain/lesson-url";
+import { compactUuidKey, entityIdFromUrlKey, entityUrlKey, lessonIdFromUrlKey, lessonUrlKey } from "../domain/lesson-url";
 import { reportDocumentTitleFromIsoDate, reportPdfFilenameFromIsoDate } from "../domain/report-title";
 import {
   CALENDAR_TIMEZONE,
@@ -268,7 +268,7 @@ async function emitLessonReportNotification(
     evenBetterIf: report.even_better_if,
     resources: resources.filter((resource) => resource.status === "available" && !resource.deleted_at).map((resource) => ({
       filename: resource.original_filename,
-      path: `/learn/student/resources/${encodeURIComponent(resource.id)}/download`
+      path: `/learn/student/resources/${entityRouteId(resource.id)}/download`
     }))
   }, origin);
   return emitNotification(env, {
@@ -369,6 +369,15 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
 }
 
+function compactLearnUrls(content: string): string {
+  const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+  const pathPattern = new RegExp(`(\\/learn\\/[^"'<>\\s]*\\/?)(${uuid})(?=[/"'?&#])`, "gi");
+  const queryPattern = new RegExp(`([?&](?:student|lesson|id|resource|invoice|series|notification|request|credit|alert)=)(${uuid})(?=[&#"'])`, "gi");
+  return content
+    .replace(pathPattern, (_match, prefix: string, id: string) => `${prefix}${entityUrlKey(id)}`)
+    .replace(queryPattern, (_match, prefix: string, id: string) => `${prefix}${entityUrlKey(id)}`);
+}
+
 function navigation(role: Role): string {
   const icons = {
     dashboard: "M13 3v6h8V3h-8Zm0 18h8V11h-8v10ZM3 21h8v-8H3v8ZM3 3v8h8V3H3Z",
@@ -401,7 +410,7 @@ function appPage(user: AppUser, csrfToken: string, title: string, content: strin
   const identity = user.role === "ADMIN"
     ? `<span class="header-control identity-role">ADMIN</span>`
     : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
-  const body = `<div class="app-shell"><header class="topbar"><div class="brand"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor</strong></span></div><div class="topbar-center-logo"><a class="topbar-center-logo-link" href="/learn" aria-label="FoxTutor Learn dashboard"><img src="/learn/assets/learn_logo-240.webp" alt="FoxTutor Learn" width="120" height="77"></a></div><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${content}</main></div>${learnFooter()}</div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
+  const body = `<div class="app-shell"><header class="topbar"><div class="brand"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor</strong></span></div><div class="topbar-center-logo"><a class="topbar-center-logo-link" href="/learn" aria-label="FoxTutor Learn dashboard"><img src="/learn/assets/learn_logo-240.webp" alt="FoxTutor Learn" width="120" height="77"></a></div><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${compactLearnUrls(content)}</main></div>${learnFooter()}</div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
   return htmlDocument(title, body, !exactTitle);
 }
 
@@ -542,7 +551,7 @@ function notificationList(
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Suppressed</span><strong>${counts.SUPPRESSED}</strong></section></div>`;
   const body = rows.length
-    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Pupil</th><th>Lesson date</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${encodeURIComponent(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Pupil">${row.student_id ? `<a href="/learn/admin/students/${encodeURIComponent(row.student_id)}">${escapeHtml(row.student_name ?? "Pupil")}</a>` : "—"}</td><td data-label="Lesson date">${row.lesson_id && row.lesson_start_at ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(notificationTimestamp(row.lesson_start_at))}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(notificationTimestamp(row.scheduled_at))}</td><td data-label="Created">${escapeHtml(notificationTimestamp(row.created_at))}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Pupil</th><th>Lesson date</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${entityRouteId(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Pupil">${row.student_id ? `<a href="/learn/admin/students/${entityRouteId(row.student_id)}">${escapeHtml(row.student_name ?? "Pupil")}</a>` : "—"}</td><td data-label="Lesson date">${row.lesson_id && row.lesson_start_at ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(notificationTimestamp(row.lesson_start_at))}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(notificationTimestamp(row.scheduled_at))}</td><td data-label="Created">${escapeHtml(notificationTimestamp(row.created_at))}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
   const statusQuery = selectedStatus ? `&status=${encodeURIComponent(selectedStatus)}` : "";
   const sizeOptions = [12, 24, 48].map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("");
@@ -557,9 +566,9 @@ function notificationDetail(notification: Awaited<ReturnType<typeof findNotifica
   if (!notification) return `<section class="card empty-state compact-empty"><h2>Notification not found</h2></section>`;
   const scheduled = notification.scheduled_at ? isoToLocalDateTime(notification.scheduled_at, CALENDAR_TIMEZONE) : "";
   const scheduleControl = notification.status === "PENDING"
-    ? `<form method="post" action="/learn/admin/notifications/${encodeURIComponent(notification.id)}">${hiddenCsrf(csrfToken)}<label>Send at (UK time)<input type="datetime-local" name="scheduledAt" value="${escapeHtml(scheduled)}" required></label>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<div class="form-actions"><button class="button" type="submit">Update schedule</button></div></form>`
+    ? `<form method="post" action="/learn/admin/notifications/${entityRouteId(notification.id)}">${hiddenCsrf(csrfToken)}<label>Send at (UK time)<input type="datetime-local" name="scheduledAt" value="${escapeHtml(scheduled)}" required></label>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<div class="form-actions"><button class="button" type="submit">Update schedule</button></div></form>`
     : `<p class="muted">Scheduling is locked because this notification is ${notificationStatusLabel(notification.status).toLowerCase()}.</p>`;
-  return `<section class="card notification-detail"><div class="page-heading"><div><h1>${escapeHtml(notification.event_type.replaceAll("_", " "))}</h1><p class="lede">${escapeHtml(notificationStatusLabel(notification.status))} · ${escapeHtml(notification.recipient_email ?? "Unknown")}</p></div><div class="form-actions"><a class="button secondary" href="/learn/admin/notifications/${encodeURIComponent(notification.id)}/preview" target="_blank" rel="noopener">Preview email</a><a class="button secondary" href="/learn/admin/notifications">Back to notifications</a></div></div><dl class="detail-grid"><div><dt>Created</dt><dd>${escapeHtml(notificationTimestamp(notification.created_at))}</dd></div><div><dt>Scheduled</dt><dd>${escapeHtml(notificationTimestamp(notification.scheduled_at))}</dd></div><div><dt>Attempts</dt><dd>${notification.attempt_count}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(notification.provider_reference ?? "—")}</dd></div></dl><h2>Subject</h2><p>${escapeHtml(notification.subject)}</p><h2>Plain-text content</h2><pre class="notification-content">${escapeHtml(notification.text_body)}</pre><h2>HTML content</h2><pre class="notification-content">${escapeHtml(notification.html_body)}</pre><h2>Schedule</h2>${scheduleControl}</section>`;
+  return `<section class="card notification-detail"><div class="page-heading"><div><h1>${escapeHtml(notification.event_type.replaceAll("_", " "))}</h1><p class="lede">${escapeHtml(notificationStatusLabel(notification.status))} · ${escapeHtml(notification.recipient_email ?? "Unknown")}</p></div><div class="form-actions"><a class="button secondary" href="/learn/admin/notifications/${entityRouteId(notification.id)}/preview" target="_blank" rel="noopener">Preview email</a><a class="button secondary" href="/learn/admin/notifications">Back to notifications</a></div></div><dl class="detail-grid"><div><dt>Created</dt><dd>${escapeHtml(notificationTimestamp(notification.created_at))}</dd></div><div><dt>Scheduled</dt><dd>${escapeHtml(notificationTimestamp(notification.scheduled_at))}</dd></div><div><dt>Attempts</dt><dd>${notification.attempt_count}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(notification.provider_reference ?? "—")}</dd></div></dl><h2>Subject</h2><p>${escapeHtml(notification.subject)}</p><h2>Plain-text content</h2><pre class="notification-content">${escapeHtml(notification.text_body)}</pre><h2>HTML content</h2><pre class="notification-content">${escapeHtml(notification.html_body)}</pre><h2>Schedule</h2>${scheduleControl}</section>`;
 }
 
 function accountingLabel(value: string): string {
@@ -579,7 +588,7 @@ function accountingContactList(
   const rows = students.map((student) => {
     const link = byStudent.get(student.id);
     const status = link?.status ?? "UNVERIFIED";
-    return `<tr><td data-label="Student">${escapeHtml(student.name)}</td><td data-label="Email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Contact ID"><form method="post" action="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="accounting-icon-button accounting-save-button" type="submit" aria-label="Verify and save contact for ${escapeHtml(student.name)}" title="Verify and save"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2-2V7l-4-4m-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6m3-10H5v4h10V5h5v4Z"></path></svg></button>${link ? `<button class="accounting-icon-button accounting-remove-button" formaction="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}/remove" type="submit" aria-label="Remove contact mapping for ${escapeHtml(student.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7Z"></path>    </svg></button>` : `<button class="accounting-icon-button accounting-remove-button" type="button" disabled aria-disabled="true" aria-label="No contact mapping to remove for ${escapeHtml(student.name)}" title="No contact mapping to remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1 0 2 2 2h8c1.1 0 2-2 2-2V7Z"></path></svg></button>`}</div></form></td></tr>`;
+    return `<tr><td data-label="Student">${escapeHtml(student.name)}</td><td data-label="Email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Contact ID"><form method="post" action="/learn/admin/accounting/contacts/${entityRouteId(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="accounting-icon-button accounting-save-button" type="submit" aria-label="Verify and save contact for ${escapeHtml(student.name)}" title="Verify and save"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2-2V7l-4-4m-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6m3-10H5v4h10V5h5v4Z"></path></svg></button>${link ? `<button class="accounting-icon-button accounting-remove-button" formaction="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}/remove" type="submit" aria-label="Remove contact mapping for ${escapeHtml(student.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7Z"></path>    </svg></button>` : `<button class="accounting-icon-button accounting-remove-button" type="button" disabled aria-disabled="true" aria-label="No contact mapping to remove for ${escapeHtml(student.name)}" title="No contact mapping to remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1 0 2 2 2h8c1.1 0 2-2 2-2V7Z"></path></svg></button>`}</div></form></td></tr>`;
   }).join("");
   return `<section class="card"><div class="section-heading"><div><h2>Production FreeAgent contact mappings</h2><p class="muted">Production contact IDs are verified and saved explicitly. Sandbox contact configuration is restricted to the Production billing settings test area.</p></div></div>${students.length ? `<div class="table-wrap accounting-contact-table"><table><thead><tr><th>Student</th><th>Email</th><th>Status</th><th>Contact ID</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty-state compact-empty"><p>No Learn students exist.</p></div>`}</section>`;
 }
@@ -685,7 +694,7 @@ function lessonReportForm(
 function reportAttachmentUploadForm(lesson: Lesson, resources: Resource[]): string {
   const id = `report-attachment-${lesson.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const attached = resources.filter((resource) => resource.status === "available" && !resource.deleted_at);
-  const attachedList = attached.map((resource) => `<span class="report-attachment-chip" data-report-resource-chip><a href="/learn/admin/resources/${encodeURIComponent(resource.id)}/download">${escapeHtml(resource.original_filename)} <span>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</span></a><button type="button" data-report-resource-delete="${escapeHtml(`/learn/admin/resources/${encodeURIComponent(resource.id)}/delete`)}" aria-label="Remove ${escapeHtml(resource.original_filename)}" title="Remove attachment">×</button></span>`).join("");
+  const attachedList = attached.map((resource) => `<span class="report-attachment-chip" data-report-resource-chip><a href="/learn/admin/resources/${entityRouteId(resource.id)}/download">${escapeHtml(resource.original_filename)} <span>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</span></a><button type="button" data-report-resource-delete="${escapeHtml(`/learn/admin/resources/${entityRouteId(resource.id)}/delete`)}" aria-label="Remove ${escapeHtml(resource.original_filename)}" title="Remove attachment">×</button></span>`).join("");
   return `<section class="report-attachments"><input type="hidden" name="attachmentIdempotencyKey" value="${escapeHtml(crypto.randomUUID())}"><div class="report-attachments-grid${attached.length ? " has-files" : ""}" data-attachment-grid><div class="resource-file-dropzone" data-file-dropzone tabindex="0" role="button" aria-labelledby="${id}-label" aria-describedby="${id}-help"><span class="resource-file-icon" aria-hidden="true">↥</span><strong id="${id}-label">Drop a file here or <span class="resource-browse">Browse</span> to add lesson attachments</strong><span id="${id}-help" class="field-help">Up to 5 files · PDF · DOCX · TXT · PNG · JPEG · WEBP · Up to 25 MB each</span><input id="${id}" type="file" name="attachments" aria-label="Choose lesson attachments" multiple accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"></div><div class="report-attachment-list" data-report-attachment-list><output class="file-preview" data-file-preview hidden aria-live="polite"></output>${attachedList}</div></div><p class="upload-status" data-upload-status aria-live="polite"></p></section>`;
 }
 
@@ -920,10 +929,12 @@ function parseResourceFilters(url: URL): ResourceFilters {
   const sort = ["newest", "oldest", "filename-asc", "filename-desc"].includes(url.searchParams.get("sort") ?? "")
     ? url.searchParams.get("sort") as ResourceFilters["sort"]
     : "newest";
+  const studentId = entityIdFromUrlKey((url.searchParams.get("student") ?? "").trim()) ?? "";
+  const lessonId = entityIdFromUrlKey((url.searchParams.get("lesson") ?? "").trim()) ?? "";
   return {
     search: (url.searchParams.get("q") ?? "").trim().slice(0, 100),
-    studentId: (url.searchParams.get("student") ?? "").trim().slice(0, 100),
-    lessonId: (url.searchParams.get("lesson") ?? "").trim().slice(0, 100),
+    studentId,
+    lessonId,
     type,
     added,
     sort
@@ -966,8 +977,8 @@ function resourceListOptions(filters: ResourceFilters, page: number, pageSize: n
 function resourceFilterQuery(filters: ResourceFilters, page?: number, pageSize?: number): string {
   const query = new URLSearchParams();
   if (filters.search) query.set("q", filters.search);
-  if (filters.studentId) query.set("student", filters.studentId);
-  if (filters.lessonId) query.set("lesson", filters.lessonId);
+  if (filters.studentId) query.set("student", entityUrlKey(filters.studentId));
+  if (filters.lessonId) query.set("lesson", entityUrlKey(filters.lessonId));
   if (filters.type) query.set("type", filters.type);
   if (filters.added !== "any") query.set("added", filters.added);
   if (filters.sort !== "newest") query.set("sort", filters.sort);
@@ -1035,13 +1046,13 @@ function resourceIcon(name: "open" | "download" | "details" | "delete"): string 
 }
 
 function resourceActionButtons(resource: Resource, admin: boolean): string {
-  const base = `/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}`;
+  const base = `/learn/${admin ? "admin" : "student"}/resources/${entityRouteId(resource.id)}`;
   const filename = escapeHtml(resource.original_filename);
   const open = `<a class="resource-action" href="${base}/download" target="_blank" rel="noopener noreferrer" aria-label="Open ${filename}" title="Open">${resourceIcon("open")}</a>`;
   const download = `<a class="resource-action" href="${base}/download?download=1" aria-label="Download ${filename}" title="Download">${resourceIcon("download")}</a>`;
   if (!admin) return `<span class="resource-actions">${open}${download}</span>`;
   const details = `<a class="resource-action" href="${base}" aria-label="View details for ${filename}" title="Details">${resourceIcon("details")}</a>`;
-  const deleteAction = `<button class="resource-action resource-action-danger" type="button" data-resource-delete-trigger="resource-delete-${encodeURIComponent(resource.id)}" data-resource-delete-confirm="Delete &quot;${filename}&quot;? This removes the resource from the student's portal." aria-label="Delete ${filename}" title="Delete">${resourceIcon("delete")}</button>`;
+  const deleteAction = `<button class="resource-action resource-action-danger" type="button" data-resource-delete-trigger="resource-delete-${entityRouteId(resource.id)}" data-resource-delete-confirm="Delete &quot;${filename}&quot;? This removes the resource from the student's portal." aria-label="Delete ${filename}" title="Delete">${resourceIcon("delete")}</button>`;
   return `<span class="resource-actions">${open}${download}${details}${deleteAction}</span>`;
 }
 
@@ -1057,7 +1068,7 @@ function resourceRows(resources: Resource[], options: { admin?: boolean; csrfTok
   const rows = resources.map((resource) => {
     const filename = escapeHtml(resource.original_filename);
       const deleteForm = admin
-        ? `<form id="resource-delete-${encodeURIComponent(resource.id)}" method="post" action="/learn/admin/resources/${encodeURIComponent(resource.id)}/delete" class="resource-hidden-form" data-resource-delete-confirm="Delete &quot;${filename}&quot;? This removes the resource from the student's portal.">${hiddenCsrf(options.csrfToken ?? "")}</form>`
+        ? `<form id="resource-delete-${entityRouteId(resource.id)}" method="post" action="/learn/admin/resources/${entityRouteId(resource.id)}/delete" class="resource-hidden-form" data-resource-delete-confirm="Delete &quot;${filename}&quot;? This removes the resource from the student's portal.">${hiddenCsrf(options.csrfToken ?? "")}</form>`
       : "";
     return `<tr>${admin ? `<td class="resource-select-column" data-label="Select"><input type="checkbox" name="resourceId" value="${escapeHtml(resource.id)}" form="resource-bulk-delete-form" data-resource-select aria-label="Select ${filename}"></td>` : ""}<td data-label="File"><strong class="resource-filename" title="${filename}">${filename}</strong><small class="resource-meta">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</small></td><td data-label="Student">${escapeHtml(resource.student_name ?? "Student")}</td><td data-label="Lesson">${escapeHtml(resourceLessonLabel(resource))}</td><td data-label="Uploaded">${escapeHtml(resourceDate(resource))}</td><td data-label="Actions">${resourceActionButtons(resource, admin)}${deleteForm}</td></tr>`;
   }).join("");
@@ -1183,7 +1194,7 @@ function resourceContext(context: ResourceUploadContext): string {
 
 function resourceReturnPath(context: ResourceUploadContext): string {
   if (context.kind === "lesson") return `/learn/admin/lessons/${lessonRouteId(context.lesson.id)}`;
-  if (context.kind === "student") return `/learn/admin/students/${encodeURIComponent(context.student.id)}`;
+  if (context.kind === "student") return `/learn/admin/students/${entityRouteId(context.student.id)}`;
   return "/learn/admin/resources";
 }
 
@@ -1217,7 +1228,7 @@ function resourceUploadForm(
 
 function resourceSummary(resource: Resource, admin: boolean, csrfToken: string): string {
  const lesson = resource.lesson_start_at ? `Lesson · ${resourceLessonLabel(resource)}` : "General student resource";
- const base = `/learn/${admin ? "admin" : "student"}/resources/${encodeURIComponent(resource.id)}`;
+ const base = `/learn/${admin ? "admin" : "student"}/resources/${entityRouteId(resource.id)}`;
  const actionBar = `<div class="resource-detail-actions"><a class="button" href="${base}/download" target="_blank" rel="noopener noreferrer">${resourceIcon("open")}<span>Open</span></a><a class="button secondary" href="${base}/download?download=1">${resourceIcon("download")}<span>Download</span></a>${admin ? `<details class="delete-confirmation"><summary>${resourceIcon("delete")}<span>Delete</span></summary><p>Delete “${escapeHtml(resource.original_filename)}”? This removes the resource from the student's portal.</p><form method="post" action="${base}/delete">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Delete resource</button></form></details>` : ""}</div>`;
  return `<section class="card resource-detail"><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div></div>${actionBar}<div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Lesson</strong><br>${escapeHtml(lesson)}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div></section>`;
 }
@@ -1231,7 +1242,7 @@ function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): stri
         ? "No report available"
         : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`;
   const primary = showStudent
-    ? `<a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>`
+    ? `<a href="/learn/admin/students/${entityRouteId(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a>`
     : `<a href="${basePath}/${lessonRouteId(lesson.id)}">View lesson</a>`;
   return `<tr><td data-label="${showStudent ? "Student" : "Lesson"}">${primary}</td><td data-label="Date and time"><a href="${basePath}/${lessonRouteId(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${report}</td></tr>`;
 }
@@ -1243,7 +1254,7 @@ function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean):
 
 function studentRows(students: Student[]): string {
   if (!students.length) return `<p class="muted">No students yet.</p>`;
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Level</th><th>International</th><th>Status</th><th>Actions</th></tr></thead><tbody>${students.map((student) => `<tr><td data-label="Name"><a href="/learn/admin/students/${encodeURIComponent(student.id)}">${escapeHtml(student.name)}</a></td><td data-label="Email">${escapeHtml(student.email)}</td><td data-label="Level">${escapeHtml(student.level ?? "Not set")}</td><td data-label="International">${student.international ? "Yes" : "No"}</td><td data-label="Status"><span class="status status-${student.status.toLowerCase()}">${student.status === "ACTIVE" ? "Active" : "Inactive"}</span></td><td data-label="Actions"><a href="/learn/admin/students/${encodeURIComponent(student.id)}/edit">Edit</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Level</th><th>International</th><th>Status</th><th>Actions</th></tr></thead><tbody>${students.map((student) => `<tr><td data-label="Name"><a href="/learn/admin/students/${entityRouteId(student.id)}">${escapeHtml(student.name)}</a></td><td data-label="Email">${escapeHtml(student.email)}</td><td data-label="Level">${escapeHtml(student.level ?? "Not set")}</td><td data-label="International">${student.international ? "Yes" : "No"}</td><td data-label="Status"><span class="status status-${student.status.toLowerCase()}">${student.status === "ACTIVE" ? "Active" : "Inactive"}</span></td><td data-label="Actions"><a href="/learn/admin/students/${entityRouteId(student.id)}/edit">Edit</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function hiddenCsrf(csrfToken: string): string {
@@ -1323,30 +1334,29 @@ function studentSeriesPage(
     price_minor: number | string;
     status: string;
   },
-  lessons: Lesson[]
+  lessons: Lesson[],
+  now: string,
+  notice?: string
 ): Response {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const rows = lessons.length
-    ? lessons.map((lesson) => `<tr><td><a href="/learn/student/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td>${lesson.status === "scheduled" ? buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/cancel`, "Cancel lesson") : "—"}</td></tr>`).join("")
+    ? lessons.map((lesson) => {
+      const canCancel = lesson.status === "scheduled" && canStudentCancel(lesson, now);
+      const action = lesson.status !== "scheduled"
+        ? "—"
+        : canCancel
+          ? `<button class="button secondary" type="button" data-series-cancel-trigger data-lesson-id="${escapeHtml(lesson.id)}" data-lesson-label="${escapeHtml(formatLessonTime(lesson))}">Cancel lesson</button>`
+          : `<span class="button secondary disabled-action" aria-disabled="true" title="Lessons cannot be cancelled within 24 hours of their start.">Cancel lesson</span>`;
+      return `<tr><td><a href="/learn/student/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td>${action}</td></tr>`;
+    }).join("")
     : `<tr><td colspan="3">No materialised lessons are currently in this series.</td></tr>`;
-  const scheduled = lessons.filter((lesson) => lesson.status === "scheduled");
-  const cancelAction = series.status !== "ENDED" && series.status !== "CANCELLED" && scheduled.length
-    ? `<section class="card form-card"><h2>Cancel future lessons</h2><p>This ends the series from the next scheduled lesson onward. Individual lessons can be cancelled separately above.</p><form method="post" action="/learn/student/series/${encodeURIComponent(series.id)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Cancel this and future lessons</button></form></section>`
-    : "";
+  const cancelDialog = `<dialog class="cancel-dialog" data-series-cancel-dialog data-series-id="${escapeHtml(compactUuidKey(series.id))}" aria-labelledby="series-cancel-title"><div class="card form-card"><button class="cancel-dialog-close" type="button" data-series-cancel-close aria-label="Close cancellation dialog">×</button><h2 id="series-cancel-title">Cancel recurring lesson</h2><p data-series-cancel-lesson></p><p>What would you like to do?</p><div class="form-actions"><form method="post" data-series-cancel-instance-form>${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Cancel just this lesson</button></form><form method="post" data-series-cancel-future-form>${hiddenCsrf(csrfToken)}<input type="hidden" name="lessonId" data-series-cancel-lesson-id><button class="button danger" type="submit">Cancel this and all future lessons</button></form><button class="button secondary" type="button" data-series-cancel-close>Keep lesson</button></div></div></dialog>`;
+  const notification = notice ? `<div data-notification-message="${escapeHtml(notice)}" data-notification-type="error" hidden></div>` : "";
   return appPage(
     user,
     csrfToken,
     "Recurring lesson series",
-    `<div class="page-heading"><div><h1>Recurring lesson series</h1><p class="lede">${escapeHtml(dayNames[series.day_of_week] ?? "Weekly")} at ${escapeHtml(series.local_start_time)} · ${series.duration_minutes} minutes</p></div><a class="button secondary" href="/learn/student/lessons">Back to lessons</a></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${escapeHtml(series.status.toLowerCase())}">${escapeHtml(series.status)}</span></p><p><strong>Price</strong><br>${billingMoney(series.price_minor)} per lesson</p><p><strong>Starts</strong><br>${escapeHtml(series.start_date)}</p><p><strong>Ends</strong><br>${escapeHtml(series.end_date ?? "Ongoing")}</p></section><section class="card"><h2>Scheduled lessons</h2><p class="muted">FoxTutor shows the currently materialised lessons in the bounded scheduling window.</p><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>${cancelAction}`
-  );
-}
-
-function studentSeriesCancellationConfirmation(user: AppUser, csrfToken: string, seriesId: string, lessons: Lesson[]): Response {
-  return appPage(
-    user,
-    csrfToken,
-    "Cancel recurring lesson series",
-    `<section class="card form-card"><h1>Cancel this and future lessons?</h1><p class="lede">${lessons.length} scheduled lessons will be cancelled from the next occurrence onward.</p><p>This action ends the recurring series. It cannot be undone from the student portal.</p><form method="post" action="/learn/student/series/${encodeURIComponent(seriesId)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/series/${encodeURIComponent(seriesId)}">Keep series</a><button class="button danger" type="submit">Cancel series</button></form></section>`
+    `${notification}<div class="page-heading"><div><h1>Recurring lesson series</h1><p class="lede">${escapeHtml(dayNames[series.day_of_week] ?? "Weekly")} at ${escapeHtml(series.local_start_time)} · ${series.duration_minutes} minutes</p></div><a class="button secondary" href="/learn/student/lessons">Back to lessons</a></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${escapeHtml(series.status.toLowerCase())}">${escapeHtml(series.status)}</span></p><p><strong>Price</strong><br>${billingMoney(series.price_minor)} per lesson</p><p><strong>Starts</strong><br>${escapeHtml(series.start_date)}</p><p><strong>Ends</strong><br>${escapeHtml(series.end_date ?? "Ongoing")}</p></section><section class="card"><h2>Scheduled lessons</h2><p class="muted">FoxTutor shows the currently materialised lessons in the bounded scheduling window.</p><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>${cancelDialog}`
   );
 }
 
@@ -1551,7 +1561,7 @@ function formText(form: FormData, name: string): string {
 
 function studentIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/admin\/students\/([^/]+)(?:\/(?:edit|deactivate))?$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  return match ? entityIdFromPathSegment(match[1]) : null;
 }
 
 function lessonIdFromPath(pathname: string): string | null {
@@ -1562,22 +1572,25 @@ function lessonIdFromPath(pathname: string): string | null {
 
 function studentSeriesIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/student\/series\/([^/]+)(?:\/cancel)?$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  if (!match) return null;
+  const value = decodePathSegment(match[1]);
+  if (!value) return null;
+  return entityIdFromUrlKey(value);
 }
 
 function rescheduleRequestIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/admin\/reschedules\/([^/]+)\/(?:approve|reject)$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  return match ? entityIdFromPathSegment(match[1]) : null;
 }
 
 function notificationIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/admin\/notifications\/([^/]+)$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  return match ? entityIdFromPathSegment(match[1]) : null;
 }
 
 function accountingOutboxIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/admin\/accounting\/([^/]+)(?:\/(?:retry|reconcile))?$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  return match ? entityIdFromPathSegment(match[1]) : null;
 }
 
 function lessonRouteId(id: string): string {
@@ -1586,7 +1599,7 @@ function lessonRouteId(id: string): string {
 
 function resourceIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/(?:admin|student)\/resources\/([^/]+)(?:\/(?:download|delete))?$/.exec(pathname.replace(/\/+$/, ""));
-  return match ? decodePathSegment(match[1]) : null;
+  return match ? entityIdFromPathSegment(match[1]) : null;
 }
 
 function decodePathSegment(value: string): string | null {
@@ -1596,6 +1609,15 @@ function decodePathSegment(value: string): string | null {
     if (error instanceof URIError) return null;
     throw error;
   }
+}
+
+function entityRouteId(id: string): string {
+  return encodeURIComponent(entityUrlKey(id));
+}
+
+function entityIdFromPathSegment(value: string): string | null {
+  const decoded = decodePathSegment(value);
+  return decoded ? entityIdFromUrlKey(decoded) : null;
 }
 
 async function requireApplicationSession(request: Request, env: Env): Promise<{ active: ActiveSession | null; response?: Response; setCookies?: string[] }> {
@@ -1770,7 +1792,7 @@ function resourceSuccessPage(user: AppUser, csrfToken: string, resourceId: strin
     user,
     csrfToken,
     "Resource added",
-    `<section class="card resource-success"><div data-notification-message="Resource uploaded" data-notification-type="success" hidden></div><h1>Resource added</h1><p class="lede">The file is ready to use.</p><div class="form-actions"><a class="button" href="/learn/admin/resources/${encodeURIComponent(resourceId)}">View resource</a><a class="button secondary" href="${returnPath}">${returnLabel}</a></div></section>`
+    `<section class="card resource-success"><div data-notification-message="Resource uploaded" data-notification-type="success" hidden></div><h1>Resource added</h1><p class="lede">The file is ready to use.</p><div class="form-actions"><a class="button" href="/learn/admin/resources/${entityRouteId(resourceId)}">View resource</a><a class="button secondary" href="${returnPath}">${returnLabel}</a></div></section>`
   );
 }
 
@@ -1881,7 +1903,7 @@ async function resourceUpload(
       studentName: resourceStudent.name,
       filename: availableResource.original_filename,
       lessonLabel: lessonContext,
-      resourcePath: `/learn/student/resources/${encodeURIComponent(availableResource.id)}/download`
+      resourcePath: `/learn/student/resources/${entityRouteId(availableResource.id)}/download`
     }, origin);
     await emitNotification(env, {
       type: "RESOURCE_ADDED",
@@ -2025,7 +2047,7 @@ async function billingOperationsPage(
   const failed = readiness.filter(({ result }) => result.state === "PAYMENT_FAILED").length;
   const creditCovered = readiness.filter(({ result }) => result.state === "CREDIT_COVERED").length;
   const rowMarkup = readiness.length
-    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a>${row.student_id ? ` <a class="text-link" href="/learn/admin/billing/audit/${encodeURIComponent(row.student_id)}">Audit</a>` : ""}</td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(row.billing_event_id)}">Emergency exception</a>` : "Not created"}</td></tr>`).join("")
+    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a>${row.student_id ? ` <a class="text-link" href="/learn/admin/billing/audit/${encodeURIComponent(row.student_id)}">Audit</a>` : ""}</td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(entityUrlKey(row.billing_event_id))}">Emergency exception</a>` : "Not created"}</td></tr>`).join("")
     : `<tr><td colspan="8">No upcoming lessons require billing attention.</td></tr>`;
   const creditRows = credits.length
     ? credits.map((credit) => `<tr><td><a href="/learn/admin/billing/credits/${encodeURIComponent(credit.credit_id)}">${escapeHtml(credit.student_name ?? credit.student_id)}</a></td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
@@ -2042,7 +2064,7 @@ async function recurringSeriesPage(user: AppUser, csrfToken: string, db: D1Datab
   const studentNames = new Map(students.map((student) => [student.id, student.name]));
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const rows = series.length
-    ? series.map((item) => `<tr><td>${escapeHtml(studentNames.get(item.student_id) ?? item.student_id)}</td><td>${escapeHtml(dayNames[item.day_of_week] ?? "Day")} ${escapeHtml(item.local_start_time)}</td><td>${item.duration_minutes} minutes</td><td>${billingMoney(item.price_minor)}</td><td>${escapeHtml(item.start_date)}${item.end_date ? ` to ${escapeHtml(item.end_date)}` : ""}</td><td><span class="status status-${item.status.toLowerCase()}">${escapeHtml(item.status)}</span></td><td>${item.status === "ACTIVE" ? `<form method="post" action="/learn/admin/series/${encodeURIComponent(item.id)}/pause">${hiddenCsrf(csrfToken)}<input type="hidden" name="startsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="endsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="reason" value="Administrator pause"><button class="button secondary" type="submit">Pause</button></form>` : item.status === "PAUSED" ? `<form method="post" action="/learn/admin/series/${encodeURIComponent(item.id)}/resume">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Resume</button></form>` : "—"}</td></tr>`).join("")
+    ? series.map((item) => `<tr><td>${escapeHtml(studentNames.get(item.student_id) ?? item.student_id)}</td><td>${escapeHtml(dayNames[item.day_of_week] ?? "Day")} ${escapeHtml(item.local_start_time)}</td><td>${item.duration_minutes} minutes</td><td>${billingMoney(item.price_minor)}</td><td>${escapeHtml(item.start_date)}${item.end_date ? ` to ${escapeHtml(item.end_date)}` : ""}</td><td><span class="status status-${item.status.toLowerCase()}">${escapeHtml(item.status)}</span></td><td>${item.status === "ACTIVE" ? `<form method="post" action="/learn/admin/series/${entityRouteId(item.id)}/pause">${hiddenCsrf(csrfToken)}<input type="hidden" name="startsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="endsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="reason" value="Administrator pause"><button class="button secondary" type="submit">Pause</button></form>` : item.status === "PAUSED" ? `<form method="post" action="/learn/admin/series/${entityRouteId(item.id)}/resume">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Resume</button></form>` : "—"}</td></tr>`).join("")
     : `<tr><td colspan="7">No recurring lesson series.</td></tr>`;
   return appPage(user, csrfToken, "Recurring series", `<div class="page-heading"><div><h1>Recurring lesson series</h1><p class="lede">FoxTutor owns recurrence. Future lessons are materialised only through the bounded six-week Europe/London horizon.</p></div>${buttonLink("/learn/admin/series/new", "Create series")}</div><section class="card"><div class="table-wrap"><table><thead><tr><th>Student</th><th>Weekly time</th><th>Duration</th><th>Price</th><th>Dates</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>`);
 }
@@ -2101,7 +2123,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-series-action") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const match = /^\/learn\/admin\/series\/([^/]+)\/(pause|resume|end)$/.exec(url.pathname);
-    const seriesId = match ? decodePathSegment(match[1] ?? "") : null;
+    const seriesId = match ? entityIdFromPathSegment(match[1] ?? "") : null;
     const action = match?.[2];
     if (!seriesId || !action) return messagePage("Series not found", "That recurring series does not exist.", 404);
     const form = await parseForm(request);
@@ -2130,7 +2152,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-billing-audit") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the read-only billing audit page.", 405);
     const match = /^\/learn\/admin\/billing\/audit\/([^/]+)$/.exec(url.pathname);
-    const studentId = match ? decodePathSegment(match[1] ?? "") : "";
+    const studentId = match ? entityIdFromPathSegment(match[1] ?? "") : "";
     if (!studentId) return messagePage("Student not found", "That student does not exist.", 404);
     const student = await findStudent(db, studentId);
     if (!student) return messagePage("Student not found", "That student does not exist.", 404);
@@ -2153,14 +2175,14 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-billing-action") {
     const emergencyMatch = /^\/learn\/admin\/billing\/emergency-payg\/([^/]+)$/.exec(url.pathname);
     if (emergencyMatch) {
-      const billingEventId = decodePathSegment(emergencyMatch[1] ?? "");
+      const billingEventId = entityIdFromPathSegment(emergencyMatch[1] ?? "");
       if (!billingEventId) return messagePage("Billing event not found", "That billing event does not exist.", 404);
       const event = await db.prepare(
         "SELECT id, student_id, status FROM billing_events WHERE id = ?"
       ).bind(billingEventId).first<{ id: string; student_id: string; status: string }>();
       if (!event) return messagePage("Billing event not found", "That billing event does not exist.", 404);
       if (request.method === "GET") {
-        return appPage(active.user, csrfToken, "Emergency billing exception", `<div class="page-heading"><div><h1>Emergency billing exception</h1><p class="lede">This admin-only exception prevents Direct Debit collection for one billing event. It is never shown as a customer payment choice.</p></div></div><section class="card form-card"><form method="post" action="/learn/admin/billing/emergency-payg/${encodeURIComponent(event.id)}">${hiddenCsrf(csrfToken)}<label>Reason<textarea name="reason" minlength="10" maxlength="500" required></textarea><span class="field-help">Use only for a last-minute addition where a normal Direct Debit authorisation cannot reasonably be established in time.</span></label><div class="form-actions"><a class="button secondary" href="/learn/admin/billing">Cancel</a><button class="button danger" type="submit">Record emergency exception</button></div></form></section>`);
+        return appPage(active.user, csrfToken, "Emergency billing exception", `<div class="page-heading"><div><h1>Emergency billing exception</h1><p class="lede">This admin-only exception prevents Direct Debit collection for one billing event. It is never shown as a customer payment choice.</p></div></div><section class="card form-card"><form method="post" action="/learn/admin/billing/emergency-payg/${encodeURIComponent(entityUrlKey(event.id))}">${hiddenCsrf(csrfToken)}<label>Reason<textarea name="reason" minlength="10" maxlength="500" required></textarea><span class="field-help">Use only for a last-minute addition where a normal Direct Debit authorisation cannot reasonably be established in time.</span></label><div class="form-actions"><a class="button secondary" href="/learn/admin/billing">Cancel</a><button class="button danger" type="submit">Record emergency exception</button></div></form></section>`);
       }
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
       const form = await parseForm(request);
@@ -2184,7 +2206,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const authorizeDirectDebitMatch = /^\/learn\/admin\/billing\/invoices\/([^/]+)\/authorize-direct-debit$/.exec(url.pathname);
     if (authorizeDirectDebitMatch) {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
-      const invoiceId = decodePathSegment(authorizeDirectDebitMatch[1] ?? "");
+      const invoiceId = entityIdFromPathSegment(authorizeDirectDebitMatch[1] ?? "");
       const invoice = invoiceId ? await findBillingInvoice(db, invoiceId) : null;
       if (!invoice) return messagePage("Invoice not found", "That billing invoice does not exist.", 404);
       const form = await parseForm(request);
@@ -2216,11 +2238,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const authorized = await authorizeBillingInvoiceDirectDebit(db, invoice.id, active.user.id, now);
       if (!authorized) return messagePage("Authorization unavailable", "This invoice has already been authorized or its collection operation is no longer pending.", 409);
       await processBillingInvoiceOperation(db, env, `direct-debit-operation:${invoice.id}`, now, freeAgentFetch);
-      return redirect(`/learn/admin/billing/invoices/${encodeURIComponent(invoice.id)}`);
+      return redirect(`/learn/admin/billing/invoices/${entityRouteId(invoice.id)}`);
     }
     const invoiceMatch = /^\/learn\/admin\/billing\/invoices\/([^/]+)$/.exec(url.pathname);
     if (invoiceMatch && request.method === "GET") {
-      const invoiceId = decodePathSegment(invoiceMatch[1] ?? "");
+      const invoiceId = entityIdFromPathSegment(invoiceMatch[1] ?? "");
       const invoice = invoiceId ? await findBillingInvoice(db, invoiceId) : null;
       if (!invoice) return messagePage("Invoice not found", "That billing invoice does not exist.", 404);
       const event = await db.prepare("SELECT * FROM billing_events WHERE id = ?").bind(invoice.billing_event_id).first<{ lesson_id: string | null; lesson_date: string | null; payer_student_id: string; }>();
@@ -2240,7 +2262,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     }
     const creditMatch = /^\/learn\/admin\/billing\/credits\/([^/]+)$/.exec(url.pathname);
     if (creditMatch && request.method === "GET") {
-      const creditId = decodePathSegment(creditMatch[1] ?? "");
+      const creditId = entityIdFromPathSegment(creditMatch[1] ?? "");
       const credit = creditId ? await findCreditById(db, creditId) : null;
       if (!credit) return messagePage("Credit not found", "That customer credit does not exist.", 404);
       const transactions = await db.prepare("SELECT * FROM credit_ledger_transactions WHERE credit_id = ? ORDER BY created_at ASC, id ASC").bind(credit.credit_id).all<{ created_at: string; transaction_type: string; amount_minor: number | string; invoice_id: string | null; provider_reference: string | null; }>();
@@ -2251,7 +2273,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     }
     const alertMatch = /^\/learn\/admin\/billing\/alerts\/([^/]+)$/.exec(url.pathname);
     if (!alertMatch || request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
-    const alertId = decodePathSegment(alertMatch[1] ?? "");
+    const alertId = entityIdFromPathSegment(alertMatch[1] ?? "");
     const form = await parseForm(request);
     const action = formText(form ?? new FormData(), "action");
     if (!alertId || (action !== "ACKNOWLEDGE" && action !== "RESOLVE")) return messagePage("Invalid alert action", "Choose an available alert action.", 400);
@@ -2404,7 +2426,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-accounting-contact") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const match = /^\/learn\/admin\/accounting\/contacts\/([^/]+)(\/remove)?$/.exec(url.pathname);
-    const studentId = match ? decodePathSegment(match[1] ?? "") : null;
+    const studentId = match ? entityIdFromPathSegment(match[1] ?? "") : null;
     const student = studentId ? await findStudent(db, studentId) : null;
     if (!studentId || !student) return messagePage("Not found", "That Learn payer does not exist.", 404);
     const form = await parseForm(request);
@@ -2564,7 +2586,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-notification") {
     const previewMatch = /^\/learn\/admin\/notifications\/([^/]+)\/preview$/.exec(url.pathname.replace(/\/+$/, ""));
-    const id = previewMatch ? decodePathSegment(previewMatch[1]) : notificationIdFromPath(url.pathname);
+    const id = previewMatch ? entityIdFromPathSegment(previewMatch[1]) : notificationIdFromPath(url.pathname);
     if (!id) return messagePage("Not found", "That notification does not exist.", 404);
     const notification = await findNotificationById(db, id);
     if (!notification) return messagePage("Not found", "That notification does not exist.", 404);
@@ -2586,7 +2608,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     }
     const changed = await updateNotificationSchedule(db, id, scheduled.value, new Date().toISOString());
     if (!changed) return messagePage("Schedule unavailable", "The notification is no longer pending.", 409);
-    return redirect(`/learn/admin/notifications/${encodeURIComponent(id)}`);
+    return redirect(`/learn/admin/notifications/${entityRouteId(id)}`);
   }
   if (route === "admin-reschedules") {
     return appPage(active.user, csrfToken, "Reschedule requests", `<div class="page-heading"><h1>Reschedule requests</h1></div>${rescheduleQueue(await listPendingRescheduleRequests(db), csrfToken)}`);
@@ -2692,7 +2714,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-resource-search") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Resource suggestions are read-only.", 405);
-    return resourceSuggestionsResponse(await listResourceSuggestions(db, url.searchParams.get("q") ?? "", 5, url.searchParams.get("student") ?? undefined));
+    return resourceSuggestionsResponse(await listResourceSuggestions(db, url.searchParams.get("q") ?? "", 5, entityIdFromUrlKey(url.searchParams.get("student") ?? "") ?? undefined));
   }
   if (route === "admin-resources") {
     if (request.method === "GET" && request.headers.get("X-Resource-Fragment") === "1") {
@@ -2719,8 +2741,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-resource-form") {
     const students = await listStudents(db);
     const lessons = await listLessons(db);
-    const requestedLessonId = url.searchParams.get("lesson") ?? undefined;
-    const requestedStudentId = url.searchParams.get("student") ?? undefined;
+    const requestedLessonId = entityIdFromUrlKey(url.searchParams.get("lesson") ?? "") ?? undefined;
+    const requestedStudentId = entityIdFromUrlKey(url.searchParams.get("student") ?? "") ?? undefined;
     const requestedLesson = lessons.find((lesson) => lesson.id === requestedLessonId);
     const requestedStudent = students.find((student) => student.id === (requestedLesson?.student_id ?? requestedStudentId) && student.status === "ACTIVE");
     const context = requestedLesson && requestedStudent && requestedLesson.student_id === requestedStudent.id
@@ -2862,7 +2884,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         content
       }, now);
     }
-    return redirect(`/learn/admin/students/${encodeURIComponent(studentId)}?created=1`);
+    return redirect(`/learn/admin/students/${entityRouteId(studentId)}?created=1`);
   }
   if (route === "admin-student" || route === "admin-student-edit" || route === "admin-student-deactivate") {
     const id = studentIdFromPath(url.pathname);
@@ -2909,7 +2931,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (route === "admin-student-deactivate") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
       await deactivateStudent(db, student.id, new Date().toISOString());
-      return redirect(`/learn/admin/students/${encodeURIComponent(student.id)}`);
+      return redirect(`/learn/admin/students/${entityRouteId(student.id)}`);
     }
     if (request.method === "GET") return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, `${url.pathname}`, student));
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -2922,11 +2944,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!account) return appPage(active.user, csrfToken, "Edit student", studentForm(csrfToken, url.pathname, student, "The login email must belong to an active STUDENT Learn account."));
     if (account.id !== student.learn_user_id && await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
     await updateStudent(db, { ...profile.value, id: student.id, learnUserId: account.id, now });
-    return redirect(`/learn/admin/students/${encodeURIComponent(student.id)}`);
+    return redirect(`/learn/admin/students/${entityRouteId(student.id)}`);
   }
   if (route === "admin-lesson-form") {
     const students = await listStudents(db);
-    if (request.method === "GET") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, undefined, undefined, url.searchParams.get("student") ?? undefined, url.searchParams.get("startAt") ?? undefined, url.searchParams.get("endAt") ?? undefined, url.searchParams.get("timezone") ?? undefined));
+    if (request.method === "GET") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, undefined, undefined, entityIdFromUrlKey(url.searchParams.get("student") ?? "") ?? undefined, url.searchParams.get("startAt") ?? undefined, url.searchParams.get("endAt") ?? undefined, url.searchParams.get("timezone") ?? undefined));
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
     if (!form) return messagePage("Invalid request", "The submitted form is invalid or too large.", 400);
@@ -3494,29 +3516,35 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const student = await findActiveStudentForUser(db, active.user.id);
     const series = seriesId ? await findRecurringSeries(db, seriesId) : null;
     if (!student || !series || series.student_id !== student.id) return messagePage("Not found", "That recurring lesson series does not exist.", 404);
+    const requestedSeriesKey = decodePathSegment(/^\/learn\/student\/series\/([^/]+)/.exec(url.pathname.replace(/\/+$/, ""))?.[1] ?? "");
+    if (route === "student-series" && request.method === "GET" && requestedSeriesKey === series.id) {
+      return redirect(`/learn/student/series/${encodeURIComponent(compactUuidKey(series.id))}${url.search}`);
+    }
     const lessonsForSeries = (await listLessonsForUser(db, active.user.id))
       .filter((lesson) => lesson.recurring_series_id === series.id)
       .sort((left, right) => left.start_at.localeCompare(right.start_at));
     if (route === "student-series-cancel") {
-      const scheduled = lessonsForSeries.filter((lesson) => lesson.status === "scheduled");
-      if (!scheduled.length) return messagePage("Cancellation unavailable", "There are no scheduled lessons remaining in this series.", 409);
-      const now = new Date().toISOString();
-      if (scheduled.some((lesson) => !canStudentCancel(lesson, now))) {
-        return messagePage("Cancellation unavailable", "A recurring series can only be cancelled when every scheduled lesson is more than 24 hours away. Cancel individual eligible lessons instead.", 409);
-      }
-      if (request.method === "GET") return studentSeriesCancellationConfirmation(active.user, csrfToken, series.id, scheduled);
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+      const form = await parseForm(request);
+      if (!form) return messagePage("Invalid request", "The submitted cancellation is invalid.", 400);
+      const lessonId = formText(form, "lessonId");
+      const targetLesson = lessonsForSeries.find((lesson) => lesson.id === lessonId && lesson.status === "scheduled");
+      if (!targetLesson) return messagePage("Cancellation unavailable", "That recurring lesson is no longer available to cancel. Refresh and try again.", 409);
+      const now = new Date().toISOString();
+      if (!canStudentCancel(targetLesson, now)) {
+        return redirect(`/learn/student/series/${encodeURIComponent(compactUuidKey(series.id))}?notice=${encodeURIComponent("This lesson cannot be cancelled within 24 hours of its start.")}`);
+      }
       const changed = await cancelRecurringLesson(db, {
-        lessonId: scheduled[0]!.id,
+        lessonId: targetLesson.id,
         actorUserId: active.user.id,
         actorRole: "STUDENT",
         mode: "THIS_AND_FUTURE",
-        reason: "Student cancelled recurring series",
+        reason: "Student cancelled this and future recurring lessons",
         now
       });
-      return changed ? redirect(`/learn/student/series/${encodeURIComponent(series.id)}`) : messagePage("Cancellation unavailable", "The recurring series could not be cancelled. Refresh and try again.", 409);
+      return changed ? redirect(`/learn/student/series/${encodeURIComponent(compactUuidKey(series.id))}`) : messagePage("Cancellation unavailable", "The recurring series could not be cancelled. Refresh and try again.", 409);
     }
-    return studentSeriesPage(active.user, csrfToken, series, lessonsForSeries);
+    return studentSeriesPage(active.user, csrfToken, series, lessonsForSeries, new Date().toISOString(), url.searchParams.get("notice") ?? undefined);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);
@@ -3533,14 +3561,22 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const now = new Date().toISOString();
     if (request.method === "GET") {
       if (!canStudentCancel(lesson, now)) {
-        return messagePage("Cancellation unavailable", "Student cancellation is only available more than 24 hours before the lesson.", 409);
+        const destination = lesson.recurring_series_id
+          ? `/learn/student/series/${encodeURIComponent(compactUuidKey(lesson.recurring_series_id))}`
+          : `/learn/student/lessons/${lessonRouteId(lesson.id)}`;
+        return redirect(`${destination}?notice=${encodeURIComponent("This lesson cannot be cancelled within 24 hours of its start.")}`);
       }
       return appPage(active.user, csrfToken, "Cancel lesson", cancellationConfirmation(csrfToken, lesson));
     }
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const currentLesson = await findLessonForUser(db, id, active.user.id);
     if (!currentLesson) return messagePage("Not found", "That lesson does not exist.", 404);
-    if (!canStudentCancel(currentLesson, new Date().toISOString())) return messagePage("Cancellation unavailable", "Student cancellation is only available more than 24 hours before the lesson.", 409);
+    if (!canStudentCancel(currentLesson, new Date().toISOString())) {
+      const destination = currentLesson.recurring_series_id
+        ? `/learn/student/series/${encodeURIComponent(compactUuidKey(currentLesson.recurring_series_id))}`
+        : `/learn/student/lessons/${lessonRouteId(currentLesson.id)}`;
+      return redirect(`${destination}?notice=${encodeURIComponent("This lesson cannot be cancelled within 24 hours of its start.")}`);
+    }
     const changed = await cancelLesson(db, {
       lessonId: currentLesson.id,
       studentId: currentLesson.student_id,
@@ -3698,8 +3734,10 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       && latestCancellation?.event_type === "STUDENT_CANCELLED"
       && latestCancellation.actor_role === "STUDENT"
       && latestCancellation.initiated_by_user_id === active.user.id;
+    const notice = url.searchParams.get("notice");
+    const notification = notice ? `<div data-notification-message="${escapeHtml(notice)}" data-notification-type="error" hidden></div>` : "";
     if (lesson.status === "cancelled") {
-      return appPage(active.user, csrfToken, "Cancelled lesson", `<section class="card cancellation-result"><h1>Lesson cancelled</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This lesson is no longer scheduled.</p>${studentLessonActions(lesson, csrfToken, pending, canUndo, now)}</section>`);
+      return appPage(active.user, csrfToken, "Cancelled lesson", `${notification}<section class="card cancellation-result"><h1>Lesson cancelled</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>This lesson is no longer scheduled.</p>${studentLessonActions(lesson, csrfToken, pending, canUndo, now)}</section>`);
     }
     const resources = await listResourcesForLessonForStudent(db, lesson.id, active.user.id);
     const report = await findSentLessonReportForStudent(db, lesson.id, active.user.id);
@@ -3707,7 +3745,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const join = lesson.status === "scheduled" && lesson.external_url
       ? `<a class="button" href="${escapeHtml(lesson.external_url)}" rel="noreferrer">Join lesson</a>`
       : "";
-    return appPage(active.user, csrfToken, "Lesson", `<div class="page-heading"><div><h1>${escapeHtml(formatLessonTime(lesson))}</h1></div>${studentLessonActions(lesson, csrfToken, pending, false, now)}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${join || (lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not provided")}</p></section>${recurringSeries ? `<section class="card"><h2>Recurring lesson series</h2><p>This lesson is part of a recurring series.</p><a class="button secondary" href="/learn/student/series/${encodeURIComponent(recurringSeries.id)}">View series and scheduled lessons</a></section>` : ""}${report ? `<section class="card"><div class="section-heading"><div><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
+    return appPage(active.user, csrfToken, "Lesson", `${notification}<div class="page-heading"><div><h1>${escapeHtml(formatLessonTime(lesson))}</h1></div>${studentLessonActions(lesson, csrfToken, pending, false, now)}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${join || (lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not provided")}</p></section>${recurringSeries ? `<section class="card"><h2>Recurring lesson series</h2><p>This lesson is part of a recurring series.</p><a class="button secondary" href="/learn/student/series/${encodeURIComponent(compactUuidKey(recurringSeries.id))}">View series and scheduled lessons</a></section>` : ""}${report ? `<section class="card"><div class="section-heading"><div><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }

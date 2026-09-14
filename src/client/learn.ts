@@ -54,6 +54,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     const url = new URL(window.location.href);
     const deleted = Number(url.searchParams.get("deleted") ?? 0);
     const failed = Number(url.searchParams.get("failed") ?? 0);
+    const notice = url.searchParams.has("notice");
     const cleanReportState = pathname.endsWith("/report") && (url.searchParams.has("delivery") || url.searchParams.has("saved"));
     if (deleted || failed) {
       const message = deleted && failed
@@ -70,7 +71,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       url.searchParams.delete("reason");
       url.searchParams.delete("saved");
     }
-    if (deleted || failed || cleanReportState) window.history.replaceState({}, "", url);
+    url.searchParams.delete("notice");
+    if (deleted || failed || cleanReportState || notice) window.history.replaceState({}, "", url);
   };
   showPageNotification();
 
@@ -269,6 +271,33 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       }
     })();
   });
+
+  const seriesCancelDialog = document.querySelector<HTMLDialogElement>("[data-series-cancel-dialog]");
+  if (seriesCancelDialog) {
+    const seriesId = seriesCancelDialog.dataset.seriesId;
+    const lessonLabel = seriesCancelDialog.querySelector<HTMLElement>("[data-series-cancel-lesson]");
+    const lessonId = seriesCancelDialog.querySelector<HTMLInputElement>("[data-series-cancel-lesson-id]");
+    const instanceForm = seriesCancelDialog.querySelector<HTMLFormElement>("[data-series-cancel-instance-form]");
+    const futureForm = seriesCancelDialog.querySelector<HTMLFormElement>("[data-series-cancel-future-form]");
+    const close = () => seriesCancelDialog.close();
+    document.querySelectorAll<HTMLButtonElement>("[data-series-cancel-trigger]").forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        if (!seriesId || !lessonLabel || !lessonId || !instanceForm || !futureForm) return;
+        const selectedLessonId = trigger.dataset.lessonId;
+        const selectedLessonLabel = trigger.dataset.lessonLabel;
+        if (!selectedLessonId || !selectedLessonLabel) return;
+        lessonLabel.textContent = selectedLessonLabel;
+        lessonId.value = selectedLessonId;
+        instanceForm.action = `/learn/student/lessons/${encodeURIComponent(selectedLessonId)}/cancel`;
+        futureForm.action = `/learn/student/series/${encodeURIComponent(seriesId)}/cancel`;
+        if (!seriesCancelDialog.open) seriesCancelDialog.showModal();
+      });
+    });
+    seriesCancelDialog.querySelectorAll<HTMLButtonElement>("[data-series-cancel-close]").forEach((button) => button.addEventListener("click", close));
+    seriesCancelDialog.addEventListener("click", (event) => {
+      if (event.target === seriesCancelDialog) close();
+    });
+  }
 
   document.querySelectorAll<HTMLElement>(".calendar-host").forEach((element) => {
     const rawEvents = element.dataset.calendarEvents;

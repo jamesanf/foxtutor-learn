@@ -61,8 +61,14 @@ describe("student profile form UI", () => {
 
   it("provides recurring lesson management and invoice links", () => {
     expect(workerSource).toContain("View series and scheduled lessons");
-    expect(workerSource).toContain("Cancel this and future lessons");
+    expect(workerSource).toContain("Cancel just this lesson");
+    expect(workerSource).toContain("Cancel this and all future lessons");
+    expect(workerSource).toContain("data-series-cancel-trigger");
+    expect(workerSource).toContain("What would you like to do?");
+    expect(workerSource).toContain("Lessons cannot be cancelled within 24 hours of their start.");
+    expect(workerSource).toContain("This lesson cannot be cancelled within 24 hours of its start.");
+    expect(workerSource).toContain("compactUuidKey(series.id)");
     expect(workerSource).toContain("View/download invoice");
-    expect(workerSource).toContain("student-series-cancel");
+    expect(workerSource).toContain("mode: \"THIS_AND_FUTURE\"");
   });
 });
