@@ -169,11 +169,20 @@ copied into application state or documentation.
 
 ## Deployment and acceptance
 
-The final deployment record is completed only after the source is committed,
-the working tree is clean, the exact commit is deployed, remote migrations are
-checked, and the user reloads the authenticated student page. This document
-must contain the final commit SHA and Worker version before Phase 7.8 can be
-marked ready.
+The first committed Phase 7.8 source deployment was:
+
+| Item | Observed value |
+| --- | --- |
+| Commit | `25e0f384a8ec845134526788f78f445c3bbbc721` |
+| Worker version | `042c1fb4-6f62-441f-a967-9ac1fabe01b8` |
+| Deployment time | `2026-09-14T18:44:21Z` |
+| Remote D1 migrations | No migrations to apply; through `0027_phase77_payment_submitted.sql` |
+| Public smoke | `/` 200, `/learn` 302 Access redirect |
+
+The 302 is only perimeter evidence, not authenticated application acceptance.
+The documentation-only provenance update will be committed and deployed
+separately so the final repository commit and final Worker version are also
+recorded exactly.
 
 Required human action: reload the authenticated
 `/learn/student/billing` page after deployment and report the displayed state;
