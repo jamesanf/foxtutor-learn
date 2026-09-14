@@ -9,9 +9,9 @@
 - D1 migration state: through `0020_accounting_company_name.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `0dd25b1`
-- Deployed source commit: `0dd25b1`
-- Deployed Worker version: `ad6ddec2-9acc-45b7-a577-a2664294b623`
+- Repository HEAD at executable deployment: `9d69df1`
+- Deployed source commit: `9d69df1`
+- Deployed Worker version: `c91ef6b8-a2b0-49be-9418-2789b473035f`
 - FreeAgent Sandbox secret bindings: configured
 - FreeAgent OAuth connection: completed for Fox Learning Ltd Sandbox;
   encrypted tokens are persisted in `accounting_connections`

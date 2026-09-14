@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-14 - Balance accounting status cards
+
+- Accounting status cards now render as five equal columns when space allows,
+  then adapt to a full second row without leaving an empty grid slot.
+- The small-screen fallback keeps the final status card spanning the available
+  row width.
+- Deployed executable commit `9d69df1` as Worker version
+  `c91ef6b8-a2b0-49be-9418-2789b473035f`.
+
 ### 2026-09-14 - Normalize billing settings layout
 
 - Made the Billing settings card full-width with equal-sized
