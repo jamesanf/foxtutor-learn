@@ -16,6 +16,10 @@ Authorization state is random, stored as a hash with the initiating admin,
 environment and expiry, and consumed atomically. Callback state, admin
 identity, environment and configured redirect URI must all match. Tokens are
 encrypted with AES-GCM material derived from the server-side encryption key.
+The exact OAuth callback path bypasses the outer Cloudflare Access application
+so FreeAgent can return to it, but the Worker performs its own state-bound
+administrator authorization before exchanging the code. No other Learn or
+accounting path is bypassed.
 
 ## Identity and authorization
 

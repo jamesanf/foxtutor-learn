@@ -21,9 +21,10 @@ production credentials.
 4. As an admin, open `/learn/admin/accounting` and start the FreeAgent
    connection.
 5. Complete OAuth, verify the returned company subdomain and confirm the
-   connection status. If the callback returns 502, inspect the safe
-   stage-labelled Worker diagnostic and repeat only after identifying the
-   failing stage.
+   connection status. The exact callback path bypasses Cloudflare Access, but
+   the Worker accepts it only with the one-time admin-bound OAuth state. If
+   the callback returns 502, inspect the safe stage-labelled Worker diagnostic
+   and repeat only after identifying the failing stage.
 6. For the approved test payer, enter the numeric FreeAgent contact ID.
    Confirm the server verifies the contact in the pinned company before saving.
 7. After the consequence is approved, create or select the approved

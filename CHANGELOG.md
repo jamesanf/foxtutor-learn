@@ -1,5 +1,18 @@
 # Changelog
 
+### 2026-09-14 - Narrow FreeAgent OAuth callback perimeter
+
+- Added an exact-path Cloudflare Access application for
+  `foxtutor.org/learn/admin/accounting/oauth/callback` with a Bypass/Everyone
+  policy; the broader Learn application and all admin/accounting routes remain
+  protected.
+- Updated the Worker callback to authenticate the bypassed request through its
+  one-time admin-bound OAuth state and establish the normal Learn session only
+  after a successful provider connection.
+- Deployed executable commit
+  `4903417404b2096c5252b76082864919211beeaa` as Worker version
+  `1b21cf49-2ba2-4724-9656-6d3a718ffcab`.
+
 ### 2026-09-14 - Deploy safe FreeAgent OAuth diagnostics
 
 - Added stage-labelled server diagnostics for configuration validation,

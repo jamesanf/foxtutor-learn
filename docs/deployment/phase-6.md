@@ -9,9 +9,9 @@
 - D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `9b80225`
-- Deployed source commit: `9b80225`
-- Deployed Worker version: `3f743654-1e32-4900-9cb8-019e7949efe7`
+- Repository HEAD at executable deployment: `4903417404b2096c5252b76082864919211beeaa`
+- Deployed source commit: `4903417404b2096c5252b76082864919211beeaa`
+- Deployed Worker version: `1b21cf49-2ba2-4724-9656-6d3a718ffcab`
 - FreeAgent Sandbox secret bindings: configured
 - FreeAgent OAuth connection: not completed; `accounting_connections` has no
   persisted connection
@@ -34,10 +34,13 @@ source commit above is the reviewed executable commit from which
    GBP cannot be changed; any other setting change must be explicit and
    approved. The current non-VAT setting is an explicit zero tax rate; never
    rely on FreeAgent defaults.
-7. Complete the sandbox acceptance runbook.
-8. Configure production only after sandbox evidence and commercial approval.
-9. Run exactly one approved controlled production accounting event.
-10. Verify the external provider object, retention and independent evidence.
+7. Complete the sandbox OAuth callback. The exact callback path bypasses
+   Cloudflare Access, but the Worker accepts it only with the one-time
+   admin-bound OAuth state and creates the normal Learn session after success.
+8. Complete the sandbox acceptance runbook.
+9. Configure production only after sandbox evidence and commercial approval.
+10. Run exactly one approved controlled production accounting event.
+11. Verify the external provider object, retention and independent evidence.
 
 ## Current closure state
 

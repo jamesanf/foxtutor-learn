@@ -76,6 +76,10 @@ These values must always be reported separately:
 - **OAuth state:** Sandbox secrets and company pin are configured, but no
   `accounting_connections` row exists because the OAuth callback has not yet
   completed successfully.
+- **Callback perimeter:** only
+  `/learn/admin/accounting/oauth/callback` bypasses Cloudflare Access. The
+  Worker requires a one-time OAuth state bound to an active administrator;
+  `/learn/admin` and all other accounting routes remain Access-protected.
 
 Wrangler reports the deployment source metadata as `Unknown`; the deployed
 source commit is the reviewed executable commit from which the deployment was

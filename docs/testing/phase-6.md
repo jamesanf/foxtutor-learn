@@ -58,3 +58,8 @@ The deployed OAuth callback now emits a stage-labelled diagnostic containing
 only a safe error code, HTTP status and fixed stage message. The next
 authenticated Sandbox callback must be repeated to identify the live failing
 stage.
+
+The callback perimeter was verified separately: an invalid-state request to
+the exact callback path reaches the Worker and returns its application-level
+403, while `/learn/admin` and `/learn/admin/accounting` continue to return
+Cloudflare Access authentication redirects.
