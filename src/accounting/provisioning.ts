@@ -38,18 +38,6 @@ function localState(status: DirectDebitStatus): { mandateState: BillingMandateSt
   return { mandateState: status, provisioningState: status };
 }
 
-export function shouldSendDirectDebitSetupNotification(
-  account: Pick<BillingAccount, "mandate_state" | "last_error_code">,
-  status: DirectDebitStatus
-): boolean {
-  return status === "SETUP_REQUIRED"
-    || (
-      status === "UNKNOWN"
-      && (account.mandate_state === "NOT_CONFIGURED" || account.mandate_state === "UNKNOWN")
-      && account.last_error_code === "MANDATE_STATE_MISSING"
-    );
-}
-
 function safeProviderError(error: unknown): { code: string; message: string } {
   if (error instanceof FreeAgentApiError) return { code: error.shape.code, message: error.message };
   return { code: "UNKNOWN", message: "FreeAgent provisioning failed unexpectedly." };

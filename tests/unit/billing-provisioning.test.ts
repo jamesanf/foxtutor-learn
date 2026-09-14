@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reconcileVerifiedContact, shouldSendDirectDebitSetupNotification } from "../../src/accounting/provisioning";
+import { reconcileVerifiedContact } from "../../src/accounting/provisioning";
 import type { FreeAgentContact } from "../../src/accounting/freeagent/client";
 
 const now = "2026-09-14T12:00:00.000Z";
@@ -99,21 +99,6 @@ const activeContact: FreeAgentContact = {
 };
 
 describe("billing mandate reconciliation", () => {
-  it("sends initial setup guidance when a new account has no provider mandate field", () => {
-    expect(shouldSendDirectDebitSetupNotification({
-      mandate_state: "NOT_CONFIGURED",
-      last_error_code: "MANDATE_STATE_MISSING"
-    }, "UNKNOWN")).toBe(true);
-    expect(shouldSendDirectDebitSetupNotification({
-      mandate_state: "UNKNOWN",
-      last_error_code: "MANDATE_STATE_MISSING"
-    }, "UNKNOWN")).toBe(true);
-    expect(shouldSendDirectDebitSetupNotification({
-      mandate_state: "UNKNOWN",
-      last_error_code: "TIMEOUT"
-    }, "UNKNOWN")).toBe(false);
-  });
-
   it("updates a verified Production contact to an ACTIVE billing account immediately", async () => {
     const state = harness(account({ provider_environment: "sandbox" }));
     await expect(reconcileVerifiedContact(state.db, { FREEAGENT_ENVIRONMENT: "production" }, "student-1", activeContact, now))
