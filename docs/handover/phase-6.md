@@ -1,14 +1,15 @@
 # Phase 6 - External acceptance runbook
 
-This runbook contains no secrets. It starts only after the owner approves the
-commercial contract and supplies credentials through the approved secret
-channel.
+This runbook contains no secrets. The Sandbox bindings are currently
+configured in the Worker; it starts with the authenticated OAuth callback
+attempt. Production remains gated on commercial approval and separate
+production credentials.
 
 ## Sandbox
 
-1. Configure the sandbox FreeAgent environment, client ID, client secret,
-   encryption key, exact registered callback URI, company subdomain and
-   approved provider mapping values. Review the admin billing-management page:
+1. Confirm the configured Sandbox environment, exact registered callback URI,
+   company subdomain and approved provider mapping values. Review the admin
+   billing-management page:
    the initial normal lesson setting is 55.00 GBP, GBP is immutable, and the
    item type, category, payment terms and explicit sales-tax rate are editable.
    Keep the sales-tax rate at `0` for the current non-VAT contract.
@@ -20,7 +21,9 @@ channel.
 4. As an admin, open `/learn/admin/accounting` and start the FreeAgent
    connection.
 5. Complete OAuth, verify the returned company subdomain and confirm the
-   connection status.
+   connection status. If the callback returns 502, inspect the safe
+   stage-labelled Worker diagnostic and repeat only after identifying the
+   failing stage.
 6. For the approved test payer, enter the numeric FreeAgent contact ID.
    Confirm the server verifies the contact in the pinned company before saving.
 7. After the consequence is approved, create or select the approved

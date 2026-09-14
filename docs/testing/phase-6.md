@@ -23,7 +23,7 @@ The automated suite covers:
 - browser shell accessibility and no-index contracts;
 - production perimeter smoke.
 
-Current result: **27 test files and 130 tests passed**.
+Current result: **27 test files and 131 tests passed**.
 
 Run the current suite with:
 
@@ -53,3 +53,8 @@ The following cannot be claimed without human-owned provider access:
 - authenticated production admin/student browser acceptance.
 
 No test fixture substitutes for those external actions.
+
+The deployed OAuth callback now emits a stage-labelled diagnostic containing
+only a safe error code, HTTP status and fixed stage message. The next
+authenticated Sandbox callback must be repeated to identify the live failing
+stage.

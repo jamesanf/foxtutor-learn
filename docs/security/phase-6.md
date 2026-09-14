@@ -49,3 +49,7 @@ blocked while active accounting work depends on it.
 Logs may include event identity, status, attempt, safe error code and provider
 reference. They must not include secrets, authorization headers, raw OAuth
 responses or unnecessary personal data.
+
+OAuth callback failure diagnostics are restricted to a fixed stage label,
+safe error code, HTTP status and safe message. Authorization codes, tokens,
+secrets, encryption keys and provider response bodies are excluded.

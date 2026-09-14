@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-14 - Deploy safe FreeAgent OAuth diagnostics
+
+- Added stage-labelled server diagnostics for configuration validation,
+  authorization-code exchange, company verification, D1 lookup and encrypted
+  token persistence without logging credentials, tokens, authorization codes or
+  provider response bodies.
+- Deployed executable commit `9b80225` as Worker version
+  `3f743654-1e32-4900-9cb8-019e7949efe7`.
+- Confirmed the Sandbox secret bindings are present and production D1 has no
+  persisted accounting connection or provider token.
+- The full suite passes with 27 test files and 131 tests.
+
 ### 2026-09-14 - Simplify billing settings guidance
 
 - Reduced the billing-page setup copy to concise defaults and provider mapping

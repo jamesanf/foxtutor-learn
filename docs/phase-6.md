@@ -60,19 +60,22 @@ only current Phase 6 documents; historical release chronology is preserved in
 | Operational/accounting separation | D1 foreign keys and deletion guards | Migration and retention design | COMPLETE |
 | Browser/admin console | `src/worker/index.ts`, `public/learn.css` | Browser shell contract and deployed route | COMPLETE - AUTHENTICATED ACCEPTANCE ONLY REMAINS |
 | Production deployment | `docs/deployment/phase-6.md` | Worker, route and D1 verification | COMPLETE |
-| Sandbox mutation | External FreeAgent sandbox | No credentials supplied; normal lesson values are known | BLOCKED - EXTERNAL CREDENTIAL |
+| Sandbox mutation | External FreeAgent sandbox | Secrets are configured; OAuth, mapping approval and mutation evidence remain | BLOCKED - EXTERNAL ACCEPTANCE |
 | Production mutation | External FreeAgent production | No credentials or approval supplied | BLOCKED - EXTERNAL HUMAN GATE |
 
 ## Current deployed distinction
 
 These values must always be reported separately:
 
-- **Repository HEAD at executable deployment:** `be74998b6dc3b26ca75deecaa7db7008eea0a84e`.
-- **Deployed source commit:** `be74998b6dc3b26ca75deecaa7db7008eea0a84e`.
-- **Deployed Worker version:** `f29f346c-91e8-4f62-a6be-f6bf99514583`.
+- **Repository HEAD at executable deployment:** `9b80225`.
+- **Deployed source commit:** `9b80225`.
+- **Deployed Worker version:** `3f743654-1e32-4900-9cb8-019e7949efe7`.
 - **D1 state:** production migrations through
   `0019_accounting_billing_settings.sql`, with no pending migration reported
   after deployment of the executable change.
+- **OAuth state:** Sandbox secrets and company pin are configured, but no
+  `accounting_connections` row exists because the OAuth callback has not yet
+  completed successfully.
 
 Wrangler reports the deployment source metadata as `Unknown`; the deployed
 source commit is the reviewed executable commit from which the deployment was
@@ -93,16 +96,16 @@ Only the following external actions remain:
    authority, item/category, payment terms and effective-date policy. Review
    the current billing-management values; GBP is always enforced and the
    initial normal lesson amount is 55.00 GBP with an explicit zero tax rate.
-3. Supply sandbox FreeAgent client credentials and the encryption key through
-   the approved secret channel.
-4. Complete sandbox OAuth and verify the pinned company.
-5. Supply and verify the approved sandbox contact and provider mappings.
-6. Run the approved sandbox event only after the `ADMIN_CANCELLED`
+3. Complete Sandbox OAuth and verify the pinned company. If the callback
+   fails, inspect the deployed safe stage diagnostic; it never logs tokens,
+   secrets, authorization codes or provider response bodies.
+4. Supply and verify the approved sandbox contact and provider mappings.
+5. Run the approved sandbox event only after the `ADMIN_CANCELLED`
    consequence is decided, then verify the provider object.
-7. Supply production credentials through the approved secret channel.
-8. Verify the production company and repeat the approved mapping checks.
-9. Approve and execute exactly one controlled production accounting event.
-10. Independently verify the provider object and retention result.
+6. Supply production credentials through the approved secret channel.
+7. Verify the production company and repeat the approved mapping checks.
+8. Approve and execute exactly one controlled production accounting event.
+9. Independently verify the provider object and retention result.
 
 There are no technical TODOs in this checklist.
 

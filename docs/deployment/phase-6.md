@@ -9,15 +9,16 @@
 - D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `be74998b6dc3b26ca75deecaa7db7008eea0a84e`
-- Deployed source commit: `be74998b6dc3b26ca75deecaa7db7008eea0a84e`
-- Deployed Worker version: `f29f346c-91e8-4f62-a6be-f6bf99514583`
-- Production FreeAgent configuration: absent until human acceptance
+- Repository HEAD at executable deployment: `9b80225`
+- Deployed source commit: `9b80225`
+- Deployed Worker version: `3f743654-1e32-4900-9cb8-019e7949efe7`
+- FreeAgent Sandbox secret bindings: configured
+- FreeAgent OAuth connection: not completed; `accounting_connections` has no
+  persisted connection
 
 Wrangler reported the deployment source metadata as `Unknown`; the deployed
 source commit above is the reviewed executable commit from which
-`npm run deploy` was run. A documentation-only commit does not constitute a
-runtime deployment.
+`npm run deploy` was run.
 
 ## Safe rollout order
 
@@ -28,11 +29,11 @@ runtime deployment.
    state.
 5. Run perimeter smoke and authenticated admin/student checks where credentials
    are available.
-6. Configure sandbox secrets through the approved secret store only. Confirm
-   the initial 55.00 GBP settings in the admin billing-management page. GBP
-   cannot be changed; any other setting change must be explicit and approved.
-   The current non-VAT setting is an explicit zero tax rate; never rely on
-   FreeAgent defaults.
+6. Confirm the configured Sandbox secrets, company pin and callback, then
+   review the initial 55.00 GBP settings in the admin billing-management page.
+   GBP cannot be changed; any other setting change must be explicit and
+   approved. The current non-VAT setting is an explicit zero tax rate; never
+   rely on FreeAgent defaults.
 7. Complete the sandbox acceptance runbook.
 8. Configure production only after sandbox evidence and commercial approval.
 9. Run exactly one approved controlled production accounting event.
