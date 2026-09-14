@@ -26,6 +26,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("FreeAgent ${environmentLabel} integration active");
     expect(workerSource).toContain('status.connected ? "Reauthenticate" : "Connect"');
     expect(workerSource).toContain('`/learn/admin/accounting/connect/${environment}`');
+    expect(workerSource).toContain("FreeAgent token encryption key is not configured.");
     expect(workerSource).toContain('class="accounting-icon-link accounting-settings-link"');
     expect(workerSource).toContain('aria-label="Billing settings"');
     expect(workerSource).toContain("M12 15.5A3.5 3.5 0 1 1 15.5 12");

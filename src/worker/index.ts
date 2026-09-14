@@ -174,7 +174,7 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatuses, accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, listFreeAgentCategories, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
+import { accountingIntegrationStatuses, accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, freeAgentEnvironmentConfigIssue, listFreeAgentCategories, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
 import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, parseFreeAgentEnvironment, type FreeAgentCategory, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
@@ -2007,9 +2007,17 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (!environment) return messagePage("FreeAgent environment required", "Choose Connect Sandbox or Connect Production.", 400);
     const credentials = freeAgentEnvironmentConfig(env, environment);
     if (!credentials) {
+      const configurationIssue = freeAgentEnvironmentConfigIssue(env, environment);
+      const issueMessage = configurationIssue === "token_encryption_key"
+        ? `${freeAgentEnvironmentLabel(environment)} FreeAgent token encryption key is not configured.`
+        : configurationIssue === "client_id"
+          ? `${freeAgentEnvironmentLabel(environment)} FreeAgent OAuth client ID is not configured.`
+          : configurationIssue === "client_secret"
+            ? `${freeAgentEnvironmentLabel(environment)} FreeAgent OAuth client secret is not configured.`
+            : `${freeAgentEnvironmentLabel(environment)} FreeAgent configuration is not available.`;
       return messagePage(
         `${freeAgentEnvironmentLabel(environment)} FreeAgent unavailable`,
-        `${freeAgentEnvironmentLabel(environment)} FreeAgent credentials are not configured.`,
+        issueMessage,
         503
       );
     }

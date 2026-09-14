@@ -124,10 +124,24 @@ export interface FreeAgentEnvironmentConfig {
   oauthRedirectUri: string | null;
 }
 
-export function freeAgentEnvironmentConfig(
+export type FreeAgentEnvironmentConfigIssue =
+  | "environment"
+  | "client_id"
+  | "client_secret"
+  | "token_encryption_key";
+
+type FreeAgentEnvironmentConfigValues = {
+  clientId?: string;
+  clientSecret?: string;
+  companySubdomain?: string;
+  tokenEncryptionKey?: string;
+  oauthRedirectUri?: string;
+};
+
+function freeAgentEnvironmentConfigValues(
   env: AccountingEnvironment,
-  environment = configuredEnvironment(env)
-): FreeAgentEnvironmentConfig | null {
+  environment: FreeAgentEnvironment | null
+): FreeAgentEnvironmentConfigValues | null {
   if (!environment) return null;
   const selected = environment === "sandbox"
     ? {
@@ -151,22 +165,40 @@ export function freeAgentEnvironmentConfig(
     tokenEncryptionKey: env.FREEAGENT_TOKEN_ENCRYPTION_KEY,
     oauthRedirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI
   } : null;
-  const value = {
+  return {
     clientId: selected.clientId ?? legacySandbox?.clientId,
     clientSecret: selected.clientSecret ?? legacySandbox?.clientSecret,
     companySubdomain: selected.companySubdomain ?? legacySandbox?.companySubdomain,
     tokenEncryptionKey: selected.tokenEncryptionKey ?? legacySandbox?.tokenEncryptionKey,
     oauthRedirectUri: selected.oauthRedirectUri ?? legacySandbox?.oauthRedirectUri
   };
-  return value.clientId && value.clientSecret && value.tokenEncryptionKey
-    ? {
-      clientId: value.clientId,
-      clientSecret: value.clientSecret,
-      companySubdomain: value.companySubdomain ?? null,
-      tokenEncryptionKey: value.tokenEncryptionKey,
-      oauthRedirectUri: value.oauthRedirectUri ?? null
-    }
-    : null;
+}
+
+export function freeAgentEnvironmentConfigIssue(
+  env: AccountingEnvironment,
+  environment = configuredEnvironment(env)
+): FreeAgentEnvironmentConfigIssue | null {
+  const value = freeAgentEnvironmentConfigValues(env, environment);
+  if (!value) return "environment";
+  if (!value.clientId) return "client_id";
+  if (!value.clientSecret) return "client_secret";
+  if (!value.tokenEncryptionKey) return "token_encryption_key";
+  return null;
+}
+
+export function freeAgentEnvironmentConfig(
+  env: AccountingEnvironment,
+  environment = configuredEnvironment(env)
+): FreeAgentEnvironmentConfig | null {
+  const value = freeAgentEnvironmentConfigValues(env, environment);
+  if (!value || !value.clientId || !value.clientSecret || !value.tokenEncryptionKey) return null;
+  return {
+    clientId: value.clientId,
+    clientSecret: value.clientSecret,
+    companySubdomain: value.companySubdomain ?? null,
+    tokenEncryptionKey: value.tokenEncryptionKey,
+    oauthRedirectUri: value.oauthRedirectUri ?? null
+  };
 }
 
 function providerError(error: unknown): FreeAgentApiError | null {

@@ -6,6 +6,7 @@ import {
 } from "../../src/accounting/freeagent/client";
 import {
   freeAgentEnvironmentConfig,
+  freeAgentEnvironmentConfigIssue,
   type AccountingEnvironment
 } from "../../src/accounting/service";
 
@@ -62,6 +63,25 @@ describe("FreeAgent environment isolation", () => {
       FREEAGENT_TOKEN_ENCRYPTION_KEY: "legacy-sandbox-key"
     });
     expect(freeAgentEnvironmentConfig(env, "production")).toBeNull();
+  });
+
+  it("identifies a missing Production token encryption key before OAuth", () => {
+    const env = environment({ FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY: undefined });
+    expect(freeAgentEnvironmentConfigIssue(env, "production")).toBe("token_encryption_key");
+    expect(freeAgentEnvironmentConfig(env, "production")).toBeNull();
+  });
+
+  it("accepts complete Production configuration for OAuth URL generation", () => {
+    const env = environment();
+    expect(freeAgentEnvironmentConfigIssue(env, "production")).toBeNull();
+    const approval = new URL(freeAgentAuthorizationUrl("production", {
+      clientId: env.FREEAGENT_PRODUCTION_CLIENT_ID ?? "",
+      redirectUri: env.FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI ?? "",
+      state: "production-state",
+      accessLevel: "4"
+    }));
+    expect(approval.origin).toBe("https://api.freeagent.com");
+    expect(approval.pathname).toBe("/v2/approve_app");
   });
 
   it("uses an environment-specific API origin", async () => {
