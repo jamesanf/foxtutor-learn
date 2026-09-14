@@ -96,6 +96,8 @@ export interface AccountingBillingSettings {
   amount: string;
   item_type: string;
   category_url: string;
+  provider_environment: AccountingEnvironmentName | null;
+  provider_company_subdomain: string | null;
   payment_terms_days: number;
   currency: "GBP";
   sales_tax_rate: string;
@@ -580,6 +582,8 @@ export async function saveAccountingBillingSettings(
     amount: string;
     itemType: string;
     categoryUrl: string;
+    providerEnvironment?: AccountingEnvironmentName | null;
+    providerCompanySubdomain?: string | null;
     paymentTermsDays: number;
     salesTaxRate: string;
     updatedByUserId: string | null;
@@ -588,13 +592,15 @@ export async function saveAccountingBillingSettings(
 ): Promise<void> {
   await db.prepare(
     `INSERT INTO accounting_billing_settings
-     (id, amount, item_type, category_url, payment_terms_days, currency,
+     (id, amount, item_type, category_url, provider_environment, provider_company_subdomain, payment_terms_days, currency,
       sales_tax_rate, updated_by_user_id, created_at, updated_at)
-     VALUES ('FREEAGENT', ?, ?, ?, ?, 'GBP', ?, ?, ?, ?)
+     VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, 'GBP', ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        amount = excluded.amount,
        item_type = excluded.item_type,
        category_url = excluded.category_url,
+       provider_environment = excluded.provider_environment,
+       provider_company_subdomain = excluded.provider_company_subdomain,
        payment_terms_days = excluded.payment_terms_days,
        currency = 'GBP',
        sales_tax_rate = excluded.sales_tax_rate,
@@ -604,6 +610,8 @@ export async function saveAccountingBillingSettings(
     input.amount,
     input.itemType,
     input.categoryUrl,
+    input.providerEnvironment ?? null,
+    input.providerCompanySubdomain ?? null,
     input.paymentTermsDays,
     input.salesTaxRate,
     input.updatedByUserId,

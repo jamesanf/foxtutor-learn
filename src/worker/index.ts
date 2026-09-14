@@ -174,8 +174,8 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
-import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
+import { accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, listFreeAgentCategories, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
+import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, type FreeAgentCategory, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
   MAX_RESOURCE_SIZE_BYTES,
@@ -525,10 +525,12 @@ function accountingList(
   const summary = `<div class="summary-grid accounting-summary-grid"><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Retryable</span><strong>${counts.RETRYABLE}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Succeeded</span><strong>${counts.SUCCEEDED}</strong></section></div>`;
   const settingsAction = `<a class="accounting-icon-link accounting-settings-link" href="/learn/admin/accounting/settings" aria-label="Billing settings" title="Billing settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5ZM19.43 12.97c.04-.32.07-.64.07-.97s-.02-.65-.07-.97l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.37-.31-.6-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98L14.5 2.42C14.47 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.5.42L9.12 5.07c-.61.25-1.18.59-1.69.98l-2.49-1c-.23-.08-.48 0-.6.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.32-.08.65-.08.98s.03.65.08.97l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.37.31.6.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.25 1.18-.58 1.69-.98l2.49 1c.23.08.48 0 .6-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.63Z"></path></svg></a>`;
   const connection = `<section class="card"><div class="section-heading"><div><h2>FreeAgent</h2><p class="lede">${escapeHtml(status.label)} · ${escapeHtml(status.environment)}</p></div><div class="form-actions accounting-connection-actions">${settingsAction}${status.configured && !status.connected ? buttonLink("/learn/admin/accounting/connect", "Connect FreeAgent") : ""}${!status.errorMessage ? `<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span>` : ""}</div></div>${status.errorMessage ? `<p class="form-error">${escapeHtml(status.errorMessage)}</p>` : ""}${status.lastSuccessAt ? `<p class="muted">Last successful sync: ${escapeHtml(notificationTimestamp(status.lastSuccessAt))}</p>` : ""}</section>`;
+  const mapping = status.invoiceMapping;
+  const mappingStatus = `<section class="card"><div class="section-heading"><div><h2>Invoice mapping</h2><p class="lede">${mapping.category ? "Configured" : "Incomplete"}</p></div><a class="button secondary" href="/learn/admin/accounting/settings">Configure</a></div><dl class="accounting-connection-details"><div><dt>Amount</dt><dd>${mapping.amount ? "Configured (£55.00 default)" : "Not configured"}</dd></div><div><dt>Item type</dt><dd>${mapping.itemType ? "Configured" : "Not configured"}</dd></div><div><dt>Category</dt><dd>${mapping.category ? "Configured" : "Not selected"}</dd></div><div><dt>Payment terms</dt><dd>${mapping.paymentTerms ? "Configured (0 days default)" : "Not configured"}</dd></div><div><dt>Currency</dt><dd>${mapping.currency ? "GBP" : "Not configured"}</dd></div><div><dt>VAT / sales tax</dt><dd>${mapping.salesTax ? "Configured (0% default)" : "Not configured"}</dd></div></dl></section>`;
   const body = rows.length
     ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Event</th><th>Student</th><th>Consequence</th><th>Status</th><th>External reference</th><th>Action</th></tr></thead><tbody>${rows.map((row) => `<tr><td data-label="Date">${escapeHtml(notificationTimestamp(row.created_at))}</td><td data-label="Event">${escapeHtml(accountingLabel(row.event_type))}</td><td data-label="Student">${escapeHtml(row.student_name ?? "Pupil")}</td><td data-label="Consequence">${escapeHtml(accountingLabel(row.billing_consequence))}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(accountingLabel(row.status))}</span>${row.safe_error_message ? `<small>${escapeHtml(row.safe_error_message)}</small>` : ""}</td><td data-label="External reference">${row.external_url ? `<a href="${escapeHtml(row.external_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.external_reference ?? "Open in FreeAgent")}</a>` : escapeHtml(row.external_reference ?? "—")}</td><td data-label="Action">${row.status === "UNKNOWN" ? `<a class="button secondary" href="/learn/admin/accounting/${encodeURIComponent(row.id)}/reconcile">Reconcile</a>` : ["FAILED", "RETRYABLE"].includes(row.status) ? `<form method="post" action="/learn/admin/accounting/${encodeURIComponent(row.id)}/retry">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Retry</button></form>` : "—"}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No accounting events</h2><p>Phase 5 commercial decisions will appear here when they require an accounting boundary.</p></div>`;
-  return `${connection}${summary}${accountingContactList(students, links, csrfToken)}<section class="card"><div class="section-heading"><div><h2>Accounting outbox</h2><p class="muted">FreeAgent actions are processed separately from lesson and email delivery.</p></div></div>${body}</section>`;
+  return `${connection}${mappingStatus}${summary}${accountingContactList(students, links, csrfToken)}<section class="card"><div class="section-heading"><div><h2>Accounting outbox</h2><p class="muted">FreeAgent actions are processed separately from lesson and email delivery.</p></div></div>${body}</section>`;
 }
 
 function billingSettingsErrorHint(error: string): string {
@@ -549,6 +551,8 @@ function accountingBillingSettingsPage(
     salesTaxRate: string;
   },
   status: Awaited<ReturnType<typeof accountingIntegrationStatus>>,
+  categories: FreeAgentCategory[] = [],
+  categoryError?: string,
   error?: string
 ): string {
   const integrationTag = status.connected
@@ -562,7 +566,15 @@ function accountingBillingSettingsPage(
   const warning = error
     ? `<p class="form-error form-warning" role="alert" tabindex="0" data-tooltip="${escapeHtml(billingSettingsErrorHint(error))}">${escapeHtml(error)}</p>`
     : "";
-  return `<section class="card form-card billing-settings-card"><div class="page-heading"><div><h1>Billing settings</h1></div><div class="form-actions billing-settings-actions">${connectionAction}${backAction}</div></div>${connectionDetails}${warning}<p class="info-box">FreeAgent credentials are managed as Cloudflare secrets. Category and contact mappings come from FreeAgent.</p><form method="post" action="/learn/admin/accounting/settings"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Use pounds and pence, for example 55.00.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required><span class="field-help">Hours is the default.</span></label><label>FreeAgent category URL<input name="categoryUrl" type="url" value="${escapeHtml(values.categoryUrl)}" required><span class="field-help">Use the category URL from FreeAgent.</span></label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required></label><label>Sales tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0 means no VAT.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save billing settings</button></div></form></section>`;
+  const categoryOptions = categories.length
+    ? `<option value="">Select a FreeAgent accounting category</option>${categories.map((category) => `<option value="${escapeHtml(category.url)}"${category.url === values.categoryUrl ? " selected" : ""}>${escapeHtml(category.name)}${category.nominalCode ? ` (${escapeHtml(category.nominalCode)})` : ""}</option>`).join("")}`
+    : `<option value="">${categoryError ? "Categories unavailable" : "No categories returned"}</option>`;
+  const mapping = status.invoiceMapping;
+  const mappingRow = (label: string, configured: boolean): string => `<div><dt>${label}</dt><dd>${configured ? "Configured" : "Not configured"}</dd></div>`;
+  const categoryHelp = categoryError
+    ? `<span class="field-help form-error">${escapeHtml(categoryError)}</span>`
+    : `<span class="field-help">Choose the approved category for the connected FreeAgent company. The provider URL is stored internally.</span>`;
+  return `<section class="card form-card billing-settings-card"><div class="page-heading"><div><h1>Billing settings</h1></div><div class="form-actions billing-settings-actions">${connectionAction}${backAction}</div></div>${connectionDetails}${warning}<p class="info-box">FreeAgent credentials are managed as Cloudflare secrets. Category choices are read from the connected ${escapeHtml(status.environment)} company; no raw provider URL is required.</p><section class="accounting-mapping-status"><h2>Invoice mapping</h2><dl class="accounting-connection-details">${mappingRow("Amount", mapping.amount)}${mappingRow("Item type", mapping.itemType)}${mappingRow("Category", mapping.category)}${mappingRow("Payment terms", mapping.paymentTerms)}${mappingRow("Currency", mapping.currency)}${mappingRow("VAT / sales tax", mapping.salesTax)}</dl></section><form method="post" action="/learn/admin/accounting/settings"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Normal lesson value: £55.00. Sandbox acceptance may use a separate controlled test amount.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required><span class="field-help">Hours is the established default.</span></label><label>FreeAgent accounting category<select name="categoryUrl" required>${categoryOptions}</select>${categoryHelp}</label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required><span class="field-help">The approved default is 0 days.</span></label><label>VAT / sales-tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0% means the established non-VAT setting.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save billing settings</button></div></form></section>`;
 }
 
 function lessonReportForm(
@@ -2032,6 +2044,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const persisted = await findAccountingBillingSettings(db);
     const fallback = configuredInvoice(env);
     const status = await accountingIntegrationStatus(db, env);
+    const environment = configuredEnvironment(env);
     const values = {
       amount: persisted?.amount ?? fallback?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
       itemType: persisted?.item_type ?? fallback?.itemType ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours",
@@ -2039,8 +2052,22 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       paymentTermsDays: String(persisted?.payment_terms_days ?? fallback?.paymentTermsInDays ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"),
       salesTaxRate: persisted?.sales_tax_rate ?? fallback?.salesTaxRate ?? env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"
     };
+    let categories: FreeAgentCategory[] = [];
+    let categoryError: string | undefined;
+    if (status.connected && environment) {
+      try {
+        categories = await listFreeAgentCategories(db, env, new Date().toISOString(), freeAgentFetch);
+        if (!categories.length) categoryError = "The connected FreeAgent company returned no accounting categories.";
+      } catch (error) {
+        categoryError = error instanceof FreeAgentApiError
+          ? `FreeAgent categories could not be loaded (${error.shape.code}).`
+          : "FreeAgent categories could not be loaded.";
+      }
+    } else if (!status.connected) {
+      categoryError = "Connect FreeAgent before selecting a company accounting category.";
+    }
     if (request.method === "GET") {
-      return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status));
+      return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status, categories, categoryError));
     }
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
@@ -2052,10 +2079,12 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       paymentTermsDays: formText(form, "paymentTermsDays"),
       currency: formText(form, "currency"),
       salesTaxRate: formText(form, "salesTaxRate")
-    }, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : null);
-    if (!result.value) return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status, result.error ?? "Billing settings are invalid."), false);
+    }, environment, categories);
+    if (!result.value) return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status, categories, categoryError, result.error ?? "Billing settings are invalid."), false);
     await saveAccountingBillingSettings(db, {
       ...result.value,
+      providerEnvironment: environment,
+      providerCompanySubdomain: status.companySubdomain,
       updatedByUserId: active.user.id,
       now: new Date().toISOString()
     });

@@ -19,7 +19,10 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"');
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"');
     expect(workerSource).toContain("FreeAgent credentials are managed as Cloudflare secrets.");
-    expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
+    expect(workerSource).toContain("Category choices are read from the connected");
+    expect(workerSource).toContain('name="categoryUrl" required');
+    expect(workerSource).not.toContain('name="categoryUrl" type="url"');
+    expect(workerSource).toContain("provider URL is stored internally");
     expect(workerSource).toContain("FreeAgent integration active");
     expect(workerSource).toContain("Reauthenticate FreeAgent");
     expect(workerSource).toContain('class="accounting-icon-link accounting-settings-link"');

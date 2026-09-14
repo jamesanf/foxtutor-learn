@@ -22,6 +22,7 @@ import {
   FreeAgentClient,
   parseFreeAgentEnvironment,
   refreshAccessToken,
+  type FreeAgentCategory,
   type FreeAgentEnvironment
 } from "./freeagent/client";
 import {
@@ -80,6 +81,14 @@ export interface AccountingIntegrationStatus {
   lastSuccessAt: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  invoiceMapping: {
+    amount: boolean;
+    itemType: boolean;
+    category: boolean;
+    paymentTerms: boolean;
+    currency: boolean;
+    salesTax: boolean;
+  };
 }
 
 export interface InvoiceConfiguration {
@@ -181,14 +190,22 @@ function invoiceConfigurationIssueForValues(
   if (amountMinorUnits === null || amountMinorUnits <= 0n) return "FreeAgent invoice amount is missing or invalid.";
   if (amountMinorUnits > 999999999999n) return "FreeAgent invoice amount is outside the supported range.";
   if (!itemType || itemType.length > 240) return "FreeAgent invoice item type is missing or too long.";
-  if (!categoryUrl) return "FreeAgent invoice category is missing.";
-  if (!/^https:\/\/api(?:\.sandbox)?\.freeagent\.com\/v2\/categories\/[^/]+$/.test(categoryUrl)) return "FreeAgent invoice category URL is invalid.";
+  const categoryIssue = categoryUrlIssue(categoryUrl, environment);
+  if (categoryIssue) return categoryIssue;
   if (!paymentTermsText || !/^\d+$/.test(paymentTermsText)) return "FreeAgent invoice payment terms are missing or invalid.";
   const paymentTerms = Number(paymentTermsText);
   if (!Number.isInteger(paymentTerms) || paymentTerms < 0 || paymentTerms > 365) return "FreeAgent invoice payment terms are outside the supported range.";
   if (currency !== NORMAL_LESSON_CURRENCY) return "FreeAgent invoice currency must be GBP.";
   if (!salesTax || normalizeSalesTaxRate(salesTax) === null) return "FreeAgent invoice VAT/tax mapping is missing or invalid.";
-  if (!categoryUrl.startsWith(`https://api${environment === "sandbox" ? ".sandbox" : ""}.freeagent.com/`)) return "FreeAgent invoice category does not match the configured environment.";
+  return null;
+}
+
+function categoryUrlIssue(categoryUrl: string, environment: FreeAgentEnvironment | null): string | null {
+  if (!categoryUrl) return "FreeAgent invoice category is missing.";
+  if (!/^https:\/\/api(?:\.sandbox)?\.freeagent\.com\/v2\/categories\/[^/]+$/.test(categoryUrl)) return "FreeAgent invoice category URL is invalid.";
+  if (!environment) return "FreeAgent environment is not configured.";
+  const origin = environment === "sandbox" ? "https://api.sandbox.freeagent.com" : "https://api.freeagent.com";
+  if (!categoryUrl.startsWith(`${origin}/`)) return "FreeAgent invoice category does not match the configured environment.";
   return null;
 }
 
@@ -231,6 +248,37 @@ export function configuredInvoice(env: AccountingEnvironment): InvoiceConfigurat
   }, configuredEnvironment(env));
 }
 
+function billingSettingsValues(
+  settings: Awaited<ReturnType<typeof findAccountingBillingSettings>> | null,
+  env: AccountingEnvironment
+): BillingSettingsInput {
+  return {
+    amount: settings?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
+    itemType: settings?.item_type ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours",
+    categoryUrl: settings?.category_url ?? env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
+    paymentTermsDays: String(settings?.payment_terms_days ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"),
+    currency: settings?.currency ?? env.FREEAGENT_INVOICE_CURRENCY ?? "GBP",
+    salesTaxRate: settings?.sales_tax_rate ?? env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"
+  };
+}
+
+function invoiceMappingStatus(values: BillingSettingsInput, environment: FreeAgentEnvironment | null): AccountingIntegrationStatus["invoiceMapping"] {
+  const amount = values.amount.trim();
+  const itemType = values.itemType.trim();
+  const categoryUrl = values.categoryUrl.trim();
+  const paymentTermsDays = values.paymentTermsDays.trim();
+  const currency = values.currency.trim();
+  const salesTaxRate = values.salesTaxRate.trim();
+  return {
+    amount: Boolean(amount && parseMinorUnits(amount) !== null && parseMinorUnits(amount)! > 0n),
+    itemType: Boolean(itemType),
+    category: categoryUrlIssue(categoryUrl, environment) === null,
+    paymentTerms: /^\d+$/.test(paymentTermsDays) && Number(paymentTermsDays) >= 0 && Number(paymentTermsDays) <= 365,
+    currency: currency === "GBP",
+    salesTax: Boolean(salesTaxRate && normalizeSalesTaxRate(salesTaxRate) !== null)
+  };
+}
+
 function logOAuthStageFailure(stage: string, error: unknown): void {
   const diagnostic = error instanceof FreeAgentApiError
     ? { stage, code: error.shape.code, status: error.shape.status, message: error.shape.message }
@@ -238,12 +286,22 @@ function logOAuthStageFailure(stage: string, error: unknown): void {
   console.log("FreeAgent OAuth stage failed", diagnostic);
 }
 
-export function validateBillingSettings(input: BillingSettingsInput, environment: FreeAgentEnvironment | null): {
+export function validateBillingSettings(
+  input: BillingSettingsInput,
+  environment: FreeAgentEnvironment | null,
+  categories?: FreeAgentCategory[]
+): {
   value: { amount: string; itemType: string; categoryUrl: string; paymentTermsDays: number; salesTaxRate: string } | null;
   error: string | null;
 } {
   const error = invoiceConfigurationIssueForValues(input, environment);
   if (error) return { value: null, error };
+  if (categories && categories.length && !categories.some((category) => category.url === input.categoryUrl.trim())) {
+    return { value: null, error: "Select an accounting category returned by the connected FreeAgent company." };
+  }
+  if (categories && !categories.length) {
+    return { value: null, error: "FreeAgent accounting categories are unavailable; refresh after reconnecting the provider." };
+  }
   return {
     value: {
       amount: formatMinorUnits(parseMinorUnits(input.amount.trim())!),
@@ -262,13 +320,26 @@ async function ensureAccountingBillingSettings(
   now: string
 ): Promise<Awaited<ReturnType<typeof findAccountingBillingSettings>>> {
   const existing = await findAccountingBillingSettings(db);
-  if (existing) return existing;
+  if (existing) {
+    const environment = configuredEnvironment(env);
+    const credentials = freeAgentEnvironmentConfig(env, environment);
+    if (
+      environment &&
+      credentials?.companySubdomain &&
+      existing.provider_environment === environment &&
+      existing.provider_company_subdomain === credentials.companySubdomain
+    ) return existing;
+    if (!existing.provider_environment && environment && credentials?.companySubdomain) return existing;
+    return existing;
+  }
   const initial = configuredInvoice(env);
   if (!initial) return null;
   await saveAccountingBillingSettings(db, {
     amount: initial.amount,
     itemType: initial.itemType,
     categoryUrl: initial.categoryUrl,
+    providerEnvironment: configuredEnvironment(env),
+    providerCompanySubdomain: freeAgentEnvironmentConfig(env, configuredEnvironment(env))?.companySubdomain ?? null,
     paymentTermsDays: initial.paymentTermsInDays,
     salesTaxRate: initial.salesTaxRate,
     updatedByUserId: null,
@@ -284,6 +355,16 @@ export async function configuredInvoiceFromDatabase(
 ): Promise<InvoiceConfiguration | null> {
   const settings = await ensureAccountingBillingSettings(db, env, now);
   if (!settings) return null;
+  const environment = configuredEnvironment(env);
+  const credentials = freeAgentEnvironmentConfig(env, environment);
+  if (
+    settings.provider_environment &&
+    settings.provider_environment !== environment
+  ) return null;
+  if (
+    settings.provider_company_subdomain &&
+    settings.provider_company_subdomain !== credentials?.companySubdomain
+  ) return null;
   return invoiceConfigurationFromValues({
     amount: settings.amount,
     itemType: settings.item_type,
@@ -292,6 +373,15 @@ export async function configuredInvoiceFromDatabase(
     currency: settings.currency,
     salesTaxRate: settings.sales_tax_rate
   }, configuredEnvironment(env));
+}
+
+export async function listFreeAgentCategories(
+  db: D1Database,
+  env: AccountingEnvironment,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch
+): Promise<FreeAgentCategory[]> {
+  return providerCall(db, env, now, fetcher, (client, token) => client.listCategories(token));
 }
 
 async function accessToken(
@@ -503,25 +593,27 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
   const environment = configuredEnvironment(env);
   const credentials = freeAgentEnvironmentConfig(env, environment);
   const persistedSettings = await findAccountingBillingSettings(db);
-  const configurationMessage = persistedSettings
-    ? invoiceConfigurationFromValues({
-      amount: persistedSettings.amount,
-      itemType: persistedSettings.item_type,
-      categoryUrl: persistedSettings.category_url,
-      paymentTermsDays: String(persistedSettings.payment_terms_days),
-      currency: persistedSettings.currency,
-      salesTaxRate: persistedSettings.sales_tax_rate
-    }, environment)
-      ? null
-      : invoiceConfigurationIssueForValues({
-        amount: persistedSettings.amount,
-        itemType: persistedSettings.item_type,
-        categoryUrl: persistedSettings.category_url,
-        paymentTermsDays: String(persistedSettings.payment_terms_days),
-        currency: persistedSettings.currency,
-        salesTaxRate: persistedSettings.sales_tax_rate
-      }, environment)
-    : invoiceConfigurationIssue(env, environment);
+  const settingsValues = billingSettingsValues(persistedSettings, env);
+  const settingsEnvironmentMismatch = Boolean(
+    persistedSettings?.provider_environment &&
+    persistedSettings.provider_environment !== environment
+  );
+  const settingsCompanyMismatch = Boolean(
+    persistedSettings?.provider_company_subdomain &&
+    persistedSettings.provider_company_subdomain !== credentials?.companySubdomain
+  );
+  const configurationMessage = settingsEnvironmentMismatch
+    ? "FreeAgent invoice category belongs to a different environment."
+    : settingsCompanyMismatch
+      ? "FreeAgent invoice category belongs to a different company."
+      : invoiceConfigurationFromValues(settingsValues, environment)
+        ? null
+        : invoiceConfigurationIssueForValues(settingsValues, environment);
+  const invoiceMappingBase = invoiceMappingStatus(settingsValues, environment);
+  const invoiceMapping = {
+    ...invoiceMappingBase,
+    category: invoiceMappingBase.category && !settingsEnvironmentMismatch && !settingsCompanyMismatch
+  };
   const configured = Boolean(
     environment &&
     credentials &&
@@ -539,7 +631,8 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
       label: !configured ? "Not configured" : configurationMessage ? "Invoice mapping incomplete" : "Connection requires attention",
       lastSuccessAt: connection?.last_success_at ?? null,
       errorCode: connection?.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
-      errorMessage: connection?.last_error_message ?? configurationMessage
+      errorMessage: connection?.last_error_message ?? configurationMessage,
+      invoiceMapping
     };
   }
   const identityMatches = connection.environment === environment &&
@@ -556,7 +649,8 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
       : "Connection requires attention",
     lastSuccessAt: connection.last_success_at,
     errorCode: connection.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
-    errorMessage: connection.last_error_message ?? configurationMessage
+    errorMessage: connection.last_error_message ?? configurationMessage,
+    invoiceMapping
   };
 }
 

@@ -112,6 +112,22 @@ Changing the selected environment does not reinterpret provider IDs or reuse
 stale mandate, invoice, payment, or contact state. The additive Phase 7.9
 migration preserves the existing Sandbox records and creates independent
 per-environment connection and mapping storage.
+
+### Invoice category mapping
+
+The admin accounting settings page reads company-specific categories through
+`GET /v2/categories` using the authenticated connection for the selected
+environment. The administrator selects the approved category by name and
+nominal code; FoxTutor stores the provider URL only as an implementation
+value. A category URL is accepted only when its API origin matches the
+selected environment, and the persisted mapping is also bound to the
+connected company subdomain. A Sandbox category can therefore never be
+reused for Production, even if the URL shape is otherwise valid.
+
+The established defaults remain £55.00, `Hours`, 0 payment terms days, GBP
+and 0% sales tax. These defaults describe normal lesson accounting and do not
+authorize a provider invoice. A controlled Sandbox acceptance amount is a
+separate operation.
 | `/v2/categories` | Read company-specific categories; category URLs must come from the intended company. |
 | `/v2/invoices` | Create/read/update invoices. New invoices begin as `Draft`; invoice items accept explicit `sales_tax_rate`; invoice responses expose `payment_methods`. |
 | `/v2/invoices/:id/transitions/mark_as_sent` | Mark an invoice sent. |

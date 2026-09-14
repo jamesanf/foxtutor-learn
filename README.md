@@ -8,15 +8,13 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.8 — FreeAgent billing acceptance and finalisation
+**Phase:** Phase 7.10 — FreeAgent Sandbox/Production acceptance preparation
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source baseline:** Phase 7.8 functional source commit `9495ff2e4b5e482f2f6d0b2239b62a813aeedafb`; Worker `09963e6c-fd80-4160-8f14-50489fd4b157`
-**Previous Worker version:** `a57d4b20-93de-4c72-8af6-3b1f8eed54ea`
-**Current Worker version:** `09963e6c-fd80-4160-8f14-50489fd4b157`
-**D1 migrations:** `0001_foundation.sql` through `0027_phase77_payment_submitted.sql` deployed
-**Automated validation:** 37 test files, 210 tests passing
+**Deployed source baseline:** Phase 7.9 environment-isolation source commit `7862e3bee6abc6458293d959990f6d8b6e48fab0`; later contact-table alignment Worker `d106164d-adbf-411f-b3bb-9e48413d1410` was deployed from a subsequent uncommitted-source state and is not attributed to `7862...`
+**D1 migrations:** `0001_foundation.sql` through `0028_phase79_environment_isolation.sql` deployed; Phase 7.10 category-binding migration is pending
+**Automated validation:** 38 test files, 220 tests passing locally before the next release commit
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -56,10 +54,11 @@ The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
 the connection tokens are encrypted and persisted in D1. The live D1 state has
 one verified Sandbox contact mapping for contact `257175`, with no conflicting
-mapping, outbox row, retry audit row or financial mutation. Billing settings
-show the connection status, environment, company identity and reauthentication
-action; invoice-producing acceptance remains fail-closed until the approved
-FreeAgent category/accounting mapping and cancellation consequence exist.
+mapping, outbox row, retry audit row or financial mutation. Phase 7.10 replaces
+raw category-URL entry with a provider-backed company category selector and
+binds the saved category to its environment and company. Invoice-producing
+acceptance remains fail-closed until an administrator explicitly selects and
+saves the approved category mapping.
 
 Phase 7.8 identifies the real production chain as student
 `2dba78cd-0ce9-4aa2-918f-c3fb9d3b683b` -> verified FreeAgent contact `257175`
@@ -71,6 +70,12 @@ presenting them as one generic provider failure. The existing mandate is not
 replaced, no real financial mutation is performed, and the final provider/API
 and authenticated-browser evidence remains a human-assisted acceptance gate.
 See [`docs/phase-7.8.md`](docs/phase-7.8.md).
+
+Phase 7.10 keeps Sandbox and Production as separate FreeAgent trust domains,
+adds business-facing invoice mapping diagnostics and category lookup, and
+records the Direct Debit setup email as instructional/support-only. No
+Production OAuth, invoice, payment, mandate mutation or £1 collection is
+claimed by this release. See [`docs/phase-7.10.md`](docs/phase-7.10.md).
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,

@@ -192,13 +192,21 @@ export async function provisionBillingAccount(
     }
     if (student.learn_user_id && notificationDue(account, status, now)) {
       const type = status === "SETUP_REQUIRED" ? "BILLING_DIRECT_DEBIT_SETUP" : "BILLING_DIRECT_DEBIT_REMINDER";
-      await createDirectDebitNotification(db, env, {
+      const notification = await createDirectDebitNotification(db, env, {
         type,
         eventId: `${account.id}:${type}:${Math.floor(Date.parse(now) / (7 * 24 * 60 * 60_000))}`,
         recipientUserId: student.learn_user_id,
         studentId: student.id,
         studentName: student.name
       }, now, fetcher);
+      await recordBillingProvisioningEvent(db, {
+        id: crypto.randomUUID(),
+        billingAccountId: account.id,
+        eventType: type === "BILLING_DIRECT_DEBIT_SETUP" ? "SETUP_NOTIFICATION_SENT" : "SETUP_REMINDER_SENT",
+        safeDetail: notification.status,
+        idempotencyKey: `${account.id}:direct-debit-notification:${notification.idempotency_key}`,
+        now
+      });
       await markBillingNotificationSent(db, account.id, now, null);
     }
   } catch (error) {

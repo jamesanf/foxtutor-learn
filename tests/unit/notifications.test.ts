@@ -7,7 +7,7 @@ import {
   reminderIdempotencyKey
 } from "../../src/domain/notifications";
 import { learnLink } from "../../src/notifications/links";
-import { renderCancellationProcessed, renderDstWarning, renderEmail, renderLessonReminder, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
+import { renderCancellationProcessed, renderDirectDebitStatus, renderDstWarning, renderEmail, renderLessonReminder, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
 import { findNotificationById } from "../../src/db/notifications";
 
 function mockNotificationDb(firstResult: unknown): D1Database {
@@ -132,6 +132,15 @@ describe("notification domain", () => {
     expect(rendered.text).toContain("moved forward");
     expect(rendered.text).toContain("scheduled in UK time");
     expect(rendered.text).toContain("no lesson time has been changed");
+  });
+
+  it("labels Direct Debit messages as provider instructions rather than invitations", () => {
+    const rendered = renderDirectDebitStatus({ studentName: "Jamie", status: "setup" });
+    expect(rendered.subject).toBe("Direct Debit setup required");
+    expect(rendered.text).toContain("billing administrator will start the secure provider setup");
+    expect(rendered.text).toContain("Bank details must be entered only through the provider's secure flow");
+    expect(rendered.text).not.toContain("set up Direct Debit here");
+    expect(rendered.html).not.toContain("href=");
   });
 
   it("keeps cancellation email content concise and exposes undo only for student cancellations", () => {

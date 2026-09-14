@@ -8,6 +8,48 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Respo
 }
 
 describe("FreeAgent billing capabilities", () => {
+  it.each(["sandbox", "production"] as const)("lists categories on the %s provider origin", async (environment) => {
+    let requestUrl = "";
+    const origin = environment === "sandbox" ? "https://api.sandbox.freeagent.com" : "https://api.freeagent.com";
+    const client = new FreeAgentClient({
+      environment,
+      fetcher: async (input) => {
+        requestUrl = String(input);
+        return jsonResponse({
+          categories: [{ url: `${origin}/v2/categories/1`, name: "Sales", nominal_code: "001" }]
+        });
+      }
+    });
+    await expect(client.listCategories("token")).resolves.toEqual([{
+      url: `${origin}/v2/categories/1`,
+      name: "Sales",
+      nominalCode: "001"
+    }]);
+    expect(requestUrl).toBe(`${origin}/v2/categories?per_page=100`);
+  });
+
+  it("rejects malformed and empty category responses distinctly", async () => {
+    const malformed = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async () => jsonResponse({ categories: [{ url: "https://api.freeagent.com/v2/categories/1", name: "Sales" }] })
+    });
+    await expect(malformed.listCategories("token")).rejects.toMatchObject({ shape: { code: "MALFORMED_RESPONSE" } });
+
+    const empty = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async () => jsonResponse({ categories: [] })
+    });
+    await expect(empty.listCategories("token")).resolves.toEqual([]);
+  });
+
+  it("surfaces provider category errors without inventing options", async () => {
+    const client = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async () => jsonResponse({ error: "unavailable" }, 503)
+    });
+    await expect(client.listCategories("token")).rejects.toMatchObject({ shape: { code: "TEMPORARY_PROVIDER" } });
+  });
+
   it("reads mandate state from the contact resource", async () => {
     const client = new FreeAgentClient({
       environment: "sandbox",

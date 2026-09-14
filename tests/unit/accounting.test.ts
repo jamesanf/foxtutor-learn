@@ -284,6 +284,38 @@ describe("invoice configuration", () => {
       salesTaxRate: ""
     }, "sandbox").error).toContain("VAT/tax");
   });
+
+  it("requires a category returned by the active provider company when options are supplied", () => {
+    const categories = [{
+      url: "https://api.sandbox.freeagent.com/v2/categories/2",
+      name: "Sales",
+      nominalCode: "001"
+    }];
+    expect(validateBillingSettings({
+      amount: "55.00",
+      itemType: "Hours",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/9",
+      paymentTermsDays: "0",
+      currency: "GBP",
+      salesTaxRate: "0"
+    }, "sandbox", categories).error).toContain("returned by the connected FreeAgent company");
+    expect(validateBillingSettings({
+      amount: "55.00",
+      itemType: "Hours",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/2",
+      paymentTermsDays: "0",
+      currency: "GBP",
+      salesTaxRate: "0"
+    }, "sandbox", categories).error).toBeNull();
+    expect(validateBillingSettings({
+      amount: "55.00",
+      itemType: "Hours",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/2",
+      paymentTermsDays: "0",
+      currency: "GBP",
+      salesTaxRate: "0"
+    }, "sandbox", []).error).toContain("categories are unavailable");
+  });
 });
 
 describe("FreeAgent adapter", () => {

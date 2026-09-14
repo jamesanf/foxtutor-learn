@@ -226,4 +226,11 @@ describe("D1 foundation", () => {
     expect(migration).toContain("ALTER TABLE billing_invoices ADD COLUMN provider_environment");
     expect(migration).toContain("ALTER TABLE billing_payments ADD COLUMN provider_environment");
   });
+
+  it("binds invoice category mappings to their provider environment and company", () => {
+    const migration = readFileSync("migrations/0029_accounting_category_environment.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE accounting_billing_settings ADD COLUMN provider_environment");
+    expect(migration).toContain("ALTER TABLE accounting_billing_settings ADD COLUMN provider_company_subdomain");
+    expect(migration).toContain("accounting_connections_by_environment");
+  });
 });

@@ -59,6 +59,12 @@ export interface FreeAgentCompany {
   currency?: string;
 }
 
+export interface FreeAgentCategory {
+  url: string;
+  name: string;
+  nominalCode: string | null;
+}
+
 export interface FreeAgentClientOptions {
   environment: FreeAgentEnvironment;
   apiVersion?: string;
@@ -221,6 +227,47 @@ export class FreeAgentClient {
       retryAfterSeconds: null
     });
     return result.data.company;
+  }
+
+  async listCategories(accessToken: string): Promise<FreeAgentCategory[]> {
+    const result = await this.requestJson<{
+      categories?: Array<{
+        url?: string;
+        name?: string;
+        nominal_code?: string | number;
+      }>;
+    }>(accessToken, "/v2/categories?per_page=100");
+    if (!Array.isArray(result.data.categories)) {
+      throw new FreeAgentApiError({
+        code: "MALFORMED_RESPONSE",
+        status: result.response.status,
+        message: "FreeAgent category response was incomplete.",
+        retryable: false,
+        unknown: true,
+        retryAfterSeconds: null
+      });
+    }
+    return result.data.categories.map((category) => {
+      const url = canonicalProviderUrl(category.url, this.options.environment);
+      const name = typeof category.name === "string" ? category.name.trim() : "";
+      if (!url || !name) {
+        throw new FreeAgentApiError({
+          code: "MALFORMED_RESPONSE",
+          status: result.response.status,
+          message: "FreeAgent category response contained an invalid category.",
+          retryable: false,
+          unknown: true,
+          retryAfterSeconds: null
+        });
+      }
+      return {
+        url,
+        name,
+        nominalCode: category.nominal_code === undefined || category.nominal_code === null
+          ? null
+          : String(category.nominal_code)
+      };
+    });
   }
 
   async getContact(accessToken: string, externalReference: string): Promise<FreeAgentContact | null> {
