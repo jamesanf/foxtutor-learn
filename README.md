@@ -8,15 +8,15 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.2 implementation complete; remote/provider acceptance recorded separately
+**Phase:** Phase 7.2 deployed; real provider acceptance recorded separately
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7.2 recurring lessons, billing operations and payment readiness
-**Repository HEAD:** `working tree`
-**Executable deployment commit:** `4afa705`
-**Deployed source:** `4afa705`
-**Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`
-**D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally; remote deployment is a separate release gate
-**Automated validation:** 31 test files, 168 tests passing
+**Repository HEAD:** `9da2c03` (runtime release; documentation follow-up may advance HEAD)
+**Executable deployment commit:** `9da2c03`
+**Deployed source:** `9da2c03`
+**Worker version:** `bba7fcaf-dfa6-42dd-aa77-11ac66e04125`
+**D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally and remotely
+**Automated validation:** 31 test files, 169 tests passing
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -188,7 +188,7 @@ operational records.
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
 | 7 | Billing engine and long-term operations hardening | Phase 7 programme; provider and commercial gates remain explicit |
 | 7.1 | Recurrent lessons, billing orchestration and payment readiness | Foundational architecture implemented and absorbed into 7.2 completion |
-| 7.2 | Complete billing engine and operationalisation | Implemented locally; deployment and real-provider evidence are separate gates |
+| 7.2 | Complete billing engine and operationalisation | Deployed; real provider evidence and commercial approval remain separate gates |
 
 ## Security model
 

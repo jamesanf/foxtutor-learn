@@ -2,9 +2,10 @@
 
 ## Current state
 
-Phase 7.1 is implemented and validated locally only. Local D1 migrations
-`0021`, `0022` and `0023` apply successfully. The production/remote D1 schema
-and Worker remain at the Phase 6 deployment boundary.
+This is the historical Phase 7.1 record. Its local-only boundary was
+superseded by Phase 7.2, which applied migrations through `0024` and deployed
+the completed runtime. See `docs/deployment/phase-7.2.md` for the current
+record.
 
 `npm run check` passes with a Wrangler dry-run. No `--remote` migration,
 production deployment or financial mutation was performed.

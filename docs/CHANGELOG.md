@@ -16,6 +16,18 @@
 - Real provider financial acceptance remains a separately evidenced human gate;
   no provider mutation is claimed by the controlled local evidence.
 
+### 2026-09-14 - Deploy Phase 7.2 runtime and schema
+
+- Applied migrations `0021` through `0024` to production D1 database
+  `foxtutor-learn`; remote billing tables are present and contain no billing
+  events or financial mutations.
+- Deployed Worker source commit `9da2c03` as version
+  `bba7fcaf-dfa6-42dd-aa77-11ac66e04125` with the existing Access perimeter and
+  five-minute scheduler.
+- Verified the protected production route returns the Cloudflare Access
+  challenge and remote D1 retains the Phase 6 student, lesson and verified
+  FreeAgent contact data.
+
 ### 2026-09-14 - File project documentation under docs
 
 - Moved the project instructions, phase plan, changelog and repository

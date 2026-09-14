@@ -8,6 +8,9 @@
 - Build/type checks and client bundle build pass.
 - The global business-time invariant is enforced in source and forward-only
   D1 triggers.
+- Production D1 is migrated through `0024_phase72_global_timezone_operations.sql`
+  and the protected Worker is deployed as
+  `bba7fcaf-dfa6-42dd-aa77-11ac66e04125` from source `9da2c03`.
 
 ## REAL FREEAGENT SANDBOX EVIDENCE
 
