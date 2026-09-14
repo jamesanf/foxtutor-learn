@@ -93,7 +93,8 @@ import {
   listUpcomingBillingRows,
   listOpenBillingAlerts,
   listPendingBillingEvents,
-  updateBillingAlertStatus
+  updateBillingAlertStatus,
+  type BillingHistoryItem
 } from "../db/billing";
 import {
   addRecurringPause,
@@ -138,6 +139,7 @@ import {
   currentCalendarDate
 } from "../domain/calendar";
 import { calculatePaymentReadiness } from "../domain/payment-readiness";
+import { directDebitStatusCopy, mapDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
 import {
   academicYearOptions,
   isStudentAcademicSystem,
@@ -167,7 +169,7 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatus, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, processAccountingOutbox, processCreditNoteProviderOperation, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
+import { accountingIntegrationStatus, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
 import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
@@ -2886,7 +2888,51 @@ async function runStudentBillingStage<T>(
   }
 }
 
-async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
+async function studentDirectDebitStatus(
+  db: D1Database,
+  env: Env,
+  studentId: string
+): Promise<DirectDebitStatus> {
+  const link = await findExternalAccountingLink(db, studentId);
+  if (!link || link.status !== "VERIFIED") return "NOT_CONFIGURED";
+  try {
+    const contact = await providerCall(db, env, new Date().toISOString(), freeAgentFetch, (client, token) =>
+      client.getContact(token, link.external_url)
+    );
+    return mapDirectDebitStatus(contact?.directDebitMandateState ?? null, true);
+  } catch (error) {
+    console.error("student_billing_mandate_status_failed", {
+      studentId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorCode: error instanceof FreeAgentApiError ? error.shape.code : "UNKNOWN"
+    });
+    return "UNKNOWN";
+  }
+}
+
+function billingCustomerStatusLabel(kind: BillingHistoryItem["kind"], status: string): string {
+  const normalized = status.toUpperCase();
+  if (normalized === "PAYMENT_PENDING" || normalized === "PENDING") return "Payment processing";
+  if (normalized === "SCHEDULED") return "Collection scheduled";
+  if (normalized === "CONFIRMED" || normalized === "PAID") return "Payment confirmed";
+  if (normalized === "FAILED") return "Payment failed";
+  if (normalized === "UNKNOWN" || normalized === "RECONCILIATION_REQUIRED") return "Needs checking";
+  if (normalized === "SENT" || normalized === "INVOICE_CREATED") return "Invoice outstanding";
+  if (normalized === "CREDIT_COVERED" || normalized === "SETTLED") return "Covered by credit";
+  if (kind === "CREDIT" || kind === "CREDIT_CONSUMED") return billingReadinessLabel(normalized);
+  return billingReadinessLabel(normalized);
+}
+
+function directDebitStatusClass(status: DirectDebitStatus): string {
+  if (status === "ACTIVE") return "active";
+  if (status === "FAILED") return "failed";
+  if (status === "PENDING_AUTHORISATION") return "pending";
+  if (status === "SETUP_REQUESTED") return "sent";
+  if (status === "UNKNOWN") return "unknown";
+  return "suppressed";
+}
+
+async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Database, env: Env): Promise<Response> {
   const context = { userId: user.id };
   studentBillingStage("STUDENT_BILLING_START", context);
   studentBillingStage("AUTHENTICATED_USER_RESOLVED", context);
@@ -2902,22 +2948,29 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
   const [credits, history, upcoming] = await Promise.all([
     runStudentBillingStage("CREDIT_QUERY", studentContext, async () => (await listCustomerCreditBalances(db)).filter((row) => row.student_id === student.id)),
     runStudentBillingStage("HISTORY_QUERY", studentContext, () => listBillingHistory(db, student.id)),
-    runStudentBillingStage("UPCOMING_QUERY", studentContext, () => listUpcomingBillingRows(db, today, nextSeven, student.id))
+    runStudentBillingStage("UPCOMING_QUERY", studentContext, () => listUpcomingBillingRows(db, today, nextSeven, student.id)),
   ]);
+  const mandateStatus = await runStudentBillingStage("DIRECT_DEBIT_STATUS_QUERY", studentContext, () =>
+    studentDirectDebitStatus(db, env, student.id)
+  );
+  const mandateCopy = directDebitStatusCopy(mandateStatus);
   studentBillingStage("TOTALS_CALCULATED", { ...studentContext, studentId: student.id });
   const availableCredit = credits.reduce((total, credit) => total + (billingMinorValue(credit.remaining_amount_minor) ?? 0n), 0n);
   const outstanding = upcoming.reduce((total, row) => total + (billingMinorValue(row.amount_minor) ?? 0n), 0n);
   const creditRows = credits.length
-    ? credits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>${escapeHtml(credit.source_event_id)}</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
+    ? credits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>Cancellation credit</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel("CREDIT", credit.status))}</td></tr>`).join("")
     : `<tr><td colspan="6">No credit history.</td></tr>`;
   const upcomingRows = upcoming.length
-    ? upcoming.map((row) => `<tr><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(row.credit_available_minor)}</td><td>${escapeHtml(row.status)}</td><td>${escapeHtml(row.collection_date ? billingDateLabel(row.collection_date) : "Not scheduled")}</td></tr>`).join("")
+    ? upcoming.map((row) => `<tr><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(row.credit_available_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(row.kind, row.status))}</td><td>${escapeHtml(row.collection_date ? billingDateLabel(row.collection_date) : "Not scheduled")}</td></tr>`).join("")
     : `<tr><td colspan="5">No lessons in the next seven days.</td></tr>`;
   const historyRows = history.length
-    ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.provider_reference ?? "—")}</td></tr>`).join("")
-    : `<tr><td colspan="5">No billing history yet.</td></tr>`;
+    ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(item.kind, item.status))}</td></tr>`).join("")
+    : `<tr><td colspan="4">No billing history yet.</td></tr>`;
+  const mandateAction = mandateStatus === "ACTIVE"
+    ? ""
+    : `<p class="form-actions"><a class="button secondary" href="mailto:hello@foxtutor.org?subject=Direct%20Debit%20setup%20help">Contact FoxTutor</a></p>`;
   studentBillingStage("BILLING_HTML_RENDER_START", studentContext);
-  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">A plain-English view of what you owe, your credit and upcoming collections. All dates use Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Payment method</span><strong>Direct Debit</strong><small>Managed through FreeAgent</small></section></div><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th><th>Provider reference</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
+  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">A plain-English view of what you owe, your credit and upcoming collections. All dates use Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Payment method</span><strong>Direct Debit</strong><small>${escapeHtml(mandateCopy.label)}</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit setup</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses a secure payment provider for Direct Debit. We will send a secure authorisation request by email. Open that request directly and enter bank details only in the provider's secure mandate flow, not in FoxTutor Learn. FoxTutor Learn stores the payment status needed for billing, not your bank account number or sort code.</p><ol><li>Open the secure authorisation request from the email.</li><li>Complete the bank authorisation there.</li><li>Return to this page to check the status. Setup can remain pending for up to three working days after authorisation.</li></ol><p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
   studentBillingStage("BILLING_HTML_RENDER_COMPLETE", studentContext);
   studentBillingStage("STUDENT_BILLING_END", studentContext);
   return response;
@@ -2929,7 +2982,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
-  if (route === "student-billing") return studentBillingPage(active.user, csrfToken, db);
+  if (route === "student-billing") return studentBillingPage(active.user, csrfToken, db, env);
   if (route === "student-calendar") {
     const lessons = await listLessonsForUser(db, active.user.id);
     const feed = await findActiveCalendarFeedForOwner(db, active.user.id);

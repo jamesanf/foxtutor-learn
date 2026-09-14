@@ -16,6 +16,12 @@ failure, but the release is still awaiting:
 - the remaining commercial/accounting approvals required before financial
   mutations can be enabled.
 
+Phase 7.5 is the active financial acceptance gate. It remains **NOT READY**:
+the customer-facing Direct Debit status journey and formal state/invariant
+model are now recorded, but comprehensive failure-injection, concurrency,
+reconciliation, Sandbox financial, and authenticated browser evidence is not
+complete.
+
 ## Deployed baseline
 
 - Source commit: `042d3e6`
@@ -44,6 +50,10 @@ Direct Debit authority; FoxTutor does not create a parallel mandate.
   states, provider status refresh and reconciliation tasks.
 - Deduplicated billing alerts with acknowledgement and resolution audit.
 - Student billing visibility and admin billing operations surfaces.
+- Privacy-safe student Direct Debit status mapping for FreeAgent's
+  `setup`, `pending`, `active`, `inactive`, `failed` and unknown states.
+- Customer instructions that keep bank details inside the provider mandate
+  flow and omit provider/internal references from student billing HTML.
 
 ## Acceptance boundary
 

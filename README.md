@@ -8,14 +8,14 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7 — billing engine and long-term operations hardening
+**Phase:** Phase 7.5 — financial safety and acceptance
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
 **Deployed source commit:** `042d3e6`
 **Worker version:** `7a9b7b0f-40ca-44b3-9698-2a216708f5bb`
 **D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally and remotely
-**Automated validation:** 32 test files, 171 tests passing
+**Automated validation:** 33 test files, 181 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -28,6 +28,13 @@ session. Real FreeAgent Sandbox financial mutations and payment/Direct Debit
 lifecycle evidence also remain outstanding; the application must continue to
 fail closed until those gates and the remaining commercial approvals are
 complete.
+
+Phase 7.5 is the financial safety and acceptance gate. It formalises billing
+states and invariants, adds the customer-facing Direct Debit status journey,
+and requires comprehensive failure, concurrency, reconciliation, provider
+Sandbox and authenticated runtime evidence. It remains **NOT READY** until
+those engineering and provider gates are evidenced; only genuine commercial
+decisions may remain human approval gates.
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -195,6 +202,7 @@ operational records.
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
 | 7 | Billing engine and long-term operations hardening | 1101 diagnosed and fixed in source/deployment; authenticated runtime, provider acceptance and commercial gates remain open |
+| 7.5 | Financial safety and acceptance | Direct Debit UX and formal acceptance model added; comprehensive engineering/provider/runtime evidence remains open |
 
 ## Security model
 

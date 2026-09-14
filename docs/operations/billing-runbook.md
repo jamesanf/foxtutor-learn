@@ -23,9 +23,18 @@ bank transaction.
 ## Direct Debit
 
 Mandates are managed by the existing FreeAgent-GoCardless workflow. FoxTutor
-does not create a parallel mandate. A submitted or pending collection is not
-`PAYMENT_SECURED`; only full credit coverage or confirmed provider payment is
-secure.
+does not create a parallel mandate. The student billing page reads only the
+current student's verified contact and maps provider state to plain English:
+setup/request sent, authorisation pending, active, failed, or status unknown.
+It never displays provider IDs or bank details.
+
+The customer must open the secure authorisation request from the provider
+email and enter bank details there, not in FoxTutor Learn. FreeAgent guidance
+states that setup can take up to three working days after authorisation. A
+missing or expired request is handled through `hello@foxtutor.org`.
+
+A submitted or pending collection is not `PAYMENT_SECURED`; only full credit
+coverage or confirmed provider payment is secure.
 
 ## Recovery
 

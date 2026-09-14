@@ -1,5 +1,19 @@
 # Changelog
 
+### 2026-09-14 - Add Phase 7.5 Direct Debit safety boundary
+
+- Added an explicit Phase 7.5 billing state model and financial invariant
+  record.
+- Added provider-state mapping for FreeAgent Direct Debit mandate states,
+  including safe handling of missing and unknown results.
+- Added a student-facing Direct Debit setup/status section using the existing
+  FreeAgent-GoCardless authority; no parallel mandate flow was introduced.
+- Removed provider references and internal source identifiers from student
+  billing HTML and kept pending collection distinct from confirmed payment.
+- Added Direct Debit mapping and student privacy regression tests.
+- Recorded Phase 7.5 as **NOT READY** pending comprehensive engineering,
+  provider Sandbox, reconciliation and authenticated runtime evidence.
+
 ### 2026-09-14 - Diagnose and deploy the student billing Worker 1101 fix
 
 - Reproduced the exact production D1 failure in the former six-way

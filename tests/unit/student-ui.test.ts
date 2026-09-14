@@ -21,4 +21,17 @@ describe("student profile form UI", () => {
     expect(cssSource).toContain("content: attr(data-tooltip)");
     expect(cssSource).toContain(".student-form-grid");
   });
+
+  it("provides a privacy-safe Direct Debit status and setup journey", () => {
+    const billingSource = workerSource.slice(
+      workerSource.indexOf("async function studentBillingPage"),
+      workerSource.indexOf("async function handleStudent")
+    );
+    expect(billingSource).toContain("Direct Debit setup");
+    expect(billingSource).toContain("secure authorisation request");
+    expect(billingSource).toContain("up to three working days");
+    expect(billingSource).toContain("not in FoxTutor Learn");
+    expect(billingSource).not.toContain("provider reference</th>");
+    expect(billingSource).not.toContain("source_event_id");
+  });
 });
