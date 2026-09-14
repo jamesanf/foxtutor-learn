@@ -271,6 +271,37 @@ describe("FreeAgent adapter", () => {
     expect(calls[1]?.body).toContain("grant_type=refresh_token");
   });
 
+  it("uses a safely bound default fetcher through a client instance", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).endsWith("/v2/token_endpoint")) {
+        return jsonResponse({
+          access_token: "access-default",
+          refresh_token: "refresh-default",
+          expires_in: 3600,
+          refresh_token_expires_in: 86_400
+        });
+      }
+      return jsonResponse({ company: { subdomain: "foxlearningltdgmailcom" } });
+    });
+    try {
+      const client = new FreeAgentClient({ environment: "sandbox" });
+      await expect(client.company("token")).resolves.toMatchObject({ subdomain: "foxlearningltdgmailcom" });
+      await expect(exchangeAuthorizationCode("sandbox", {
+        clientId: "client-1",
+        clientSecret: "secret-1",
+        code: "code-1",
+        redirectUri: "https://learn.example.test/callback"
+      })).resolves.toMatchObject({ accessToken: "access-default" });
+      await expect(refreshAccessToken("sandbox", {
+        clientId: "client-1",
+        clientSecret: "secret-1",
+        refreshToken: "refresh-1"
+      })).resolves.toMatchObject({ refreshToken: "refresh-default" });
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
   it("preserves timeout failures as unknown external outcomes", async () => {
     const diagnostic = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const client = new FreeAgentClient({
