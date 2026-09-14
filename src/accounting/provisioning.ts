@@ -66,6 +66,37 @@ function providerRetryAt(now: string, code: string): string {
   return new Date(Date.parse(now) + (code === "RATE_LIMIT" ? 60 : 15) * 60_000).toISOString();
 }
 
+async function sendDirectDebitNotificationIfDue(
+  db: D1Database,
+  env: ProvisioningEnvironment,
+  account: BillingAccount,
+  student: StudentProvisioningRow,
+  status: DirectDebitStatus,
+  now: string,
+  fetcher: typeof fetch
+): Promise<void> {
+  if (!student.learn_user_id || !notificationDue(account, status, now)) return;
+  const type = shouldSendDirectDebitSetupNotification(account, status)
+    ? "BILLING_DIRECT_DEBIT_SETUP"
+    : "BILLING_DIRECT_DEBIT_REMINDER";
+  const notification = await createDirectDebitNotification(db, env, {
+    type,
+    eventId: `${account.id}:${type}:${Math.floor(Date.parse(now) / (7 * 24 * 60 * 60_000))}`,
+    recipientUserId: student.learn_user_id,
+    studentId: student.id,
+    studentName: student.name
+  }, now, fetcher);
+  await recordBillingProvisioningEvent(db, {
+    id: crypto.randomUUID(),
+    billingAccountId: account.id,
+    eventType: type === "BILLING_DIRECT_DEBIT_SETUP" ? "SETUP_NOTIFICATION_SENT" : "SETUP_REMINDER_SENT",
+    safeDetail: notification.status,
+    idempotencyKey: `${account.id}:direct-debit-notification:${notification.idempotency_key}`,
+    now
+  });
+  await markBillingNotificationSent(db, account.id, now, null);
+}
+
 function contactReference(contact: FreeAgentContact): string {
   return contact.url.split("/").pop() ?? contact.url;
 }
@@ -286,27 +317,8 @@ export async function provisionBillingAccount(
         now
       });
     }
-    if (student.learn_user_id && notificationDue(account, status, now)) {
-      const type = shouldSendDirectDebitSetupNotification(account, status)
-        ? "BILLING_DIRECT_DEBIT_SETUP"
-        : "BILLING_DIRECT_DEBIT_REMINDER";
-      const notification = await createDirectDebitNotification(db, env, {
-        type,
-        eventId: `${account.id}:${type}:${Math.floor(Date.parse(now) / (7 * 24 * 60 * 60_000))}`,
-        recipientUserId: student.learn_user_id,
-        studentId: student.id,
-        studentName: student.name
-      }, now, fetcher);
-      await recordBillingProvisioningEvent(db, {
-        id: crypto.randomUUID(),
-        billingAccountId: account.id,
-        eventType: type === "BILLING_DIRECT_DEBIT_SETUP" ? "SETUP_NOTIFICATION_SENT" : "SETUP_REMINDER_SENT",
-        safeDetail: notification.status,
-        idempotencyKey: `${account.id}:direct-debit-notification:${notification.idempotency_key}`,
-        now
-      });
-      await markBillingNotificationSent(db, account.id, now, null);
-    }
+    const updatedAccount = await findBillingAccount(db, student.id);
+    if (updatedAccount) await sendDirectDebitNotificationIfDue(db, env, updatedAccount, student, status, now, fetcher);
   } catch (error) {
     const failure = safeProviderError(error);
     const retryAt = providerRetryAt(now, failure.code);
@@ -383,6 +395,8 @@ export async function reconcileBillingAccountMandate(
       });
     }
     const status = await persistMandateState(db, env, studentId, contact, now);
+    const updatedAccount = await findBillingAccount(db, studentId);
+    if (updatedAccount && student) await sendDirectDebitNotificationIfDue(db, env, updatedAccount, student, status, now, fetcher);
     const state = classifyDirectDebitState(contact.directDebitMandateState, true);
     console.info("billing_mandate_reconciled", {
       studentId,
