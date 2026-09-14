@@ -11,9 +11,9 @@ replacement, payment system or accounting ledger.
 **Phase:** Engineering-complete; Phase 6 remains externally acceptance-blocked
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6 accounting boundary hardening
-**Executable deployment commit:** `f976e08`
-**Deployed source:** `f976e08`
-**Worker version:** `33fb8ca6-cdf1-4131-8f33-0b635c1224ff`
+**Executable deployment commit:** `2511fca`
+**Deployed source:** `2511fca`
+**Worker version:** `cd2d248d-e304-4020-8593-7488f9c78877`
 **D1 migrations:** `0001_foundation.sql` through `0020_accounting_company_name.sql`
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin

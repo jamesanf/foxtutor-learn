@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-14 - Simplify billing settings navigation
+
+- Replaced the Billing settings text back button with a compact clickable
+  MDI-style back arrow in the top-right actions.
+- Kept Reauthenticate FreeAgent as the only text action.
+- Deployed executable commit `2511fca` as Worker version
+  `cd2d248d-e304-4020-8593-7488f9c78877`.
+
 ### 2026-09-14 - Fix contact mapping persistence
 
 - Corrected the `external_accounting_links` insert to provide exactly 15
