@@ -2,9 +2,12 @@
 
 This runbook contains no secrets. The Sandbox bindings are configured in the
 Worker and the Fox Learning Ltd OAuth connection is active with encrypted
-tokens persisted in D1. The remaining Sandbox steps are approved mappings,
-provider acceptance and mutation evidence. Production remains gated on
-commercial approval and separate production credentials.
+tokens persisted in D1. Contact `257175` is currently verified for the Learn
+student with no conflicting mapping. The live outbox and retry audit are
+empty, and no financial mutation has been performed. The remaining Sandbox
+steps are the approved accounting/category mapping, provider acceptance and
+mutation evidence. Production remains gated on commercial approval and
+separate production credentials.
 
 ## Sandbox
 
@@ -29,11 +32,10 @@ commercial approval and separate production credentials.
    Access, but the Worker accepts it only with the one-time admin-bound OAuth
    state. If the callback returns 502, inspect the safe stage-labelled Worker
    diagnostic and repeat only after identifying the failing stage.
-6. For the approved test payer, enter the numeric FreeAgent contact ID.
-   Confirm the server verifies the contact in the pinned company before saving.
-   Use the save icon in the contact-mapping table; use the adjacent trash icon
-   only when removal is approved and no active accounting dependency exists.
-7. After the consequence is approved, create or select the approved
+6. The current approved test payer mapping is already verified as contact
+   `257175` in D1. Do not replace or remove it unless an approved mapping
+   change is required and no active accounting dependency exists.
+7. After the consequence and invoice/category mapping are approved, create or select the approved
    `ADMIN_CANCELLED` test event. Confirm one
    outbox row, the deterministic accounting reference and the visible blocked
    state before retry.

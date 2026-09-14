@@ -23,12 +23,15 @@ The automated suite covers:
 - successful `verifyFreeAgentContactMapping()` persistence through the
   `external_accounting_links` D1 insert, including a `VERIFIED` stored link and
   exact bound-value count;
+- provider-independent outbox processing that creates once, replays by
+  deterministic provider reference, records bounded retryable failure, marks
+  unknown network outcomes and reconciles them without a blind retry;
 - migration structure through `0020_accounting_company_name.sql`;
 - browser shell accessibility, accounting icon/action contracts and no-index
   contracts;
 - production perimeter smoke.
 
-Current result: **27 test files and 139 tests passed**.
+Current result: **27 test files and 142 tests passed**.
 
 Run the current suite with:
 
@@ -48,9 +51,10 @@ be refreshed whenever tests change.
 
 The following cannot be claimed without human-owned provider access:
 
-- sandbox contact and invoice mapping;
+- provider-side Sandbox invoice/category mapping;
 - provider-side sandbox invoice creation;
-- provider-side duplicate, timeout and reconciliation evidence;
+- provider-side duplicate, timeout and reconciliation evidence (the
+  provider-independent seams are covered by automated tests);
 - production OAuth and company verification;
 - one controlled production accounting event;
 - independent production provider verification and retention acceptance;

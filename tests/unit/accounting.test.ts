@@ -27,6 +27,8 @@ import {
   connectFreeAgent,
   configuredInvoice,
   invoiceConfigurationIssue,
+  processAccountingOutbox,
+  reconcileAccountingOutbox,
   validateBillingSettings,
   verifyFreeAgentContactMapping
 } from "../../src/accounting/service";
@@ -38,6 +40,148 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Respo
     status,
     headers: responseHeaders
   });
+}
+
+async function accountingProcessHarness() {
+  const encryptionKey = "test-encryption-key";
+  const connection = {
+    id: "FREEAGENT",
+    environment: "sandbox",
+    company_subdomain: "foxlearningltdgmailcom",
+    company_name: "Fox Learning Ltd",
+    access_token_ciphertext: "",
+    refresh_token_ciphertext: "unused-refresh-token",
+    access_token_expires_at: "2040-09-14T14:00:00.000Z",
+    refresh_token_expires_at: null,
+    status: "CONNECTED",
+    last_success_at: null,
+    last_error_code: null,
+    last_error_message: null,
+    updated_at: "2026-09-14T12:00:00.000Z"
+  };
+  const billingSettings = {
+    id: "FREEAGENT",
+    amount: "55.00",
+    item_type: "Hours",
+    category_url: "https://api.sandbox.freeagent.com/v2/categories/1",
+    payment_terms_days: 0,
+    currency: "GBP",
+    sales_tax_rate: "0",
+    updated_by_user_id: null,
+    created_at: "2026-09-14T12:00:00.000Z",
+    updated_at: "2026-09-14T12:00:00.000Z"
+  };
+  const link = {
+    id: "link-1",
+    provider: "FREEAGENT",
+    local_entity_type: "STUDENT",
+    local_entity_id: "student-1",
+    external_resource_type: "CONTACT",
+    external_reference: "257175",
+    external_url: "https://api.sandbox.freeagent.com/v2/contacts/257175",
+    status: "VERIFIED",
+    verified_at: "2026-09-14T12:00:00.000Z",
+    verified_environment: "sandbox",
+    verified_company_subdomain: "foxlearningltdgmailcom",
+    last_error_code: null,
+    last_error_message: null,
+    created_at: "2026-09-14T12:00:00.000Z",
+    updated_at: "2026-09-14T12:00:00.000Z"
+  };
+  const outbox = {
+    id: "outbox-1",
+    event_type: "CANCELLATION_ACCOUNTING",
+    business_event_id: "history-1",
+    lesson_id: "lesson-1",
+    student_id: "student-1",
+    billing_consequence: "STUDENT_CANCELLED",
+    action_type: "CREATE_INVOICE",
+    status: "PENDING",
+    idempotency_key: "accounting:CANCELLATION_ACCOUNTING:history1",
+    accounting_reference: "FT-ACC-history1",
+    accounting_effective_date: "2026-09-14",
+    attempt_count: 0,
+    next_attempt_at: null,
+    last_attempted_at: null,
+    external_reference: null,
+    external_url: null,
+    external_resource_type: null,
+    provider_status: null,
+    safe_error_code: null,
+    safe_error_message: null,
+    created_at: "2026-09-14T12:00:00.000Z",
+    updated_at: "2026-09-14T12:00:00.000Z",
+    completed_at: null
+  };
+  const state = { connection, outbox: outbox as Record<string, unknown>, invoicePresent: false };
+  state.connection.access_token_ciphertext = await encryptCredential("access-token", encryptionKey);
+  const db = {
+    prepare(sql: string) {
+      const execute = async (values: unknown[] = []) => {
+        if (sql.includes("FROM accounting_connections")) return state.connection;
+        if (sql.includes("FROM accounting_billing_settings")) return billingSettings;
+        if (sql.includes("FROM external_accounting_links")) return link;
+        if (sql.includes("FROM accounting_outbox")) return state.outbox;
+        return null;
+      };
+      const run = async (values: unknown[] = []) => {
+        if (sql.includes("SET status = 'UNKNOWN'")) return { meta: { changes: 0 } };
+        if (sql.includes("SET status = 'PROCESSING'")) {
+          state.outbox.status = "PROCESSING";
+          state.outbox.attempt_count = Number(state.outbox.attempt_count) + 1;
+          state.outbox.last_attempted_at = values[0];
+          state.outbox.updated_at = values[1];
+          return { meta: { changes: 1 } };
+        }
+        if (sql.includes("SET status = 'SUCCEEDED'")) {
+          state.outbox.status = "SUCCEEDED";
+          state.outbox.external_reference = values[0];
+          state.outbox.external_url = values[1];
+          state.outbox.external_resource_type = values[2];
+          state.outbox.provider_status = values[3];
+          state.outbox.safe_error_code = null;
+          state.outbox.safe_error_message = null;
+          state.outbox.completed_at = values[4];
+          state.outbox.updated_at = values[5];
+          return { meta: { changes: 1 } };
+        }
+        if (sql.includes("SET status = ?, safe_error_code = ?")) {
+          state.outbox.status = values[0];
+          state.outbox.safe_error_code = values[1];
+          state.outbox.safe_error_message = values[2];
+          state.outbox.provider_status = values[3];
+          state.outbox.next_attempt_at = values[4];
+          state.outbox.updated_at = values[5];
+          return { meta: { changes: 1 } };
+        }
+        if (sql.includes("SET status = ?, last_error_code = ?")) return { meta: { changes: 1 } };
+        return { meta: { changes: 1 } };
+      };
+      return {
+        first: async () => execute(),
+        all: async () => ({ results: [state.outbox] }),
+        run: async () => run(),
+        bind(...values: unknown[]) {
+          return {
+            first: async () => execute(values),
+            all: async () => ({ results: [state.outbox] }),
+            run: async () => run(values)
+          };
+        }
+      };
+    }
+  } as unknown as D1Database;
+  return {
+    db,
+    state,
+    env: {
+      FREEAGENT_ENVIRONMENT: "sandbox",
+      FREEAGENT_CLIENT_ID: "client-1",
+      FREEAGENT_CLIENT_SECRET: "secret-1",
+      FREEAGENT_TOKEN_ENCRYPTION_KEY: encryptionKey,
+      FREEAGENT_COMPANY_SUBDOMAIN: "foxlearningltdgmailcom"
+    }
+  };
 }
 
 describe("accounting domain", () => {
@@ -455,6 +599,76 @@ describe("FreeAgent adapter", () => {
       verified_environment: "sandbox",
       verified_company_subdomain: "foxlearningltdgmailcom"
     });
+  });
+
+  it("creates one invoice and replays by provider reference without a second POST", async () => {
+    const harness = await accountingProcessHarness();
+    let createCount = 0;
+    const fetcher: typeof fetch = async (input, init) => {
+      if (init?.method === "POST") {
+        createCount += 1;
+        harness.state.invoicePresent = true;
+        return jsonResponse({
+          invoice: {
+            url: "https://api.sandbox.freeagent.com/v2/invoices/42",
+            reference: "FT-ACC-history1"
+          }
+        }, 201);
+      }
+      return jsonResponse({
+        invoices: harness.state.invoicePresent
+          ? [{ url: "https://api.sandbox.freeagent.com/v2/invoices/42", reference: "FT-ACC-history1" }]
+          : []
+      });
+    };
+
+    const first = await processAccountingOutbox(harness.db, harness.env, "outbox-1", "2026-09-14T12:00:00.000Z", fetcher);
+    expect(first).toMatchObject({ status: "SUCCEEDED", external_reference: "42", provider_status: "CREATED" });
+    expect(createCount).toBe(1);
+
+    harness.state.outbox.status = "RETRYABLE";
+    harness.state.outbox.external_reference = null;
+    harness.state.outbox.external_url = null;
+    harness.state.outbox.external_resource_type = null;
+    harness.state.outbox.completed_at = null;
+    const replay = await processAccountingOutbox(harness.db, harness.env, "outbox-1", "2026-09-14T12:05:00.000Z", fetcher);
+    expect(replay).toMatchObject({ status: "SUCCEEDED", external_reference: "42", provider_status: "RECONCILED" });
+    expect(createCount).toBe(1);
+  });
+
+  it("records bounded retry state for a retryable provider failure", async () => {
+    const harness = await accountingProcessHarness();
+    const fetcher: typeof fetch = async () => jsonResponse({ error: "slow down" }, 429, { "Retry-After": "30" });
+
+    const result = await processAccountingOutbox(harness.db, harness.env, "outbox-1", "2026-09-14T12:00:00.000Z", fetcher);
+    expect(result).toMatchObject({
+      status: "RETRYABLE",
+      safe_error_code: "RATE_LIMIT",
+      provider_status: "429",
+      next_attempt_at: "2026-09-14T12:00:30.000Z"
+    });
+  });
+
+  it("marks an unknown provider outcome for reconciliation instead of retrying blindly", async () => {
+    const harness = await accountingProcessHarness();
+    let mode: "timeout" | "invoice" = "timeout";
+    const fetcher: typeof fetch = async (input) => {
+      if (mode === "timeout") throw new TypeError("network interrupted");
+      return jsonResponse({
+        invoice: {
+          url: "https://api.sandbox.freeagent.com/v2/invoices/42",
+          reference: "FT-ACC-history1"
+        }
+      });
+    };
+
+    const unknown = await processAccountingOutbox(harness.db, harness.env, "outbox-1", "2026-09-14T12:00:00.000Z", fetcher);
+    expect(unknown).toMatchObject({ status: "UNKNOWN", safe_error_code: "NETWORK", next_attempt_at: null });
+
+    mode = "invoice";
+    const reconciled = await reconcileAccountingOutbox(harness.db, harness.env, unknown!, "42", "2026-09-14T12:05:00.000Z", fetcher);
+    expect(reconciled).toBe(true);
+    expect(harness.state.outbox).toMatchObject({ status: "SUCCEEDED", external_reference: "42", provider_status: "RECONCILED" });
   });
 
   it("preserves timeout failures as unknown external outcomes", async () => {

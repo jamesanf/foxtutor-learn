@@ -1,5 +1,24 @@
 # Changelog
 
+### 2026-09-14 - Complete autonomous Phase 6 acceptance pass
+
+- Independently verified the live production D1 state: Sandbox connection
+  `CONNECTED` for Fox Learning Ltd / `foxlearningltdgmailcom`, encrypted
+  OAuth material present, exactly one `VERIFIED` contact mapping for `257175`,
+  no conflicting mapping, no outbox rows, no retry-audit rows and no financial
+  mutation.
+- Verified production D1 has no pending migrations and the deployed Worker
+  remains version `71accc39-6c06-4fc7-9390-12afcf48add1` from executable
+  source commit `4afa705`; repository HEAD remains separately tracked.
+- Added provider-independent regression coverage for create/replay
+  idempotency, retryable rate-limit handling, unknown network outcomes and
+  reconciliation. The complete suite now passes with 27 test files and
+  142 tests.
+- Confirmed the only remaining blockers are the approved accounting/category
+  mapping, the `ADMIN_CANCELLED` commercial consequence, Sandbox provider
+  mutation evidence and production human gates. No financial mutation or
+  provider evidence was fabricated.
+
 ### 2026-09-14 - Consolidate Phase 6 documentation
 
 - Reconciled the current README, master phase plan, repository structure and
@@ -9,7 +28,8 @@
   regression, final billing/contact-mapping UI controls, current migration
   state and the distinction between deployed source and later
   documentation-only commits.
-- Current automated validation remains 27 test files and 139 tests passing.
+- The prior documentation pass recorded 27 test files and 139 tests passing;
+  the current acceptance pass raises this to 142.
 - Retained implementation chronology below as historical changelog records;
   redundant superseded current-state claims were removed from the active
   records.

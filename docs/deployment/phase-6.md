@@ -16,6 +16,10 @@
 - FreeAgent Sandbox secret bindings: configured
 - FreeAgent OAuth connection: completed for Fox Learning Ltd Sandbox;
   encrypted tokens are persisted in `accounting_connections`
+- Live Sandbox D1 verification: one `VERIFIED` contact mapping for `257175`
+  with no conflict; no outbox, retry-audit or financial-mutation rows
+- Live billing configuration: no persisted row because the approved
+  FreeAgent category/accounting mapping has not been supplied
 
 Wrangler reported the deployment source metadata as `Unknown`; the deployed
 source commit above is the reviewed executable commit from which
@@ -57,3 +61,9 @@ The latest executable release also includes the corrected
 `external_accounting_links` insert (15 values for 15 columns), successful D1
 mapping-path regression coverage, compact contact save/remove controls, and
 matching accounting settings/back icons.
+
+The current repository HEAD is `3921c60`; it is distinct from the deployed
+executable source commit above. The current full validation result is 27 test
+files and 142 tests passing, with build/check, browser shell and production
+perimeter smoke passing. The visual browser helper was attempted but could not
+run because no Chrome DevTools endpoint was available at `127.0.0.1:9222`.

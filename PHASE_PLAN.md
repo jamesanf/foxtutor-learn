@@ -802,11 +802,15 @@ matrix, architecture, security controls, test boundary, deployment
 distinction, human checklist and acceptance runbook are maintained in
 [`docs/phase-6.md`](docs/phase-6.md).
 
-Phase 6 remains operationally open only because human-owned commercial approval,
-the remaining `ADMIN_CANCELLED` consequence decision, FreeAgent credentials,
-sandbox provider acceptance and one controlled production accounting event are
-outstanding. No technical TODO is represented as a human blocker, no financial
-mutation has been fabricated, and
+The live Sandbox connection is currently `CONNECTED` for Fox Learning Ltd
+(`foxlearningltdgmailcom`), and contact `257175` is persisted as one verified
+mapping with no conflict. The live outbox and retry-audit tables are empty;
+this is expected because no approved invoice-producing event has been created.
+Phase 6 remains operationally open only because human-owned commercial
+approval, the remaining `ADMIN_CANCELLED` consequence decision, approved
+invoice/category mapping, sandbox provider acceptance and one controlled
+production accounting event are outstanding. No technical TODO is represented
+as a human blocker, no financial mutation has been fabricated, and
 `phase-6-complete` must not be created until the external closure evidence is
 recorded.
 

@@ -60,8 +60,8 @@ only current Phase 6 documents; historical release chronology is preserved in
 | FreeAgent adapter boundary | `src/accounting/freeagent/client.ts` | URL, payload, error and timeout tests | COMPLETE |
 | OAuth state and encrypted tokens | `src/accounting/credentials.ts`, `src/accounting/service.ts` | OAuth exchange/refresh and secret-boundary tests | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Environment/company pinning | `src/accounting/service.ts` | Configuration and company checks | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
-| Contact mapping | `src/accounting/service.ts`, `src/db/accounting.ts` | Admin route, verification, replacement/removal guards | COMPLETE - HUMAN MAPPING REQUIRED |
-| Invoice mapping | `src/accounting/service.ts`, `src/db/accounting.ts`, adapter payload | Persisted admin settings, immutable GBP, fixed-decimal amount, explicit tax, category/payment/date validation | COMPLETE - PROVIDER MAPPING VALUES REQUIRED |
+| Contact mapping | `src/accounting/service.ts`, `src/db/accounting.ts` | Admin route, verification, replacement/removal guards; live D1 has one `VERIFIED` Sandbox mapping for contact `257175` and no conflict | COMPLETE |
+| Invoice mapping | `src/accounting/service.ts`, `src/db/accounting.ts`, adapter payload | Persisted admin settings, immutable GBP, fixed-decimal amount, explicit tax, category/payment/date validation; live billing-settings row is intentionally empty until the approved category mapping is supplied | COMPLETE - APPROVED PROVIDER MAPPING REQUIRED |
 | Billing management | `/learn/admin/accounting/settings`, `accounting_billing_settings` | Admin GET/POST form, connection identity/status, reauthentication, CSRF, validation, actor/timestamp persistence and invoice consumption | COMPLETE |
 | Reconciliation | `src/accounting/service.ts`, admin reconcile route | Unknown-state and provider-reference seams | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Manual retry audit | `migrations/0017_accounting_operations.sql`, `src/db/accounting.ts` | Additive actor/state audit path | COMPLETE |
@@ -69,7 +69,7 @@ only current Phase 6 documents; historical release chronology is preserved in
 | Operational/accounting separation | D1 foreign keys and deletion guards | Migration and retention design | COMPLETE |
 | Browser/admin console | `src/worker/index.ts`, `public/learn.css` | Browser shell contract and deployed route | COMPLETE - AUTHENTICATED ACCEPTANCE ONLY REMAINS |
 | Production deployment | `docs/deployment/phase-6.md` | Worker, route and D1 verification | COMPLETE |
-| Sandbox mutation | External FreeAgent sandbox | OAuth/company connection is complete; approved mappings and mutation evidence remain | BLOCKED - EXTERNAL ACCEPTANCE |
+| Sandbox mutation | External FreeAgent sandbox | OAuth/company connection and contact mapping are complete; no approved invoice-producing event or category mapping exists, so no mutation was attempted | BLOCKED - EXTERNAL ACCEPTANCE |
 | Production mutation | External FreeAgent production | No credentials or approval supplied | BLOCKED - EXTERNAL HUMAN GATE |
 
 ## Current deployed distinction
@@ -101,6 +101,20 @@ deployed source commit.
 
 ## Human acceptance checklist
 
+The current live Sandbox evidence is:
+
+- `accounting_connections`: one `CONNECTED` Sandbox connection for Fox
+  Learning Ltd / `foxlearningltdgmailcom`; encrypted access and refresh
+  material is present, and no credential values are exposed.
+- `external_accounting_links`: exactly one `VERIFIED` mapping for contact
+  `257175`, with no conflicting mapping.
+- `accounting_billing_settings`: zero rows because no approved FreeAgent
+  category/accounting mapping has been supplied.
+- `accounting_outbox` and `accounting_retry_audit`: zero rows; no financial
+  mutation has been performed.
+- Production D1 reports no migrations to apply and the deployed callback
+  rejects an invalid state at the Worker boundary.
+
 Only the following external actions remain:
 
 1. Decide whether `ADMIN_CANCELLED` produces no accounting action, a
@@ -110,7 +124,8 @@ Only the following external actions remain:
    authority, item/category, payment terms and effective-date policy. Review
    the current billing-management values; GBP is always enforced and the
    initial normal lesson amount is 55.00 GBP with an explicit zero tax rate.
-3. Supply and verify the approved sandbox contact and provider mappings.
+3. Supply the approved Sandbox invoice/category mapping through the billing
+   settings page or approved configuration channel.
 4. Run the approved sandbox event only after the `ADMIN_CANCELLED`
    consequence is decided, then verify the provider object.
 5. Supply production credentials through the approved secret channel.

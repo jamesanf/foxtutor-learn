@@ -15,13 +15,16 @@ replacement, payment system or accounting ledger.
 **Deployed source:** `4afa705`
 **Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`
 **D1 migrations:** `0001_foundation.sql` through `0020_accounting_company_name.sql`
-**Automated validation:** 27 test files, 139 tests passing
+**Automated validation:** 27 test files, 142 tests passing
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
-the connection tokens are encrypted and persisted in D1. Billing settings show
-the connection status, environment, company identity and reauthentication
-action. No financial mutation has been performed.
+the connection tokens are encrypted and persisted in D1. The live D1 state has
+one verified Sandbox contact mapping for contact `257175`, with no conflicting
+mapping, outbox row, retry audit row or financial mutation. Billing settings
+show the connection status, environment, company identity and reauthentication
+action; invoice-producing acceptance remains fail-closed until the approved
+FreeAgent category/accounting mapping and cancellation consequence exist.
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
