@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-14 - Match accounting icon navigation
+
+- Replaced the Billing settings text action on the accounting page with a
+  visible MDI settings cog.
+- Matched the settings cog and Billing settings back arrow with the same
+  house-colour size, hover, and focus treatment.
+- Deployed executable commit `5f4f19a` as Worker version
+  `6e182030-d609-4012-a7dc-e4a778c1b423`.
+
 ### 2026-09-14 - Simplify billing settings navigation
 
 - Replaced the Billing settings text back button with a compact clickable
