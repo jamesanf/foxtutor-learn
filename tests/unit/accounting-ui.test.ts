@@ -87,7 +87,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("findActiveUserById(db, consumed.admin_user_id)");
     expect(workerSource).toContain('admin.role !== "ADMIN"');
     expect(workerSource).toContain('createSession(db, admin, env.ENVIRONMENT === "production")');
-    expect(workerSource).toContain("verifyFreeAgentContactMapping(db, env, { studentId, studentEmail: student.email, studentParentEmail: student.parent_email, externalReference, environment, now: new Date().toISOString() }, freeAgentFetch);");
+    expect(workerSource).toContain("verifyFreeAgentContactMapping(db, env, { studentId, studentEmail: student.email, studentParentEmail: student.parent_email, externalReference, environment, now }, freeAgentFetch);");
   });
 
   it("keeps contact mappings readable on desktop and mobile", () => {

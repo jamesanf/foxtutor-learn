@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   classifyDirectDebitState,
   directDebitStatusCopy,
-  mapDirectDebitStatus
+  mapDirectDebitStatus,
+  shouldReconcileDirectDebitStatus
 } from "../../src/domain/direct-debit";
 import { freeAgentContactFixture } from "../../src/accounting/freeagent/fixtures";
 
@@ -35,6 +36,30 @@ describe("Direct Debit mandate state mapping", () => {
   it("classifies malformed and unexpected provider values separately", () => {
     expect(classifyDirectDebitState(42 as never, true).diagnosticCode).toBe("MALFORMED_PROVIDER_RESPONSE");
     expect(classifyDirectDebitState("future-provider-state", true).diagnosticCode).toBe("UNEXPECTED_MANDATE_STATE");
+  });
+
+  it("refreshes UNKNOWN even when an old transient error set a future retry time", () => {
+    expect(shouldReconcileDirectDebitStatus({
+      mandateState: "UNKNOWN",
+      lastReconciledAt: "2026-09-14T12:00:00.000Z",
+      nextReconcileAt: "2026-09-15T12:00:00.000Z",
+      now: "2026-09-14T13:00:00.000Z"
+    })).toBe(true);
+  });
+
+  it("refreshes a stale UNKNOWN and leaves a fresh provider state cached", () => {
+    expect(shouldReconcileDirectDebitStatus({
+      mandateState: "UNKNOWN",
+      lastReconciledAt: "2026-09-13T12:00:00.000Z",
+      nextReconcileAt: "2026-09-14T12:00:00.000Z",
+      now: "2026-09-14T12:00:00.000Z"
+    })).toBe(true);
+    expect(shouldReconcileDirectDebitStatus({
+      mandateState: "ACTIVE",
+      lastReconciledAt: "2026-09-14T12:00:00.000Z",
+      nextReconcileAt: "2026-09-15T12:00:00.000Z",
+      now: "2026-09-14T13:00:00.000Z"
+    })).toBe(false);
   });
 
   it("keeps customer copy free of provider identifiers and bank-data instructions", () => {

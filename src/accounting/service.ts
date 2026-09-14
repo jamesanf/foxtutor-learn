@@ -23,6 +23,7 @@ import {
   parseFreeAgentEnvironment,
   refreshAccessToken,
   type FreeAgentCategory,
+  type FreeAgentContact,
   type FreeAgentEnvironment
 } from "./freeagent/client";
 import {
@@ -1090,7 +1091,7 @@ export async function verifyFreeAgentContactMapping(
   env: AccountingEnvironment,
   input: { studentId: string; studentEmail?: string; studentParentEmail?: string; externalReference: string; now: string; environment?: FreeAgentEnvironment },
   fetcher: typeof fetch = freeAgentFetch
-): Promise<void> {
+): Promise<FreeAgentContact> {
   const environment = input.environment ?? configuredEnvironment(env);
   const externalReference = environment === "sandbox" &&
     [input.studentEmail, input.studentParentEmail].some((email) => email?.trim().toLowerCase() === SANDBOX_TEST_CONTACT_EMAIL)
@@ -1173,9 +1174,9 @@ export async function verifyFreeAgentContactMapping(
     const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
     const token = await accessToken(db, env, environment, input.now, fetcher);
     stage = "FreeAgent contact GET";
-    let contact: { url: string; directDebitMandateState?: string | null };
+    let contact: FreeAgentContact;
     try {
-      const found = await client.findContact(token, input.externalReference);
+      const found = await client.findContact(token, externalReference);
       if (!found) throw new FreeAgentApiError({
         code: "MALFORMED_RESPONSE",
         status: null,
@@ -1184,6 +1185,22 @@ export async function verifyFreeAgentContactMapping(
         unknown: true,
         retryAfterSeconds: null
       });
+      const expectedEmails = [input.studentEmail, input.studentParentEmail]
+        .map((email) => email?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email));
+      const contactEmails = [found.email, found.billingEmail]
+        .map((email) => email?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email));
+      if (expectedEmails.length && !expectedEmails.some((email) => contactEmails.includes(email))) {
+        throw new FreeAgentApiError({
+          code: "CONFLICT",
+          status: 409,
+          message: "The FreeAgent contact email does not match the Learn student.",
+          retryable: false,
+          unknown: false,
+          retryAfterSeconds: null
+        });
+      }
       contact = found;
       const mandateState = typeof contact.directDebitMandateState === "string"
         ? contact.directDebitMandateState.toUpperCase().slice(0, 64)
@@ -1212,6 +1229,7 @@ export async function verifyFreeAgentContactMapping(
       verifiedCompanySubdomain: connection.company_subdomain,
       now: input.now
     });
+    return contact;
   } catch (error) {
     logFailure(error, stage);
     throw error;

@@ -110,7 +110,7 @@ import {
 } from "../db/recurrence";
 import { processBillingInvoiceOperation, processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
 import { auditBillingChain } from "../billing/audit";
-import { provisionBillingAccount, reconcileBillingAccountMandate, runBillingProvisioningScheduler } from "../accounting/provisioning";
+import { provisionBillingAccount, reconcileBillingAccountMandate, reconcileVerifiedContact, runBillingProvisioningScheduler } from "../accounting/provisioning";
 import { createEmergencyPaygOverride, findBillingAccount } from "../db/billing-accounts";
 import { canRecordEmergencyPayg, validateEmergencyPaygReason } from "../domain/billing-policy";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
@@ -148,7 +148,7 @@ import {
   currentCalendarDate
 } from "../domain/calendar";
 import { calculatePaymentReadiness } from "../domain/payment-readiness";
-import { classifyDirectDebitState, directDebitStatusCopy, mapDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
+import { classifyDirectDebitState, directDebitStatusCopy, mapDirectDebitStatus, shouldReconcileDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
 import { runBillingSentinel } from "../billing/sentinel";
 import {
   academicYearOptions,
@@ -2366,8 +2366,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     }
     const externalReference = formText(form ?? new FormData(), "externalReference").trim();
     if (!/^\d+$/.test(externalReference)) return messagePage("Invalid contact", "Enter a numeric FreeAgent contact ID.", 400);
+    const now = new Date().toISOString();
+    let verifiedContact;
     try {
-      await verifyFreeAgentContactMapping(db, env, { studentId, studentEmail: student.email, studentParentEmail: student.parent_email, externalReference, environment, now: new Date().toISOString() }, freeAgentFetch);
+      verifiedContact = await verifyFreeAgentContactMapping(db, env, { studentId, studentEmail: student.email, studentParentEmail: student.parent_email, externalReference, environment, now }, freeAgentFetch);
     } catch (error) {
       if (error instanceof FreeAgentApiError && error.shape.code === "CONFLICT") {
         return messagePage("Contact mapping in use", error.message, 409);
@@ -2388,6 +2390,20 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         ? `${freeAgentEnvironmentLabel(environment)} FreeAgent contact ${externalReference} was not found.`
         : `${freeAgentEnvironmentLabel(environment)} FreeAgent contact verification failed.`;
       return messagePage(`${freeAgentEnvironmentLabel(environment)} contact verification failed`, message, error instanceof FreeAgentApiError && error.shape.status && error.shape.status >= 400 && error.shape.status < 500 ? error.shape.status : 502);
+    }
+    try {
+      await reconcileVerifiedContact(db, env, studentId, verifiedContact, now);
+    } catch (error) {
+      console.error("billing_contact_verification_reconciliation_failed", {
+        studentId,
+        environment,
+        errorCode: error instanceof FreeAgentApiError ? error.shape.code : "UNKNOWN"
+      });
+      return messagePage(
+        "Contact verified but billing state unavailable",
+        "The FreeAgent contact was verified, but FoxTutor could not reconcile its Direct Debit state. No payment was initiated; retry the verification after checking the provider connection.",
+        502
+      );
     }
     return redirect("/learn/admin/accounting");
   }
@@ -3262,20 +3278,27 @@ async function studentDirectDebitStatus(
   env: Env,
   studentId: string
 ): Promise<DirectDebitStatus> {
+  const environment = env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production"
+    ? env.FREEAGENT_ENVIRONMENT
+    : null;
+  const link = await findExternalAccountingLink(db, studentId, environment ?? undefined);
+  if (!environment || !link || link.status !== "VERIFIED" || link.verified_environment !== environment) return "SETUP_REQUIRED";
   const account = await findBillingAccount(db, studentId);
   if (account) {
-    const nextReconcileAt = account.next_reconcile_at ? Date.parse(account.next_reconcile_at) : Number.NaN;
-    const reconciliationDue = !Number.isFinite(nextReconcileAt) || nextReconcileAt <= Date.now();
-    const reconciledAt = account.last_reconciled_at ? Date.parse(account.last_reconciled_at) : Number.NaN;
-    const stale = !Number.isFinite(reconciledAt) || reconciledAt <= Date.now() - 24 * 60 * 60_000;
-    const unresolvedWithoutRecordedError = account.mandate_state === "UNKNOWN" && !account.last_error_code;
-    if (unresolvedWithoutRecordedError || (reconciliationDue && (account.mandate_state === "UNKNOWN" || stale))) {
+    const mappingChanged = Boolean(
+      (account.provider_environment && account.provider_environment !== environment) ||
+      (account.provider_contact_reference && account.provider_contact_reference !== link.external_reference)
+    );
+    if (shouldReconcileDirectDebitStatus({
+      mandateState: account.mandate_state,
+      lastReconciledAt: account.last_reconciled_at,
+      nextReconcileAt: account.next_reconcile_at,
+      now: new Date().toISOString()
+    }) || mappingChanged) {
       return reconcileBillingAccountMandate(db, env, studentId, new Date().toISOString(), freeAgentFetch);
     }
     return account.mandate_state;
   }
-  const link = await findExternalAccountingLink(db, studentId, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
-  if (!link || link.status !== "VERIFIED") return "SETUP_REQUIRED";
   try {
     const contact = await providerCall(db, env, new Date().toISOString(), freeAgentFetch, (client, token) =>
       client.getContact(token, link.external_url)

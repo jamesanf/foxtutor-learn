@@ -54,6 +54,77 @@ function providerRetryAt(now: string, code: string): string {
   return new Date(Date.parse(now) + (code === "RATE_LIMIT" ? 60 : 15) * 60_000).toISOString();
 }
 
+function contactReference(contact: FreeAgentContact): string {
+  return contact.url.split("/").pop() ?? contact.url;
+}
+
+function contactMatchesStudent(contact: FreeAgentContact, studentEmail: string): boolean {
+  const expected = studentEmail.trim().toLowerCase();
+  return [contact.email, contact.billingEmail]
+    .map((email) => email?.trim().toLowerCase())
+    .filter((email): email is string => Boolean(email))
+    .includes(expected);
+}
+
+async function persistMandateState(
+  db: D1Database,
+  environment: AccountingEnvironment,
+  studentId: string,
+  contact: FreeAgentContact,
+  now: string
+): Promise<DirectDebitStatus> {
+  const providerEnvironment = configuredEnvironment(environment);
+  const account = await findBillingAccount(db, studentId);
+  const link = providerEnvironment
+    ? await findExternalAccountingLink(db, studentId, providerEnvironment)
+    : null;
+  const providerContactReference = contactReference(contact);
+  if (
+    !providerEnvironment ||
+    !account ||
+    !link ||
+    link.status !== "VERIFIED" ||
+    link.verified_environment !== providerEnvironment ||
+    link.external_reference !== providerContactReference
+  ) {
+    throw new FreeAgentApiError({
+      code: "CONFLICT",
+      status: 409,
+      message: "The verified FreeAgent mapping does not match the provider contact.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
+  const state = classifyDirectDebitState(contact.directDebitMandateState, true);
+  const states = localState(state.status);
+  const prior = account.mandate_state;
+  await updateBillingAccount(db, account.id, {
+    mandateState: states.mandateState,
+    provisioningState: states.provisioningState,
+    providerEnvironment,
+    providerContactReference,
+    providerContactUrl: contact.url,
+    verifiedAt: state.status === "ACTIVE" ? now : null,
+    lastReconciledAt: now,
+    nextReconcileAt: new Date(Date.parse(now) + (state.status === "ACTIVE" ? 24 : 1) * 60 * 60_000).toISOString(),
+    lastErrorCode: state.diagnosticCode,
+    lastErrorMessage: state.diagnosticMessage,
+    claimExpiresAt: null
+  }, now);
+  if (prior !== states.mandateState) {
+    await recordBillingProvisioningEvent(db, {
+      id: crypto.randomUUID(),
+      billingAccountId: account.id,
+      eventType: "MANDATE_STATE_CHANGED",
+      safeDetail: `${prior}->${states.mandateState}`,
+      idempotencyKey: `${account.id}:mandate:${states.mandateState}:${now}`,
+      now
+    });
+  }
+  return state.status;
+}
+
 async function studentRow(db: D1Database, studentId: string): Promise<StudentProvisioningRow | null> {
   return db.prepare(
     "SELECT id, name, email, learn_user_id, status FROM students WHERE id = ?"
@@ -79,6 +150,16 @@ async function findOrCreateContact(
       unknown: false,
       retryAfterSeconds: null
     });
+    if (!contactMatchesStudent(contact, student.email)) {
+      throw new FreeAgentApiError({
+        code: "CONFLICT",
+        status: 409,
+        message: "The verified FreeAgent contact email does not match the Learn student.",
+        retryable: false,
+        unknown: false,
+        retryAfterSeconds: null
+      });
+    }
     return { contact, eventType: "CONTACT_FOUND" };
   }
 
@@ -162,6 +243,7 @@ export async function provisionBillingAccount(
     await updateBillingAccount(db, account.id, {
       mandateState: states.mandateState,
       provisioningState: states.provisioningState,
+      providerEnvironment: configuredEnvironment(env),
       providerContactReference: contact.url.split("/").pop() ?? contact.url,
       providerContactUrl: contact.url,
       verifiedAt: status === "ACTIVE" ? now : null,
@@ -235,6 +317,17 @@ export async function provisionBillingAccount(
   return findBillingAccount(db, studentId);
 }
 
+export async function reconcileVerifiedContact(
+  db: D1Database,
+  env: ProvisioningEnvironment,
+  studentId: string,
+  contact: FreeAgentContact,
+  now: string
+): Promise<DirectDebitStatus> {
+  await ensureBillingAccount(db, studentId, now, configuredEnvironment(env));
+  return persistMandateState(db, env, studentId, contact, now);
+}
+
 export async function reconcileBillingAccountMandate(
   db: D1Database,
   env: ProvisioningEnvironment,
@@ -243,23 +336,28 @@ export async function reconcileBillingAccountMandate(
   fetcher: typeof fetch = freeAgentFetch
 ): Promise<DirectDebitStatus> {
   const account = await findBillingAccount(db, studentId);
-  const link = await findExternalAccountingLink(db, studentId, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
+  const providerEnvironment = configuredEnvironment(env);
+  const link = await findExternalAccountingLink(db, studentId, providerEnvironment ?? undefined);
   if (!account || !link || link.status !== "VERIFIED") return "SETUP_REQUIRED";
+  if (!providerEnvironment || link.verified_environment !== providerEnvironment) return "UNKNOWN";
   try {
+    const student = await studentRow(db, studentId);
     const contact = await providerCall(db, env, now, fetcher, (client, token) =>
       client.getContact(token, link.external_url)
     );
-    if (!contact) {
+    if (!contact || !student || !contactMatchesStudent(contact, student.email)) {
       throw new FreeAgentApiError({
-        code: "NOT_FOUND",
-        status: 404,
-        message: "The mapped FreeAgent contact no longer exists.",
+        code: contact ? "CONFLICT" : "NOT_FOUND",
+        status: contact ? 409 : 404,
+        message: contact
+          ? "The verified FreeAgent contact email does not match the Learn student."
+          : "The mapped FreeAgent contact no longer exists.",
         retryable: false,
         unknown: false,
         retryAfterSeconds: null
       });
     }
-    const providerContactReference = contact.url.split("/").pop() ?? contact.url;
+    const providerContactReference = contactReference(contact);
     if (providerContactReference !== link.external_reference) {
       throw new FreeAgentApiError({
         code: "CONFLICT",
@@ -270,21 +368,8 @@ export async function reconcileBillingAccountMandate(
         retryAfterSeconds: null
       });
     }
-    const state = classifyDirectDebitState(contact?.directDebitMandateState ?? null, true);
-    const status = state.status;
-    const states = localState(status);
-    await updateBillingAccount(db, account.id, {
-      mandateState: states.mandateState,
-      provisioningState: states.provisioningState,
-      providerContactReference,
-      providerContactUrl: contact.url,
-      verifiedAt: status === "ACTIVE" ? now : null,
-      lastReconciledAt: now,
-      nextReconcileAt: new Date(Date.parse(now) + (status === "ACTIVE" ? 24 : 1) * 60 * 60_000).toISOString(),
-      lastErrorCode: state.diagnosticCode,
-      lastErrorMessage: state.diagnosticMessage,
-      claimExpiresAt: null
-    }, now);
+    const status = await persistMandateState(db, env, studentId, contact, now);
+    const state = classifyDirectDebitState(contact.directDebitMandateState, true);
     console.info("billing_mandate_reconciled", {
       studentId,
       billingAccountId: account.id,

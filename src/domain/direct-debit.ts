@@ -43,6 +43,20 @@ export interface DirectDebitStateResult {
   diagnosticMessage: string | null;
 }
 
+export function shouldReconcileDirectDebitStatus(input: {
+  mandateState: DirectDebitStatus;
+  lastReconciledAt: string | null;
+  nextReconcileAt: string | null;
+  now: string;
+}): boolean {
+  if (input.mandateState === "UNKNOWN") return true;
+  const nextReconcileAt = input.nextReconcileAt ? Date.parse(input.nextReconcileAt) : Number.NaN;
+  const lastReconciledAt = input.lastReconciledAt ? Date.parse(input.lastReconciledAt) : Number.NaN;
+  const due = !Number.isFinite(nextReconcileAt) || nextReconcileAt <= Date.parse(input.now);
+  const stale = !Number.isFinite(lastReconciledAt) || lastReconciledAt <= Date.parse(input.now) - 24 * 60 * 60_000;
+  return due && stale;
+}
+
 export function normalizeProviderMandateState(value: unknown): ProviderMandateState {
   if (value === null || value === undefined) return null;
   if (typeof value !== "string") return "__MALFORMED__";

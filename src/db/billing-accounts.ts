@@ -102,6 +102,7 @@ export async function updateBillingAccount(
   input: {
     mandateState: BillingMandateState;
     provisioningState: BillingProvisioningState;
+    providerEnvironment?: "sandbox" | "production" | null;
     providerContactReference?: string | null;
     providerContactUrl?: string | null;
     verifiedAt?: string | null;
@@ -117,6 +118,7 @@ export async function updateBillingAccount(
     `UPDATE billing_accounts
      SET mandate_state = ?,
          provisioning_state = ?,
+         provider_environment = COALESCE(?, provider_environment),
          provider_contact_reference = COALESCE(?, provider_contact_reference),
          provider_contact_url = COALESCE(?, provider_contact_url),
          verified_at = COALESCE(?, verified_at),
@@ -130,6 +132,7 @@ export async function updateBillingAccount(
   ).bind(
     input.mandateState,
     input.provisioningState,
+    input.providerEnvironment ?? null,
     input.providerContactReference ?? null,
     input.providerContactUrl ?? null,
     input.verifiedAt ?? null,

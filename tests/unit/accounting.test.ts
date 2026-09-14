@@ -911,9 +911,15 @@ describe("FreeAgent adapter", () => {
         };
       }
     } as unknown as D1Database;
-    const fetcher: typeof fetch = async () => jsonResponse({
-      contact: { url: "https://api.sandbox.freeagent.com/v2/contacts/257175" }
-    });
+    const fetcher: typeof fetch = async (input) => {
+      expect(String(input)).toBe("https://api.sandbox.freeagent.com/v2/contacts/257175");
+      return jsonResponse({
+        contact: {
+          url: "https://api.sandbox.freeagent.com/v2/contacts/257175",
+          email: "jamesanf@gmail.com"
+        }
+      });
+    };
 
     await expect(verifyFreeAgentContactMapping(db, {
       FREEAGENT_ENVIRONMENT: "sandbox",
@@ -926,7 +932,10 @@ describe("FreeAgent adapter", () => {
       studentEmail: "jamesanf@gmail.com",
       externalReference: "21801761",
       now
-    }, fetcher)).resolves.toBeUndefined();
+    }, fetcher)).resolves.toMatchObject({
+      url: "https://api.sandbox.freeagent.com/v2/contacts/257175",
+      email: "jamesanf@gmail.com"
+    });
 
     expect(storedLinks).toHaveLength(1);
     expect(storedLinks[0]).toMatchObject({
