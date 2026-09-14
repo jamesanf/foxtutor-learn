@@ -1086,6 +1086,24 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   };
   setupNotificationConsole();
 
+  document.querySelectorAll<HTMLInputElement>("[data-accounting-category-search]").forEach((search) => {
+    const selectElement = search.parentElement?.querySelector("[data-accounting-category-select]");
+    if (!(selectElement instanceof HTMLSelectElement)) return;
+    const select = selectElement;
+    const filter = () => {
+      const query = search.value.trim().toLowerCase();
+      Array.from(select.options).forEach((option) => {
+        if (!option.value) {
+          option.hidden = false;
+          return;
+        }
+        option.hidden = !String(option.dataset.categorySearch ?? "").toLowerCase().includes(query);
+      });
+      if (select.selectedOptions[0]?.hidden) select.value = "";
+    };
+    search.addEventListener("input", filter);
+  });
+
   document.querySelectorAll<HTMLFormElement>("[data-student-profile-form]").forEach((form) => {
     const systemElement = form.querySelector("[data-academic-system]");
     const yearElement = form.querySelector("[data-academic-year]");

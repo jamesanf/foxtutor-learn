@@ -288,8 +288,10 @@ describe("invoice configuration", () => {
   it("requires a category returned by the active provider company when options are supplied", () => {
     const categories = [{
       url: "https://api.sandbox.freeagent.com/v2/categories/2",
-      name: "Sales",
-      nominalCode: "001"
+      description: "Sales",
+      nominalCode: "001",
+      group: "INCOME" as const,
+      autoSalesTaxRate: null
     }];
     expect(validateBillingSettings({
       amount: "55.00",
@@ -455,6 +457,25 @@ describe("FreeAgent adapter", () => {
     expect(calls[1]?.body).toContain("grant_type=refresh_token");
   });
 
+  it("uses the Production token endpoint for Production authorization", async () => {
+    let requestUrl = "";
+    await expect(exchangeAuthorizationCode("production", {
+      clientId: "production-client",
+      clientSecret: "production-secret",
+      code: "production-code",
+      redirectUri: "https://foxtutor.org/learn/admin/accounting/oauth/callback"
+    }, async (input) => {
+      requestUrl = String(input);
+      return jsonResponse({
+        access_token: "production-access",
+        refresh_token: "production-refresh",
+        expires_in: 3600,
+        refresh_token_expires_in: 86_400
+      });
+    })).resolves.toMatchObject({ accessToken: "production-access" });
+    expect(requestUrl).toBe("https://api.freeagent.com/v2/token_endpoint");
+  });
+
   it("uses a safely bound default fetcher through a client instance", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       if (String(input).endsWith("/v2/token_endpoint")) {
@@ -465,7 +486,7 @@ describe("FreeAgent adapter", () => {
           refresh_token_expires_in: 86_400
         });
       }
-      return jsonResponse({ company: { subdomain: "foxlearningltdgmailcom" } });
+      return jsonResponse({ company: { subdomain: "foxlearningltdgmailcom", currency: "GBP" } });
     });
     try {
       const client = new FreeAgentClient({ environment: "sandbox" });
@@ -498,7 +519,7 @@ describe("FreeAgent adapter", () => {
           refresh_token_expires_in: 86_400
         });
       }
-      return jsonResponse({ company: { subdomain: "foxlearningltdgmailcom" } });
+      return jsonResponse({ company: { subdomain: "foxlearningltdgmailcom", currency: "GBP" } });
     });
     const saved: unknown[] = [];
     const db = {

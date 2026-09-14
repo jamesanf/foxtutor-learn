@@ -66,6 +66,15 @@ describe("accounting admin presentation contract", () => {
     expect(readFileSync("src/accounting/service.ts", "utf8")).toContain('console.log("FreeAgent OAuth stage failed", diagnostic)');
   });
 
+  it("generates the admin OAuth target from the server-selected environment", () => {
+    expect(workerSource).toContain('const environment = configuredEnvironment(env);');
+    expect(workerSource).toContain('return redirect(freeAgentAuthorizationUrl(environment, {');
+    expect(workerSource).toContain('clientId: credentials.clientId');
+    expect(workerSource).not.toContain("login.sandbox.freeagent.com");
+    expect(workerSource).toContain("const connectionLabel = status.connected ? \"Connected\" : \"Not connected\";");
+    expect(workerSource).toContain("freeAgentEnvironmentLabel(status.environment)");
+  });
+
   it("handles the bypassed callback with one-time admin-bound OAuth state", () => {
     expect(workerSource).toContain('if (route === "admin-accounting-callback") return handleAccountingOAuthCallback(request, env);');
     expect(workerSource).toContain("findActiveUserById(db, consumed.admin_user_id)");

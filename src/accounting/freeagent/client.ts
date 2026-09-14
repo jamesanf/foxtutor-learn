@@ -61,8 +61,10 @@ export interface FreeAgentCompany {
 
 export interface FreeAgentCategory {
   url: string;
-  name: string;
+  description: string;
   nominalCode: string | null;
+  group: "ADMIN_EXPENSES" | "COST_OF_SALES" | "INCOME" | "GENERAL";
+  autoSalesTaxRate: string | null;
 }
 
 export interface FreeAgentClientOptions {
@@ -135,6 +137,103 @@ function canonicalProviderUrl(value: unknown, environment: FreeAgentEnvironment)
   } catch {
     return null;
   }
+}
+
+type FreeAgentCategoryGroup = FreeAgentCategory["group"];
+
+const categoryGroups: ReadonlyArray<{
+  key: "admin_expenses_categories" | "cost_of_sales_categories" | "income_categories" | "general_categories";
+  group: FreeAgentCategoryGroup;
+  order: number;
+}> = [
+  { key: "income_categories", group: "INCOME", order: 0 },
+  { key: "cost_of_sales_categories", group: "COST_OF_SALES", order: 1 },
+  { key: "admin_expenses_categories", group: "ADMIN_EXPENSES", order: 2 },
+  { key: "general_categories", group: "GENERAL", order: 3 }
+];
+
+function categoryResponseError(message: string): FreeAgentApiError {
+  return new FreeAgentApiError({
+    code: "MALFORMED_RESPONSE",
+    status: null,
+    message,
+    retryable: false,
+    unknown: true,
+    retryAfterSeconds: null
+  });
+}
+
+export function normalizeFreeAgentCategories(
+  data: unknown,
+  environment: FreeAgentEnvironment,
+  status = 200
+): FreeAgentCategory[] {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new FreeAgentApiError({
+      ...categoryResponseError("FreeAgent category response was not an object.").shape,
+      status
+    });
+  }
+  const response = data as Record<string, unknown>;
+  const knownKeys = categoryGroups.map(({ key }) => key);
+  if (!knownKeys.some((key) => Object.prototype.hasOwnProperty.call(response, key))) {
+    throw new FreeAgentApiError({
+      ...categoryResponseError("FreeAgent category response did not contain a documented category collection.").shape,
+      status
+    });
+  }
+  const categories: Array<FreeAgentCategory & { order: number }> = [];
+  for (const { key, group, order } of categoryGroups) {
+    const collection = response[key];
+    if (collection === undefined) continue;
+    if (!Array.isArray(collection)) {
+      throw new FreeAgentApiError({
+        ...categoryResponseError(`FreeAgent category collection ${key} was not an array.`).shape,
+        status
+      });
+    }
+    for (const item of collection) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new FreeAgentApiError({
+          ...categoryResponseError(`FreeAgent ${key} contained an invalid category.`).shape,
+          status
+        });
+      }
+      const category = item as Record<string, unknown>;
+      const url = canonicalProviderUrl(category.url, environment);
+      const description = typeof category.description === "string" ? category.description.trim() : "";
+      if (!url || !description) {
+        throw new FreeAgentApiError({
+          ...categoryResponseError(`FreeAgent ${key} contained a category without a safe URL or description.`).shape,
+          status
+        });
+      }
+      categories.push({
+        url,
+        description,
+        nominalCode: category.nominal_code === undefined || category.nominal_code === null
+          ? null
+          : String(category.nominal_code),
+        group,
+        autoSalesTaxRate: category.auto_sales_tax_rate === undefined || category.auto_sales_tax_rate === null
+          ? null
+          : String(category.auto_sales_tax_rate),
+        order
+      });
+    }
+  }
+  const deduplicated = new Map<string, FreeAgentCategory & { order: number }>();
+  for (const category of categories) {
+    if (!deduplicated.has(category.url)) deduplicated.set(category.url, category);
+  }
+  return [...deduplicated.values()]
+    .sort((left, right) =>
+      left.order - right.order
+      || left.description.localeCompare(right.description)
+      || (left.nominalCode ?? "").localeCompare(right.nominalCode ?? "")
+      || left.url.localeCompare(right.url)
+    )
+    .map(({ order: _order, ...category }) => category);
 }
 
 export class FreeAgentClient {
@@ -230,44 +329,8 @@ export class FreeAgentClient {
   }
 
   async listCategories(accessToken: string): Promise<FreeAgentCategory[]> {
-    const result = await this.requestJson<{
-      categories?: Array<{
-        url?: string;
-        name?: string;
-        nominal_code?: string | number;
-      }>;
-    }>(accessToken, "/v2/categories?per_page=100");
-    if (!Array.isArray(result.data.categories)) {
-      throw new FreeAgentApiError({
-        code: "MALFORMED_RESPONSE",
-        status: result.response.status,
-        message: "FreeAgent category response was incomplete.",
-        retryable: false,
-        unknown: true,
-        retryAfterSeconds: null
-      });
-    }
-    return result.data.categories.map((category) => {
-      const url = canonicalProviderUrl(category.url, this.options.environment);
-      const name = typeof category.name === "string" ? category.name.trim() : "";
-      if (!url || !name) {
-        throw new FreeAgentApiError({
-          code: "MALFORMED_RESPONSE",
-          status: result.response.status,
-          message: "FreeAgent category response contained an invalid category.",
-          retryable: false,
-          unknown: true,
-          retryAfterSeconds: null
-        });
-      }
-      return {
-        url,
-        name,
-        nominalCode: category.nominal_code === undefined || category.nominal_code === null
-          ? null
-          : String(category.nominal_code)
-      };
-    });
+    const result = await this.requestJson<unknown>(accessToken, "/v2/categories?per_page=100");
+    return normalizeFreeAgentCategories(result.data, this.options.environment, result.response.status);
   }
 
   async getContact(accessToken: string, externalReference: string): Promise<FreeAgentContact | null> {

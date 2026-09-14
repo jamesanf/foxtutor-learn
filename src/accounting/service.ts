@@ -704,11 +704,12 @@ export async function connectFreeAgent(
     const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
     const company = await client.company(tokens.accessToken);
     stage = "company subdomain comparison";
-    if (company.subdomain !== credentials.companySubdomain) {
+    const expectedCurrency = env.FREEAGENT_INVOICE_CURRENCY ?? NORMAL_LESSON_CURRENCY;
+    if (company.subdomain !== credentials.companySubdomain || company.currency !== expectedCurrency) {
       throw new FreeAgentApiError({
         code: "CONFIGURATION",
         status: null,
-        message: "FreeAgent authenticated company does not match the configured company.",
+        message: "FreeAgent authenticated company does not match the configured company or currency.",
         retryable: false,
         unknown: false,
         retryAfterSeconds: null

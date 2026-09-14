@@ -113,12 +113,23 @@ stale mandate, invoice, payment, or contact state. The additive Phase 7.9
 migration preserves the existing Sandbox records and creates independent
 per-environment connection and mapping storage.
 
+The admin connection action uses the configured environment to generate the
+FreeAgent OAuth authorization URL: `/v2/approve_app` on
+`api.sandbox.freeagent.com` for Sandbox or `api.freeagent.com` for Production.
+The one-time OAuth state is bound to the environment and administrator, and
+the callback exchanges the code and verifies the configured company before
+storing the environment-specific connection.
+
 ### Invoice category mapping
 
 The admin accounting settings page reads company-specific categories through
 `GET /v2/categories` using the authenticated connection for the selected
-environment. The administrator selects the approved category by name and
-nominal code; FoxTutor stores the provider URL only as an implementation
+environment. FreeAgent returns four collections:
+`admin_expenses_categories`, `cost_of_sales_categories`, `income_categories`
+and `general_categories`. FoxTutor maps their `description`, `nominal_code`,
+provider URL and group into one deterministic list, removes duplicate URLs and
+displays the description and nominal code. The administrator selects the
+approved category; FoxTutor stores the provider URL only as an implementation
 value. A category URL is accepted only when its API origin matches the
 selected environment, and the persisted mapping is also bound to the
 connected company subdomain. A Sandbox category can therefore never be
