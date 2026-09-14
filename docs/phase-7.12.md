@@ -20,8 +20,8 @@ Production credentials and human authorization are available.
 
 | Item | Value |
 | --- | --- |
-| Source commit | `125113a` |
-| Worker version | `a734b16f-660f-4e5b-800a-58e6af130044` |
+| Source commit | `7ef5c76` |
+| Worker version | `46e84b42-6201-4141-ad7e-f567ddd45b80` |
 | D1 migrations | `0001` through `0030_freeagent_dual_connections.sql` |
 | Automated validation | 38 test files, 232 tests |
 | Production smoke | `/learn` returned the Cloudflare Access `302` |

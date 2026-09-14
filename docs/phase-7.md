@@ -22,8 +22,8 @@ acceptance record; it is not superseded by this provider-contract repair.
 
 ## Deployed baseline
 
-- Source commit: `125113a`
-- Worker version: `a734b16f-660f-4e5b-800a-58e6af130044`
+- Source commit: `7ef5c76`
+- Worker version: `46e84b42-6201-4141-ad7e-f567ddd45b80`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0030_freeagent_dual_connections.sql`
 - Scheduler: `*/5 * * * *`

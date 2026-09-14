@@ -9,8 +9,8 @@ deployment.
 
 | Item | Value |
 | --- | --- |
-| Source commit | `125113a` |
-| Worker version | `a734b16f-660f-4e5b-800a-58e6af130044` |
+| Source commit | `7ef5c76` |
+| Worker version | `46e84b42-6201-4141-ad7e-f567ddd45b80` |
 | D1 migration | `0030_freeagent_dual_connections.sql` applied |
 | Follow-up migration check | No migrations to apply |
 | Production smoke | `/learn` returned Cloudflare Access `302` |

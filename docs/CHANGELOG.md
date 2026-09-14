@@ -16,7 +16,9 @@
 - Passed 38 test files and 232 tests; build, legal checks, Wrangler dry-run,
   local/remote migration checks and production smoke checks passed.
 - Deployed Worker version `a734b16f-660f-4e5b-800a-58e6af130044` from commit
-  `125113a`; no Production financial mutation was performed.
+  `125113a`; the later accounting UI polish is deployed as Worker version
+  `46e84b42-6201-4141-ad7e-f567ddd45b80` from commit `7ef5c76`; no Production
+  financial mutation was performed.
 - Production OAuth, live Sandbox provider evidence and authenticated browser
   redirect capture remain human-gated.
 
