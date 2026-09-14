@@ -2,6 +2,7 @@
 
 ## Delivered
 
+- Commit `46737a32ff953267ecc184917a514fed3622dab6`.
 - Environment-bound Production/Sandbox contact verification.
 - Explicit contact verification failure classification for administrators.
 - Mandate-state read diagnostics without provider mutation.

@@ -2,6 +2,9 @@
 
 ## Source
 
+Implementation and documentation commit:
+`46737a32ff953267ecc184917a514fed3622dab6`.
+
 The deployment must contain only the committed Phase 7.14 source and
 documentation. The temporary Production credential compatibility flag remains
 enabled until authenticated acceptance proves it can be removed safely.
