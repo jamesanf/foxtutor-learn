@@ -3339,8 +3339,8 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
   studentBillingStage("CURRENT_DATE_RESOLVED", studentContext);
   const [credits, history, upcoming] = await Promise.all([
     runStudentBillingStage("CREDIT_QUERY", studentContext, async () => (await listCustomerCreditBalances(db)).filter((row) => row.student_id === student.id)),
-    runStudentBillingStage("HISTORY_QUERY", studentContext, () => listBillingHistory(db, student.id)),
-    runStudentBillingStage("UPCOMING_QUERY", studentContext, () => listUpcomingBillingRows(db, today, nextSeven, student.id)),
+    runStudentBillingStage("HISTORY_QUERY", studentContext, () => listBillingHistory(db, student.id, 100, configuredEnvironment(env))),
+    runStudentBillingStage("UPCOMING_QUERY", studentContext, () => listUpcomingBillingRows(db, today, nextSeven, student.id, configuredEnvironment(env))),
   ]);
   const mandateStatus = await runStudentBillingStage("DIRECT_DEBIT_STATUS_QUERY", studentContext, () =>
     studentDirectDebitStatus(db, env, student.id)

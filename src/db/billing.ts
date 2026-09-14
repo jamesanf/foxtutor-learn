@@ -1062,9 +1062,14 @@ export async function updateBillingAlertStatus(
 export async function listBillingHistory(
   db: D1Database,
   studentId: string,
-  limit = 100
+  limit = 100,
+  providerEnvironment?: "sandbox" | "production" | null
 ): Promise<BillingHistoryItem[]> {
   const boundedLimit = Math.max(1, Math.min(limit, 500));
+  const invoiceEnvironmentFilter = providerEnvironment
+    ? " AND (i.provider_environment = ? OR i.provider_environment IS NULL)"
+    : "";
+  const invoiceEnvironmentBindings = providerEnvironment ? [providerEnvironment] : [];
   const [lessonCharges, cancellations, credits, ledgerTransactions, invoices, payments] = await Promise.all([
     db.prepare(
       `SELECT e.id, 'LESSON_CHARGE' AS kind, COALESCE(e.lesson_date, e.created_at) AS occurred_at,
@@ -1073,11 +1078,11 @@ export async function listBillingHistory(
               e.status, 'Lesson charge' AS description, e.external_reference AS provider_reference
        FROM billing_events e
        JOIN students s ON s.id = e.student_id
-       LEFT JOIN billing_invoices i ON i.billing_event_id = e.id
+       LEFT JOIN billing_invoices i ON i.billing_event_id = e.id${invoiceEnvironmentFilter}
        WHERE e.student_id = ?
        ORDER BY occurred_at DESC, e.id DESC
        LIMIT ?`
-    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    ).bind(...invoiceEnvironmentBindings, studentId, boundedLimit).all<BillingHistoryItem>(),
     db.prepare(
       `SELECT h.id, 'CANCELLATION' AS kind, h.created_at AS occurred_at,
               h.student_id, s.name AS student_name, h.lesson_id, NULL AS billing_event_id,
@@ -1126,9 +1131,10 @@ export async function listBillingHistory(
        JOIN billing_events e ON e.id = i.billing_event_id
        JOIN students s ON s.id = i.student_id
        WHERE i.student_id = ?
+         ${invoiceEnvironmentFilter}
        ORDER BY i.created_at DESC, i.id DESC
        LIMIT ?`
-    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    ).bind(studentId, ...invoiceEnvironmentBindings, boundedLimit).all<BillingHistoryItem>(),
     db.prepare(
       `SELECT p.id, 'PAYMENT' AS kind, p.created_at AS occurred_at,
               i.student_id, s.name AS student_name, e.lesson_id,
@@ -1140,9 +1146,10 @@ export async function listBillingHistory(
        JOIN billing_events e ON e.id = i.billing_event_id
        JOIN students s ON s.id = i.student_id
        WHERE i.student_id = ?
+         ${invoiceEnvironmentFilter}
        ORDER BY p.created_at DESC, p.id DESC
        LIMIT ?`
-    ).bind(studentId, boundedLimit).all<BillingHistoryItem>()
+    ).bind(studentId, ...invoiceEnvironmentBindings, boundedLimit).all<BillingHistoryItem>()
   ]);
   return [
     ...lessonCharges.results,
@@ -1164,7 +1171,8 @@ export async function listUpcomingBillingRows(
   db: D1Database,
   startDate: string,
   endDate: string,
-  studentId?: string
+  studentId?: string,
+  providerEnvironment?: "sandbox" | "production" | null
 ): Promise<Array<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null }>> {
   const result = await db.prepare(
     `SELECT e.id, 'LESSON_CHARGE' AS kind, COALESCE(e.lesson_date, e.created_at) AS occurred_at,
@@ -1177,12 +1185,19 @@ export async function listUpcomingBillingRows(
      FROM billing_events e
      JOIN students s ON s.id = e.student_id
      LEFT JOIN billing_invoices i ON i.billing_event_id = e.id
+       ${providerEnvironment ? "AND (i.provider_environment = ? OR i.provider_environment IS NULL)" : ""}
      LEFT JOIN customer_credit_accounts a ON a.student_id = e.payer_student_id
      LEFT JOIN billing_payments p ON p.invoice_id = i.id
      WHERE e.lesson_date >= ? AND e.lesson_date < ? AND e.status != 'CANCELLED'
        AND (? IS NULL OR e.student_id = ?)
      ORDER BY e.lesson_date ASC, e.id ASC`
-  ).bind(startDate, endDate, studentId ?? null, studentId ?? null).all<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null }>();
+  ).bind(
+    ...(providerEnvironment ? [providerEnvironment] : []),
+    startDate,
+    endDate,
+    studentId ?? null,
+    studentId ?? null
+  ).all<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null }>();
   return result.results;
 }
 

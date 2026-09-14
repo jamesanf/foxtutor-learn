@@ -82,4 +82,11 @@ describe("student billing history query", () => {
       rows[1]
     ]);
   });
+
+  it("does not surface invoices from a different provider environment", async () => {
+    const db = mockBillingDb(() => []);
+
+    await expect(listBillingHistory(db, "student-1", 100, "production")).resolves.toEqual([]);
+    expect(db.queries.filter((sql) => sql.includes("provider_environment")).length).toBe(3);
+  });
 });
