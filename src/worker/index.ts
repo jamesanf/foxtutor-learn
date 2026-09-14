@@ -113,6 +113,7 @@ import { auditBillingChain } from "../billing/audit";
 import { provisionBillingAccount, reconcileBillingAccountMandate, reconcileVerifiedContact, runBillingProvisioningScheduler } from "../accounting/provisioning";
 import { createEmergencyPaygOverride, findBillingAccount } from "../db/billing-accounts";
 import { canRecordEmergencyPayg, validateEmergencyPaygReason } from "../domain/billing-policy";
+import { billingCustomerStatusLabel } from "../domain/billing-history";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
 import {
   cancelLesson,
@@ -3312,20 +3313,6 @@ async function studentDirectDebitStatus(
     });
     return "UNKNOWN";
   }
-}
-
-function billingCustomerStatusLabel(kind: BillingHistoryItem["kind"], status: string): string {
-  const normalized = status.toUpperCase();
-  if (normalized === "SUBMITTED") return "Collection submitted";
-  if (normalized === "PAYMENT_PENDING" || normalized === "PENDING") return "Payment processing";
-  if (normalized === "SCHEDULED") return "Collection scheduled";
-  if (normalized === "CONFIRMED" || normalized === "PAID") return "Payment confirmed";
-  if (normalized === "FAILED") return "Payment failed";
-  if (normalized === "UNKNOWN" || normalized === "RECONCILIATION_REQUIRED") return "Needs checking";
-  if (normalized === "SENT" || normalized === "INVOICE_CREATED") return "Invoice outstanding";
-  if (normalized === "CREDIT_COVERED" || normalized === "SETTLED") return "Covered by credit";
-  if (kind === "CREDIT" || kind === "CREDIT_CONSUMED") return billingReadinessLabel(normalized);
-  return billingReadinessLabel(normalized);
 }
 
 function directDebitStatusClass(status: DirectDebitStatus): string {

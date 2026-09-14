@@ -48,6 +48,12 @@ export function collectionDateSevenDaysBeforeLesson(lessonDate: string): string 
   return subtractCalendarDays(lessonDate, 7);
 }
 
+export function isCollectionDateReached(collectionDate: string, today: string): boolean {
+  parseDate(collectionDate);
+  parseDate(today);
+  return collectionDate <= today;
+}
+
 export function applyAvailableCredits(
   grossAmountMinor: bigint,
   credits: readonly AvailableCredit[]

@@ -21,9 +21,9 @@ import {
 } from "../accounting/service";
 import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
 import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
-import { billingReference } from "../domain/billing";
+import { billingReference, isCollectionDateReached } from "../domain/billing";
 import { classifyDirectDebitState } from "../domain/direct-debit";
-import { mapFreeAgentPaymentStatus } from "../domain/payment-status";
+import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
 
 function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
@@ -306,7 +306,7 @@ async function processDirectDebit(
     }, now);
     return;
   }
-  if (!invoice.collection_date || invoice.collection_date > now.slice(0, 10)) {
+  if (!invoice.collection_date || !isCollectionDateReached(invoice.collection_date, now.slice(0, 10))) {
     await markBillingInvoiceOperation(db, operation.id, {
       status: "RETRYABLE",
       providerStatus: "NOT_YET_DUE",
@@ -534,9 +534,7 @@ export async function reconcileBillingInvoices(
         ? "CONFIRMED"
         : cancelled
           ? "NOT_STARTED"
-          : provider.paymentStatus
-            ? mapFreeAgentPaymentStatus(provider.paymentStatus)
-            : "NOT_STARTED";
+          : mapFreeAgentInvoicePaymentStatus(provider.status, provider.paymentStatus);
       if (paymentStatus !== "NOT_STARTED") {
         await db.prepare(
           `INSERT INTO billing_payments

@@ -19,3 +19,19 @@ export function mapFreeAgentPaymentStatus(value: unknown): PaymentLifecycleState
   if (normalized === "not started" || normalized === "not_started") return "NOT_STARTED";
   return "UNKNOWN";
 }
+
+export function mapFreeAgentInvoicePaymentStatus(
+  invoiceStatus: unknown,
+  paymentStatus: unknown
+): PaymentLifecycleState {
+  const invoiceState = typeof invoiceStatus === "string" ? invoiceStatus.trim().toLowerCase() : "";
+  if (invoiceState === "draft") return "NOT_STARTED";
+  if (invoiceState === "paid") return "CONFIRMED";
+  if (typeof paymentStatus === "string" && paymentStatus.trim()) {
+    return mapFreeAgentPaymentStatus(paymentStatus);
+  }
+  if (["payment pending", "payment submitted", "payment failed"].includes(invoiceState)) {
+    return mapFreeAgentPaymentStatus(invoiceState);
+  }
+  return "NOT_STARTED";
+}

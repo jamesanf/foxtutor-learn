@@ -876,8 +876,9 @@ export async function ensureDirectDebitOperationForInvoice(
             'direct-debit:' || id, 'PENDING', ?, ?
      FROM billing_invoices
      WHERE id = ? AND status = 'SENT' AND net_amount_minor > 0
+       AND collection_date IS NOT NULL AND collection_date <= ?
      ON CONFLICT(invoice_id, operation_type) DO NOTHING`
-  ).bind(now, now, invoiceId).run();
+  ).bind(now, now, invoiceId, now.slice(0, 10)).run();
   return result.meta.changes > 0;
 }
 

@@ -7,6 +7,7 @@ import {
   creditConsumptionIdempotencyKey,
   creditGrantIdempotencyKey,
   creditStatus,
+  isCollectionDateReached,
   refundIdempotencyKey
 } from "../../src/domain/billing";
 
@@ -93,5 +94,17 @@ describe("customer credit ledger rules", () => {
       cancellationDate: null,
       creditNoteDate: null
     });
+  });
+
+  it("keeps a twelve-lesson future fixture invoice-only until each collection date", () => {
+    const lessonDates = [
+      "2026-09-17", "2026-09-18", "2026-09-24", "2026-09-25",
+      "2026-10-01", "2026-10-02", "2026-10-08", "2026-10-09",
+      "2026-10-15", "2026-10-16", "2026-10-22", "2026-10-23"
+    ];
+    const collectionDates = lessonDates.map(collectionDateSevenDaysBeforeLesson);
+    expect(new Set(lessonDates)).toHaveLength(12);
+    expect(collectionDates.filter((date) => isCollectionDateReached(date, "2026-09-14"))).toHaveLength(2);
+    expect(collectionDates.filter((date) => !isCollectionDateReached(date, "2026-09-14"))).toHaveLength(10);
   });
 });
