@@ -1,5 +1,18 @@
 # Changelog
 
+### 2026-09-14 - Show the connected FreeAgent company
+
+- Added migration `0020_accounting_company_name.sql` and persisted the
+  provider-returned company name alongside the verified environment and
+  subdomain.
+- Billing settings now shows connection status, environment, company name,
+  company subdomain and connection update time, with an explicit
+  **Reauthenticate FreeAgent** action.
+- The full suite passes with 27 test files and 136 tests.
+- Applied the migration to production D1 and deployed executable commit
+  `67491cb` as Worker version
+  `4f1e31cd-6fa8-4abe-8a1e-eafb14632c2f`.
+
 ### 2026-09-14 - Complete Sandbox OAuth and billing status UI
 
 - Corrected every production FreeAgent call path to pass the explicitly bound

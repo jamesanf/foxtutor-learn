@@ -6,12 +6,12 @@
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Schedule: `*/5 * * * *`
 - D1: `foxtutor-learn`
-- D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
+- D1 migration state: through `0020_accounting_company_name.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `3d52084`
-- Deployed source commit: `3d52084`
-- Deployed Worker version: `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`
+- Repository HEAD at executable deployment: `67491cb`
+- Deployed source commit: `67491cb`
+- Deployed Worker version: `4f1e31cd-6fa8-4abe-8a1e-eafb14632c2f`
 - FreeAgent Sandbox secret bindings: configured
 - FreeAgent OAuth connection: completed for Fox Learning Ltd Sandbox;
   encrypted tokens are persisted in `accounting_connections`
@@ -30,7 +30,8 @@ source commit above is the reviewed executable commit from which
 5. Run perimeter smoke and authenticated admin/student checks where credentials
    are available.
 6. Confirm the configured Sandbox secrets, company pin and callback, then
-   review the initial 55.00 GBP settings in the admin billing-management page.
+   review the active connection identity and initial 55.00 GBP settings in the
+   admin billing-management page.
    GBP cannot be changed; any other setting change must be explicit and
    approved. The current non-VAT setting is an explicit zero tax rate; never
    rely on FreeAgent defaults.

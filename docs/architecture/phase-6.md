@@ -54,6 +54,11 @@ both by the application validator and the database constraint. If the record
 does not yet exist, a valid environment configuration is imported once as the
 bootstrap value; invalid or incomplete configuration remains fail-closed.
 
+`accounting_connections` stores the encrypted OAuth material and the verified
+FreeAgent environment, company name and company subdomain. Billing settings
+exposes this connection identity and offers a state-preserving reauthentication
+flow; it never renders credentials or token material.
+
 ## Status model
 
 | From | Allowed next state |

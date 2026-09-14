@@ -20,11 +20,11 @@ The automated suite covers:
   provider outcomes;
 - admin-only route classification, billing-settings persistence and
   CSRF-protected accounting actions;
-- migration structure through `0019_accounting_billing_settings.sql`;
+- migration structure through `0020_accounting_company_name.sql`;
 - browser shell accessibility and no-index contracts;
 - production perimeter smoke.
 
-Current result: **27 test files and 135 tests passed**.
+Current result: **27 test files and 136 tests passed**.
 
 Run the current suite with:
 

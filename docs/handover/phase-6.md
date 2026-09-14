@@ -20,9 +20,10 @@ commercial approval and separate production credentials.
 3. Confirm the configured environment is `sandbox` and the callback exactly
    matches the registered URI.
 4. As an admin, open `/learn/admin/accounting` and confirm the green
-   **FreeAgent integration active** tag in Billing settings. Use
+   **FreeAgent integration active** tag in Billing settings. Review the
+   environment, company name and company subdomain shown there. Use
    **Reauthenticate FreeAgent** only when a fresh OAuth authorization is
-   required.
+   required; this refreshes the persisted company identity.
 5. For a fresh authorization, verify the returned company subdomain and
    confirm the connection status. The exact callback path bypasses Cloudflare
    Access, but the Worker accepts it only with the one-time admin-bound OAuth

@@ -53,7 +53,7 @@ only current Phase 6 documents; historical release chronology is preserved in
 | Environment/company pinning | `src/accounting/service.ts` | Configuration and company checks | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Contact mapping | `src/accounting/service.ts`, `src/db/accounting.ts` | Admin route, verification, replacement/removal guards | COMPLETE - HUMAN MAPPING REQUIRED |
 | Invoice mapping | `src/accounting/service.ts`, `src/db/accounting.ts`, adapter payload | Persisted admin settings, immutable GBP, fixed-decimal amount, explicit tax, category/payment/date validation | COMPLETE - PROVIDER MAPPING VALUES REQUIRED |
-| Billing management | `/learn/admin/accounting/settings`, `accounting_billing_settings` | Admin GET/POST form, CSRF, validation, actor/timestamp persistence and invoice consumption | COMPLETE |
+| Billing management | `/learn/admin/accounting/settings`, `accounting_billing_settings` | Admin GET/POST form, connection identity/status, reauthentication, CSRF, validation, actor/timestamp persistence and invoice consumption | COMPLETE |
 | Reconciliation | `src/accounting/service.ts`, admin reconcile route | Unknown-state and provider-reference seams | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Manual retry audit | `migrations/0017_accounting_operations.sql`, `src/db/accounting.ts` | Additive actor/state audit path | COMPLETE |
 | Authorization and CSRF | `src/auth/authorization.ts`, `src/worker/index.ts` | Admin/student route classification and CSRF checks | COMPLETE |
@@ -71,7 +71,7 @@ These values must always be reported separately:
 - **Deployed source commit:** `3d52084`.
 - **Deployed Worker version:** `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`.
 - **D1 state:** production migrations through
-  `0019_accounting_billing_settings.sql`, with no pending migration reported
+  `0020_accounting_company_name.sql`, with no pending migration reported
   after deployment of the executable change.
 - **OAuth state:** Sandbox secrets and company pin are configured; OAuth
   completed successfully for Fox Learning Ltd and encrypted tokens are

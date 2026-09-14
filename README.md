@@ -11,15 +11,16 @@ replacement, payment system or accounting ledger.
 **Phase:** Engineering-complete; Phase 6 remains externally acceptance-blocked
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6 accounting boundary hardening
-**Executable deployment commit:** `3d52084`
-**Deployed source:** `3d52084`
-**Worker version:** `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`
-**D1 migrations:** `0001_foundation.sql` through `0019_accounting_billing_settings.sql`
+**Executable deployment commit:** `67491cb`
+**Deployed source:** `67491cb`
+**Worker version:** `4f1e31cd-6fa8-4abe-8a1e-eafb14632c2f`
+**D1 migrations:** `0001_foundation.sql` through `0020_accounting_company_name.sql`
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
-the connection tokens are encrypted and persisted in D1. No financial
-mutation has been performed.
+the connection tokens are encrypted and persisted in D1. Billing settings show
+the connection status, environment, company identity and reauthentication
+action. No financial mutation has been performed.
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
