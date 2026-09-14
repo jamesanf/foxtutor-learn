@@ -26,6 +26,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("FreeAgent ${environmentLabel} integration active");
     expect(workerSource).toContain("Reauthenticate ${environmentLabel}");
     expect(workerSource).toContain("Connect ${environmentLabel}");
+    expect(workerSource).toContain('`/learn/admin/accounting/connect/${environment}`');
     expect(workerSource).toContain('class="accounting-icon-link accounting-settings-link"');
     expect(workerSource).toContain('aria-label="Billing settings"');
     expect(workerSource).toContain("M12 15.5A3.5 3.5 0 1 1 15.5 12");
@@ -73,7 +74,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('clientId: credentials.clientId');
     expect(workerSource).not.toContain("login.sandbox.freeagent.com");
     expect(workerSource).toContain("FreeAgent ${label}");
-    expect(workerSource).toContain('buttonLink(`/learn/admin/accounting/connect/${environment}`');
+    expect(workerSource).toContain('`/learn/admin/accounting/connect/${environment}`');
     expect(workerSource).toContain('freeAgentEnvironmentLabel(environment)');
   });
 
