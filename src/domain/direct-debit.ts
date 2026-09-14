@@ -33,14 +33,14 @@ export function directDebitStatusCopy(status: DirectDebitStatus): DirectDebitSta
       return {
         label: "Setup has not been started",
         description: "FoxTutor will send a secure Direct Debit authorisation request when setup is started.",
-        action: "If you expected a request, contact FoxTutor.",
+        action: "If you expected a request, contact billing.",
         tone: "neutral"
       };
     case "SETUP_REQUESTED":
       return {
         label: "Authorisation request sent",
         description: "Open the secure request from your email and complete the bank authorisation there.",
-        action: "If the request is missing or expired, contact FoxTutor.",
+        action: "If the request is missing or expired, contact billing.",
         tone: "info"
       };
     case "PENDING_AUTHORISATION":
@@ -61,14 +61,14 @@ export function directDebitStatusCopy(status: DirectDebitStatus): DirectDebitSta
       return {
         label: "Direct Debit setup needs attention",
         description: "The payment provider has not confirmed an active mandate.",
-        action: "Contact FoxTutor so the setup can be checked safely.",
+        action: "Contact billing so the setup can be checked safely.",
         tone: "error"
       };
     case "UNKNOWN":
       return {
         label: "We're checking the status of your Direct Debit",
         description: "FoxTutor could not safely confirm the current provider status.",
-        action: "Do not submit bank details to FoxTutor Learn. Contact FoxTutor if this persists.",
+        action: "Do not submit bank details to FoxTutor Learn. Contact billing if this persists.",
         tone: "warning"
       };
   }

@@ -31,6 +31,9 @@ describe("student profile form UI", () => {
     expect(billingSource).toContain("secure authorisation request");
     expect(billingSource).toContain("up to three working days");
     expect(billingSource).toContain("not in FoxTutor Learn");
+    expect(billingSource).toContain("Contact billing");
+    expect(billingSource).toContain("mailto:billing@foxtutor.org");
+    expect(billingSource).toContain(">billing@foxtutor.org</a>");
     expect(billingSource).not.toContain("provider reference</th>");
     expect(billingSource).not.toContain("source_event_id");
   });

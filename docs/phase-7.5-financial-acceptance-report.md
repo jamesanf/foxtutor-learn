@@ -104,7 +104,7 @@ FoxTutor sends a secure authorisation request by email. The customer opens the
 request directly, enters bank details only in the provider's secure mandate
 flow, returns to FoxTutor Learn, and checks the displayed status. Setup may
 remain pending for up to three working days. Missing or expired requests are
-handled through `hello@foxtutor.org`. The page does not expose provider
+handled through `billing@foxtutor.org`. The page does not expose provider
 customer IDs, mandate IDs, invoice references, internal billing IDs, account
 numbers, or sort codes.
 
