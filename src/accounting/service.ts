@@ -155,6 +155,13 @@ export function configuredInvoice(env: AccountingEnvironment): InvoiceConfigurat
   }, configuredEnvironment(env));
 }
 
+function logOAuthStageFailure(stage: string, error: unknown): void {
+  const diagnostic = error instanceof FreeAgentApiError
+    ? { stage, code: error.shape.code, status: error.shape.status, message: error.shape.message }
+    : { stage, code: "UNKNOWN", status: null, message: "Unexpected OAuth connection failure." };
+  console.log("FreeAgent OAuth stage failed", diagnostic);
+}
+
 export function validateBillingSettings(input: BillingSettingsInput, environment: FreeAgentEnvironment | null): {
   value: { amount: string; itemType: string; categoryUrl: string; paymentTermsDays: number; salesTaxRate: string } | null;
   error: string | null;
@@ -387,14 +394,14 @@ export async function connectFreeAgent(
         retryAfterSeconds: null
       });
     }
-    stage = "authorization-code exchange";
+    stage = "exchangeAuthorizationCode";
     const tokens = await exchangeAuthorizationCode(input.environment, {
       clientId: env.FREEAGENT_CLIENT_ID,
       clientSecret: env.FREEAGENT_CLIENT_SECRET,
       code: input.code,
       redirectUri: input.redirectUri
     }, fetcher);
-    stage = "Sandbox /v2/company request";
+    stage = "Sandbox /v2/company";
     const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
     const company = await client.company(tokens.accessToken);
     stage = "company subdomain comparison";
@@ -408,7 +415,7 @@ export async function connectFreeAgent(
         retryAfterSeconds: null
       });
     }
-    stage = "existing accounting_connections lookup";
+    stage = "findAccountingConnection";
     const existing = await findAccountingConnection(db);
     if (existing && existing.environment !== input.environment) {
       throw new FreeAgentApiError({
@@ -420,17 +427,21 @@ export async function connectFreeAgent(
         retryAfterSeconds: null
       });
     }
-    stage = "encrypted token persistence";
+    stage = "token encryption";
+    const accessTokenCiphertext = await encryptCredential(tokens.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY);
+    const refreshTokenCiphertext = await encryptCredential(tokens.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY);
+    stage = "saveAccountingConnection";
     await saveAccountingConnection(db, {
       environment: input.environment,
       companySubdomain: company.subdomain ?? null,
-      accessTokenCiphertext: await encryptCredential(tokens.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
-      refreshTokenCiphertext: await encryptCredential(tokens.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
+      accessTokenCiphertext,
+      refreshTokenCiphertext,
       accessTokenExpiresAt: new Date(Date.parse(input.now) + tokens.expiresIn * 1000).toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresIn === null ? null : new Date(Date.parse(input.now) + tokens.refreshTokenExpiresIn * 1000).toISOString(),
       now: input.now
     });
   } catch (error) {
+    logOAuthStageFailure(stage, error);
     throw stageError(error);
   }
 }

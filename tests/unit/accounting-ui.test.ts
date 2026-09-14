@@ -26,6 +26,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('console.error("FreeAgent OAuth callback failed", diagnostic)');
     expect(workerSource).toContain("{ code: error.shape.code, status: error.shape.status, message: error.shape.message }");
     expect(workerSource).not.toContain("console.error(\"FreeAgent OAuth callback failed\", error)");
+    expect(readFileSync("src/accounting/service.ts", "utf8")).toContain('console.log("FreeAgent OAuth stage failed", diagnostic)');
   });
 
   it("handles the bypassed callback with one-time admin-bound OAuth state", () => {
