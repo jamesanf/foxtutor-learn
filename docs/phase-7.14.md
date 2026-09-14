@@ -3,7 +3,8 @@
 ## Status
 
 The recurring-series Worker 1101 defect is repaired in source and covered by
-targeted tests. Production contact reconciliation remains pending an
+targeted tests. The repair is deployed as Worker version
+`607499e6-ddde-4a10-af50-a534c1d16fc8`. Production contact reconciliation remains pending an
 authenticated read-only provider call for contact `21801761`; no provider
 contact result is claimed here.
 

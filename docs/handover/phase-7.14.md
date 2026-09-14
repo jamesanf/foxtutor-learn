@@ -2,7 +2,8 @@
 
 ## Delivered
 
-- Commit `46737a32ff953267ecc184917a514fed3622dab6`.
+- Commit `b7cb157edb71e8722a41d2ba302b8f4848ad1142`.
+- Worker version `607499e6-ddde-4a10-af50-a534c1d16fc8`.
 - Environment-bound Production/Sandbox contact verification.
 - Explicit contact verification failure classification for administrators.
 - Mandate-state read diagnostics without provider mutation.

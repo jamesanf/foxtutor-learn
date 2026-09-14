@@ -14,13 +14,13 @@ claimed.
 
 ## Deployed baseline
 
-- Source commit: `6db5a1c581e3c326c7d8927eee8568c66292bebf`
-- Worker version: `50eda89c-8729-446c-902b-eb9e10ec3015`
+- Source commit: `b7cb157edb71e8722a41d2ba302b8f4848ad1142`
+- Worker version: `607499e6-ddde-4a10-af50-a534c1d16fc8`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0030_freeagent_dual_connections.sql`
 - Scheduler: `*/5 * * * *`
 - Business timezone: `Europe/London`
-- Automated validation: 38 test files and 242 passing tests
+- Automated validation: 38 test files and 244 passing tests
 
 The release keeps FoxTutor authoritative for recurring series, lesson
 instances, billing events, credit, readiness and operational audit. FreeAgent

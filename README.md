@@ -13,9 +13,10 @@ replacement, payment system or accounting ledger.
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
 **Phase 7.13 source commit:** `6db5a1c581e3c326c7d8927eee8568c66292bebf`
-**Latest Phase 7.14 source:** `46737a32ff953267ecc184917a514fed3622dab6`
+**Latest Phase 7.14 source:** `b7cb157edb71e8722a41d2ba302b8f4848ad1142`
+**Phase 7.14 Worker version:** `607499e6-ddde-4a10-af50-a534c1d16fc8`
 **D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` deployed
-**Automated validation:** 38 test files, 242 tests passing
+**Automated validation:** 38 test files, 244 tests passing
 
 Phase 7.14 repairs environment-bound contact verification and the recurring
 lesson materialisation UPSERT that caused Worker 1101 after a series row was
