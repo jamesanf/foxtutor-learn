@@ -46,7 +46,7 @@ authorization. Concurrent D1 trigger/ledger acceptance remains open.
 ## 6. Recurrence test coverage
 
 The recurrence/cancellation files contain **8 tests**: recurrence (5) and
-cancellation policy (3). They cover the six-week window, end dates, pauses,
+cancellations (3). They cover the six-week window, end dates, pauses,
 London DST conversion and timezone rejection. Scheduler replay, missed
 invocation and concurrent materialisation evidence remains open.
 
