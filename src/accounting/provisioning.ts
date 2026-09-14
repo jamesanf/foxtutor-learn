@@ -46,7 +46,7 @@ export function shouldSendDirectDebitSetupNotification(
   return status === "SETUP_REQUIRED"
     || (
       status === "UNKNOWN"
-      && account.mandate_state === "NOT_CONFIGURED"
+      && (account.mandate_state === "NOT_CONFIGURED" || account.mandate_state === "UNKNOWN")
       && account.last_error_code === "MANDATE_STATE_MISSING"
     );
 }

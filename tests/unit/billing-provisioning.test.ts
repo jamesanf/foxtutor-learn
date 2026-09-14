@@ -106,6 +106,10 @@ describe("billing mandate reconciliation", () => {
     }, "UNKNOWN")).toBe(true);
     expect(shouldSendDirectDebitSetupNotification({
       mandate_state: "UNKNOWN",
+      last_error_code: "MANDATE_STATE_MISSING"
+    }, "UNKNOWN")).toBe(true);
+    expect(shouldSendDirectDebitSetupNotification({
+      mandate_state: "UNKNOWN",
       last_error_code: "TIMEOUT"
     }, "UNKNOWN")).toBe(false);
   });
