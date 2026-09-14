@@ -67,3 +67,12 @@ D1 persistence diagnostics are separately restricted to the stage, error name,
 constructor name, a message truncated to 240 characters and an optional safe
 SQLite code. They never log contact payloads, contact identifiers, tokens,
 secrets, authorization headers or response bodies.
+
+## Current acceptance gate
+
+The live Sandbox OAuth connection and verified contact mapping are present, but
+no billing configuration or accounting event has been persisted. The latest
+handoff supplied literal placeholders rather than approved commercial values.
+Those placeholders are not accepted by the application and must not reach D1,
+the outbox or FreeAgent. This fail-closed state is intentional until the
+consequence, effective-date policy and billing/category mapping are explicit.

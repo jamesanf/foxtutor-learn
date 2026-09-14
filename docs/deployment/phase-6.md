@@ -9,8 +9,8 @@
 - D1 migration state: through `0020_accounting_company_name.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository state: documentation-only reconciliation commits may follow the
-  executable deployment
+- Repository HEAD: `52611e2`; documentation-only reconciliation commits may
+  follow the executable deployment
 - Deployed source commit: `4afa705`
 - Deployed Worker version: `71accc39-6c06-4fc7-9390-12afcf48add1`
 - FreeAgent Sandbox secret bindings: configured
@@ -18,8 +18,8 @@
   encrypted tokens are persisted in `accounting_connections`
 - Live Sandbox D1 verification: one `VERIFIED` contact mapping for `257175`
   with no conflict; no outbox, retry-audit or financial-mutation rows
-- Live billing configuration: no persisted row because the approved
-  FreeAgent category/accounting mapping has not been supplied
+- Live billing configuration: no persisted row because the latest submitted
+  category/accounting values were literal placeholders, not approved values
 
 Wrangler reported the deployment source metadata as `Unknown`; the deployed
 source commit above is the reviewed executable commit from which
@@ -35,11 +35,10 @@ source commit above is the reviewed executable commit from which
 5. Run perimeter smoke and authenticated admin/student checks where credentials
    are available.
 6. Confirm the configured Sandbox secrets, company pin and callback, then
-   review the active connection identity and initial 55.00 GBP settings in the
-   admin billing-management page.
-   GBP cannot be changed; any other setting change must be explicit and
-   approved. The current non-VAT setting is an explicit zero tax rate; never
-   rely on FreeAgent defaults.
+   review the active connection identity and the billing-management page.
+   GBP cannot be changed; every other setting must come from explicit
+   approved values. The normal 55.00 GBP and zero-tax values are defaults,
+   not substitutes for the missing acceptance approval.
 7. Complete or reauthenticate through the sandbox OAuth callback. The exact
    callback path bypasses Cloudflare Access, but the Worker accepts it only
    with the one-time admin-bound OAuth state and creates the normal Learn
@@ -62,7 +61,7 @@ The latest executable release also includes the corrected
 mapping-path regression coverage, compact contact save/remove controls, and
 matching accounting settings/back icons.
 
-The current repository HEAD is `3921c60`; it is distinct from the deployed
+The current repository HEAD is `52611e2`; it is distinct from the deployed
 executable source commit above. The current full validation result is 27 test
 files and 143 tests passing, with build/check, browser shell and production
 perimeter smoke passing. The visual calendar helper was attempted with a local

@@ -59,6 +59,21 @@ FreeAgent environment, company name and company subdomain. Billing settings
 exposes this connection identity and offers a state-preserving reauthentication
 flow; it never renders credentials or token material.
 
+## Current live boundary
+
+The deployed Sandbox connection is `CONNECTED` for Fox Learning Ltd
+(`foxlearningltdgmailcom`). Contact `257175` is stored as one verified
+Sandbox mapping with no conflict. The live
+`accounting_billing_settings`, `accounting_outbox` and
+`accounting_retry_audit` tables are empty because no executable commercial
+approval or invoice-producing event exists.
+
+The latest acceptance handoff contained literal placeholders for the
+`ADMIN_CANCELLED` consequence, effective-date policy and billing/category
+configuration. Placeholders are not valid configuration; the service must
+continue to fail closed and must not create an outbox mutation or provider
+request until explicit approved values are supplied.
+
 ## Status model
 
 | From | Allowed next state |

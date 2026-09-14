@@ -71,6 +71,11 @@ This is the current canonical structure. Agents may refine it when implementatio
   `docs/testing/phase-6.md`, `docs/deployment/phase-6.md` and
   `docs/handover/phase-6.md`; historical chronology is retained in
   `CHANGELOG.md`.
+- The current Phase 6 acceptance gate is explicit in all six records: the
+  Sandbox connection and contact mapping are live and verified, but no
+  billing configuration or accounting event exists because the latest
+  submitted consequence, effective-date policy and billing values were
+  placeholders rather than approved values.
 - `scripts/` contains deterministic project helpers and verification tools.
 - Session task records are kept outside the repository; credentials and production data never belong in project files.
 - Authenticated browser profiles, cookies, access tokens, test downloads, local R2 exports, and other sensitive runtime state must never be committed.

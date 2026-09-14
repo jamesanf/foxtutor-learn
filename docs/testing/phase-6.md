@@ -33,6 +33,12 @@ The automated suite covers:
 
 Current result: **27 test files and 143 tests passed**.
 
+The current repository baseline is `52611e2`; the deployed executable source
+remains `4afa705` as Worker version
+`71accc39-6c06-4fc7-9390-12afcf48add1`. The live D1 verification still shows
+one connected Sandbox company, one verified contact mapping for `257175`, no
+billing-settings row, no outbox row and no retry-audit row.
+
 Run the current suite with:
 
 ```sh
@@ -49,7 +55,9 @@ be refreshed whenever tests change.
 
 ## Not performed
 
-The following cannot be claimed without human-owned provider access:
+The following cannot be claimed because the latest acceptance handoff did not
+contain executable approved values and provider access alone cannot supply
+commercial decisions:
 
 - provider-side Sandbox invoice/category mapping;
 - provider-side sandbox invoice creation;
@@ -59,6 +67,12 @@ The following cannot be claimed without human-owned provider access:
 - one controlled production accounting event;
 - independent production provider verification and retention acceptance;
 - authenticated production admin/student browser acceptance.
+
+The submitted strings `[INSERT APPROVED CONSEQUENCE]`,
+`[INSERT APPROVED POLICY]` and
+`[INSERT APPROVED CATEGORY / ITEM / TAX / PAYMENT TERMS / OTHER VALUES]` are
+literal placeholders, not test fixtures or approved configuration. No test
+has persisted or used them.
 
 No test fixture substitutes for those external actions.
 

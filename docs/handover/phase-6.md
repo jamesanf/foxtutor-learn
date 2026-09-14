@@ -3,20 +3,26 @@
 This runbook contains no secrets. The Sandbox bindings are configured in the
 Worker and the Fox Learning Ltd OAuth connection is active with encrypted
 tokens persisted in D1. Contact `257175` is currently verified for the Learn
-student with no conflicting mapping. The live outbox and retry audit are
-empty, and no financial mutation has been performed. The remaining Sandbox
-steps are the approved accounting/category mapping, provider acceptance and
-mutation evidence. Production remains gated on commercial approval and
-separate production credentials.
+student with no conflicting mapping. The live billing-settings row, outbox and
+retry audit are empty, and no financial mutation has been performed.
+
+The latest acceptance handoff supplied literal placeholders rather than
+executable approvals for the `ADMIN_CANCELLED` consequence, effective-date
+policy and FreeAgent billing/category configuration. Do not persist or use
+those strings. Production remains gated on the same commercial decision,
+separate production credentials and controlled provider verification.
 
 ## Sandbox
 
+0. Replace the literal placeholders with the exact approved consequence,
+   effective-date policy and FreeAgent billing/category values. Do not
+   continue with a financial event until these values are explicit.
 1. Confirm the configured Sandbox environment, exact registered callback URI,
    company subdomain and approved provider mapping values. Review the admin
    billing-management page:
-   the initial normal lesson setting is 55.00 GBP, GBP is immutable, and the
-   item type, category, payment terms and explicit sales-tax rate are editable.
-   Keep the sales-tax rate at `0` for the current non-VAT contract.
+   GBP is immutable, and the item type, category, payment terms and explicit
+   sales-tax rate must match the approved values. The normal 55.00 GBP and
+   zero-tax values are defaults only.
 2. Decide the `ADMIN_CANCELLED` accounting consequence before creating or
    processing an administrative-cancellation invoice event. The system will
    not infer invoice creation or no action.
@@ -35,14 +41,13 @@ separate production credentials.
 6. The current approved test payer mapping is already verified as contact
    `257175` in D1. Do not replace or remove it unless an approved mapping
    change is required and no active accounting dependency exists.
-7. After the consequence and invoice/category mapping are approved, create or select the approved
-   `ADMIN_CANCELLED` test event. Confirm one
-   outbox row, the deterministic accounting reference and the visible blocked
-   state before retry.
-8. Run the event through the scheduled processor or the approved operational
-   trigger. Verify the approved provider object, including contact, date,
-   currency, item, category, tax and amount when the approved consequence is
-   invoice-producing.
+7. After the approvals are persisted, create or select the approved
+   `ADMIN_CANCELLED` test event. Confirm exactly one outbox row or, for an
+   approved no-action consequence, exactly one durable `NOT_REQUIRED` outcome.
+8. For an invoice-producing consequence, run the event through the scheduled
+   processor or approved operational trigger and verify the real provider
+   object, including contact, date, currency, item, category, tax and amount.
+   For a no-action consequence, verify that no FreeAgent request occurs.
 9. Replay the worker and confirm no second invoice is created.
 10. Exercise the approved timeout/unknown test seam, reconcile the existing
    provider invoice and confirm the external reference is stored.
@@ -56,6 +61,10 @@ The deployed contact-mapping insert defect has been corrected and covered by a
 successful D1 persistence regression. If verification still fails, inspect
 the safe `D1 mapping persistence` diagnostic before changing provider
 configuration or contact mappings.
+
+Current repository HEAD is `52611e2`; deployed executable source is `4afa705`
+and the deployed Worker version is
+`71accc39-6c06-4fc7-9390-12afcf48add1`.
 
 ## Production
 

@@ -1,5 +1,22 @@
 # Changelog
 
+### 2026-09-14 - Reconcile Phase 6 acceptance gate
+
+- Reconciled every current Phase 6 record with the latest live state:
+  repository HEAD `52611e2`, deployed source `4afa705`, Worker version
+  `71accc39-6c06-4fc7-9390-12afcf48add1`, connected Fox Learning Ltd Sandbox
+  company, verified contact `257175`, zero billing-settings rows, zero
+  outbox rows and zero retry-audit rows.
+- Recorded that the latest acceptance handoff contained literal placeholders
+  rather than executable approvals for the `ADMIN_CANCELLED` consequence,
+  effective-date policy and FreeAgent billing/category configuration.
+- Clarified that no placeholder may be persisted or used for a provider
+  request, no live financial acceptance has started, and the next acceptance
+  branch depends on whether the approved consequence is no-action or
+  invoice-producing.
+- Updated the README, master phase plan, repository structure, architecture,
+  security, testing, deployment, handover and current-status records.
+
 ### 2026-09-14 - Complete autonomous Phase 6 acceptance pass
 
 - Independently verified the live production D1 state: Sandbox connection

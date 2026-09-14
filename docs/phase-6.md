@@ -2,13 +2,15 @@
 
 ## Status
 
-**PHASE 6 STATUS: TECHNICALLY COMPLETE - EXTERNAL ACCEPTANCE BLOCKED**
+**PHASE 6 STATUS: TECHNICALLY COMPLETE - LIVE SANDBOX ACCEPTANCE NOT STARTED**
 
 The application-side accounting implementation is complete and hardened. The
-remaining work requires a human-owned commercial decision, provider
-credentials, provider-side acceptance and one controlled production
-accounting event. No provider evidence, credential or commercial approval is
-invented here.
+latest attempted live-acceptance handoff supplied literal placeholders rather
+than executable approvals for the `ADMIN_CANCELLED` consequence,
+effective-date policy and FreeAgent billing/category configuration. Those
+values cannot be inferred or persisted. No provider evidence, credential or
+commercial approval is invented here, and no real Sandbox financial mutation
+has been attempted.
 
 This is the single current Phase 6 status record. The supporting architecture,
 security, testing, deployment and handover records in this directory are the
@@ -52,7 +54,7 @@ only current Phase 6 documents; historical release chronology is preserved in
 
 | Requirement | Source of truth | Evidence | State |
 | --- | --- | --- | --- |
-| Cancellation consequence mapping | `src/domain/accounting.ts`, Phase 5 history | `tests/unit/accounting.test.ts`, `tests/integration/accounting.test.ts` | COMPLETE - HUMAN CONTRACT VALUES STILL REQUIRED |
+| Cancellation consequence mapping | `src/domain/accounting.ts`, Phase 5 history | `tests/unit/accounting.test.ts`, `tests/integration/accounting.test.ts` | IMPLEMENTED - APPROVED HUMAN CONTRACT VALUE STILL REQUIRED |
 | Durable outbox and event identity | `migrations/0016_accounting_outbox.sql`, `src/db/accounting.ts` | Migration tests and transaction-boundary tests | COMPLETE |
 | Database uniqueness and retention | `migrations/0016_accounting_outbox.sql` | Forward migration checks; D1 production state | COMPLETE |
 | Accounting status machine | `src/domain/accounting.ts`, `src/db/accounting.ts` | Transition and retry tests; guarded SQL updates | COMPLETE |
@@ -61,7 +63,7 @@ only current Phase 6 documents; historical release chronology is preserved in
 | OAuth state and encrypted tokens | `src/accounting/credentials.ts`, `src/accounting/service.ts` | OAuth exchange/refresh and secret-boundary tests | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Environment/company pinning | `src/accounting/service.ts` | Configuration and company checks | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Contact mapping | `src/accounting/service.ts`, `src/db/accounting.ts` | Admin route, verification, replacement/removal guards; live D1 has one `VERIFIED` Sandbox mapping for contact `257175` and no conflict | COMPLETE |
-| Invoice mapping | `src/accounting/service.ts`, `src/db/accounting.ts`, adapter payload | Persisted admin settings, immutable GBP, fixed-decimal amount, explicit tax, category/payment/date validation; live billing-settings row is intentionally empty until the approved category mapping is supplied | COMPLETE - APPROVED PROVIDER MAPPING REQUIRED |
+| Invoice mapping | `src/accounting/service.ts`, `src/db/accounting.ts`, adapter payload | Persisted admin settings, immutable GBP, fixed-decimal amount, explicit tax, category/payment/date validation; live billing-settings row is empty because the submitted mapping was a placeholder | IMPLEMENTED - APPROVED PROVIDER MAPPING REQUIRED |
 | Billing management | `/learn/admin/accounting/settings`, `accounting_billing_settings` | Admin GET/POST form, connection identity/status, reauthentication, CSRF, validation, actor/timestamp persistence and invoice consumption | COMPLETE |
 | Reconciliation | `src/accounting/service.ts`, admin reconcile route | Unknown-state and provider-reference seams | COMPLETE - PROVIDER ACCEPTANCE ONLY REMAINS |
 | Manual retry audit | `migrations/0017_accounting_operations.sql`, `src/db/accounting.ts` | Additive actor/state audit path | COMPLETE |
@@ -69,15 +71,15 @@ only current Phase 6 documents; historical release chronology is preserved in
 | Operational/accounting separation | D1 foreign keys and deletion guards | Migration and retention design | COMPLETE |
 | Browser/admin console | `src/worker/index.ts`, `public/learn.css` | Browser shell contract and deployed route | COMPLETE - AUTHENTICATED ACCEPTANCE ONLY REMAINS |
 | Production deployment | `docs/deployment/phase-6.md` | Worker, route and D1 verification | COMPLETE |
-| Sandbox mutation | External FreeAgent sandbox | OAuth/company connection and contact mapping are complete; no approved invoice-producing event or category mapping exists, so no mutation was attempted | BLOCKED - EXTERNAL ACCEPTANCE |
+| Sandbox mutation | External FreeAgent sandbox | OAuth/company connection and contact mapping are complete; the latest approval fields are placeholders, so acceptance has not started and no mutation was attempted | BLOCKED - INVALID/MISSING APPROVAL INPUT |
 | Production mutation | External FreeAgent production | No credentials or approval supplied | BLOCKED - EXTERNAL HUMAN GATE |
 
 ## Current deployed distinction
 
 These values must always be reported separately:
 
-- **Repository state:** documentation-only reconciliation commits may follow
-  the executable deployment.
+- **Repository HEAD:** `52611e2`; documentation-only reconciliation commits
+  may follow the executable deployment.
 - **Deployed source commit:** `4afa705`.
 - **Deployed Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`.
 - **D1 state:** production migrations through
@@ -115,25 +117,38 @@ The current live Sandbox evidence is:
 - Production D1 reports no migrations to apply and the deployed callback
   rejects an invalid state at the Worker boundary.
 
+The latest acceptance handoff supplied these literal placeholder values:
+
+- `ADMIN_CANCELLED` consequence: `[INSERT APPROVED CONSEQUENCE]`
+- effective-date policy: `[INSERT APPROVED POLICY]`
+- billing/accounting configuration:
+  `[INSERT APPROVED CATEGORY / ITEM / TAX / PAYMENT TERMS / OTHER VALUES]`
+
+They are recorded here only to explain why the gate remains closed; they are
+not configuration and must never be written to D1 or used for a provider
+request.
+
 Only the following external actions remain:
 
-1. Decide whether `ADMIN_CANCELLED` produces no accounting action, a
-   55.00 GBP no-VAT invoice, another accounting consequence, or a
-   compensating/credit action.
-2. If `ADMIN_CANCELLED` produces a provider action, approve its payer/contact
-   authority, item/category, payment terms and effective-date policy. Review
-   the current billing-management values; GBP is always enforced and the
-   initial normal lesson amount is 55.00 GBP with an explicit zero tax rate.
-3. Supply the approved Sandbox invoice/category mapping through the billing
-   settings page or approved configuration channel.
-4. Run the approved sandbox event only after the `ADMIN_CANCELLED`
-   consequence is decided, then verify the provider object.
+1. Replace the three literal placeholders with the exact approved
+   `ADMIN_CANCELLED` consequence, effective-date policy and
+   FreeAgent billing/category values. The agent cannot infer these decisions.
+2. Persist the approved billing configuration through the normal admin path
+   and verify the D1 row before creating an event. GBP remains immutable.
+3. Create or select the approved `ADMIN_CANCELLED` event. If the approved
+   consequence is `NO_ACTION`, verify the durable `NOT_REQUIRED` outcome and
+   do not call FreeAgent. If it is invoice-producing, continue through the
+   real Sandbox invoice, replay, retry and reconciliation checks.
+4. Record the real Sandbox provider evidence, including the exact invoice
+   identifier when an invoice is approved.
 5. Supply production credentials through the approved secret channel.
 6. Verify the production company and repeat the approved mapping checks.
 7. Approve and execute exactly one controlled production accounting event.
 8. Independently verify the provider object and retention result.
 
-There are no technical TODOs in this checklist.
+There are no unresolved implementation TODOs in this checklist. The next
+technical acceptance step is gated solely by the missing executable approval
+values above.
 
 ## Closure requirement
 

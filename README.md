@@ -8,9 +8,10 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Engineering-complete; Phase 6 remains externally acceptance-blocked
+**Phase:** Engineering-complete; Phase 6 live Sandbox acceptance not started
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 6 accounting boundary hardening
+**Repository HEAD:** `52611e2`
 **Executable deployment commit:** `4afa705`
 **Deployed source:** `4afa705`
 **Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`
@@ -51,9 +52,11 @@ sent explicitly so FreeAgent defaults cannot add tax. `ADMIN_CANCELLED` remains
 an explicitly unresolved accounting consequence and is not treated as an
 invoice decision.
 The application-side Phase 6 implementation is complete and hardened. The
-phase remains operationally open only because the remaining external
-commercial/provider acceptance requires human-owned approval/credentials and
-controlled real FreeAgent mutations.
+phase remains operationally open because the latest attempted acceptance
+handoff supplied literal placeholders rather than executable approvals for
+the `ADMIN_CANCELLED` consequence, effective-date policy and FreeAgent
+billing/category configuration. Those values have not been persisted, and no
+real Sandbox financial mutation has been attempted.
 The deployed contact-mapping persistence defect was corrected, and regression
 coverage now verifies successful contact verification through D1 persistence.
 
