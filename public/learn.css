@@ -319,6 +319,8 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-connection-actions .button { width: 100%; justify-content: center; }
 .accounting-connection-actions .status { justify-self: center; }
 .billing-settings-card { max-width: none; }
+.billing-settings-card .page-heading > div:first-child { min-width: 0; }
+.billing-settings-card .page-heading h1 { min-width: 0; white-space: nowrap; font-size: clamp(1.5rem, 3vw, 2.35rem); }
 .billing-settings-actions { margin-top: 0; }
 .billing-settings-actions .button { width: 220px; min-width: 220px; max-width: 220px; flex: 0 0 220px; box-sizing: border-box; padding-inline: 10px; font-size: .78rem; white-space: nowrap; }
 .billing-settings-actions .status { white-space: nowrap; }
