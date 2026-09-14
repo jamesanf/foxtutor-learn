@@ -32,6 +32,12 @@ https://api.sandbox.freeagent.com/v2/approve_app
 https://api.freeagent.com/v2/approve_app
 ```
 
+The temporary compatibility test may provision the existing Sandbox app's
+Client ID and Secret under the two Production credential secret names only.
+Secret values must never be copied into source, logs or documentation. After
+the test, retain the result and remove or replace the temporary Production
+credential configuration as appropriate.
+
 ## Safety boundary
 
 Production credentials are supplied only through the deployment secret

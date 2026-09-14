@@ -6,6 +6,17 @@ Phase 7.12 is implemented, tested, migrated and deployed. It remains
 **NOT READY - PRODUCTION FREEAGENT AUTHORIZATION REQUIRED** until legitimate
 Production credentials and human authorization are available.
 
+## Temporary OAuth compatibility test
+
+For the read-only Production OAuth compatibility experiment, the existing
+FreeAgent Developer Dashboard app credentials used by Sandbox may be entered
+temporarily into `FREEAGENT_PRODUCTION_CLIENT_ID` and
+`FREEAGENT_PRODUCTION_CLIENT_SECRET` through the secure deployment secret
+mechanism. This does not change the Sandbox secrets or the dual-connection
+architecture. The temporary configuration must be removed or replaced after
+the experiment is classified, and it must not be treated as the final
+Production credential policy.
+
 ## Delivered
 
 - Explicit Sandbox and Production connection cards and actions.
