@@ -1234,11 +1234,13 @@ function resourceSummary(resource: Resource, admin: boolean, csrfToken: string):
  return `<section class="card resource-detail"><div class="page-heading"><div><h1>${escapeHtml(resource.original_filename)}</h1><p class="lede">${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div></div>${actionBar}<div class="detail-grid"><p><strong>Student</strong><br>${escapeHtml(resource.student_name ?? "Student")}</p><p><strong>Lesson</strong><br>${escapeHtml(lesson)}</p><p><strong>Uploaded</strong><br>${escapeHtml(resourceDate(resource))}</p>${resource.page_count ? `<p><strong>Pages</strong><br>${resource.page_count}</p>` : ""}</div></section>`;
 }
 
-function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): string {
+function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean, studentViewer = false): string {
   const report = !lessonReportEligible(lesson)
     ? "—"
     : lesson.report_status === "SENT"
       ? `<a href="${basePath}/${lessonRouteId(lesson.id)}/report">View report</a>`
+      : studentViewer
+        ? ""
       : showStudent
         ? "No report available"
         : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`;
@@ -1248,9 +1250,9 @@ function lessonRow(lesson: Lesson, basePath: string, showStudent: boolean): stri
   return `<tr><td data-label="${showStudent ? "Student" : "Lesson"}">${primary}</td><td data-label="Date and time"><a href="${basePath}/${lessonRouteId(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${report}</td></tr>`;
 }
 
-function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean): string {
+function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean, studentViewer = false): string {
   if (!lessons.length) return `<p class="muted">No lessons yet.</p>`;
-  return `<div class="table-wrap"><table class="lesson-table"><thead><tr>${showStudent ? "<th>Student</th>" : "<th>Lesson</th>"}<th>Date and time</th><th>Status</th><th>Report</th></tr></thead><tbody>${lessons.map((lesson) => lessonRow(lesson, basePath, showStudent)).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table class="lesson-table"><thead><tr>${showStudent ? "<th>Student</th>" : "<th>Lesson</th>"}<th>Date and time</th><th>Status</th><th>Report</th></tr></thead><tbody>${lessons.map((lesson) => lessonRow(lesson, basePath, showStudent, studentViewer)).join("")}</tbody></table></div>`;
 }
 
 function studentRows(students: Student[]): string {
@@ -3559,7 +3561,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const now = Date.now();
     const upcoming = lessons.filter((lesson) => lesson.status === "scheduled" && new Date(lesson.start_at).getTime() >= now);
     const past = lessons.filter((lesson) => lesson.status !== "cancelled" && (lesson.status === "completed" || new Date(lesson.start_at).getTime() < now));
-    return appPage(active.user, csrfToken, "My lessons", `<h1>My lessons</h1><section class="card"><h2>Upcoming</h2>${lessonTable(upcoming, "/learn/student/lessons", false)}</section><section class="card"><h2>Past</h2>${lessonTable(past, "/learn/student/lessons", false)}</section>`);
+    return appPage(active.user, csrfToken, "My lessons", `<h1>My lessons</h1><section class="card"><h2>Upcoming</h2>${lessonTable(upcoming, "/learn/student/lessons", false, true)}</section><section class="card"><h2>Past</h2>${lessonTable(past, "/learn/student/lessons", false, true)}</section>`);
   }
   if (route === "student-lesson-cancel") {
     const id = lessonIdFromPath(url.pathname);

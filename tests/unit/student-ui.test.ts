@@ -71,4 +71,11 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain("View/download invoice");
     expect(workerSource).toContain("mode: \"THIS_AND_FUTURE\"");
   });
+
+  it("does not expose report creation actions in the student lesson list", () => {
+    expect(workerSource).toContain("function lessonTable(lessons: Lesson[], basePath: string, showStudent: boolean, studentViewer = false)");
+    expect(workerSource).toContain("? \"\"");
+    expect(workerSource).toContain('lessonTable(upcoming, "/learn/student/lessons", false, true)');
+    expect(workerSource).toContain('lessonTable(past, "/learn/student/lessons", false, true)');
+  });
 });
