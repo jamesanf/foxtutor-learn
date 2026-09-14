@@ -58,3 +58,7 @@ OAuth callback failure diagnostics are restricted to a fixed stage label,
 safe error code, HTTP status, safe message and a non-sensitive fetcher type
 (`bound-wrapper` or `injected`). Authorization codes, tokens, secrets,
 encryption keys and provider response bodies are excluded.
+
+Contact-mapping diagnostics use the same safe boundary and redact the
+provider contact path to `/v2/contacts/:id`; they record only the stage,
+status, error code, retryability, unknown-result flag and fetcher type.

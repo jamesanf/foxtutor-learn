@@ -1,5 +1,15 @@
 # Changelog
 
+### 2026-09-14 - Instrument contact verification failures
+
+- Added safe diagnostics for access-token retrieval/refresh, FreeAgent contact
+  GET, contact response validation and D1 mapping persistence.
+- Confirmed the production route passes the shared bound FreeAgent fetcher and
+  redacts contact identifiers from diagnostic paths.
+- The full suite passes with 27 test files and 137 tests.
+- Deployed executable commit `27b63dc` as Worker version
+  `572e4ea8-e728-46a5-a17d-d36d8a443441`.
+
 ### 2026-09-14 - Correct accounting layout width cascades
 
 - Fixed the desktop five-column accounting summary rule and removed the
