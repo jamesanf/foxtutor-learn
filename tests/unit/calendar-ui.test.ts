@@ -121,8 +121,12 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain("<span>Active Students</span>");
     expect(workerSource).toContain("<span>Next Lesson</span>");
     expect(workerSource).toContain('<strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>');
-    expect(workerSource).toContain('<a class="summary-card" href="/learn/admin/bookings"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong>');
-    expect(workerSource).toContain('<a class="summary-card" href="/learn/admin/students"><span>Active Students</span><strong>${activeStudents}</strong>');
+    expect(workerSource).toContain('<a class="summary-card" href="/learn/admin/bookings"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></a>');
+    expect(workerSource).toContain('<a class="summary-card" href="/learn/admin/students"><span>Active Students</span><strong>${activeStudents}</strong></a>');
+    expect(workerSource).toContain('<a class="summary-card" href="/learn/admin/reschedules"><span>Reschedule requests</span><strong>${rescheduleRequests}</strong></a>');
+    expect(workerSource).not.toContain("<small>View bookings</small>");
+    expect(workerSource).not.toContain("<small>View students</small>");
+    expect(workerSource).not.toContain("<small>View reschedules</small>");
     expect(workerSource).not.toContain("No scheduled lessons");
     expect(workerSource).not.toContain("PRIVATE LEARNING PORTAL");
     expect(workerSource).not.toContain("LESSON SCHEDULE</p><h1>Calendar");
