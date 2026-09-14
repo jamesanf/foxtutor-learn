@@ -3,7 +3,6 @@ import {
   ensureBillingAccount,
   findBillingAccount,
   listDueBillingAccounts,
-  markBillingNotificationSent,
   recordBillingProvisioningEvent,
   updateBillingAccount,
   type BillingAccount,
@@ -14,7 +13,7 @@ import { findAccountingConnection, findExternalAccountingLink, upsertExternalAcc
 import { classifyDirectDebitState, type DirectDebitStatus } from "../domain/direct-debit";
 import { configuredEnvironment, providerCall, type AccountingEnvironment } from "./service";
 import { freeAgentFetch, FreeAgentApiError, type FreeAgentContact } from "./freeagent/client";
-import { createDirectDebitNotification, type NotificationEnvironment } from "../notifications/service";
+import type { NotificationEnvironment } from "../notifications/service";
 
 interface ProvisioningEnvironment extends AccountingEnvironment, NotificationEnvironment {}
 
@@ -51,12 +50,6 @@ export function shouldSendDirectDebitSetupNotification(
     );
 }
 
-function notificationDue(account: BillingAccount, status: DirectDebitStatus, now: string): boolean {
-  if (!shouldSendDirectDebitSetupNotification(account, status) && status !== "AUTHORISATION_PENDING") return false;
-  if (!account.last_notification_at) return true;
-  return Date.parse(now) - Date.parse(account.last_notification_at) >= 7 * 24 * 60 * 60_000;
-}
-
 function safeProviderError(error: unknown): { code: string; message: string } {
   if (error instanceof FreeAgentApiError) return { code: error.shape.code, message: error.message };
   return { code: "UNKNOWN", message: "FreeAgent provisioning failed unexpectedly." };
@@ -64,37 +57,6 @@ function safeProviderError(error: unknown): { code: string; message: string } {
 
 function providerRetryAt(now: string, code: string): string {
   return new Date(Date.parse(now) + (code === "RATE_LIMIT" ? 60 : 15) * 60_000).toISOString();
-}
-
-async function sendDirectDebitNotificationIfDue(
-  db: D1Database,
-  env: ProvisioningEnvironment,
-  account: BillingAccount,
-  student: StudentProvisioningRow,
-  status: DirectDebitStatus,
-  now: string,
-  fetcher: typeof fetch
-): Promise<void> {
-  if (!student.learn_user_id || !notificationDue(account, status, now)) return;
-  const type = shouldSendDirectDebitSetupNotification(account, status)
-    ? "BILLING_DIRECT_DEBIT_SETUP"
-    : "BILLING_DIRECT_DEBIT_REMINDER";
-  const notification = await createDirectDebitNotification(db, env, {
-    type,
-    eventId: `${account.id}:${type}:${Math.floor(Date.parse(now) / (7 * 24 * 60 * 60_000))}`,
-    recipientUserId: student.learn_user_id,
-    studentId: student.id,
-    studentName: student.name
-  }, now, fetcher);
-  await recordBillingProvisioningEvent(db, {
-    id: crypto.randomUUID(),
-    billingAccountId: account.id,
-    eventType: type === "BILLING_DIRECT_DEBIT_SETUP" ? "SETUP_NOTIFICATION_SENT" : "SETUP_REMINDER_SENT",
-    safeDetail: notification.status,
-    idempotencyKey: `${account.id}:direct-debit-notification:${notification.idempotency_key}`,
-    now
-  });
-  await markBillingNotificationSent(db, account.id, now, null);
 }
 
 function contactReference(contact: FreeAgentContact): string {
@@ -317,8 +279,6 @@ export async function provisionBillingAccount(
         now
       });
     }
-    const updatedAccount = await findBillingAccount(db, student.id);
-    if (updatedAccount) await sendDirectDebitNotificationIfDue(db, env, updatedAccount, student, status, now, fetcher);
   } catch (error) {
     const failure = safeProviderError(error);
     const retryAt = providerRetryAt(now, failure.code);
@@ -395,8 +355,6 @@ export async function reconcileBillingAccountMandate(
       });
     }
     const status = await persistMandateState(db, env, studentId, contact, now);
-    const updatedAccount = await findBillingAccount(db, studentId);
-    if (updatedAccount && student) await sendDirectDebitNotificationIfDue(db, env, updatedAccount, student, status, now, fetcher);
     const state = classifyDirectDebitState(contact.directDebitMandateState, true);
     console.info("billing_mandate_reconciled", {
       studentId,

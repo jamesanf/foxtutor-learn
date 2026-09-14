@@ -111,6 +111,7 @@ import {
 import { processBillingInvoiceOperation, processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
 import { auditBillingChain } from "../billing/audit";
 import { provisionBillingAccount, reconcileBillingAccountMandate, reconcileVerifiedContact, runBillingProvisioningScheduler } from "../accounting/provisioning";
+import { freeAgentContactMandateRequestUrl } from "../accounting/freeagent/client";
 import { createEmergencyPaygOverride, findBillingAccount } from "../db/billing-accounts";
 import { canRecordEmergencyPayg, validateEmergencyPaygReason } from "../domain/billing-policy";
 import { billingCustomerStatusLabel } from "../domain/billing-history";
@@ -2825,10 +2826,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (route === "admin-student") {
       const lessonPagination = parseStudentSectionPagination(url, "lessonsPage", "lessonsSize");
       const resourcePagination = parseStudentSectionPagination(url, "resourcesPage", "resourcesSize");
-      const [lessonTotal, resourceTotal, billingAccount] = await Promise.all([
+      const [lessonTotal, resourceTotal, billingAccount, accountingLink] = await Promise.all([
         countLessonsForStudentRecord(db, student.id),
         countResourcesForStudentRecord(db, student.id),
-        findBillingAccount(db, student.id)
+        findBillingAccount(db, student.id),
+        findExternalAccountingLink(db, student.id, configuredEnvironment(env) ?? undefined)
       ]);
       const lessonPageCount = Math.max(1, Math.ceil(lessonTotal / lessonPagination.pageSize));
       const resourcePageCount = Math.max(1, Math.ceil(resourceTotal / resourcePagination.pageSize));
@@ -2839,11 +2841,21 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         listResourcesForStudentRecord(db, student.id, resourcePagination.pageSize, (safeResourcePage - 1) * resourcePagination.pageSize)
       ]);
       const detailValue = (value: string | null | undefined) => value ? escapeHtml(value).replace(/\n/g, "<br>") : "—";
+      const mandateRequestUrl = billingAccount && billingAccount.mandate_state !== "ACTIVE" && accountingLink?.status === "VERIFIED"
+        ? freeAgentContactMandateRequestUrl(
+          accountingLink.verified_environment ?? "production",
+          accountingLink.verified_company_subdomain,
+          accountingLink.external_reference
+        )
+        : null;
+      const mandateRequestAction = mandateRequestUrl
+        ? `<section class="card"><h2>Provider mandate request</h2><p class="muted">FreeAgent does not expose this mandate request through its OAuth API. Open the verified provider form and submit the request there; FreeAgent/GoCardless will email the customer. FoxTutor will reconcile the provider state after submission.</p><a class="button" href="${escapeHtml(mandateRequestUrl)}" target="_blank" rel="noopener noreferrer">Open FreeAgent mandate request</a></section>`
+        : "";
       const profileDetails = `<section class="card detail-grid"><p><strong>Status</strong><br>${student.status === "ACTIVE" ? "Active" : "Inactive"}</p><p><strong>Level</strong><br>${escapeHtml(student.level ?? "Not set")}</p><p><strong>Academic system</strong><br>${escapeHtml(student.academic_year_system)}</p><p><strong>Academic year</strong><br>${escapeHtml(["MATURE", "PRIVATE", "INTERNATIONAL"].includes(student.academic_year_system) ? "Not applicable" : student.academic_year)}</p><p><strong>Pupil email</strong><br>${escapeHtml(student.email)}</p><p><strong>Parent or carer name</strong><br>${escapeHtml(student.parent_name || "Not set")}</p><p><strong>Parent or carer email</strong><br>${escapeHtml(student.parent_email || "Not set")}</p><p><strong>International pupil</strong><br>${student.international ? "Yes — DST reminders enabled" : "No"}</p><p><strong>Learn account</strong><br>${student.learn_user_id ? "Explicitly linked" : "Not linked"}</p><p><strong>Direct Debit mandate</strong><br>${escapeHtml(billingAccount?.mandate_state ?? "Not configured")}</p><p><strong>Billing provisioning</strong><br>${escapeHtml(billingAccount?.provisioning_state ?? "Not configured")}</p><p><strong>Provider environment</strong><br>${escapeHtml(billingAccount?.provider_environment?.toUpperCase() ?? "Not configured")}</p><p class="full-width"><strong>Billing address</strong><br>${detailValue(student.billing_address)}</p><p class="full-width"><strong>Class texts</strong><br>${detailValue(student.class_texts)}</p><p class="full-width"><strong>Additional support needs</strong><br>${detailValue(student.additional_support_needs)}</p><p><strong>Created</strong><br>${escapeHtml(notificationTimestamp(student.created_at))}</p><p><strong>Updated</strong><br>${escapeHtml(notificationTimestamp(student.updated_at))}</p></section>`;
       const lessonSection = `<details class="card student-collapsible" open><summary><span><strong>Lessons</strong><small>${lessonTotal} lesson${lessonTotal === 1 ? "" : "s"}</small></span></summary><div class="student-collapsible-body">${lessonTable(lessons, "/learn/admin/lessons", true)}${studentSectionPagination(safeLessonPage, lessonPagination.pageSize, lessonTotal, `/learn/admin/students/${encodeURIComponent(student.id)}`, "Student lessons", "lessonsPage", "lessonsSize")}</div></details>`;
       const resourceAction = student.status === "ACTIVE" ? `<div class="student-section-action">${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource")}</div>` : "";
       const resourceSection = `<details class="card student-collapsible" open><summary><span><strong>Resources</strong><small>Documents for this student.</small></span></summary><div class="student-collapsible-body">${resourceAction}${resources.length ? resourceRows(resources, { admin: true, csrfToken }) : `<p class="muted">No resources for this student yet.</p>`}${studentSectionPagination(safeResourcePage, resourcePagination.pageSize, resourceTotal, `/learn/admin/students/${encodeURIComponent(student.id)}`, "Student resources", "resourcesPage", "resourcesSize")}</div></details>`;
-      return appPage(active.user, csrfToken, "Student", `<div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div><div class="form-actions">${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div></div>${profileDetails}${lessonSection}${resourceSection}${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form student-deactivate-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
+      return appPage(active.user, csrfToken, "Student", `<div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div><div class="form-actions">${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div></div>${profileDetails}${mandateRequestAction}${lessonSection}${resourceSection}${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form student-deactivate-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
     }
     if (route === "admin-student-deactivate") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);

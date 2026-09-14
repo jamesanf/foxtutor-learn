@@ -17,6 +17,7 @@ import {
 import {
   exchangeAuthorizationCode,
   freeAgentAuthorizationUrl,
+  freeAgentContactMandateRequestUrl,
   freeAgentFetch,
   FreeAgentApiError,
   FreeAgentClient,
@@ -379,6 +380,15 @@ describe("FoxTutor category policy", () => {
 });
 
 describe("FreeAgent adapter", () => {
+  it("builds the authenticated provider mandate handoff URL without exposing credentials", () => {
+    expect(freeAgentContactMandateRequestUrl("production", "foxlearningltd", "23200281"))
+      .toBe("https://foxlearningltd.freeagent.com/contacts/23200281/direct_debits/new");
+    expect(freeAgentContactMandateRequestUrl("sandbox", "sandbox-company", "257175"))
+      .toBe("https://sandbox-company.sandbox.freeagent.com/contacts/257175/direct_debits/new");
+    expect(freeAgentContactMandateRequestUrl("production", "https://evil.example", "23200281")).toBeNull();
+    expect(freeAgentContactMandateRequestUrl("production", "foxlearningltd", "not-an-id")).toBeNull();
+  });
+
   it("builds explicit sandbox and production OAuth URLs", () => {
     const sandbox = new URL(freeAgentAuthorizationUrl("sandbox", {
       clientId: "client-1",

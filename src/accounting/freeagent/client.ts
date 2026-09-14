@@ -103,6 +103,20 @@ export function freeAgentBaseUrl(environment: FreeAgentEnvironment): string {
   return environment === "sandbox" ? "https://api.sandbox.freeagent.com" : "https://api.freeagent.com";
 }
 
+export function freeAgentContactMandateRequestUrl(
+  environment: FreeAgentEnvironment,
+  companySubdomain: string | null | undefined,
+  externalReference: string | null | undefined
+): string | null {
+  const subdomain = companySubdomain?.trim().toLowerCase() ?? "";
+  const reference = externalReference?.trim() ?? "";
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(subdomain) || !/^\d+$/.test(reference)) return null;
+  const host = environment === "sandbox"
+    ? `${subdomain}.sandbox.freeagent.com`
+    : `${subdomain}.freeagent.com`;
+  return `https://${host}/contacts/${reference}/direct_debits/new`;
+}
+
 export function freeAgentAuthorizationUrl(
   environment: FreeAgentEnvironment,
   input: { clientId: string; redirectUri: string; state: string; accessLevel: string }
