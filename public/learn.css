@@ -658,6 +658,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .calendar-host.fc .fc-toolbar-chunk { min-width: 0; }
   .calendar-host.fc .fc-toolbar-title { overflow-wrap: anywhere; text-align: center; }
 }
+@media (max-width: 900px) {
+  .accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .accounting-summary-grid .summary-card:last-child { grid-column: span 2; }
+}
+@media (max-width: 560px) {
+  .accounting-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .accounting-summary-grid .summary-card:last-child { grid-column: 1 / -1; }
+}
 @media (max-width: 480px) {
   .resource-search-wrap input, .resource-student-search input { min-height: 48px; padding-inline: 44px; }
   .resource-finder-toolbar { gap: 8px; }

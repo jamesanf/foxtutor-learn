@@ -65,5 +65,8 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain("@media (max-width: 900px) {\n  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
     expect(workerSource).toContain('class="form-actions accounting-connection-actions"');
     expect(cssSource).toContain(".accounting-connection-actions .button { width: 100%; justify-content: center; }");
+    expect(workerSource).toContain('class="summary-grid accounting-summary-grid"');
+    expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }");
+    expect(cssSource).toContain(".accounting-summary-grid .summary-card:last-child { grid-column: span 2; }");
   });
 });
