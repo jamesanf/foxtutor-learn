@@ -1,5 +1,8 @@
 # Phase 7.1 testing and evidence
 
+> Historical Phase 7.1 evidence. Phase 7.2 is the current test and acceptance
+> boundary; see `docs/testing/phase-7.2.md`.
+
 ## Automated results
 
 - `npm test`: 31 test files, 168 tests passing.

@@ -1,5 +1,8 @@
 # Phase 7.1 handover
 
+> Historical handover boundary. Phase 7.2 is the current operational handover;
+> see `docs/handover/phase-7.2.md`.
+
 ## Implemented
 
 The local implementation provides FoxTutor-owned recurring series, six-week

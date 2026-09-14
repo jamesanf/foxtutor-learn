@@ -69,7 +69,7 @@ auditable records and never happen as a side effect of cancellation.
 
 The ledger and invoice tables provide the durable seam for lesson-level
 billing, deterministic oldest-credit-first allocation, and replay-safe
-reconciliation. The Phase 7.1 Worker prepares individual invoices, applies
+reconciliation. The Phase 7.2 Worker prepares individual invoices, applies
 local credit, settles fully covered lessons without a zero-value provider
 invoice, and schedules Direct Debit operations only after the seven-day
 collection date and mandate checks pass. Invoice status reconciliation,

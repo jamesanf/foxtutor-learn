@@ -1,5 +1,8 @@
 # PHASE 7.1 ACCEPTANCE REPORT
 
+> Historical Phase 7.1 report. Phase 7.2 supersedes its local-only deployment
+> boundary; the current record is `docs/phase-7.2-acceptance-report.md`.
+
 ## 1. Executive summary
 
 Phase 7.1 is implemented and validated locally. It is **NO-GO for production
@@ -79,8 +82,10 @@ remains outstanding.
 
 ## 14. Remote schema/deployment state
 
-Remote D1 and the deployed Worker remain at the Phase 6 boundary. No remote
-Phase 7.1 migration or deployment was performed.
+At the time of this historical Phase 7.1 report, remote D1 and the deployed
+Worker remained at the Phase 6 boundary. No remote Phase 7.1 migration or
+deployment was performed; Phase 7.2 later applied the current migrations and
+deployed the runtime.
 
 ## 15. Real Sandbox evidence
 

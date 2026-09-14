@@ -76,13 +76,13 @@ collection_date = lesson_date - 7 calendar days
 Payment readiness is a derived, explicit state and is never inferred solely
 from an invoice existing or a Direct Debit request being submitted.
 
-## Acceptance gate
+## Original acceptance gate
 
-Phase 7.1 is not complete until the implementation and test matrix in the
-master plan pass, local migration/build checks are clean, provider limitations
-are documented, and any real Sandbox evidence is clearly separated from
-provider-independent controlled-seam evidence. Production deployment and
-financial mutation remain gated by the Phase 6 commercial/provider approvals.
+The original Phase 7.1 gate required the implementation and test matrix in the
+master plan to pass, local migration/build checks to be clean, provider
+limitations to be documented, and any real Sandbox evidence to be clearly
+separated from provider-independent controlled-seam evidence. Phase 7.2
+supersedes that boundary for current deployment and operational status.
 
 The implementation and local gates are complete. Real FreeAgent and
 GoCardless Sandbox evidence remains a separate provider acceptance activity;

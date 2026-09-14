@@ -1,5 +1,8 @@
 # Phase 7.1 architecture
 
+> Historical foundational architecture. Phase 7.2 is the current operational
+> phase; see `docs/architecture/phase-7.2.md` for the current architecture.
+
 ## Authority and flow
 
 ```text

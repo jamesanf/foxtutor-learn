@@ -88,7 +88,7 @@ coverage now verifies successful contact verification through D1 persistence.
   documents, provider references and exposed payment/mandate state.
 - Accounting follows the boundary `operational event -> accounting
   consequence -> outbox -> scheduled Worker -> FreeAgent adapter`.
-- Phase 7.1 uses individual FreeAgent invoices, not recurring invoice profiles,
+-   Phase 7 uses individual FreeAgent invoices, not recurring invoice profiles,
   and retains a separate local payment/alert/reconciliation history. FoxTutor
   business time is always Europe/London, recurrence is bounded to six weeks,
   and `PAYMENT_SECURED` means credit coverage or confirmed provider payment,
@@ -124,9 +124,9 @@ git diff --check
 
 Use `npm run deploy` only for an authorised production deployment. Apply
 forward-only migrations before deploying code that depends on them. The
-current Phase 6 deployment state and acceptance boundary are documented in
-[`docs/deployment/phase-6.md`](docs/deployment/phase-6.md) and
-[`docs/handover/phase-6.md`](docs/handover/phase-6.md).
+current Phase 7.2 deployment state and acceptance boundary are documented in
+[`docs/deployment/phase-7.2.md`](docs/deployment/phase-7.2.md) and
+[`docs/handover/phase-7.2.md`](docs/handover/phase-7.2.md).
 
 ## Repository map
 
@@ -155,13 +155,19 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/architecture/learn-branding-legal.md` | Learn shell branding and portal legal policy boundary |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
 | `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
-| `docs/phase-7.1.md` | Current Phase 7.1 implementation status and provider decisions |
-| `docs/phase-7.1-acceptance-report.md` | Phase 7.1 evidence, limitations and GO/NO-GO report |
-| `docs/architecture/phase-7.1.md` | Recurrence, billing, credit and readiness architecture |
+| `docs/phase-7.1.md` | Historical Phase 7.1 foundation and provider decisions |
+| `docs/phase-7.1-acceptance-report.md` | Historical Phase 7.1 evidence and boundary |
+| `docs/architecture/phase-7.1.md` | Foundational recurrence, billing, credit and readiness architecture |
 | `docs/architecture/gocardless-freeagent.md` | FreeAgent-GoCardless boundary and safety decision |
-| `docs/testing/phase-7.1.md` | Phase 7.1 test matrix and evidence classification |
-| `docs/deployment/phase-7.1.md` | Local-only migration and deployment gate |
-| `docs/handover/phase-7.1.md` | Provider acceptance and handover boundary |
+| `docs/testing/phase-7.1.md` | Historical Phase 7.1 test matrix and evidence classification |
+| `docs/deployment/phase-7.1.md` | Historical Phase 7.1 deployment boundary |
+| `docs/handover/phase-7.1.md` | Historical Phase 7.1 handover boundary |
+| `docs/phase-7.2.md` | Current Phase 7.2 scope, invariants and acceptance boundary |
+| `docs/phase-7.2-acceptance-report.md` | Current Phase 7.2 evidence and provider gates |
+| `docs/architecture/phase-7.2.md` | Current billing operations architecture |
+| `docs/testing/phase-7.2.md` | Current Phase 7.2 test matrix and evidence classification |
+| `docs/deployment/phase-7.2.md` | Current Phase 7.2 deployment record |
+| `docs/handover/phase-7.2.md` | Current Phase 7.2 handover boundary |
 | `docs/architecture/phase-6.md` | Current accounting architecture and state model |
 | `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
 | `docs/deployment/phase-6.md` | Current deployment state and rollout order |
@@ -186,9 +192,9 @@ operational records.
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
-| 7 | Billing engine and long-term operations hardening | Phase 7 programme; provider and commercial gates remain explicit |
-| 7.1 | Recurrent lessons, billing orchestration and payment readiness | Foundational architecture implemented and absorbed into 7.2 completion |
-| 7.2 | Complete billing engine and operationalisation | Deployed; real provider evidence and commercial approval remain separate gates |
+| 7 | Billing engine and long-term operations hardening | Current programme; Phase 7.2 is the active increment |
+| 7.1 | Recurrent lessons, billing orchestration and payment readiness | Foundational scope complete; absorbed into Phase 7.2 |
+| 7.2 | Complete billing engine and operationalisation | Current; deployed; real provider evidence and commercial approval remain separate gates |
 
 ## Security model
 
