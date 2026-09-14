@@ -5,10 +5,10 @@
 Phase 7 has a deployed operational baseline, but it is **not complete** and
 must not be treated as production-ready. The implementation covers recurring
 lessons, lesson-level billing, customer credit, payment readiness, alerts and
-reconciliation state. The deployed release is still awaiting:
+reconciliation state. Phase 7.4 diagnosed and repaired the billing route
+failure, but the release is still awaiting:
 
-- diagnosis and repair of the authenticated `/learn/student/billing` Worker
-  1101 failure reported on 2026-09-14;
+- authenticated post-deployment acceptance of `/learn/student/billing`;
 - authenticated runtime acceptance of the Phase 7 student and admin surfaces;
 - controlled FreeAgent Sandbox financial acceptance;
 - observed payment/Direct Debit lifecycle evidence through the existing
@@ -18,14 +18,13 @@ reconciliation state. The deployed release is still awaiting:
 
 ## Deployed baseline
 
-- Source commit: `9da2c03`
-- Worker version: `bba7fcaf-dfa6-42dd-aa77-11ac66e04125`
+- Source commit: `042d3e6`
+- Worker version: `7a9b7b0f-40ca-44b3-9698-2a216708f5bb`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0024_phase72_global_timezone_operations.sql`
 - Scheduler: `*/5 * * * *`
 - Business timezone: `Europe/London`
-- Automated baseline: 31 test files and 169 passing tests, as recorded by the
-  current deployment documentation
+- Automated validation: 32 test files and 171 passing tests
 
 The release keeps FoxTutor authoritative for recurring series, lesson
 instances, billing events, credit, readiness and operational audit. FreeAgent
@@ -55,9 +54,17 @@ issued invoice remains an explicit reconciliation path because the public
 FreeAgent API documentation does not provide a safe credit-note matching
 operation.
 
-The known student billing 1101 must be diagnosed from the authenticated
-runtime, fixed at the root cause and covered by a regression test before this
-phase can move beyond its current gate. Until then the status is **NOT READY**.
+The reported student billing 1101 has been diagnosed from the deployed
+dependency path, fixed at the root cause and covered by a regression test.
+Phase 7.4 established the root cause:
+the six-way `UNION ALL` in `listBillingHistory` exceeded the production D1
+compound-select limit and raised `SQLITE_ERROR: too many terms in compound
+SELECT` (Cloudflare D1 error code `7500`). The query failed even for the
+real empty-billing student state, so `Promise.all` propagated the D1 rejection
+as Worker 1101. The fix is deployed and the split queries execute successfully
+against remote D1. The authenticated page has not been accepted from this
+execution environment because no legitimate Cloudflare Access student session
+is available. The status therefore remains **NOT READY**.
 
 ## Detailed records
 
@@ -77,3 +84,5 @@ The decimal records remain useful evidence and implementation history:
   metadata and migration record.
 - [`docs/handover/phase-7.2.md`](handover/phase-7.2.md) — outstanding
   operational and human gates.
+- [`docs/phase-7.4.md`](phase-7.4.md) — forensic diagnosis, regression,
+  deployment evidence and remaining authenticated-runtime gate.

@@ -1,5 +1,21 @@
 # Changelog
 
+### 2026-09-14 - Diagnose and deploy the student billing Worker 1101 fix
+
+- Reproduced the exact production D1 failure in the former six-way
+  `UNION ALL` billing-history query:
+  `SQLITE_ERROR: too many terms in compound SELECT` (D1 error code `7500`).
+- Replaced the compound query with six bounded independent queries and
+  deterministic application-side merging.
+- Added safe permanent student-billing stage diagnostics and tolerant legacy
+  money/date rendering.
+- Added the exact empty-billing 1101 regression and deterministic merge tests;
+  the suite now passes with 32 files and 171 tests.
+- Deployed source `042d3e6` as Worker version
+  `7a9b7b0f-40ca-44b3-9698-2a216708f5bb`.
+- Authenticated live route acceptance, populated provider-state evidence and
+  commercial/provider gates remain open.
+
 ### 2026-09-14 - Consolidate Phase 7 documentation
 
 - Added `docs/phase-7.md` as the single current Phase 7 status and acceptance

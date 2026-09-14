@@ -2,8 +2,9 @@
 
 > This is the detailed deployment record for the Phase 7 baseline. The
 > consolidated status is `docs/phase-7.md`; deployment does not by itself
-> establish authenticated route or provider acceptance. The student billing
-> route has a reported post-deployment Worker 1101 that remains open.
+> establish authenticated route or provider acceptance. The reported student
+> billing Worker 1101 was diagnosed and repaired in Phase 7.4; see
+> `docs/deployment/phase-7.4.md`.
 
 ## Runtime
 

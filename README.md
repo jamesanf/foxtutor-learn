@@ -12,17 +12,22 @@ replacement, payment system or accounting ledger.
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source commit:** `9da2c03`
-**Worker version:** `bba7fcaf-dfa6-42dd-aa77-11ac66e04125`
+**Deployed source commit:** `042d3e6`
+**Worker version:** `7a9b7b0f-40ca-44b3-9698-2a216708f5bb`
 **D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally and remotely
-**Automated validation:** 31 test files, 169 tests passing
+**Automated validation:** 32 test files, 171 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
-production-ready. The authenticated `/learn/student/billing` route currently
-has a reported Cloudflare Worker 1101 failure that must be diagnosed and fixed.
-Real FreeAgent Sandbox financial mutations and payment/Direct Debit lifecycle
-evidence remain outstanding; the application must continue to fail closed
-until those gates and the remaining commercial approvals are complete.
+production-ready. Phase 7.4 diagnosed the reported authenticated
+`/learn/student/billing` Worker 1101 as Cloudflare D1 rejecting the former
+six-way `UNION ALL` billing-history query with `SQLITE_ERROR: too many terms in
+compound SELECT`; the route fix is deployed with regression coverage.
+Authenticated post-deployment page acceptance is still outstanding because
+this execution environment has no legitimate Cloudflare Access student
+session. Real FreeAgent Sandbox financial mutations and payment/Direct Debit
+lifecycle evidence also remain outstanding; the application must continue to
+fail closed until those gates and the remaining commercial approvals are
+complete.
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -164,6 +169,7 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
 | `docs/architecture/gocardless-freeagent.md` | FreeAgent-GoCardless boundary and safety decision |
 | `docs/phase-7.md` | Current Phase 7 summary, status and acceptance boundary |
+| `docs/phase-7.4.md` | Worker 1101 diagnosis, fix, deployment evidence and remaining gates |
 | `docs/architecture/phase-6.md` | Current accounting architecture and state model |
 | `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
 | `docs/deployment/phase-6.md` | Current deployment state and rollout order |
@@ -188,7 +194,7 @@ operational records.
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
-| 7 | Billing engine and long-term operations hardening | Deployed baseline; runtime defect, provider acceptance and commercial gates remain open |
+| 7 | Billing engine and long-term operations hardening | 1101 diagnosed and fixed in source/deployment; authenticated runtime, provider acceptance and commercial gates remain open |
 
 ## Security model
 

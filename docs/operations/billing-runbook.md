@@ -33,3 +33,29 @@ The scheduler is safe to rerun after downtime. Operations are claimed
 atomically, deterministic keys prevent duplicates, and stale processing claims
 become unknown/reconciliation work. Investigate D1 contention or repeated
 provider failures before changing configuration.
+
+## Student Billing Worker 1101 Diagnostic Procedure
+
+1. Reproduce the authenticated `GET /learn/student/billing` request and record
+   the timestamp and Ray ID. An Access challenge is not route acceptance.
+2. Tail `foxtutor-learn` with Wrangler, filtered to the failing version or
+   request where possible. Correlate `student_billing_stage` entries with the
+   Ray ID; the permanent stages identify the last successful operation without
+   logging cookies, tokens or complete payment data.
+3. Classify the failure as authentication, student mapping, date handling,
+   credit query, history query, upcoming query, totals/conversion or rendering.
+   Preserve the exception name/message and D1/provider code in the operator
+   record.
+4. Execute the affected SQL directly against the matching remote D1 schema,
+   then reproduce it locally with a focused regression test. Do not replace a
+   failed query with fabricated empty data or a blanket catch.
+5. Fix the root cause, run the focused and full test suites, deploy the exact
+   tested source commit, and record the Worker version and migration state.
+6. Create a fresh authenticated session and verify status, content type,
+   billing headings and both empty and populated data states. Repeat after a
+   hard refresh and in a second session.
+
+The Phase 7.4 incident was caused by a six-way `UNION ALL` in
+`listBillingHistory`; production D1 rejected it with
+`SQLITE_ERROR: too many terms in compound SELECT`. The permanent fix uses
+bounded independent queries and deterministic application-side merging.
