@@ -1076,7 +1076,7 @@ export async function listBillingHistory(
   limit = 100,
   providerEnvironment?: "sandbox" | "production" | null
 ): Promise<BillingHistoryItem[]> {
-  const boundedLimit = Math.max(1, Math.min(limit, 500));
+  const boundedLimit = Math.max(1, Math.min(limit, 5000));
   const invoiceEnvironmentFilter = providerEnvironment
     ? " AND (i.provider_environment = ? OR i.provider_environment IS NULL)"
     : "";
@@ -1177,6 +1177,55 @@ export async function listBillingHistory(
       return left.id < right.id ? 1 : -1;
     })
     .slice(0, boundedLimit);
+}
+
+export async function countBillingHistory(
+  db: D1Database,
+  studentId: string,
+  providerEnvironment?: "sandbox" | "production" | null
+): Promise<number> {
+  const invoiceEnvironmentFilter = providerEnvironment
+    ? " AND (i.provider_environment = ? OR i.provider_environment IS NULL)"
+    : "";
+  const invoiceEnvironmentBindings = providerEnvironment ? [providerEnvironment] : [];
+  const counts = await Promise.all([
+    db.prepare(
+     `SELECT COUNT(*) AS count
+      FROM billing_events e
+      WHERE e.student_id = ?`
+    ).bind(studentId).first<{ count: number | string }>(),
+    db.prepare(
+     `SELECT COUNT(*) AS count
+      FROM lesson_history h
+      WHERE h.student_id = ?
+        AND h.event_type IN ('ADMIN_CANCELLED', 'STUDENT_CANCELLED', 'CANCELLATION_APPROVED')`
+    ).bind(studentId).first<{ count: number | string }>(),
+    db.prepare(
+     `SELECT COUNT(*) AS count
+      FROM customer_credits c
+      WHERE c.student_id = ?`
+    ).bind(studentId).first<{ count: number | string }>(),
+    db.prepare(
+     `SELECT COUNT(*) AS count
+      FROM credit_ledger_transactions t
+      JOIN customer_credits c ON c.id = t.credit_id
+      WHERE c.student_id = ?`
+    ).bind(studentId).first<{ count: number | string }>(),
+    db.prepare(
+     `SELECT COUNT(*) AS count
+      FROM billing_invoices i
+      WHERE i.student_id = ?
+        ${invoiceEnvironmentFilter}`
+    ).bind(studentId, ...invoiceEnvironmentBindings).first<{ count: number | string }>(),
+    db.prepare(
+     `SELECT COUNT(*) AS count
+      FROM billing_payments p
+      JOIN billing_invoices i ON i.id = p.invoice_id
+      WHERE i.student_id = ?
+        ${invoiceEnvironmentFilter}`
+    ).bind(studentId, ...invoiceEnvironmentBindings).first<{ count: number | string }>()
+  ]);
+  return counts.reduce((total, row) => total + Number(row?.count ?? 0), 0);
 }
 
 export async function listUpcomingBillingRows(

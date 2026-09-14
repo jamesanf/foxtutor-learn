@@ -77,6 +77,16 @@ payment reconciliation, alert acknowledgement and billing-history projections
 are now part of the operational boundary. Real provider mutations still
 require the Phase 6 accounting approvals and explicit Sandbox evidence.
 
+## Student billing-history pagination
+
+The student billing page uses the shared Learn pagination controls with a
+default page size of 12 and supported sizes of 24 and 48. D1 counts the six
+independent history sources before rendering the requested page, while the
+history rows retain their single deterministic descending date order. Provider
+environment filtering is applied consistently to invoice and payment rows in
+both the count and data queries, so pagination cannot reveal records from the
+other accounting environment.
+
 Credit consumption is finalized locally with an immutable ledger entry. A
 definite provider failure creates a compensating `REVERSAL`; an unknown or
 timeout outcome does not release credit and instead marks the invoice and

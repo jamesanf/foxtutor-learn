@@ -93,6 +93,7 @@ import {
   listCustomerCreditBalances,
   listDueBillingProviderOperations,
   listBillingHistory,
+  countBillingHistory,
   listUpcomingBillingRows,
   listOpenBillingAlerts,
   listPendingBillingEvents,
@@ -3412,7 +3413,7 @@ function directDebitStatusClass(status: DirectDebitStatus): string {
   return "suppressed";
 }
 
-async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Database, env: Env): Promise<Response> {
+async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Database, env: Env, url: URL): Promise<Response> {
   const context = { userId: user.id };
   studentBillingStage("STUDENT_BILLING_START", context);
   studentBillingStage("AUTHENTICATED_USER_RESOLVED", context);
@@ -3424,12 +3425,19 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
   const studentContext = { userId: user.id, studentId: student.id };
   const today = currentCalendarDate();
   const nextSeven = new Date(Date.parse(`${today}T12:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  const historyPagination = parseStudentSectionPagination(url, "page", "size");
   studentBillingStage("CURRENT_DATE_RESOLVED", studentContext);
-  const [credits, history, upcoming] = await Promise.all([
+  const [credits, historyTotal, upcoming] = await Promise.all([
     runStudentBillingStage("CREDIT_QUERY", studentContext, async () => (await listCustomerCreditBalances(db)).filter((row) => row.student_id === student.id)),
-    runStudentBillingStage("HISTORY_QUERY", studentContext, () => listBillingHistory(db, student.id, 100, configuredEnvironment(env))),
+    runStudentBillingStage("HISTORY_COUNT_QUERY", studentContext, () => countBillingHistory(db, student.id, configuredEnvironment(env))),
     runStudentBillingStage("UPCOMING_QUERY", studentContext, () => listUpcomingBillingRows(db, today, nextSeven, student.id, configuredEnvironment(env))),
   ]);
+  const historyPageCount = Math.max(1, Math.ceil(historyTotal / historyPagination.pageSize));
+  const historyPage = Math.min(historyPagination.page, historyPageCount);
+  const history = await runStudentBillingStage("HISTORY_QUERY", studentContext, () =>
+    listBillingHistory(db, student.id, historyPage * historyPagination.pageSize, configuredEnvironment(env))
+  );
+  const historyItems = history.slice((historyPage - 1) * historyPagination.pageSize, historyPage * historyPagination.pageSize);
   const mandateStatus = await runStudentBillingStage("DIRECT_DEBIT_STATUS_QUERY", studentContext, () =>
     studentDirectDebitStatus(db, env, student.id)
   );
@@ -3443,14 +3451,14 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
   const upcomingRows = upcoming.length
     ? upcoming.map((row) => `<tr><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(row.credit_available_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(row.kind, row.status))}</td><td>${escapeHtml(row.collection_date ? billingDateLabel(row.collection_date) : "Not scheduled")}</td></tr>`).join("")
     : `<tr><td colspan="5">No lessons in the next seven days.</td></tr>`;
-  const historyRows = history.length
-    ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}${item.kind === "INVOICE" && item.provider_url ? ` · <a href="${escapeHtml(item.provider_url)}" target="_blank" rel="noopener noreferrer">View/download invoice</a>` : ""}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(item.kind, item.status))}</td></tr>`).join("")
+  const historyRows = historyItems.length
+    ? historyItems.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}${item.kind === "INVOICE" && item.provider_url ? ` · <a href="${escapeHtml(item.provider_url)}" target="_blank" rel="noopener noreferrer">View/download invoice</a>` : ""}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(item.kind, item.status))}</td></tr>`).join("")
     : `<tr><td colspan="4">No billing history yet.</td></tr>`;
   const mandateAction = mandateStatus === "ACTIVE"
     ? ""
     : `<div class="direct-debit-actions"><a class="button secondary" href="mailto:billing@foxtutor.org?subject=Direct%20Debit%20setup%20help">Contact billing</a></div><p class="direct-debit-support">Billing support: <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a></p>`;
   studentBillingStage("BILLING_HTML_RENDER_START", studentContext);
-  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">Your billing summary and Direct Debit status.</p></div></div><div class="summary-grid student-billing-summary"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong><small>available to use</small></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses the secure provider flow for Direct Debit. Bank details must be entered only through that provider flow, never by email or in FoxTutor Learn. FoxTutor stores only the status needed to run billing.</p>${mandateStatus === "AUTHORISATION_PENDING" ? "<p>Use the secure provider authorisation request you received. The provider may take a few working days to confirm it.</p>" : ""}<p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
+  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">Your billing summary and Direct Debit status.</p></div></div><div class="summary-grid student-billing-summary"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong><small>available to use</small></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses the secure provider flow for Direct Debit. Bank details must be entered only through that provider flow, never by email or in FoxTutor Learn. FoxTutor stores only the status needed to run billing.</p>${mandateStatus === "AUTHORISATION_PENDING" ? "<p>Use the secure provider authorisation request you received. The provider may take a few working days to confirm it.</p>" : ""}<p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div>${studentSectionPagination(historyPage, historyPagination.pageSize, historyTotal, "/learn/student/billing", "Billing history", "page", "size")}</section>`);
   studentBillingStage("BILLING_HTML_RENDER_COMPLETE", studentContext);
   studentBillingStage("STUDENT_BILLING_END", studentContext);
   return response;
@@ -3462,7 +3470,7 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
-  if (route === "student-billing") return studentBillingPage(active.user, csrfToken, db, env);
+  if (route === "student-billing") return studentBillingPage(active.user, csrfToken, db, env, url);
   if (route === "student-calendar") {
     const lessons = await listLessonsForUser(db, active.user.id);
     const feed = await findActiveCalendarFeedForOwner(db, active.user.id);

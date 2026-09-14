@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listBillingHistory, listOpenBillingAlerts, listUpcomingBillingRows, type BillingHistoryItem } from "../../src/db/billing";
+import { countBillingHistory, listBillingHistory, listOpenBillingAlerts, listUpcomingBillingRows, type BillingHistoryItem } from "../../src/db/billing";
 
 function mockBillingDb(
   rowsForQuery: (sql: string) => BillingHistoryItem[]
@@ -11,7 +11,8 @@ function mockBillingDb(
       return {
         bind() {
           return {
-            all: async <T>() => ({ results: rowsForQuery(sql) as T[] })
+            all: async <T>() => ({ results: rowsForQuery(sql) as T[] }),
+            first: async <T>() => ({ count: rowsForQuery(sql).length } as T)
           };
         }
       };
@@ -88,6 +89,18 @@ describe("student billing history query", () => {
 
     await expect(listBillingHistory(db, "student-1", 100, "production")).resolves.toEqual([]);
     expect(db.queries.filter((sql) => sql.includes("provider_environment")).length).toBe(3);
+  });
+
+  it("counts every billing-history source with provider isolation", async () => {
+    const db = mockBillingDb((sql) => {
+      if (sql.includes("billing_events")) return [item("event-1", "2026-09-10T10:00:00.000Z", "LESSON_CHARGE"), item("event-2", "2026-09-11T10:00:00.000Z", "LESSON_CHARGE")];
+      if (sql.includes("lesson_history")) return [item("cancel-1", "2026-09-12T10:00:00.000Z", "CANCELLATION")];
+      return [];
+    });
+
+    await expect(countBillingHistory(db, "student-1", "production")).resolves.toBe(3);
+    expect(db.queries).toHaveLength(6);
+    expect(db.queries.filter((sql) => sql.includes("provider_environment")).length).toBe(2);
   });
 
   it("applies provider-environment isolation to the admin upcoming billing query", async () => {
