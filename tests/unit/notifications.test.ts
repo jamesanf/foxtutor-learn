@@ -123,6 +123,9 @@ describe("notification domain", () => {
     const rendered = renderStudentInvitation({ studentName: "Jamie", origin: "https://foxtutor.org/learn" });
     expect(rendered.subject).toBe("Welcome to FoxTutor Learn");
     expect(rendered.text).toContain("https://foxtutor.org/learn");
+    expect(rendered.text).toContain("separate secure Direct Debit request through FreeAgent");
+    expect(rendered.text).toContain("email from GoCardless");
+    expect(rendered.text).toContain("Never send bank details by email");
     expect(rendered.text).not.toContain("/admin");
   });
 

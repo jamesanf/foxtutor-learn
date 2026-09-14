@@ -2816,7 +2816,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         content
       }, now);
     }
-    return redirect("/learn/admin/students");
+    return redirect(`/learn/admin/students/${encodeURIComponent(studentId)}?created=1`);
   }
   if (route === "admin-student" || route === "admin-student-edit" || route === "admin-student-deactivate") {
     const id = studentIdFromPath(url.pathname);
@@ -2841,6 +2841,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         listResourcesForStudentRecord(db, student.id, resourcePagination.pageSize, (safeResourcePage - 1) * resourcePagination.pageSize)
       ]);
       const detailValue = (value: string | null | undefined) => value ? escapeHtml(value).replace(/\n/g, "<br>") : "—";
+      const createdNotice = url.searchParams.get("created") === "1"
+        ? `<div class="notice success" role="status"><strong>Student created.</strong> Use the FreeAgent mandate request below to send the secure GoCardless invitation. The customer will receive it from GoCardless, not FoxTutor.</div>`
+        : "";
       const mandateRequestUrl = billingAccount && billingAccount.mandate_state !== "ACTIVE" && accountingLink?.status === "VERIFIED"
         ? freeAgentContactMandateRequestUrl(
           accountingLink.verified_environment ?? "production",
@@ -2855,7 +2858,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const lessonSection = `<details class="card student-collapsible" open><summary><span><strong>Lessons</strong><small>${lessonTotal} lesson${lessonTotal === 1 ? "" : "s"}</small></span></summary><div class="student-collapsible-body">${lessonTable(lessons, "/learn/admin/lessons", true)}${studentSectionPagination(safeLessonPage, lessonPagination.pageSize, lessonTotal, `/learn/admin/students/${encodeURIComponent(student.id)}`, "Student lessons", "lessonsPage", "lessonsSize")}</div></details>`;
       const resourceAction = student.status === "ACTIVE" ? `<div class="student-section-action">${buttonLink(`/learn/admin/resources/new?student=${encodeURIComponent(student.id)}`, "Add resource")}</div>` : "";
       const resourceSection = `<details class="card student-collapsible" open><summary><span><strong>Resources</strong><small>Documents for this student.</small></span></summary><div class="student-collapsible-body">${resourceAction}${resources.length ? resourceRows(resources, { admin: true, csrfToken }) : `<p class="muted">No resources for this student yet.</p>`}${studentSectionPagination(safeResourcePage, resourcePagination.pageSize, resourceTotal, `/learn/admin/students/${encodeURIComponent(student.id)}`, "Student resources", "resourcesPage", "resourcesSize")}</div></details>`;
-      return appPage(active.user, csrfToken, "Student", `<div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div><div class="form-actions">${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div></div>${profileDetails}${mandateRequestAction}${lessonSection}${resourceSection}${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form student-deactivate-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
+      return appPage(active.user, csrfToken, "Student", `<div class="page-heading"><div><h1>${escapeHtml(student.name)}</h1><p class="lede">${escapeHtml(student.email)}</p></div><div class="form-actions">${buttonLink(`/learn/admin/students/${encodeURIComponent(student.id)}/edit`, "Edit student")}${buttonLink(`/learn/admin/lessons/new?student=${encodeURIComponent(student.id)}`, "Create lesson")}</div></div>${createdNotice}${profileDetails}${mandateRequestAction}${lessonSection}${resourceSection}${student.status === "ACTIVE" ? `<form method="post" action="/learn/admin/students/${encodeURIComponent(student.id)}/deactivate" class="inline-form student-deactivate-form">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Deactivate student</button></form>` : ""}`);
     }
     if (route === "admin-student-deactivate") {
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);

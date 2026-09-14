@@ -13,6 +13,8 @@ describe("student profile form UI", () => {
   it("shows the Direct Debit mandate state in the admin student detail", () => {
     expect(workerSource).toContain("<strong>Direct Debit mandate</strong>");
     expect(workerSource).toContain("billingAccount?.mandate_state");
+    expect(workerSource).toContain("Open FreeAgent mandate request");
+    expect(workerSource).toContain("Student created.");
     expect(workerSource).toContain("required autocomplete=\"email\"");
     expect(workerSource).toContain("name=\"parentName\"");
     expect(workerSource).toContain("name=\"parentEmail\"");

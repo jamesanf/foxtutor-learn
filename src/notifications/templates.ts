@@ -119,8 +119,8 @@ export function renderStudentInvitation(data: { studentName: string; origin: str
   const link = learnLink(data.origin, "/learn");
   return {
     subject: "Welcome to FoxTutor Learn",
-    text: `Hello ${data.studentName},\n\nYour FoxTutor Learn access is ready.\n\nOpen FoxTutor Learn: ${link}\n\nUse your usual Google account to continue.`,
-    html: frame("Welcome to FoxTutor Learn", "You received this because a Learn account was linked to your student record.", `<p>Hello ${escapeHtml(data.studentName)},</p><p>Your FoxTutor Learn access is ready.</p><p><a href="${escapeHtml(link)}">Open FoxTutor Learn</a></p><p>Use your usual Google account to continue.</p>`)
+    text: `Hello ${data.studentName},\n\nYour FoxTutor Learn access is ready.\n\nOpen FoxTutor Learn: ${link}\n\nUse your usual Google account to continue.\n\nYour billing administrator will send a separate secure Direct Debit request through FreeAgent shortly. Look out for an email from GoCardless and follow that secure link. Never send bank details by email or enter them into FoxTutor Learn.`,
+    html: frame("Welcome to FoxTutor Learn", "You received this because a Learn account was linked to your student record.", `<p>Hello ${escapeHtml(data.studentName)},</p><p>Your FoxTutor Learn access is ready.</p><p><a href="${escapeHtml(link)}">Open FoxTutor Learn</a></p><p>Use your usual Google account to continue.</p><p>Your billing administrator will send a separate secure Direct Debit request through FreeAgent shortly. Look out for an email from GoCardless and follow that secure link.</p><p>Never send bank details by email or enter them into FoxTutor Learn.</p>`)
   };
 }
 
