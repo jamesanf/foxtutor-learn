@@ -31,6 +31,7 @@ by a known implementation defect.
 
 ## Documentation release
 
-The surrounding Phase 7 documentation reconciliation is documentation-only.
-It updates the repository source of truth and does not change executable
-Worker behavior, D1 schema or provider state.
+The surrounding Phase 7 documentation reconciliation was committed as
+`1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a` and deployed as Worker version
+`b8782a16-fbac-4a53-a0ea-4f4c04fccb96`. It is documentation-only and does not
+change executable Worker behavior, D1 schema or provider state.

@@ -17,7 +17,9 @@
   Wrangler dry-run, production smoke and remote migration verification passed.
 - **Deployment:** Functional source commit
   `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`, Worker version
-  `8cd9b99f-de03-466a-8a37-46ad3e78696b`.
+  `8cd9b99f-de03-466a-8a37-46ad3e78696b`. The documentation reconciliation
+  commit `1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a` was also deployed as
+  Worker version `b8782a16-fbac-4a53-a0ea-4f4c04fccb96`.
 - **Known limitations:** Production credentials and human authorization are
   still required. Live Sandbox category response evidence and approved
   category selection were not available in this execution context.

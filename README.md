@@ -14,6 +14,7 @@ replacement, payment system or accounting ledger.
 **Repository branch:** `main`
 **Deployed source commit:** `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`
 **Worker version:** `8cd9b99f-de03-466a-8a37-46ad3e78696b`
+**Latest documentation deployment:** commit `1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a`, Worker `b8782a16-fbac-4a53-a0ea-4f4c04fccb96`
 **D1 migrations:** `0001_foundation.sql` through `0029_accounting_category_environment.sql` deployed
 **Automated validation:** 38 test files, 229 tests passing
 

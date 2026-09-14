@@ -108,8 +108,10 @@ The functional Phase 7.11 source was committed and deployed as:
 | Public smoke | `/learn` returned Cloudflare Access `302` |
 | Financial activity | No Production financial mutation performed |
 
-The documentation reconciliation is a documentation-only follow-up to that
-functional release; it does not alter the Worker code or provider state.
+The documentation reconciliation was committed as
+`1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a` and deployed as Worker version
+`b8782a16-fbac-4a53-a0ea-4f4c04fccb96`. It is documentation-only and does not
+alter Worker code, D1 schema or provider state.
 
 ## Human handover and next gate
 
