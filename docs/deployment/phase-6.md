@@ -65,5 +65,6 @@ matching accounting settings/back icons.
 The current repository HEAD is `3921c60`; it is distinct from the deployed
 executable source commit above. The current full validation result is 27 test
 files and 142 tests passing, with build/check, browser shell and production
-perimeter smoke passing. The visual browser helper was attempted but could not
-run because no Chrome DevTools endpoint was available at `127.0.0.1:9222`.
+perimeter smoke passing. The visual calendar helper was attempted with a local
+Chrome and Worker, but the isolated local D1 had no calendar fixture events;
+the Phase 6 browser shell contract remains passing.
