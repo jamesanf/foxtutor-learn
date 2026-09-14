@@ -7,8 +7,8 @@ const cssSource = readFileSync("public/learn.css", "utf8");
 describe("accounting admin presentation contract", () => {
   it("uses a dedicated money icon and keeps FreeAgent setup messaging single-sourced", () => {
     expect(workerSource).toContain('Accounting: "accounting"');
-    expect(workerSource).toContain("accounting: \"M12 2a10 10");
-    expect(workerSource).not.toContain("accounting: \"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 16h-2v-2h2v2");
+    expect(workerSource).toContain("accounting: \"M12 2C7.58 2 4 3.79 4 6");
+    expect(workerSource).not.toContain("accounting: \"M12 2a10 10");
     expect(workerSource).toContain("!status.errorMessage");
     expect(workerSource).toContain('status.errorMessage ? `<p class="form-error">');
   });
