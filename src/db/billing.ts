@@ -61,6 +61,7 @@ export interface BillingInvoice {
   due_date: string | null;
   collection_date: string | null;
   status: string;
+  provider_environment: "sandbox" | "production" | null;
   freeagent_reference: string | null;
   freeagent_url: string | null;
   provider_status: string | null;
@@ -533,6 +534,7 @@ export async function createBillingInvoice(
     lessonDate: string | null;
     dueDate: string | null;
     collectionDate: string | null;
+    providerEnvironment?: "sandbox" | "production" | null;
     now: string;
   }
 ): Promise<void> {
@@ -540,8 +542,8 @@ export async function createBillingInvoice(
     `INSERT INTO billing_invoices
      (id, billing_event_id, student_id, gross_amount_minor, credit_applied_minor,
       net_amount_minor, currency, lesson_date, billing_date, due_date, collection_date,
-      status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 0, ?, 'GBP', ?, ?, ?, ?, 'PENDING_PROVIDER', ?, ?)
+      status, provider_environment, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 0, ?, 'GBP', ?, ?, ?, ?, 'PENDING_PROVIDER', ?, ?, ?)
      ON CONFLICT(billing_event_id) DO NOTHING`
   ).bind(
     input.id,
@@ -553,6 +555,7 @@ export async function createBillingInvoice(
     input.billingDate,
     input.dueDate,
     input.collectionDate,
+    input.providerEnvironment ?? null,
     input.now,
     input.now
   ).run();
@@ -718,7 +721,7 @@ export function creditNoteReference(creditId: string): string {
 
 export async function ensureBillingInvoiceForEvent(
   db: D1Database,
-  input: { billingEventId: string; now: string }
+  input: { billingEventId: string; now: string; providerEnvironment?: "sandbox" | "production" | null }
 ): Promise<BillingInvoice | null> {
   const event = await findBillingEvent(db, input.billingEventId);
   if (!event || event.status === "CANCELLED") return null;
@@ -728,8 +731,8 @@ export async function ensureBillingInvoiceForEvent(
       `INSERT INTO billing_invoices
        (id, billing_event_id, student_id, gross_amount_minor, credit_applied_minor,
         net_amount_minor, currency, lesson_date, billing_date, due_date, collection_date,
-        status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 0, ?, 'GBP', ?, ?, ?, ?, 'PENDING_PROVIDER', ?, ?)
+        status, provider_environment, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 0, ?, 'GBP', ?, ?, ?, ?, 'PENDING_PROVIDER', ?, ?, ?)
        ON CONFLICT(billing_event_id) DO NOTHING`
     ).bind(
       `invoice:${event.id}`,
@@ -741,6 +744,7 @@ export async function ensureBillingInvoiceForEvent(
       event.billing_date ?? input.now.slice(0, 10),
       event.due_date,
       event.collection_date,
+      input.providerEnvironment ?? null,
       input.now,
       input.now
     ),

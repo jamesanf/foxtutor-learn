@@ -12,7 +12,7 @@ import {
 } from "../db/billing-accounts";
 import { findAccountingConnection, findExternalAccountingLink, upsertExternalAccountingLink } from "../db/accounting";
 import { classifyDirectDebitState, type DirectDebitStatus } from "../domain/direct-debit";
-import { providerCall, type AccountingEnvironment } from "./service";
+import { configuredEnvironment, providerCall, type AccountingEnvironment } from "./service";
 import { freeAgentFetch, FreeAgentApiError, type FreeAgentContact } from "./freeagent/client";
 import { createDirectDebitNotification, type NotificationEnvironment } from "../notifications/service";
 
@@ -68,7 +68,7 @@ async function findOrCreateContact(
   now: string,
   fetcher: typeof fetch
 ): Promise<{ contact: FreeAgentContact; eventType: "CONTACT_FOUND" | "CONTACT_CREATED" }> {
-  const link = await findExternalAccountingLink(db, student.id);
+  const link = await findExternalAccountingLink(db, student.id, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
   if (link?.status === "VERIFIED") {
     const contact = await providerCall(db, env, now, fetcher, (client, token) => client.getContact(token, link.external_url));
     if (!contact) throw new FreeAgentApiError({
@@ -106,7 +106,7 @@ async function findOrCreateContact(
     fetcher,
     (client, token) => client.createContact(token, { firstName, lastName, email: student.email })
   );
-  const connection = await findAccountingConnection(db);
+  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
   if (!connection) throw new FreeAgentApiError({
     code: "CONFIGURATION",
     status: null,
@@ -144,7 +144,7 @@ export async function provisionBillingAccount(
   now: string,
   fetcher: typeof fetch = freeAgentFetch
 ): Promise<BillingAccount | null> {
-  await ensureBillingAccount(db, studentId, now);
+  await ensureBillingAccount(db, studentId, now, configuredEnvironment(env));
   const account = await findBillingAccount(db, studentId);
   const student = await studentRow(db, studentId);
   if (!account || !student) return null;
@@ -233,7 +233,7 @@ export async function reconcileBillingAccountMandate(
   fetcher: typeof fetch = freeAgentFetch
 ): Promise<DirectDebitStatus> {
   const account = await findBillingAccount(db, studentId);
-  const link = await findExternalAccountingLink(db, studentId);
+  const link = await findExternalAccountingLink(db, studentId, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
   if (!account || !link || link.status !== "VERIFIED") return "SETUP_REQUIRED";
   try {
     const contact = await providerCall(db, env, now, fetcher, (client, token) =>

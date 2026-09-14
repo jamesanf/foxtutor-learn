@@ -22,6 +22,7 @@ export interface BillingAccount {
   payment_method: "DIRECT_DEBIT";
   mandate_state: BillingMandateState;
   provisioning_state: BillingProvisioningState;
+  provider_environment: "sandbox" | "production" | null;
   provider_contact_reference: string | null;
   provider_contact_url: string | null;
   verified_at: string | null;
@@ -43,13 +44,18 @@ const accountSelect = `SELECT b.*, s.name AS student_name, s.email AS student_em
   FROM billing_accounts b
   JOIN students s ON s.id = b.student_id`;
 
-export async function ensureBillingAccount(db: D1Database, studentId: string, now: string): Promise<void> {
+export async function ensureBillingAccount(
+  db: D1Database,
+  studentId: string,
+  now: string,
+  providerEnvironment?: "sandbox" | "production" | null
+): Promise<void> {
   await db.prepare(
     `INSERT INTO billing_accounts
-      (id, student_id, payment_method, mandate_state, provisioning_state, created_at, updated_at)
-     VALUES (?, ?, 'DIRECT_DEBIT', 'UNKNOWN', 'CONTACT_SYNC_REQUIRED', ?, ?)
+      (id, student_id, payment_method, mandate_state, provisioning_state, provider_environment, created_at, updated_at)
+     VALUES (?, ?, 'DIRECT_DEBIT', 'UNKNOWN', 'CONTACT_SYNC_REQUIRED', ?, ?, ?)
      ON CONFLICT(student_id) DO NOTHING`
-  ).bind(`billing-account:${studentId}`, studentId, now, now).run();
+  ).bind(`billing-account:${studentId}`, studentId, providerEnvironment ?? null, now, now).run();
 }
 
 export async function findBillingAccount(db: D1Database, studentId: string): Promise<BillingAccount | null> {

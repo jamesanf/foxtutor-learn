@@ -174,7 +174,7 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatus, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
+import { accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
 import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
@@ -202,6 +202,16 @@ export interface Env {
   MAIL_API_ACCESS_CLIENT_ID?: string;
   MAIL_API_ACCESS_CLIENT_SECRET?: string;
   FREEAGENT_ENVIRONMENT?: string;
+  FREEAGENT_SANDBOX_CLIENT_ID?: string;
+  FREEAGENT_SANDBOX_CLIENT_SECRET?: string;
+  FREEAGENT_SANDBOX_COMPANY_SUBDOMAIN?: string;
+  FREEAGENT_SANDBOX_TOKEN_ENCRYPTION_KEY?: string;
+  FREEAGENT_SANDBOX_OAUTH_REDIRECT_URI?: string;
+  FREEAGENT_PRODUCTION_CLIENT_ID?: string;
+  FREEAGENT_PRODUCTION_CLIENT_SECRET?: string;
+  FREEAGENT_PRODUCTION_COMPANY_SUBDOMAIN?: string;
+  FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY?: string;
+  FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI?: string;
   FREEAGENT_CLIENT_ID?: string;
   FREEAGENT_CLIENT_SECRET?: string;
   FREEAGENT_OAUTH_REDIRECT_URI?: string;
@@ -1481,7 +1491,7 @@ async function handleAccountingOAuthCallback(request: Request, env: Env): Promis
     await connectFreeAgent(db, env, {
       code,
       environment: consumed.environment,
-      redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI ?? "",
+      redirectUri: freeAgentEnvironmentConfig(env, consumed.environment)?.oauthRedirectUri ?? "",
       now: new Date().toISOString()
     }, freeAgentFetch);
     const session = await createSession(db, admin, env.ENVIRONMENT === "production");
@@ -1887,7 +1897,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const student = await findStudent(db, studentId);
     if (!student) return messagePage("Student not found", "That student does not exist.", 404);
     await reconcileBillingAccountMandate(db, env, studentId, new Date().toISOString(), freeAgentFetch);
-    const audit = await auditBillingChain(db, studentId, new Date().toISOString());
+    const audit = await auditBillingChain(db, studentId, new Date().toISOString(), {
+      providerEnvironment: configuredEnvironment(env)
+    });
     const reasonRows = audit.reasons.length
       ? audit.reasons.map((reason) => `<tr><td>${escapeHtml(reason.code)}</td><td>${escapeHtml(reason.detail)}</td></tr>`).join("")
       : `<tr><td colspan="2">No exceptions detected.</td></tr>`;
@@ -1897,7 +1909,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       active.user,
       csrfToken,
       "Billing chain audit",
-      `<div class="page-heading"><div><h1>Billing chain audit</h1><p class="lede">Read-only FreeAgent reconciliation for ${escapeHtml(student.name)}.</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Overall status</dt><dd>${escapeHtml(audit.status)}</dd></div><div><dt>Billing account</dt><dd>${escapeHtml(account?.id ?? "Missing")}</dd></div><div><dt>FreeAgent link</dt><dd>${escapeHtml(link?.status ?? "Missing")}</dd></div><div><dt>Contact reference</dt><dd>${escapeHtml(account?.providerContactReference ?? "—")}</dd></div><div><dt>Mandate state</dt><dd>${escapeHtml(account?.mandateState ?? "—")}</dd></div><div><dt>Provisioning state</dt><dd>${escapeHtml(account?.provisioningState ?? "—")}</dd></div><div><dt>Last active verification</dt><dd>${escapeHtml(account?.verifiedAt ?? "—")}</dd></div><div><dt>Last reconciled</dt><dd>${escapeHtml(account?.lastReconciledAt ?? "—")}</dd></div><div><dt>Next reconciliation</dt><dd>${escapeHtml(account?.nextReconcileAt ?? "—")}</dd></div><div><dt>Last error</dt><dd>${escapeHtml(account?.lastErrorCode ?? "None")}${account?.lastErrorMessage ? ` — ${escapeHtml(account.lastErrorMessage)}` : ""}</dd></div><div><dt>Invoice</dt><dd>${escapeHtml(audit.snapshot.invoice?.id ?? "None")}</dd></div><div><dt>Payment state</dt><dd>${escapeHtml(audit.snapshot.payment?.status ?? "Not recorded")}</dd></div></dl></section><section class="card"><h2>Reasons</h2><div class="table-wrap"><table><thead><tr><th>Code</th><th>Detail</th></tr></thead><tbody>${reasonRows}</tbody></table></div></section>`
+      `<div class="page-heading"><div><h1>Billing chain audit</h1><p class="lede">Read-only FreeAgent reconciliation for ${escapeHtml(student.name)}.</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Overall status</dt><dd>${escapeHtml(audit.status)}</dd></div><div><dt>Provider environment</dt><dd>${escapeHtml(audit.snapshot.providerEnvironment?.toUpperCase() ?? "UNKNOWN")}</dd></div><div><dt>Billing account</dt><dd>${escapeHtml(account?.id ?? "Missing")}</dd></div><div><dt>FreeAgent link</dt><dd>${escapeHtml(link?.status ?? "Missing")}</dd></div><div><dt>Contact reference</dt><dd>${escapeHtml(account?.providerContactReference ?? "—")}</dd></div><div><dt>Mandate state</dt><dd>${escapeHtml(account?.mandateState ?? "—")}</dd></div><div><dt>Provisioning state</dt><dd>${escapeHtml(account?.provisioningState ?? "—")}</dd></div><div><dt>Last active verification</dt><dd>${escapeHtml(account?.verifiedAt ?? "—")}</dd></div><div><dt>Last reconciled</dt><dd>${escapeHtml(account?.lastReconciledAt ?? "—")}</dd></div><div><dt>Next reconciliation</dt><dd>${escapeHtml(account?.nextReconcileAt ?? "—")}</dd></div><div><dt>Last error</dt><dd>${escapeHtml(account?.lastErrorCode ?? "None")}${account?.lastErrorMessage ? ` — ${escapeHtml(account.lastErrorMessage)}` : ""}</dd></div><div><dt>Invoice</dt><dd>${escapeHtml(audit.snapshot.invoice?.id ?? "None")}</dd></div><div><dt>Payment state</dt><dd>${escapeHtml(audit.snapshot.payment?.status ?? "Not recorded")}</dd></div></dl></section><section class="card"><h2>Reasons</h2><div class="table-wrap"><table><thead><tr><th>Code</th><th>Detail</th></tr></thead><tbody>${reasonRows}</tbody></table></div></section>`
     );
   }
   if (route === "admin-billing-action") {
@@ -1966,10 +1978,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-accounting-connect") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the FreeAgent connection link from the accounting page.", 405);
-    if (!env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_OAUTH_REDIRECT_URI || !env.FREEAGENT_COMPANY_SUBDOMAIN || (env.FREEAGENT_ENVIRONMENT !== "sandbox" && env.FREEAGENT_ENVIRONMENT !== "production")) {
+    const environment = configuredEnvironment(env);
+    const credentials = freeAgentEnvironmentConfig(env, environment);
+    if (!environment || !credentials || !credentials.companySubdomain || !credentials.oauthRedirectUri) {
       return messagePage("FreeAgent unavailable", "FreeAgent OAuth configuration is incomplete or the intended company is not pinned.", 503);
     }
-    const environment: FreeAgentEnvironment = env.FREEAGENT_ENVIRONMENT;
     const state = randomOAuthState();
     const now = new Date().toISOString();
     await createAccountingOAuthState(db, {
@@ -1980,8 +1993,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       createdAt: now
     });
     return redirect(freeAgentAuthorizationUrl(environment, {
-      clientId: env.FREEAGENT_CLIENT_ID,
-      redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI,
+      clientId: credentials.clientId,
+      redirectUri: credentials.oauthRedirectUri,
       state,
       accessLevel: env.FREEAGENT_ACCESS_LEVEL ?? "4"
     }));
@@ -1996,7 +2009,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       await connectFreeAgent(db, env, {
         code,
         environment: consumed.environment,
-        redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI ?? "",
+        redirectUri: freeAgentEnvironmentConfig(env, consumed.environment)?.oauthRedirectUri ?? "",
         now: new Date().toISOString()
       }, freeAgentFetch);
       return redirect("/learn/admin/accounting");
@@ -2011,7 +2024,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       accountingOutboxCounts(db),
       accountingIntegrationStatus(db, env),
       listStudents(db),
-      listExternalAccountingLinks(db)
+      listExternalAccountingLinks(db, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined)
     ]);
     return appPage(active.user, csrfToken, "Accounting", `<div class="page-heading"><div><h1>Accounting</h1><p class="lede">Operational boundary between Learn and FreeAgent.</p></div></div>${accountingList(rows, counts, status, students, links, csrfToken)}`);
   }
@@ -2054,7 +2067,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const studentId = match ? decodePathSegment(match[1] ?? "") : null;
     if (!studentId || !(await findStudent(db, studentId))) return messagePage("Not found", "That Learn payer does not exist.", 404);
     if (match?.[2] === "/remove") {
-      const removed = await removeExternalAccountingLink(db, studentId);
+      const removed = await removeExternalAccountingLink(db, studentId, configuredEnvironment(env) ?? undefined);
       return removed ? redirect("/learn/admin/accounting") : messagePage("Mapping still in use", "Resolve the accounting event before removing this contact mapping.", 409);
     }
     const form = await parseForm(request);
@@ -2066,9 +2079,10 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       if (error instanceof FreeAgentApiError && error.shape.code === "CONFLICT") {
         return messagePage("Contact mapping in use", error.message, 409);
       }
-      const link = await findExternalAccountingLink(db, studentId);
+      const link = await findExternalAccountingLink(db, studentId, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
       if (link) {
         await updateExternalAccountingLinkStatus(db, studentId, {
+          environment: configuredEnvironment(env) ?? undefined,
           status: "INVALID",
           lastErrorCode: "CONTACT_MAPPING_REQUIRED",
           lastErrorMessage: "FreeAgent could not verify this contact in the connected company.",
@@ -2962,7 +2976,7 @@ async function studentDirectDebitStatus(
     }
     return account.mandate_state;
   }
-  const link = await findExternalAccountingLink(db, studentId);
+  const link = await findExternalAccountingLink(db, studentId, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
   if (!link || link.status !== "VERIFIED") return "SETUP_REQUIRED";
   try {
     const contact = await providerCall(db, env, new Date().toISOString(), freeAgentFetch, (client, token) =>
@@ -3365,7 +3379,8 @@ export default {
       const pendingBillingEvents = await listPendingBillingEvents(db, now, 50);
       await Promise.all(pendingBillingEvents.map((event) => ensureBillingInvoiceForEvent(db, {
         billingEventId: event.id,
-        now
+        now,
+        providerEnvironment: configuredEnvironment(env)
       })));
       await ensureDueDirectDebitOperations(db, now.slice(0, 10), now);
       const dueAccounting = await listDueAccountingOutbox(db, now, 10);

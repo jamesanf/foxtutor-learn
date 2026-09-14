@@ -56,6 +56,8 @@ export interface AccountingConnection {
   updated_at: string;
 }
 
+export type AccountingEnvironmentName = "sandbox" | "production";
+
 export interface ExternalAccountingLink {
   id: string;
   provider: "FREEAGENT";
@@ -346,11 +348,28 @@ export async function reconcileAccountingReference(
   return Boolean(result.meta.changes);
 }
 
-export async function findExternalAccountingLink(db: D1Database, studentId: string): Promise<ExternalAccountingLink | null> {
+export async function findExternalAccountingLink(
+  db: D1Database,
+  studentId: string,
+  environment?: AccountingEnvironmentName
+): Promise<ExternalAccountingLink | null> {
+  if (environment) {
+    const isolated = await db.prepare(
+      `SELECT id, provider, local_entity_type, local_entity_id, external_resource_type,
+              external_reference, external_url, status, verified_at,
+              environment AS verified_environment, company_subdomain AS verified_company_subdomain,
+              last_error_code, last_error_message, created_at, updated_at
+       FROM external_accounting_links_by_environment
+       WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT'
+         AND local_entity_id = ? AND environment = ?`
+    ).bind(studentId, environment).first<ExternalAccountingLink>();
+    return isolated;
+  }
   return db.prepare(
     `SELECT * FROM external_accounting_links
-     WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND local_entity_id = ?`
-  ).bind(studentId).first<ExternalAccountingLink>();
+     WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND local_entity_id = ?
+       AND (? IS NULL OR verified_environment = ?)`
+  ).bind(studentId, environment ?? null, environment ?? null).first<ExternalAccountingLink>();
 }
 
 export async function hasActiveAccountingDependency(db: D1Database, studentId: string): Promise<boolean> {
@@ -364,12 +383,25 @@ export async function hasActiveAccountingDependency(db: D1Database, studentId: s
   return Boolean(row);
 }
 
-export async function listExternalAccountingLinks(db: D1Database): Promise<ExternalAccountingLink[]> {
+export async function listExternalAccountingLinks(db: D1Database, environment?: AccountingEnvironmentName): Promise<ExternalAccountingLink[]> {
+  if (environment) {
+    const isolated = await db.prepare(
+      `SELECT id, provider, local_entity_type, local_entity_id, external_resource_type,
+              external_reference, external_url, status, verified_at,
+              environment AS verified_environment, company_subdomain AS verified_company_subdomain,
+              last_error_code, last_error_message, created_at, updated_at
+       FROM external_accounting_links_by_environment
+       WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND environment = ?
+       ORDER BY updated_at DESC, id DESC`
+    ).bind(environment).all<ExternalAccountingLink>();
+    return isolated.results;
+  }
   const result = await db.prepare(
      `SELECT * FROM external_accounting_links
       WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT'
+        AND (? IS NULL OR verified_environment = ?)
       ORDER BY updated_at DESC, id DESC`
-  ).all<ExternalAccountingLink>();
+  ).bind(environment ?? null, environment ?? null).all<ExternalAccountingLink>();
   return result.results;
 }
 
@@ -389,6 +421,38 @@ export async function upsertExternalAccountingLink(
      now: string;
   }
 ): Promise<void> {
+  if (input.verifiedEnvironment) {
+    await db.prepare(
+      `INSERT INTO external_accounting_links_by_environment
+       (id, provider, local_entity_type, local_entity_id, external_resource_type,
+        external_reference, external_url, status, verified_at, environment,
+        company_subdomain, last_error_code, last_error_message, created_at, updated_at)
+       VALUES (?, 'FREEAGENT', 'STUDENT', ?, 'CONTACT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(provider, local_entity_type, local_entity_id, environment) DO UPDATE SET
+         external_reference = excluded.external_reference,
+         external_url = excluded.external_url,
+         status = excluded.status,
+         verified_at = excluded.verified_at,
+         company_subdomain = excluded.company_subdomain,
+         last_error_code = excluded.last_error_code,
+         last_error_message = excluded.last_error_message,
+         updated_at = excluded.updated_at`
+    ).bind(
+      input.id,
+      input.studentId,
+      input.externalReference,
+      input.externalUrl,
+      input.status ?? "UNVERIFIED",
+      input.verifiedAt ?? null,
+      input.verifiedEnvironment,
+      input.verifiedCompanySubdomain ?? null,
+      input.lastErrorCode ?? null,
+      input.lastErrorMessage?.slice(0, 240) ?? null,
+      input.now,
+      input.now
+    ).run();
+    return;
+  }
   await db.prepare(
      `INSERT INTO external_accounting_links
       (id, provider, local_entity_type, local_entity_id, external_resource_type,
@@ -425,6 +489,7 @@ export async function updateExternalAccountingLinkStatus(
   db: D1Database,
   studentId: string,
   input: {
+     environment?: AccountingEnvironmentName;
      status: "UNVERIFIED" | "VERIFIED" | "INVALID";
      verifiedAt?: string | null;
      verifiedEnvironment?: "sandbox" | "production" | null;
@@ -434,6 +499,25 @@ export async function updateExternalAccountingLinkStatus(
      now: string;
   }
 ): Promise<boolean> {
+  if (input.environment) {
+    const result = await db.prepare(
+      `UPDATE external_accounting_links_by_environment
+       SET status = ?, verified_at = ?, company_subdomain = ?,
+           last_error_code = ?, last_error_message = ?, updated_at = ?
+       WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT'
+         AND local_entity_id = ? AND environment = ?`
+    ).bind(
+      input.status,
+      input.verifiedAt ?? null,
+      input.verifiedCompanySubdomain ?? null,
+      input.lastErrorCode ?? null,
+      input.lastErrorMessage?.slice(0, 240) ?? null,
+      input.now,
+      studentId,
+      input.environment
+    ).run();
+    return Boolean(result.meta.changes);
+  }
   const result = await db.prepare(
      `UPDATE external_accounting_links
       SET status = ?, verified_at = ?, verified_environment = ?,
@@ -453,7 +537,15 @@ export async function updateExternalAccountingLinkStatus(
   return Boolean(result.meta.changes);
 }
 
-export async function removeExternalAccountingLink(db: D1Database, studentId: string): Promise<boolean> {
+export async function removeExternalAccountingLink(db: D1Database, studentId: string, environment?: AccountingEnvironmentName): Promise<boolean> {
+  if (environment) {
+    const result = await db.prepare(
+      `DELETE FROM external_accounting_links_by_environment
+       WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT'
+         AND local_entity_id = ? AND environment = ?`
+    ).bind(studentId, environment).run();
+    return Boolean(result.meta.changes);
+  }
   const result = await db.prepare(
     `DELETE FROM external_accounting_links
      WHERE provider = 'FREEAGENT' AND local_entity_type = 'STUDENT' AND local_entity_id = ?
@@ -466,8 +558,16 @@ export async function removeExternalAccountingLink(db: D1Database, studentId: st
   return Boolean(result.meta.changes);
 }
 
-export async function findAccountingConnection(db: D1Database): Promise<AccountingConnection | null> {
-  return db.prepare("SELECT * FROM accounting_connections WHERE id = 'FREEAGENT'").first<AccountingConnection>();
+export async function findAccountingConnection(db: D1Database, environment?: AccountingEnvironmentName): Promise<AccountingConnection | null> {
+  if (environment) {
+    const isolated = await db.prepare(
+      "SELECT * FROM accounting_connections_by_environment WHERE id = 'FREEAGENT' AND environment = ?"
+    ).bind(environment).first<AccountingConnection>();
+    return isolated;
+  }
+  return db.prepare(
+    "SELECT * FROM accounting_connections WHERE id = 'FREEAGENT' AND (? IS NULL OR environment = ?)"
+  ).bind(environment ?? null, environment ?? null).first<AccountingConnection>();
 }
 
 export async function findAccountingBillingSettings(db: D1Database): Promise<AccountingBillingSettings | null> {
@@ -526,12 +626,12 @@ export async function saveAccountingConnection(
   }
 ): Promise<void> {
   await db.prepare(
-    `INSERT INTO accounting_connections
+    `INSERT INTO accounting_connections_by_environment
      (id, environment, company_name, company_subdomain, access_token_ciphertext, refresh_token_ciphertext,
       access_token_expires_at, refresh_token_expires_at, status, updated_at)
      VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?)
-     ON CONFLICT(id) DO UPDATE SET
-       environment = excluded.environment, company_name = excluded.company_name,
+     ON CONFLICT(id, environment) DO UPDATE SET
+       company_name = excluded.company_name,
        company_subdomain = excluded.company_subdomain,
        access_token_ciphertext = excluded.access_token_ciphertext,
        refresh_token_ciphertext = excluded.refresh_token_ciphertext,
@@ -554,13 +654,13 @@ export async function saveAccountingConnection(
 export async function updateAccountingConnectionStatus(
   db: D1Database,
   status: AccountingConnection["status"],
-  input: { code?: string | null; message?: string | null; lastSuccessAt?: string | null; now: string }
+  input: { environment?: AccountingEnvironmentName; code?: string | null; message?: string | null; lastSuccessAt?: string | null; now: string }
 ): Promise<void> {
   await db.prepare(
-    `UPDATE accounting_connections
+    `UPDATE accounting_connections_by_environment
      SET status = ?, last_error_code = ?, last_error_message = ?, last_success_at = COALESCE(?, last_success_at), updated_at = ?
-     WHERE id = 'FREEAGENT'`
-  ).bind(status, input.code ?? null, input.message?.slice(0, 240) ?? null, input.lastSuccessAt ?? null, input.now).run();
+     WHERE id = 'FREEAGENT' AND environment = ?`
+  ).bind(status, input.code ?? null, input.message?.slice(0, 240) ?? null, input.lastSuccessAt ?? null, input.now, input.environment ?? "sandbox").run();
 }
 
 export async function createAccountingOAuthState(

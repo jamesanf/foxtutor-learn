@@ -20,6 +20,7 @@ import {
   freeAgentFetch,
   FreeAgentApiError,
   FreeAgentClient,
+  parseFreeAgentEnvironment,
   refreshAccessToken,
   type FreeAgentEnvironment
 } from "./freeagent/client";
@@ -44,6 +45,16 @@ import {
 export interface AccountingEnvironment {
   DB?: D1Database;
   FREEAGENT_ENVIRONMENT?: string;
+  FREEAGENT_SANDBOX_CLIENT_ID?: string;
+  FREEAGENT_SANDBOX_CLIENT_SECRET?: string;
+  FREEAGENT_SANDBOX_COMPANY_SUBDOMAIN?: string;
+  FREEAGENT_SANDBOX_TOKEN_ENCRYPTION_KEY?: string;
+  FREEAGENT_SANDBOX_OAUTH_REDIRECT_URI?: string;
+  FREEAGENT_PRODUCTION_CLIENT_ID?: string;
+  FREEAGENT_PRODUCTION_CLIENT_SECRET?: string;
+  FREEAGENT_PRODUCTION_COMPANY_SUBDOMAIN?: string;
+  FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY?: string;
+  FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI?: string;
   FREEAGENT_CLIENT_ID?: string;
   FREEAGENT_CLIENT_SECRET?: string;
   FREEAGENT_OAUTH_REDIRECT_URI?: string;
@@ -90,9 +101,61 @@ export interface BillingSettingsInput {
   salesTaxRate: string;
 }
 
-function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvironment | null {
-  if (env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production") return env.FREEAGENT_ENVIRONMENT;
-  return null;
+export function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvironment | null {
+  return parseFreeAgentEnvironment(env.FREEAGENT_ENVIRONMENT);
+}
+
+export interface FreeAgentEnvironmentConfig {
+  clientId: string;
+  clientSecret: string;
+  companySubdomain: string | null;
+  tokenEncryptionKey: string;
+  oauthRedirectUri: string | null;
+}
+
+export function freeAgentEnvironmentConfig(
+  env: AccountingEnvironment,
+  environment = configuredEnvironment(env)
+): FreeAgentEnvironmentConfig | null {
+  if (!environment) return null;
+  const selected = environment === "sandbox"
+    ? {
+      clientId: env.FREEAGENT_SANDBOX_CLIENT_ID,
+      clientSecret: env.FREEAGENT_SANDBOX_CLIENT_SECRET,
+      companySubdomain: env.FREEAGENT_SANDBOX_COMPANY_SUBDOMAIN,
+      tokenEncryptionKey: env.FREEAGENT_SANDBOX_TOKEN_ENCRYPTION_KEY,
+      oauthRedirectUri: env.FREEAGENT_SANDBOX_OAUTH_REDIRECT_URI
+    }
+    : {
+      clientId: env.FREEAGENT_PRODUCTION_CLIENT_ID,
+      clientSecret: env.FREEAGENT_PRODUCTION_CLIENT_SECRET,
+      companySubdomain: env.FREEAGENT_PRODUCTION_COMPANY_SUBDOMAIN,
+      tokenEncryptionKey: env.FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY,
+      oauthRedirectUri: env.FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI
+    };
+  const legacySandbox = environment === "sandbox" ? {
+    clientId: env.FREEAGENT_CLIENT_ID,
+    clientSecret: env.FREEAGENT_CLIENT_SECRET,
+    companySubdomain: env.FREEAGENT_COMPANY_SUBDOMAIN,
+    tokenEncryptionKey: env.FREEAGENT_TOKEN_ENCRYPTION_KEY,
+    oauthRedirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI
+  } : null;
+  const value = {
+    clientId: selected.clientId ?? legacySandbox?.clientId,
+    clientSecret: selected.clientSecret ?? legacySandbox?.clientSecret,
+    companySubdomain: selected.companySubdomain ?? legacySandbox?.companySubdomain,
+    tokenEncryptionKey: selected.tokenEncryptionKey ?? legacySandbox?.tokenEncryptionKey,
+    oauthRedirectUri: selected.oauthRedirectUri ?? legacySandbox?.oauthRedirectUri
+  };
+  return value.clientId && value.clientSecret && value.tokenEncryptionKey
+    ? {
+      clientId: value.clientId,
+      clientSecret: value.clientSecret,
+      companySubdomain: value.companySubdomain ?? null,
+      tokenEncryptionKey: value.tokenEncryptionKey,
+      oauthRedirectUri: value.oauthRedirectUri ?? null
+    }
+    : null;
 }
 
 function providerError(error: unknown): FreeAgentApiError | null {
@@ -238,9 +301,10 @@ async function accessToken(
   fetcher: typeof fetch,
   forceRefresh = false
 ): Promise<string> {
-  const connection = await findAccountingConnection(db);
   const environment = configuredEnvironment(env);
-  if (!environment || !connection?.refresh_token_ciphertext || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET) {
+  const credentials = freeAgentEnvironmentConfig(env, environment);
+  const connection = await findAccountingConnection(db, environment ?? undefined);
+  if (!environment || !connection?.refresh_token_ciphertext || !credentials) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
       status: null,
@@ -261,20 +325,20 @@ async function accessToken(
     });
   }
   if (!forceRefresh && connection.access_token_ciphertext && connection.access_token_expires_at && Date.parse(connection.access_token_expires_at) > Date.parse(now) + 60_000) {
-    return decryptCredential(connection.access_token_ciphertext, env.FREEAGENT_TOKEN_ENCRYPTION_KEY);
+    return decryptCredential(connection.access_token_ciphertext, credentials.tokenEncryptionKey);
   }
-  const refreshToken = await decryptCredential(connection.refresh_token_ciphertext, env.FREEAGENT_TOKEN_ENCRYPTION_KEY);
+  const refreshToken = await decryptCredential(connection.refresh_token_ciphertext, credentials.tokenEncryptionKey);
   const refreshed = await refreshAccessToken(connection.environment, {
-    clientId: env.FREEAGENT_CLIENT_ID,
-    clientSecret: env.FREEAGENT_CLIENT_SECRET,
+    clientId: credentials.clientId,
+    clientSecret: credentials.clientSecret,
     refreshToken
   }, fetcher);
   await saveAccountingConnection(db, {
     environment: connection.environment,
     companyName: connection.company_name,
     companySubdomain: connection.company_subdomain,
-    accessTokenCiphertext: await encryptCredential(refreshed.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
-    refreshTokenCiphertext: await encryptCredential(refreshed.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
+    accessTokenCiphertext: await encryptCredential(refreshed.accessToken, credentials.tokenEncryptionKey),
+    refreshTokenCiphertext: await encryptCredential(refreshed.refreshToken, credentials.tokenEncryptionKey),
     accessTokenExpiresAt: new Date(Date.parse(now) + refreshed.expiresIn * 1000).toISOString(),
     refreshTokenExpiresAt: refreshed.refreshTokenExpiresIn === null ? connection.refresh_token_expires_at : new Date(Date.parse(now) + refreshed.refreshTokenExpiresIn * 1000).toISOString(),
     now
@@ -341,8 +405,8 @@ export async function processCreditNoteProviderOperation(
     }, now);
     return findBillingProviderOperation(db, id);
   }
-  const link = await findExternalAccountingLink(db, credit.student_id);
-  const connection = await findAccountingConnection(db);
+  const link = await findExternalAccountingLink(db, credit.student_id, configuredEnvironment(env) ?? undefined);
+  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
   if (!link || link.status !== "VERIFIED" || !connection ||
       link.verified_environment !== connection.environment ||
       (connection.company_subdomain && link.verified_company_subdomain !== connection.company_subdomain)) {
@@ -410,7 +474,7 @@ export async function processCreditNoteProviderOperation(
       providerUrl: sent.url,
       providerStatus: sent.status ?? "CREATED"
     }, now);
-    await updateAccountingConnectionStatus(db, "CONNECTED", { lastSuccessAt: now, now });
+    await updateAccountingConnectionStatus(db, "CONNECTED", { environment: configuredEnvironment(env) ?? undefined, lastSuccessAt: now, now });
   } catch (error) {
     const apiError = providerError(error);
     const shape = apiError?.shape;
@@ -435,8 +499,9 @@ export async function processCreditNoteProviderOperation(
 }
 
 export async function accountingIntegrationStatus(db: D1Database, env: AccountingEnvironment): Promise<AccountingIntegrationStatus> {
-  const connection = await findAccountingConnection(db);
+  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
   const environment = configuredEnvironment(env);
+  const credentials = freeAgentEnvironmentConfig(env, environment);
   const persistedSettings = await findAccountingBillingSettings(db);
   const configurationMessage = persistedSettings
     ? invoiceConfigurationFromValues({
@@ -459,11 +524,9 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
     : invoiceConfigurationIssue(env, environment);
   const configured = Boolean(
     environment &&
-    env.FREEAGENT_CLIENT_ID &&
-    env.FREEAGENT_CLIENT_SECRET &&
-    env.FREEAGENT_TOKEN_ENCRYPTION_KEY &&
-    env.FREEAGENT_OAUTH_REDIRECT_URI &&
-    env.FREEAGENT_COMPANY_SUBDOMAIN
+    credentials &&
+    credentials.companySubdomain &&
+    credentials.oauthRedirectUri
   );
   if (!configured || !connection) {
     return {
@@ -471,7 +534,7 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
       connected: false,
       environment: environment ?? "sandbox",
       companyName: connection?.company_name ?? null,
-      companySubdomain: connection?.company_subdomain ?? env.FREEAGENT_COMPANY_SUBDOMAIN ?? null,
+      companySubdomain: connection?.company_subdomain ?? credentials?.companySubdomain ?? null,
       updatedAt: connection?.updated_at ?? null,
       label: !configured ? "Not configured" : configurationMessage ? "Invoice mapping incomplete" : "Connection requires attention",
       lastSuccessAt: connection?.last_success_at ?? null,
@@ -480,7 +543,7 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
     };
   }
   const identityMatches = connection.environment === environment &&
-    (!env.FREEAGENT_COMPANY_SUBDOMAIN || connection.company_subdomain === env.FREEAGENT_COMPANY_SUBDOMAIN);
+    connection.company_subdomain === credentials?.companySubdomain;
   return {
     configured,
     connected: connection.status === "CONNECTED" && identityMatches,
@@ -518,14 +581,14 @@ export async function connectFreeAgent(
     });
   };
   try {
+    const credentials = freeAgentEnvironmentConfig(env, input.environment);
     if (
-      !env.FREEAGENT_CLIENT_ID ||
-      !env.FREEAGENT_CLIENT_SECRET ||
-      !env.FREEAGENT_TOKEN_ENCRYPTION_KEY ||
-      !env.FREEAGENT_COMPANY_SUBDOMAIN ||
+      !credentials ||
       !configuredEnvironment(env) ||
       input.environment !== configuredEnvironment(env) ||
-      input.redirectUri !== env.FREEAGENT_OAUTH_REDIRECT_URI
+      !credentials.companySubdomain ||
+      !credentials.oauthRedirectUri ||
+      input.redirectUri !== credentials.oauthRedirectUri
     ) {
       throw new FreeAgentApiError({
         code: "CONFIGURATION",
@@ -538,16 +601,16 @@ export async function connectFreeAgent(
     }
     stage = "exchangeAuthorizationCode";
     const tokens = await exchangeAuthorizationCode(input.environment, {
-      clientId: env.FREEAGENT_CLIENT_ID,
-      clientSecret: env.FREEAGENT_CLIENT_SECRET,
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret,
       code: input.code,
       redirectUri: input.redirectUri
     }, fetcher);
-    stage = "Sandbox /v2/company";
+    stage = `${input.environment} /v2/company`;
     const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
     const company = await client.company(tokens.accessToken);
     stage = "company subdomain comparison";
-    if (env.FREEAGENT_COMPANY_SUBDOMAIN && company.subdomain !== env.FREEAGENT_COMPANY_SUBDOMAIN) {
+    if (company.subdomain !== credentials.companySubdomain) {
       throw new FreeAgentApiError({
         code: "CONFIGURATION",
         status: null,
@@ -558,7 +621,7 @@ export async function connectFreeAgent(
       });
     }
     stage = "findAccountingConnection";
-    const existing = await findAccountingConnection(db);
+    const existing = await findAccountingConnection(db, input.environment);
     if (existing && existing.environment !== input.environment) {
       throw new FreeAgentApiError({
         code: "CONFIGURATION",
@@ -570,8 +633,8 @@ export async function connectFreeAgent(
       });
     }
     stage = "token encryption";
-    const accessTokenCiphertext = await encryptCredential(tokens.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY);
-    const refreshTokenCiphertext = await encryptCredential(tokens.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY);
+    const accessTokenCiphertext = await encryptCredential(tokens.accessToken, credentials.tokenEncryptionKey);
+    const refreshTokenCiphertext = await encryptCredential(tokens.refreshToken, credentials.tokenEncryptionKey);
     stage = "saveAccountingConnection";
     await saveAccountingConnection(db, {
       environment: input.environment,
@@ -622,12 +685,12 @@ export async function processAccountingOutbox(
     await markAccountingOutcome(db, id, "FAILED", "CONTACT_MAPPING_REQUIRED", "An accounting contact must be mapped before invoicing.", null, "NOT_ATTEMPTED", now);
     return findAccountingOutbox(db, id);
   }
-  const link = await findExternalAccountingLink(db, claimed.student_id);
+  const link = await findExternalAccountingLink(db, claimed.student_id, configuredEnvironment(env) ?? undefined);
   if (!link || link.status !== "VERIFIED") {
     await markAccountingOutcome(db, id, "FAILED", "CONTACT_MAPPING_REQUIRED", "An accounting contact must be mapped before invoicing.", null, "NOT_ATTEMPTED", now);
     return findAccountingOutbox(db, id);
   }
-  const connection = await findAccountingConnection(db);
+  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
   if (
     !connection ||
     link.verified_environment !== connection.environment ||
@@ -645,7 +708,7 @@ export async function processAccountingOutbox(
         externalResourceType: "invoice",
         providerStatus: "RECONCILED"
       }, now);
-      await updateAccountingConnectionStatus(db, "CONNECTED", { lastSuccessAt: now, now });
+      await updateAccountingConnectionStatus(db, "CONNECTED", { environment: configuredEnvironment(env) ?? undefined, lastSuccessAt: now, now });
       return findAccountingOutbox(db, id);
     }
 
@@ -667,14 +730,14 @@ export async function processAccountingOutbox(
       externalResourceType: "invoice",
       providerStatus: "CREATED"
     }, now);
-    await updateAccountingConnectionStatus(db, "CONNECTED", { lastSuccessAt: now, now });
+    await updateAccountingConnectionStatus(db, "CONNECTED", { environment: configuredEnvironment(env) ?? undefined, lastSuccessAt: now, now });
   } catch (error) {
     const apiError = providerError(error);
     const shape = apiError?.shape;
     const code = shape?.code ?? "UNKNOWN";
     const message = apiError?.message ?? "FreeAgent integration failed.";
     if (code === "AUTHENTICATION" || code === "AUTHORIZATION" || code === "CONFIGURATION") {
-      await updateAccountingConnectionStatus(db, "ATTENTION", { code, message, now });
+      await updateAccountingConnectionStatus(db, "ATTENTION", { environment: configuredEnvironment(env) ?? undefined, code, message, now });
     }
     const postMayHaveSucceeded = code === "TIMEOUT" || code === "NETWORK" || Boolean(shape?.unknown);
     const status = postMayHaveSucceeded ? "UNKNOWN" : shape?.retryable ? "RETRYABLE" : "FAILED";
@@ -704,7 +767,7 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
   }
-  const connection = await findAccountingConnection(db);
+  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
   if (!connection) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
@@ -715,7 +778,7 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
   }
-  const existing = await findExternalAccountingLink(db, input.studentId);
+  const existing = await findExternalAccountingLink(db, input.studentId, configuredEnvironment(env) ?? undefined);
   if (existing && await hasActiveAccountingDependency(db, input.studentId)) {
     throw new FreeAgentApiError({
       code: "CONFLICT",

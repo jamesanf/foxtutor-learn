@@ -98,6 +98,20 @@ The following capabilities were confirmed from the official documentation:
 | --- | --- |
 | `/v2/company` | Read company identity, including subdomain. |
 | `/v2/contacts` and `/v2/contacts/:id` | List/get contacts; create/update is documented. Contact responses expose `direct_debit_mandate_state` values `setup`, `pending`, `inactive`, `active`, and `failed`. |
+
+## Phase 7.9 environment isolation
+
+FreeAgent Sandbox and Production are separate provider trust domains. The
+runtime selects exactly one with the `FREEAGENT_ENVIRONMENT` binding, accepting
+only `sandbox` or `production`. API origins, OAuth credentials, redirect
+configuration, encrypted token records, company pins, contact mappings,
+invoices, payments, and operational audit records are environment-bound.
+Production does not use the legacy generic Sandbox credential fallback.
+
+Changing the selected environment does not reinterpret provider IDs or reuse
+stale mandate, invoice, payment, or contact state. The additive Phase 7.9
+migration preserves the existing Sandbox records and creates independent
+per-environment connection and mapping storage.
 | `/v2/categories` | Read company-specific categories; category URLs must come from the intended company. |
 | `/v2/invoices` | Create/read/update invoices. New invoices begin as `Draft`; invoice items accept explicit `sales_tax_rate`; invoice responses expose `payment_methods`. |
 | `/v2/invoices/:id/transitions/mark_as_sent` | Mark an invoice sent. |

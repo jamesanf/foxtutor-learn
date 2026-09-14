@@ -215,4 +215,15 @@ describe("D1 foundation", () => {
     expect(migration).toContain("ALTER TABLE notifications RENAME TO notifications_phase76");
     expect(migration).toContain("ALTER TABLE notification_settings RENAME TO notification_settings_phase76");
   });
+
+  it("isolates FreeAgent connections, mappings and provider records by environment", () => {
+    const migration = readFileSync("migrations/0028_phase79_environment_isolation.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_connections_by_environment");
+    expect(migration).toContain("CHECK (environment IN ('sandbox', 'production'))");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS external_accounting_links_by_environment");
+    expect(migration).toContain("UNIQUE(provider, local_entity_type, local_entity_id, environment)");
+    expect(migration).toContain("ALTER TABLE billing_accounts ADD COLUMN provider_environment");
+    expect(migration).toContain("ALTER TABLE billing_invoices ADD COLUMN provider_environment");
+    expect(migration).toContain("ALTER TABLE billing_payments ADD COLUMN provider_environment");
+  });
 });

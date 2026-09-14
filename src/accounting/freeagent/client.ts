@@ -2,6 +2,10 @@ import type { AccountingErrorCode } from "../../domain/accounting";
 
 export type FreeAgentEnvironment = "sandbox" | "production";
 
+export function parseFreeAgentEnvironment(value: unknown): FreeAgentEnvironment | null {
+  return value === "sandbox" || value === "production" ? value : null;
+}
+
 export interface FreeAgentErrorShape {
   code: AccountingErrorCode;
   status: number | null;
@@ -247,6 +251,15 @@ export class FreeAgentClient {
       retryable: false,
       unknown: true,
       retryAfterSeconds: null
+    });
+    console.info("freeagent_contact_response_shape", {
+      environment: this.options.environment,
+      status: result.response.status,
+      fields: Object.keys(result.data.contact ?? {}).sort(),
+      hasDirectDebitMandateState: Object.prototype.hasOwnProperty.call(result.data.contact ?? {}, "direct_debit_mandate_state"),
+      hasPaymentMethod: Object.prototype.hasOwnProperty.call(result.data.contact ?? {}, "payment_method"),
+      hasPaymentUrl: Object.prototype.hasOwnProperty.call(result.data.contact ?? {}, "payment_url"),
+      hasGoCardlessState: Object.keys(result.data.contact ?? {}).some((key) => /gocardless|mandate|direct_debit/i.test(key))
     });
     return {
       url,

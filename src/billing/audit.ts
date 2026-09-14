@@ -51,7 +51,9 @@ export interface BillingChainSnapshot {
     resourceType: string;
     externalReference: string;
     externalUrl: string;
+    environment?: "sandbox" | "production" | null;
   } | null;
+  providerEnvironment?: "sandbox" | "production" | null;
   providerMandateState?: string | null;
   providerContactUrl?: string | null;
   providerErrorCode?: string | null;
@@ -195,13 +197,13 @@ export async function auditBillingChain(
   db: D1Database,
   studentId: string,
   checkedAt: string,
-  providerSnapshot: Pick<BillingChainSnapshot, "providerMandateState" | "providerContactUrl" | "providerErrorCode"> = {}
+  providerSnapshot: Pick<BillingChainSnapshot, "providerMandateState" | "providerContactUrl" | "providerErrorCode" | "providerEnvironment"> = {}
 ): Promise<BillingChainAudit> {
   const student = await db.prepare(
     "SELECT id, name, status FROM students WHERE id = ?"
   ).bind(studentId).first<{ id: string; name: string; status: string }>();
   const billingAccount = await db.prepare(
-    `SELECT id, payment_method, mandate_state, provisioning_state,
+    `SELECT id, payment_method, mandate_state, provisioning_state, provider_environment,
             provider_contact_reference, provider_contact_url, verified_at,
             last_reconciled_at, next_reconcile_at, last_error_code, last_error_message
      FROM billing_accounts WHERE student_id = ?`
@@ -210,6 +212,7 @@ export async function auditBillingChain(
     payment_method: string;
     mandate_state: string;
     provisioning_state: string;
+    provider_environment: "sandbox" | "production" | null;
     provider_contact_reference: string | null;
     provider_contact_url: string | null;
     verified_at: string | null;
@@ -218,23 +221,32 @@ export async function auditBillingChain(
     last_error_code: string | null;
     last_error_message: string | null;
   }>();
-  const accountingLink = await db.prepare(
-    `SELECT status, provider, external_resource_type, external_reference, external_url
-     FROM external_accounting_links
-     WHERE local_entity_type = 'STUDENT' AND local_entity_id = ?`
-  ).bind(studentId).first<{
+  const accountingLinkQuery = providerSnapshot.providerEnvironment
+    ? db.prepare(
+      `SELECT status, provider, external_resource_type, external_reference, external_url,
+              environment AS verified_environment
+       FROM external_accounting_links_by_environment
+       WHERE local_entity_type = 'STUDENT' AND local_entity_id = ? AND environment = ?`
+    ).bind(studentId, providerSnapshot.providerEnvironment)
+    : db.prepare(
+      `SELECT status, provider, external_resource_type, external_reference, external_url, verified_environment
+       FROM external_accounting_links
+       WHERE local_entity_type = 'STUDENT' AND local_entity_id = ?`
+    ).bind(studentId);
+  const accountingLink = await accountingLinkQuery.first<{
     status: string;
     provider: string;
     external_resource_type: string;
     external_reference: string;
     external_url: string;
+    verified_environment: "sandbox" | "production" | null;
   }>();
   const invoice = await db.prepare(
     `SELECT id, status, freeagent_reference, provider_status
      FROM billing_invoices
-     WHERE student_id = ?
+     WHERE student_id = ? AND (? IS NULL OR provider_environment = ?)
      ORDER BY updated_at DESC, id DESC LIMIT 1`
-  ).bind(studentId).first<{
+  ).bind(studentId, providerSnapshot.providerEnvironment ?? null, providerSnapshot.providerEnvironment ?? null).first<{
     id: string;
     status: string;
     freeagent_reference: string | null;
@@ -270,8 +282,10 @@ export async function auditBillingChain(
       provider: accountingLink.provider,
       resourceType: accountingLink.external_resource_type,
       externalReference: accountingLink.external_reference,
-      externalUrl: accountingLink.external_url
+      externalUrl: accountingLink.external_url,
+      environment: accountingLink.verified_environment
     } : null,
+    providerEnvironment: providerSnapshot.providerEnvironment ?? billingAccount?.provider_environment ?? accountingLink?.verified_environment ?? null,
     providerMandateState: providerSnapshot.providerMandateState,
     providerContactUrl: providerSnapshot.providerContactUrl,
     invoice: invoice ? {

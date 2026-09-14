@@ -119,6 +119,18 @@ async function processCreateInvoice(
     }, now);
     return;
   }
+  const environment = env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production"
+    ? env.FREEAGENT_ENVIRONMENT
+    : null;
+  if (!environment || invoice.provider_environment !== environment) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "ENVIRONMENT_MISMATCH",
+      safeErrorCode: "CONFIGURATION",
+      safeErrorMessage: "The billing invoice is not associated with the selected FreeAgent environment."
+    }, now);
+    return;
+  }
   const event = await findBillingEvent(db, invoice.billing_event_id);
   if (!event || event.status === "CANCELLED") {
     await updateBillingInvoice(db, invoice.id, { status: "CANCELLED", providerStatus: "LESSON_CANCELLED", now });
@@ -153,7 +165,7 @@ async function processCreateInvoice(
     return;
   }
   const config = await configuredInvoiceFromDatabase(db, env, now);
-  const link = await findExternalAccountingLink(db, event.student_id);
+  const link = await findExternalAccountingLink(db, event.student_id, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
   if (!config || !link || link.status !== "VERIFIED") {
     await reverseInvoiceCreditApplications(db, invoice.id, now);
     await resetInvoiceCreditAllocation(db, invoice.id, event.id, BigInt(invoice.gross_amount_minor), now);
@@ -248,6 +260,18 @@ async function processDirectDebit(
     }, now);
     return;
   }
+  const environment = env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production"
+    ? env.FREEAGENT_ENVIRONMENT
+    : null;
+  if (!environment || invoice.provider_environment !== environment) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "ENVIRONMENT_MISMATCH",
+      safeErrorCode: "CONFIGURATION",
+      safeErrorMessage: "The billing invoice is not associated with the selected FreeAgent environment."
+    }, now);
+    return;
+  }
   const event = await findBillingEvent(db, invoice.billing_event_id);
   if (!event || event.status === "CANCELLED") {
     await markBillingInvoiceOperation(db, operation.id, {
@@ -266,7 +290,7 @@ async function processDirectDebit(
     }, now);
     return;
   }
-  const link = await findExternalAccountingLink(db, event.student_id);
+  const link = await findExternalAccountingLink(db, event.student_id, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
   if (!link || link.status !== "VERIFIED") {
     await markBillingInvoiceOperation(db, operation.id, {
       status: "BLOCKED",
@@ -311,8 +335,8 @@ async function processDirectDebit(
     await db.prepare(
       `INSERT INTO billing_payments
        (id, invoice_id, method, status, provider_reference, provider_status,
-        collection_date, first_payment, idempotency_key, created_at, updated_at)
-       VALUES (?, ?, 'FREEAGENT_GOCARDLESS', ?, ?, ?, ?, 0, ?, ?, ?)
+        collection_date, first_payment, idempotency_key, provider_environment, created_at, updated_at)
+       VALUES (?, ?, 'FREEAGENT_GOCARDLESS', ?, ?, ?, ?, 0, ?, ?, ?, ?)
        ON CONFLICT(invoice_id) DO UPDATE SET
          status = excluded.status, provider_reference = excluded.provider_reference,
          provider_status = excluded.provider_status, updated_at = excluded.updated_at`
@@ -324,6 +348,7 @@ async function processDirectDebit(
       providerStatus,
       invoice.collection_date,
       `payment:${invoice.id}`,
+      environment,
       now,
       now
     ).run();
@@ -415,9 +440,10 @@ export async function reconcileBillingInvoices(
      FROM billing_invoices i
      JOIN billing_events e ON e.id = i.billing_event_id
      WHERE i.freeagent_reference IS NOT NULL
+       AND i.provider_environment = ?
        AND i.status IN ('SENT', 'PAYMENT_PENDING', 'UNKNOWN', 'FAILED')
      ORDER BY i.updated_at ASC, i.id ASC LIMIT ?`
-  ).bind(limit).all<{
+  ).bind(env.FREEAGENT_ENVIRONMENT, limit).all<{
     id: string;
     freeagent_reference: string;
     status: string;
@@ -451,8 +477,8 @@ export async function reconcileBillingInvoices(
         await db.prepare(
           `INSERT INTO billing_payments
            (id, invoice_id, method, status, provider_reference, provider_status,
-            collection_date, first_payment, idempotency_key, created_at, updated_at)
-           SELECT ?, ?, 'FREEAGENT_GOCARDLESS', ?, ?, ?, COALESCE(collection_date, ?), 0, ?, ?, ?
+            collection_date, first_payment, idempotency_key, provider_environment, created_at, updated_at)
+           SELECT ?, ?, 'FREEAGENT_GOCARDLESS', ?, ?, ?, COALESCE(collection_date, ?), 0, ?, provider_environment, ?, ?
            FROM billing_invoices WHERE id = ?
            ON CONFLICT(invoice_id) DO UPDATE SET
              status = excluded.status,
