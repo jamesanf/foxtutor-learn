@@ -1,4 +1,7 @@
-# Phase 7.11 architecture
+# Phase 7.11 architecture (historical)
+
+> Phase 7.12 supersedes the single runtime-selector model documented here.
+> Current architecture is recorded in `docs/architecture/phase-7.12.md`.
 
 Phase 7.11 preserves the Phase 7 accounting authority boundary and repairs
 two provider integration contracts: FreeAgent category response normalization

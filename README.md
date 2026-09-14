@@ -15,7 +15,7 @@ replacement, payment system or accounting ledger.
 **Phase 7.12 source commit:** `9c992fa`
 **Worker version:** `682d2fce-3398-467c-8615-534d74a3d1c3`
 **Latest documentation deployment:** commit `1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a`, Worker `b8782a16-fbac-4a53-a0ea-4f4c04fccb96`
-**D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` in source; remote rollout pending
+**D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` deployed
 **Automated validation:** 38 test files, 231 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
@@ -34,7 +34,7 @@ Phase 7.5 was the financial safety and acceptance gate. It formalised billing
 states and invariants, added the customer-facing Direct Debit status journey,
 and established the failure, concurrency, reconciliation, provider Sandbox
 and authenticated runtime evidence boundary. Its historical acceptance status
-is retained in the Phase 7.5 records; the current provider gate is Phase 7.11.
+is retained in the Phase 7.5 records; the current provider gate is Phase 7.12.
 
 Phase 7.6 makes Direct Debit the only normal customer-facing billing rail,
 adds customer-level provisioning and mandate reconciliation, keeps the
@@ -237,6 +237,7 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/phase-7.9.md` | Environment-aware FreeAgent isolation |
 | `docs/phase-7.10.md` | FreeAgent acceptance and category mapping preparation |
 | `docs/phase-7.11.md` | Provider contract, category normalization and OAuth routing repair |
+| `docs/phase-7.12.md` | Dual FreeAgent Sandbox and Production connections |
 | `docs/architecture/phase-7.12.md` | Independent FreeAgent Sandbox and Production connections |
 | `docs/testing/phase-7.12.md` | Phase 7.12 automated coverage and evidence boundary |
 | `docs/deployment/phase-7.12.md` | Phase 7.12 deployment provenance and safety boundary |

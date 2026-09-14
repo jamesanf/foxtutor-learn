@@ -1,5 +1,25 @@
 # Changelog
 
+### 2026-09-14 - Phase 7.12 FreeAgent dual connections
+
+- Replaced the single ambiguous FreeAgent admin connection action with
+  independent Sandbox and Production connection identities.
+- Added explicit `Connect/Reauthenticate Sandbox` and
+  `Connect/Reauthenticate Production` actions, including visible Production
+  action availability when Production credentials are not yet configured.
+- Bound OAuth state, token exchange, refresh, encrypted token persistence,
+  company verification and category mappings to the selected environment.
+- Added migration `0030_freeagent_dual_connections.sql` for provider/redirect
+  OAuth binding and per-environment billing settings.
+- Added regression coverage for environment-specific OAuth hosts, Production
+  credential isolation and Sandbox/Production token coexistence.
+- Passed 38 test files and 232 tests; build, legal checks, Wrangler dry-run,
+  local/remote migration checks and production smoke checks passed.
+- Deployed Worker version `a734b16f-660f-4e5b-800a-58e6af130044` from commit
+  `125113a`; no Production financial mutation was performed.
+- Production OAuth, live Sandbox provider evidence and authenticated browser
+  redirect capture remain human-gated.
+
 ### 2026-09-14 - Phase 7.11 FreeAgent contract and environment-routing repair
 
 - **Intent:** Repair the malformed FreeAgent category selector and remove the

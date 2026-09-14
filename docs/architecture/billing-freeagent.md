@@ -99,29 +99,30 @@ The following capabilities were confirmed from the official documentation:
 | `/v2/company` | Read company identity, including subdomain. |
 | `/v2/contacts` and `/v2/contacts/:id` | List/get contacts; create/update is documented. Contact responses expose `direct_debit_mandate_state` values `setup`, `pending`, `inactive`, `active`, and `failed`. |
 
-## Phase 7.11 environment isolation and provider contracts
+## Phase 7.12 independent FreeAgent connections
 
-> This section supersedes the Phase 7.9 environment-isolation wording for the
-> current implementation. Phase 7.9 remains available as historical evidence.
+> This section supersedes the Phase 7.9 and Phase 7.11 environment-selection
+> wording for the current implementation. Those records remain historical
+> evidence.
 
-FreeAgent Sandbox and Production are separate provider trust domains. The
-runtime selects exactly one with the `FREEAGENT_ENVIRONMENT` binding, accepting
-only `sandbox` or `production`. API origins, OAuth credentials, redirect
+FreeAgent Sandbox and Production are separate provider connection identities:
+`FREEAGENT:SANDBOX` and `FREEAGENT:PRODUCTION`. Both may be connected at once.
+The `FREEAGENT_ENVIRONMENT` binding is only a legacy/default operational
+selection for existing scheduled billing paths; it does not determine which
+connection exists or which admin OAuth action is used. Production does not use
+the legacy generic Sandbox credential fallback.
+
+Each connection has independent API origins, OAuth credentials, redirect
 configuration, encrypted token records, company pins, contact mappings,
-invoices, payments, and operational audit records are environment-bound.
-Production does not use the legacy generic Sandbox credential fallback.
+company verification and category mapping. Migration `0030` adds the
+per-environment billing settings table and OAuth provider/redirect binding.
 
-Changing the selected environment does not reinterpret provider IDs or reuse
-stale mandate, invoice, payment, or contact state. The additive Phase 7.9
-migration preserves the existing Sandbox records and creates independent
-per-environment connection and mapping storage.
-
-The admin connection action uses the configured environment to generate the
-FreeAgent OAuth authorization URL: `/v2/approve_app` on
-`api.sandbox.freeagent.com` for Sandbox or `api.freeagent.com` for Production.
-The one-time OAuth state is bound to the environment and administrator, and
-the callback exchanges the code and verifies the configured company before
-storing the environment-specific connection.
+The admin page exposes explicit `Connect/Reauthenticate Sandbox` and
+`Connect/Reauthenticate Production` actions. Each action generates
+`/v2/approve_app` on its own FreeAgent API host. The one-time OAuth state is
+bound to provider, environment, administrator, redirect intent, expiry and
+consumption; the callback uses only that validated state to exchange the code
+and verify the selected company before storing the connection.
 
 ### Invoice category mapping
 

@@ -978,7 +978,7 @@ The later Phase 7 increments are recorded in their dedicated evidence files:
 Each increment remains historical evidence; the consolidated current status is
 maintained in `docs/phase-7.md`.
 
-### Phase 7.11 — Provider contract and environment-routing repair
+### Phase 7.11 — Provider contract and initial environment-aware OAuth routing
 
 #### Objective
 
@@ -1006,9 +1006,37 @@ identity.
 #### Acceptance
 
 The implementation and deployment gates passed with 38 test files and 229
-tests. No Production authorization was available in this pass, so Production
-company/contact/mandate/category evidence remains a human-gated next step.
-No financial mutation was performed.
+tests. This increment is historical and was superseded by Phase 7.12's
+independent connection model. No financial mutation was performed.
+
+### Phase 7.12 — Independent FreeAgent Sandbox and Production connections
+
+#### Objective
+
+Support simultaneous, independently operated FreeAgent Sandbox and Production
+connections without using one global environment selector as the connection
+identity.
+
+#### Delivered
+
+- Add explicit `Connect/Reauthenticate Sandbox` and
+  `Connect/Reauthenticate Production` admin actions.
+- Persist independent connection records, encrypted tokens, OAuth state,
+  verified companies and category mappings per environment.
+- Route authorization, token exchange, refresh, company reads and category
+  reads to the selected environment's official FreeAgent API host.
+- Preserve Sandbox-only legacy credential fallback and fail clearly when
+  Production credentials are absent.
+- Add migration `0030_freeagent_dual_connections.sql` and regression coverage
+  for token coexistence and environment-specific OAuth hosts.
+
+#### Acceptance boundary
+
+The Worker is deployed and the migration is applied. Automated validation is
+green with 38 test files and 232 tests. Authenticated browser redirect
+evidence, live Sandbox provider evidence and Production OAuth/company/contact/
+category evidence remain human-gated. No Production financial mutation is
+allowed in this phase.
 
 ---
 

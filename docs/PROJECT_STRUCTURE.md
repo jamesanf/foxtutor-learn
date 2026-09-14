@@ -66,7 +66,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 - Learn browser assets are served at `/learn/assets/*`; top-level public-site paths are not Learn routes.
 - `migrations/` is forward-only D1 migration history.
 - The current accounting schema ends at
-  `0029_accounting_category_environment.sql` locally and remotely. Applied
+  `0030_freeagent_dual_connections.sql` locally and remotely. Applied
   migrations must never be edited in place.
 - `tests/` contains automated checks.
 - `docs/` contains project operating documentation, phase plans, changelogs and
@@ -82,10 +82,11 @@ This is the current canonical structure. Agents may refine it when implementatio
   submitted consequence, effective-date policy and billing values were
   placeholders rather than approved values.
 - `scripts/` contains deterministic project helpers and verification tools.
-- Current Phase 7.11 records are consolidated in
-  `docs/phase-7.11.md`, `docs/architecture/phase-7.11.md`,
-  `docs/testing/phase-7.11.md`, `docs/deployment/phase-7.11.md` and
-  `docs/handover/phase-7.11.md`.
+- Current Phase 7.12 records are consolidated in
+  `docs/architecture/phase-7.12.md`, `docs/testing/phase-7.12.md`,
+  `docs/deployment/phase-7.12.md` and `docs/handover/phase-7.12.md`.
+  The consolidated Phase 7 status remains in `docs/phase-7.md`; Phase 7.11
+  records are historical.
 - Session task records are kept outside the repository; credentials and production data never belong in project files.
 - Authenticated browser profiles, cookies, access tokens, test downloads, local R2 exports, and other sensitive runtime state must never be committed.
 - `foxtutorpublic/` is a local read-only branding/reference export and is ignored; the public-site repository is never a submodule or deployment input.

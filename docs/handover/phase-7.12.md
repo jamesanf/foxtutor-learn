@@ -11,13 +11,11 @@
 
 ## Required human actions
 
-1. Deploy migration `0030_freeagent_dual_connections.sql` with the tested
-   Worker source.
-2. Verify the first OAuth redirect for each explicit Sandbox and Production
+1. Verify the first OAuth redirect for each explicit Sandbox and Production
    action.
-3. Use legitimate Production FreeAgent application credentials and authorize
+2. Use legitimate Production FreeAgent application credentials and authorize
    the intended company through `Connect Production`.
-4. Record only read-only company, contact/mandate and category evidence.
+3. Record only read-only company, contact/mandate and category evidence.
 
 The release is **NOT READY — PRODUCTION FREEAGENT AUTHORIZATION REQUIRED**.
 Do not create invoices, payments, Direct Debits, credit notes or perform the

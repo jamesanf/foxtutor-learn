@@ -3,10 +3,10 @@
 ## Current status
 
 Phase 7 has a deployed operational baseline, but it is **not complete** and
-must not be treated as production-ready. The current increment is Phase 7.11,
-which repaired the FreeAgent provider contract and environment-specific OAuth
-route while preserving the existing FreeAgent-to-GoCardless authority
-boundary. The release is still awaiting:
+must not be treated as production-ready. The current increment is Phase 7.12,
+which replaces the ambiguous single FreeAgent connection action with
+independent Sandbox and Production connections while preserving the existing
+FreeAgent-to-GoCardless authority boundary. The release is still awaiting:
 
 - Production FreeAgent credentials and human OAuth authorization;
 - read-only Production company, James contact and mandate verification;
@@ -14,7 +14,7 @@ boundary. The release is still awaiting:
   selection; and
 - any later, separately authorized financial acceptance.
 
-The current provider acceptance gate is Phase 7.11. It remains **NOT READY —
+The current provider acceptance gate is Phase 7.12. It remains **NOT READY —
 PRODUCTION FREEAGENT AUTHORIZATION REQUIRED** because Production credentials
 and human authorization are not available in this execution context. The
 earlier Phase 7.5 financial safety gate remains part of the historical
@@ -22,13 +22,13 @@ acceptance record; it is not superseded by this provider-contract repair.
 
 ## Deployed baseline
 
-- Source commit: `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`
-- Worker version: `8cd9b99f-de03-466a-8a37-46ad3e78696b`
+- Source commit: `125113a`
+- Worker version: `a734b16f-660f-4e5b-800a-58e6af130044`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
-- D1 migrations: `0001` through `0029_accounting_category_environment.sql`
+- D1 migrations: `0001` through `0030_freeagent_dual_connections.sql`
 - Scheduler: `*/5 * * * *`
 - Business timezone: `Europe/London`
-- Automated validation: 38 test files and 229 passing tests
+- Automated validation: 38 test files and 232 passing tests
 
 The release keeps FoxTutor authoritative for recurring series, lesson
 instances, billing events, credit, readiness and operational audit. FreeAgent
@@ -52,7 +52,10 @@ Direct Debit authority; FoxTutor does not create a parallel mandate.
   `setup`, `pending`, `active`, `inactive`, `failed` and unknown states.
 - Customer instructions that keep bank details inside the provider mandate
   flow and omit provider/internal references from student billing HTML.
-- Environment-bound FreeAgent OAuth using the configured Sandbox or Production
+- Independent `FREEAGENT:SANDBOX` and `FREEAGENT:PRODUCTION` connections with
+  explicit admin actions, environment-bound OAuth state, credentials, tokens,
+  company verification and encrypted token keys.
+- Environment-bound FreeAgent OAuth using the selected Sandbox or Production
   API origin, credential set, token endpoint and company mapping.
 - Documented FreeAgent category normalization across
   `admin_expenses_categories`, `cost_of_sales_categories`, `income_categories`
@@ -78,6 +81,8 @@ remains open.
 | 7.8 | FreeAgent billing acceptance finalisation |
 | 7.9 | Sandbox/Production environment isolation |
 | 7.10 | Category mapping and broad environment/accounting plumbing |
+| 7.11 | Provider contract and initial environment-aware OAuth routing |
+| 7.12 | Independent Sandbox/Production connections and explicit admin actions |
 | 7.11 | Provider category-contract repair and environment-specific OAuth routing |
 
 The absence of a separate 7.3 file is intentional historical numbering; no

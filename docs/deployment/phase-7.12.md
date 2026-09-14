@@ -4,10 +4,19 @@
 
 Migration `0030_freeagent_dual_connections.sql` adds provider and redirect
 intent binding to OAuth state and a per-environment billing settings table.
-Apply it only after the tested Worker source is selected for deployment.
+It was applied successfully to the production D1 database before the Worker
+deployment.
 
-The deployment must record the source commit, Worker version, D1 migration
-result and the first redirect target for each of:
+| Item | Value |
+| --- | --- |
+| Source commit | `125113a` |
+| Worker version | `a734b16f-660f-4e5b-800a-58e6af130044` |
+| D1 migration | `0030_freeagent_dual_connections.sql` applied |
+| Follow-up migration check | No migrations to apply |
+| Production smoke | `/learn` returned Cloudflare Access `302` |
+
+Authenticated browser verification must record the first redirect target for
+each of:
 
 ```text
 Connect Sandbox
