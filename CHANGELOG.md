@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-14 - Fix contact mapping persistence
+
+- Corrected the `external_accounting_links` insert to provide exactly 15
+  values for its 15 declared columns while preserving the 12 bound
+  parameters and three provider/entity literals.
+- Added a successful contact verification regression through the D1
+  persistence path, including a stored `VERIFIED` link.
+- The full suite passes with 27 test files and 139 tests.
+- Deployed executable commit `f976e08` as Worker version
+  `33fb8ca6-cdf1-4131-8f33-0b635c1224ff`.
+
 ### 2026-09-14 - Keep billing settings title on one line
 
 - Prevented the Billing settings heading from wrapping beside the fixed-size
