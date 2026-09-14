@@ -923,7 +923,8 @@ describe("FreeAgent adapter", () => {
       FREEAGENT_TOKEN_ENCRYPTION_KEY: encryptionKey
     }, {
       studentId,
-      externalReference: "257175",
+      studentEmail: "jamesanf@gmail.com",
+      externalReference: "21801761",
       now
     }, fetcher)).resolves.toBeUndefined();
 

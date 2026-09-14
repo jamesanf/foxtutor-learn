@@ -14,6 +14,11 @@ remains pending an authenticated read-only provider call for contact
 - Contact verification now accepts a validated environment from the admin
   operation and uses that environment for connection lookup, token access,
   provider origin, mapping lookup and mapping persistence.
+- The admin contact-mapping surface is now Production-only. The legacy
+  server-default Sandbox selector cannot receive Production contact IDs.
+- Sandbox testing is hidden behind Production billing settings; the backend
+  maps the approved test payer `jamesanf@gmail.com` to Sandbox contact
+  `257175` without exposing that test mapping in the Production UI.
 - Contact verification records only safe environment, company-subdomain,
   provider-origin and normalized mandate-state metadata. It does not mutate
   the FreeAgent contact or infer a mandate state.

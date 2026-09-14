@@ -15,6 +15,9 @@
 - Deployed revision `9c135954ed64cb24486b7c0376bd6e5aae2e8cca`; the scheduler
   subsequently materialised six lessons and six billing events for each of
   the two pre-existing recurring series without creating duplicates.
+- Restricted the admin contact-mapping UI and POST route to Production so
+  Production IDs cannot enter the legacy Sandbox pipeline. Sandbox settings
+  are now testing-only, with the backend James test contact fixed at `257175`.
 - Inspected remote D1 without creating or modifying financial/provider data.
 - Authenticated Production contact and browser create/pause/resume acceptance
   remain pending; the temporary FreeAgent compatibility flag remains enabled.

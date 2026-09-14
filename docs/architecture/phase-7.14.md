@@ -2,8 +2,10 @@
 
 ## Environment-bound contact verification
 
-The contact operation carries a validated `sandbox` or `production`
-environment from the administrator form. The selected environment determines:
+The administrator contact-mapping form is Production-only. It always writes
+to the `production` environment and therefore cannot send a Production contact
+ID through the legacy server-default Sandbox pipeline. The selected backend
+environment determines:
 
 ```text
 connection row
@@ -18,6 +20,11 @@ The same environment-bound token is used for the contact request, so the
 provider company identity is inherited from the independently verified
 connection. Sandbox and Production references remain separate rows and may
 legitimately differ.
+
+Sandbox contact configuration is hidden behind the Production billing-settings
+page as a testing-only area. For the approved Sandbox test payer
+`jamesanf@gmail.com`, the backend uses contact reference `257175`; this
+fallback is never used by Production contact mapping.
 
 The provider's `direct_debit_mandate_state` is read and normalized only for
 safe diagnostics. Contact verification never changes the provider contact or

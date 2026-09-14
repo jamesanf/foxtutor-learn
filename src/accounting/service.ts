@@ -128,6 +128,8 @@ export function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvi
 }
 
 export const FREEAGENT_ENVIRONMENTS: readonly FreeAgentEnvironment[] = ["sandbox", "production"];
+export const SANDBOX_TEST_CONTACT_EMAIL = "jamesanf@gmail.com";
+export const SANDBOX_TEST_CONTACT_REFERENCE = "257175";
 
 export interface FreeAgentEnvironmentConfig {
   clientId: string;
@@ -1085,10 +1087,15 @@ export async function processAccountingOutbox(
 export async function verifyFreeAgentContactMapping(
   db: D1Database,
   env: AccountingEnvironment,
-  input: { studentId: string; externalReference: string; now: string; environment?: FreeAgentEnvironment },
+  input: { studentId: string; studentEmail?: string; studentParentEmail?: string; externalReference: string; now: string; environment?: FreeAgentEnvironment },
   fetcher: typeof fetch = freeAgentFetch
 ): Promise<void> {
-  if (!/^\d+$/.test(input.externalReference)) {
+  const environment = input.environment ?? configuredEnvironment(env);
+  const externalReference = environment === "sandbox" &&
+    [input.studentEmail, input.studentParentEmail].some((email) => email?.trim().toLowerCase() === SANDBOX_TEST_CONTACT_EMAIL)
+    ? SANDBOX_TEST_CONTACT_REFERENCE
+    : input.externalReference;
+  if (!/^\d+$/.test(externalReference)) {
     throw new FreeAgentApiError({
       code: "VALIDATION",
       status: null,
@@ -1098,7 +1105,6 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
   }
-  const environment = input.environment ?? configuredEnvironment(env);
   const connection = await findAccountingConnection(db, environment ?? undefined);
   if (!connection) {
     throw new FreeAgentApiError({
@@ -1197,7 +1203,7 @@ export async function verifyFreeAgentContactMapping(
     await upsertExternalAccountingLink(db, {
       id: crypto.randomUUID(),
       studentId: input.studentId,
-      externalReference: input.externalReference,
+      externalReference,
       externalUrl: contact.url,
       status: "VERIFIED",
       verifiedAt: input.now,

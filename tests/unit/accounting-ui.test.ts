@@ -87,7 +87,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("findActiveUserById(db, consumed.admin_user_id)");
     expect(workerSource).toContain('admin.role !== "ADMIN"');
     expect(workerSource).toContain('createSession(db, admin, env.ENVIRONMENT === "production")');
-    expect(workerSource).toContain("verifyFreeAgentContactMapping(db, env, { studentId, externalReference, environment, now: new Date().toISOString() }, freeAgentFetch);");
+    expect(workerSource).toContain("verifyFreeAgentContactMapping(db, env, { studentId, studentEmail: student.email, studentParentEmail: student.parent_email, externalReference, environment, now: new Date().toISOString() }, freeAgentFetch);");
   });
 
   it("keeps contact mappings readable on desktop and mobile", () => {
@@ -96,12 +96,18 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('class="accounting-icon-button accounting-remove-button"');
     expect(workerSource).toContain('title="Verify and save"');
     expect(workerSource).toContain('title="Remove"');
-    expect(workerSource).toContain("<th>Student</th><th>Email</th><th>Status</th><th>Contact ID</th>");
+    expect(workerSource).toContain("<th>Student</th><th>Email</th><th>Status</th><th>Production contact ID</th>");
     expect(workerSource).toContain('data-label="Student"');
     expect(workerSource).toContain('data-label="Email"');
     expect(workerSource).toContain('data-label="Contact ID"');
     expect(workerSource).not.toContain("<th>FreeAgent contact</th>");
-    expect(workerSource).toContain("automatic FreeAgent contact synchronization is planned.");
+    expect(workerSource).toContain("Sandbox contact configuration is restricted to the Production billing settings test area.");
+    expect(workerSource).toContain('const connection = connectionCard("production");');
+    expect(workerSource).toContain('listExternalAccountingLinks(db, "production")');
+    expect(workerSource).toContain('const environment: FreeAgentEnvironment = "production";');
+    expect(workerSource).toContain("Sandbox testing only.");
+    expect(workerSource).toContain("Open Sandbox test settings");
+    expect(workerSource).toContain('const environment = parseFreeAgentEnvironment(url.searchParams.get("environment")) ?? "production";');
     expect(cssSource).toContain(".accounting-contact-table table { min-width: 0; table-layout: fixed; }");
     expect(cssSource).toContain(".accounting-contact-table th, .accounting-contact-table td { width: 25%; }");
     expect(cssSource).toContain(".accounting-contact-table th:nth-child(3) { text-align: center; }");
