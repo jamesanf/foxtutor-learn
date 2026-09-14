@@ -114,11 +114,17 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-icon-button { display: inline-grid; width: 34px;");
   });
 
-  it("uses a four-card dashboard grid and stacked accounting actions", () => {
+  it("uses a four-card dashboard grid and side-by-side accounting actions", () => {
     expect(cssSource).toContain(".summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
     expect(cssSource).toContain("@media (max-width: 900px) {\n  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
     expect(workerSource).toContain('class="form-actions accounting-connection-actions"');
-    expect(cssSource).toContain(".accounting-connection-actions .button { width: 100%; justify-content: center; white-space: nowrap; }");
+    expect(workerSource).toContain('class="card"><div class="section-heading"><div><h2>FreeAgent ${label}</h2></div><div class="form-actions accounting-connection-actions">');
+    expect(workerSource).toContain('${!status.errorMessage ? `<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span>` : ""}${connectionAction}${environmentSettingsAction}');
+    expect(workerSource).not.toContain('>${escapeHtml(status.connected ? "Connected" : "Not connected")} · ${escapeHtml(label)}</p>');
+    expect(cssSource).toContain(".accounting-connection-actions { display: flex; width: auto; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: nowrap; }");
+    expect(cssSource).toContain(".accounting-connection-actions .accounting-settings-link { order: 3; }");
+    expect(cssSource).toContain(".accounting-connection-actions .status { order: 1; white-space: nowrap; }");
+    expect(cssSource).toContain(".accounting-connection-actions .button { order: 2; }");
     expect(workerSource).toContain('class="summary-grid accounting-summary-grid"');
     expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }");
     expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }");

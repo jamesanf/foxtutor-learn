@@ -330,10 +330,11 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-icon-button svg { width: 21px; height: 21px; fill: currentColor; }
 .accounting-remove-button { color: var(--danger); }
 .accounting-remove-button:hover, .accounting-remove-button:focus-visible { color: #991b1b; background: #fee2e2; }
-.accounting-connection-actions { display: grid; width: min(100%, 190px); grid-template-columns: 1fr; justify-items: stretch; }
-.accounting-connection-actions .button { width: 100%; justify-content: center; white-space: nowrap; }
-.accounting-connection-actions .accounting-settings-link { justify-self: end; }
-.accounting-connection-actions .status { justify-self: center; }
+.accounting-connection-actions { display: flex; width: auto; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: nowrap; }
+.accounting-connection-actions .button { width: auto; justify-content: center; white-space: nowrap; }
+.accounting-connection-actions .accounting-settings-link { order: 3; }
+.accounting-connection-actions .status { order: 1; white-space: nowrap; }
+.accounting-connection-actions .button { order: 2; }
 .billing-settings-card { max-width: none; }
 .accounting-fixed-category { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #b9dce4; border-radius: 7px; background: #f7fcfd; }
 .billing-settings-card .page-heading > div:first-child { min-width: 0; }
