@@ -8,13 +8,13 @@ verification and the recurring-series Worker 1101 response path while
 preserving the existing FreeAgent-to-GoCardless authority boundary.
 
 The supplied HAR proves the complete Production authorization journey through
-the FoxTutor callback. Authenticated Production contact and recurring-series acceptance still
-requires an administrator browser run. No Production financial acceptance is
-claimed.
+the FoxTutor callback. Authenticated Production contact and recurring-series
+acceptance still requires an administrator browser run. No Production
+financial acceptance is claimed.
 
 ## Deployed baseline
 
-- Source commit: `b7cb157edb71e8722a41d2ba302b8f4848ad1142`
+- Source commit: `9c135954ed64cb24486b7c0376bd6e5aae2e8cca`
 - Worker version: `08ae3704-1724-4075-8e85-fd5a14a1560e`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0030_freeagent_dual_connections.sql`

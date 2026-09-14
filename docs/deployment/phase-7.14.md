@@ -2,12 +2,14 @@
 
 ## Source
 
-Implementation and documentation commit:
-`b7cb157edb71e8722a41d2ba302b8f4848ad1142`.
+Deployed revision:
+`9c135954ed64cb24486b7c0376bd6e5aae2e8cca`.
 
 Worker version: `08ae3704-1724-4075-8e85-fd5a14a1560e`.
 
 The deployment completed successfully on the `foxtutor.org/learn` routes.
+The current repository HEAD is `83a845cd56975faa05439236c5876a902449cc31`;
+the difference is documentation-only provenance metadata.
 
 The deployment must contain only the committed Phase 7.14 source and
 documentation. The temporary Production credential compatibility flag remains

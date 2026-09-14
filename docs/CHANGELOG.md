@@ -12,6 +12,9 @@
   a partial index, while the materialisation UPSERT omitted its predicate.
 - Matched the UPSERT conflict target to the partial index and limited
   interactive create/resume materialisation to the target series.
+- Deployed revision `9c135954ed64cb24486b7c0376bd6e5aae2e8cca`; the scheduler
+  subsequently materialised six lessons and six billing events for each of
+  the two pre-existing recurring series without creating duplicates.
 - Inspected remote D1 without creating or modifying financial/provider data.
 - Authenticated Production contact and browser create/pause/resume acceptance
   remain pending; the temporary FreeAgent compatibility flag remains enabled.

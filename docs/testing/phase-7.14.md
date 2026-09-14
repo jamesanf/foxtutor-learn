@@ -10,7 +10,9 @@
 
 - D1 schema inspection confirmed the partial unique index predicate.
 - Two pre-existing active recurring-series rows were inspected.
-- No lesson or billing-event rows existed for those series at inspection time.
+- Before deployment, no lesson or billing-event rows existed for those series.
+- After deployment, each series has six lessons and six billing events; no
+  duplicate series was created.
 - Production and Sandbox connection/category records were inspected without
   exposing tokens or secrets.
 
@@ -18,7 +20,7 @@
 
 - Authenticated `GET /v2/company` and `GET /v2/contacts/21801761`.
 - Production contact HTTP result, company match and mandate state.
-- Authenticated browser create/pause/resume acceptance after deployment.
+- Authenticated browser create/pause/resume acceptance.
 - Permanent compatibility-secret cleanup.
 
 No financial mutation is part of this test record.

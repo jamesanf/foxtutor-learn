@@ -13,8 +13,9 @@ replacement, payment system or accounting ledger.
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
 **Phase 7.13 source commit:** `6db5a1c581e3c326c7d8927eee8568c66292bebf`
-**Latest Phase 7.14 source:** `b7cb157edb71e8722a41d2ba302b8f4848ad1142`
+**Deployed Phase 7.14 revision:** `9c135954ed64cb24486b7c0376bd6e5aae2e8cca`
 **Phase 7.14 Worker version:** `08ae3704-1724-4075-8e85-fd5a14a1560e`
+**Current repository HEAD:** `83a845cd56975faa05439236c5876a902449cc31`
 **D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` deployed
 **Automated validation:** 38 test files, 244 tests passing
 
@@ -24,9 +25,11 @@ saved. The temporary `FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP=true`
 compatibility path remains enabled pending authenticated acceptance.
 
 Remote D1 confirms independent Sandbox and Production connection/category
-records and two pre-existing recurring-series rows from the supplied HAR.
-Authenticated provider contact verification and browser acceptance remain
-open; this documentation does not claim a live contact result.
+records. After deployment, the scheduler materialised six lessons and six
+billing events for each of the two pre-existing recurring-series rows from
+the supplied HAR. Authenticated provider contact verification and browser
+acceptance remain open; this documentation does not claim a live contact
+result.
 
 Production remains read-only in this phase. No invoice, payment, Direct Debit,
 credit note or £1 test has been performed. The current implementation and

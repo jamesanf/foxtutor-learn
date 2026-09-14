@@ -2,7 +2,7 @@
 
 ## Delivered
 
-- Commit `b7cb157edb71e8722a41d2ba302b8f4848ad1142`.
+- Deployed revision `9c135954ed64cb24486b7c0376bd6e5aae2e8cca`.
 - Worker version `08ae3704-1724-4075-8e85-fd5a14a1560e`.
 - Environment-bound Production/Sandbox contact verification.
 - Explicit contact verification failure classification for administrators.
@@ -16,7 +16,8 @@
 Remote D1 shows independent Sandbox and Production connection and category
 records. Production contact `21801761` has not been queried from this session.
 The two pre-existing recurring series associated with the supplied HAR were
-inspected and not recreated.
+not recreated; after deployment each has six materialised lessons and six
+billing events.
 
 ## Human acceptance required
 

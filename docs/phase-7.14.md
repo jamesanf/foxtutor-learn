@@ -3,10 +3,11 @@
 ## Status
 
 The recurring-series Worker 1101 defect is repaired in source and covered by
-targeted tests. The repair is deployed as Worker version
-`08ae3704-1724-4075-8e85-fd5a14a1560e`. Production contact reconciliation remains pending an
-authenticated read-only provider call for contact `21801761`; no provider
-contact result is claimed here.
+targeted tests. The repair is deployed as revision
+`9c135954ed64cb24486b7c0376bd6e5aae2e8cca`, Worker version
+`08ae3704-1724-4075-8e85-fd5a14a1560e`. Production contact reconciliation
+remains pending an authenticated read-only provider call for contact
+`21801761`; no provider contact result is claimed here.
 
 ## Diagnosed and repaired
 
@@ -27,17 +28,20 @@ contact result is claimed here.
 ## Evidence
 
 Remote D1 inspection found two pre-existing active recurring-series rows for
-the HAR student and no materialised lessons or billing events for them. The
-deployed schema defines `idx_lessons_series_occurrence` as a partial unique
-index. The previous UPSERT did not specify the predicate required to target
-that index, which explains why the series mutation committed before the
-post-write materialisation exception produced the Worker 1101 response.
+the HAR student. Before deployment they had no materialised lessons or billing
+events. The deployed schema defines `idx_lessons_series_occurrence` as a
+partial unique index. The previous UPSERT did not specify the predicate
+required to target that index, which explains why the series mutation
+committed before the post-write materialisation exception produced the Worker
+1101 response.
 
 Remote D1 currently contains independent Sandbox and Production connection
 rows and independent category mappings. The Production connection is recorded
-as `CONNECTED` for `foxlearningltd`; the real provider contact `21801761` has
-not been queried from this execution context because no authenticated
-provider/browser session is available.
+as `CONNECTED` for `foxlearningltd`. After deployment, the scheduler created
+six lessons and six billing events for each existing series, with no duplicate
+series created. The real provider contact `21801761` has not been queried from
+this execution context because no authenticated provider/browser session is
+available.
 
 ## Safety boundary
 
@@ -48,7 +52,7 @@ diagnosis.
 
 ## Remaining acceptance
 
-After deployment, an authenticated administrator must:
+An authenticated administrator must:
 
 1. read-only verify Production contact `21801761` and record its HTTP result,
    company identity match and mandate state;
