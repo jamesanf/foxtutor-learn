@@ -31,6 +31,15 @@ import {
   parseMinorUnits,
   type AccountingErrorCode
 } from "../domain/accounting";
+import {
+  claimBillingProviderOperation,
+  creditNoteReference,
+  findBillingProviderOperation,
+  findCreditById,
+  markBillingProviderOperation,
+  saveCreditProviderReference,
+  type BillingProviderOperation
+} from "../db/billing";
 
 export interface AccountingEnvironment {
   DB?: D1Database;
@@ -273,7 +282,7 @@ async function accessToken(
   return refreshed.accessToken;
 }
 
-async function providerCall<T>(
+export async function providerCall<T>(
   db: D1Database,
   env: AccountingEnvironment,
   now: string,
@@ -291,6 +300,7 @@ async function providerCall<T>(
       retryAfterSeconds: null
     });
   }
+
   const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
   let token = await accessToken(db, env, now, fetcher);
   try {
@@ -301,6 +311,127 @@ async function providerCall<T>(
     token = await accessToken(db, env, now, fetcher, true);
     return operation(client, token);
   }
+}
+
+export async function processCreditNoteProviderOperation(
+  db: D1Database,
+  env: AccountingEnvironment,
+  id: string,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch
+): Promise<BillingProviderOperation | null> {
+  const claimed = await claimBillingProviderOperation(db, id, now, new Date(Date.parse(now) - 15 * 60_000).toISOString());
+  if (!claimed) return null;
+  if (claimed.operation_type !== "CREATE_CREDIT_NOTE" || !claimed.credit_id) {
+    await markBillingProviderOperation(db, id, {
+      status: "BLOCKED",
+      providerStatus: "NOT_SUPPORTED",
+      safeErrorCode: "CONFIGURATION",
+      safeErrorMessage: "This billing provider operation is not supported by the current worker."
+    }, now);
+    return findBillingProviderOperation(db, id);
+  }
+  const credit = await findCreditById(db, claimed.credit_id);
+  if (!credit) {
+    await markBillingProviderOperation(db, id, {
+      status: "BLOCKED",
+      providerStatus: "CREDIT_NOT_FOUND",
+      safeErrorCode: "VALIDATION",
+      safeErrorMessage: "The customer credit no longer exists."
+    }, now);
+    return findBillingProviderOperation(db, id);
+  }
+  const link = await findExternalAccountingLink(db, credit.student_id);
+  const connection = await findAccountingConnection(db);
+  if (!link || link.status !== "VERIFIED" || !connection ||
+      link.verified_environment !== connection.environment ||
+      (connection.company_subdomain && link.verified_company_subdomain !== connection.company_subdomain)) {
+    await markBillingProviderOperation(db, id, {
+      status: "BLOCKED",
+      providerStatus: "CONTACT_MAPPING_REQUIRED",
+      safeErrorCode: "CONTACT_MAPPING_REQUIRED",
+      safeErrorMessage: "A verified FreeAgent contact mapping is required before creating a credit note."
+    }, now);
+    return findBillingProviderOperation(db, id);
+  }
+  const invoiceConfig = await configuredInvoiceFromDatabase(db, env, now);
+  if (!invoiceConfig) {
+    await markBillingProviderOperation(db, id, {
+      status: "BLOCKED",
+      providerStatus: "BILLING_MAPPING_REQUIRED",
+      safeErrorCode: "CONFIGURATION",
+      safeErrorMessage: "FreeAgent credit-note mapping is not configured."
+    }, now);
+    return findBillingProviderOperation(db, id);
+  }
+  const reference = creditNoteReference(credit.credit_id);
+  try {
+    const existing = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.findCreditNoteByReference(token, link.external_url, reference)
+    );
+    if (existing) {
+      await saveCreditProviderReference(db, credit.credit_id, {
+        reference: providerReference(existing.url),
+        url: existing.url
+      }, now);
+      const sent = existing.status === "Draft"
+        ? await providerCall(db, env, now, fetcher, (client, token) => client.markCreditNoteSent(token, existing.url))
+        : existing;
+      await markBillingProviderOperation(db, id, {
+        status: "SUCCEEDED",
+        providerReference: providerReference(sent.url),
+        providerUrl: sent.url,
+        providerStatus: sent.status ?? "RECONCILED"
+      }, now);
+      return findBillingProviderOperation(db, id);
+    }
+    const creditNote = await providerCall(db, env, now, fetcher, (client, token) => client.createDraftCreditNote(token, {
+      contactUrl: link.external_url,
+      reference,
+      datedOn: now.slice(0, 10),
+      paymentTermsInDays: 0,
+      itemType: invoiceConfig.itemType,
+      description: "FoxTutor administrative cancellation credit",
+      amount: formatMinorUnits(BigInt(credit.original_amount_minor)),
+      salesTaxRate: invoiceConfig.salesTaxRate,
+      categoryUrl: invoiceConfig.categoryUrl,
+      currency: invoiceConfig.currency
+    }));
+    await saveCreditProviderReference(db, credit.credit_id, {
+      reference: providerReference(creditNote.url),
+      url: creditNote.url
+    }, now);
+    const sent = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.markCreditNoteSent(token, creditNote.url)
+    );
+    await markBillingProviderOperation(db, id, {
+      status: "SUCCEEDED",
+      providerReference: providerReference(sent.url),
+      providerUrl: sent.url,
+      providerStatus: sent.status ?? "CREATED"
+    }, now);
+    await updateAccountingConnectionStatus(db, "CONNECTED", { lastSuccessAt: now, now });
+  } catch (error) {
+    const apiError = providerError(error);
+    const shape = apiError?.shape;
+    const code = shape?.code ?? "UNKNOWN";
+    const message = apiError?.message ?? "FreeAgent credit-note operation failed.";
+    const postMayHaveSucceeded = code === "TIMEOUT" || code === "NETWORK" || Boolean(shape?.unknown);
+    const status = postMayHaveSucceeded ? "UNKNOWN" : shape?.retryable ? "RETRYABLE" : "FAILED";
+    const retryAt = status === "RETRYABLE"
+      ? shape?.retryAfterSeconds
+        ? new Date(Date.parse(now) + shape.retryAfterSeconds * 1000).toISOString()
+        : nextAccountingRetryAt(now, claimed.attempt_count)
+      : null;
+    await markBillingProviderOperation(db, id, {
+      status,
+      providerStatus: shape?.status ? String(shape.status) : "ERROR",
+      safeErrorCode: code as AccountingErrorCode,
+      safeErrorMessage: message,
+      nextAttemptAt: retryAt
+    }, now);
+  }
+  return findBillingProviderOperation(db, id);
 }
 
 export async function accountingIntegrationStatus(db: D1Database, env: AccountingEnvironment): Promise<AccountingIntegrationStatus> {

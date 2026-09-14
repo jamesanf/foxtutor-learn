@@ -1,4 +1,4 @@
-# Foxtutor Learn — AGENT_INSTRUCTION.md
+# Foxtutor Learn — docs/AGENT_INSTRUCTION.md
 
 ## Purpose
 
@@ -22,9 +22,9 @@ Phase 2 calendar chronology is authoritative: Phase 2.3 introduced calendar UX, 
 Before modifying anything, read in this order:
 
 1. `README.md`
-2. `AGENT_INSTRUCTION.md`
-3. `CHANGELOG.md`
-4. the current phase document in `PHASE_PLAN.md` or the applicable `docs/` phase record
+2. `docs/AGENT_INSTRUCTION.md`
+3. `docs/CHANGELOG.md`
+4. the current phase document in `docs/PHASE_PLAN.md` or the applicable `docs/` phase record
 5. relevant architecture/security/data-model documents
 6. current git status and recent commit history
 
@@ -132,7 +132,7 @@ After every material implementation, verification, testing, production or cleanu
 - current known limitations;
 - latest changelog summary.
 
-### CHANGELOG.md must contain
+### docs/CHANGELOG.md must contain
 
 A chronological, human-readable account of every completed pass.
 
@@ -468,7 +468,7 @@ Phase 2.10 is the final Phase 2 UX pass. Do not create Phase 2.11 and do not cla
 - Admin navigation is Dashboard, Calendar, Bookings, Students and Lessons. Bookings is a server-paginated view over upcoming scheduled rows in `lessons`, not a second database or lifecycle.
 - Dashboard is an at-a-glance surface for upcoming bookings and compact counts, not a duplicate grid of navigation cards.
 - Student forms expose one login/contact email field. The server still resolves an active `STUDENT` account and stores the explicit `learn_user_id` link; matching email is not authentication.
-- Create Lesson uses a 24-hour native time input with `step="900"` and an immediate client preview of Start + 55 minutes. The server remains authoritative for timezone-aware UTC instants, DST gaps, overlap protection and validation.
+- Create Lesson uses a 24-hour native time input with `step="900"` and an immediate client preview of Start + 55 minutes. The server remains authoritative for Europe/London wall-clock semantics, UTC instants, DST gaps, overlap protection and validation.
 - Use the existing FoxTutor Geist, blue/cyan, surface, border, button and focus system. Use grids and columns where they improve hierarchy, then stack naturally at mobile widths.
 - Browser dialogs (`alert`, `confirm`, `prompt`) remain prohibited. Subscription stays below the timetable, collapsed by default, and uses the existing internal confirmation surface.
 

@@ -63,13 +63,7 @@ export function canTransitionLessonStatus(current: LessonStatus, next: LessonSta
 }
 
 export function isValidTimeZone(timezone: string): boolean {
-  if (!timezone || timezone.length > 64) return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format();
-    return true;
-  } catch {
-    return false;
-  }
+  return timezone === FOX_TUTOR_TIMEZONE;
 }
 
 function zonedParts(instant: Date, timezone: string): { year: number; month: number; day: number; hour: number; minute: number } {
@@ -89,7 +83,7 @@ function zonedParts(instant: Date, timezone: string): { year: number; month: num
 }
 
 export function localDateTimeToIso(value: string, timezone: string): ValidationResult<string> {
-  if (!isValidTimeZone(timezone)) return { error: "Choose a valid IANA timezone." };
+  if (!isValidTimeZone(timezone)) return { error: `FoxTutor lessons always use ${FOX_TUTOR_TIMEZONE}.` };
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
   if (!match) return { error: "Enter a valid date and time." };
   const [, yearText, monthText, dayText, hourText, minuteText] = match;
@@ -129,7 +123,7 @@ export function localDateTimeToIso(value: string, timezone: string): ValidationR
 }
 
 export function isoToLocalDateTime(iso: string, timezone: string): string {
-  const parts = zonedParts(new Date(iso), timezone);
+  const parts = zonedParts(new Date(iso), FOX_TUTOR_TIMEZONE);
   return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}T${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
 }
 
@@ -169,10 +163,11 @@ export function validateLessonInput(fields: {
       studentId: fields.studentId,
       startAt: start.value,
       endAt: end.value,
-      timezone: fields.timezone,
+      timezone: FOX_TUTOR_TIMEZONE,
       status: fields.status,
       notes,
       externalUrl: externalUrl ? validExternalUrl(externalUrl) : null
     }
   };
 }
+import { FOX_TUTOR_TIMEZONE } from "./calendar";

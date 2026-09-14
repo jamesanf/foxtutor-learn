@@ -36,6 +36,11 @@ export type LearnRoute =
   | "admin-notifications"
   | "admin-notification"
   | "admin-accounting"
+  | "admin-billing"
+  | "admin-billing-action"
+  | "admin-series"
+  | "admin-series-form"
+  | "admin-series-action"
   | "admin-accounting-settings"
   | "admin-accounting-connect"
   | "admin-accounting-callback"
@@ -47,6 +52,7 @@ export type LearnRoute =
   | "admin-reschedule-reject"
   | "admin-lesson-reschedule"
   | "student"
+  | "student-billing"
   | "student-calendar"
   | "student-calendar-feed"
   | "student-lessons"
@@ -95,6 +101,11 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/notifications\/[^/]+\/preview$/.test(path)) return "admin-notification";
   if (/^\/learn\/admin\/notifications\/[^/]+$/.test(path)) return "admin-notification";
   if (path === "/learn/admin/accounting") return "admin-accounting";
+  if (path === "/learn/admin/billing") return "admin-billing";
+  if (/^\/learn\/admin\/billing\/(?:alerts|invoices|credits)\//.test(path)) return "admin-billing-action";
+  if (path === "/learn/admin/series") return "admin-series";
+  if (path === "/learn/admin/series/new") return "admin-series-form";
+  if (/^\/learn\/admin\/series\/[^/]+\/(?:pause|resume|end)$/.test(path)) return "admin-series-action";
   if (path === "/learn/admin/accounting/settings") return "admin-accounting-settings";
   if (path === "/learn/admin/accounting/connect") return "admin-accounting-connect";
   if (path === "/learn/admin/accounting/oauth/callback") return "admin-accounting-callback";
@@ -105,6 +116,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/reschedules\/[^/]+\/approve$/.test(path)) return "admin-reschedule-approve";
   if (/^\/learn\/admin\/reschedules\/[^/]+\/reject$/.test(path)) return "admin-reschedule-reject";
   if (path === "/learn/student") return "student";
+  if (path === "/learn/student/billing") return "student-billing";
   if (path === "/learn/student/calendar") return "student-calendar";
   if (path === "/learn/student/calendar/feed") return "student-calendar-feed";
   if (path === "/learn/student/lessons") return "student";

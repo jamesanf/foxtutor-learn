@@ -8,15 +8,15 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Engineering-complete; Phase 6 live Sandbox acceptance not started
+**Phase:** Phase 7.2 implementation complete; remote/provider acceptance recorded separately
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** Phase 6 accounting boundary hardening
-**Repository HEAD:** `52611e2`
+**Application/runtime release:** Phase 7.2 recurring lessons, billing operations and payment readiness
+**Repository HEAD:** `working tree`
 **Executable deployment commit:** `4afa705`
 **Deployed source:** `4afa705`
 **Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`
-**D1 migrations:** `0001_foundation.sql` through `0020_accounting_company_name.sql`
-**Automated validation:** 27 test files, 143 tests passing
+**D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally; remote deployment is a separate release gate
+**Automated validation:** 31 test files, 168 tests passing
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -51,6 +51,16 @@ changed. A zero rate is the current non-VAT setting, and every saved rate is
 sent explicitly so FreeAgent defaults cannot add tax. `ADMIN_CANCELLED` remains
 an explicitly unresolved accounting consequence and is not treated as an
 invoice decision.
+Phase 7.2 adds the operational completion of that architecture: the
+Europe/London invariant, recurring-series administration, billing history,
+invoice and credit detail, student billing visibility, canonical payment
+readiness, provider status reconciliation, actionable alert controls and
+recovery-safe scheduling. These surfaces use individual FreeAgent invoices,
+never FreeAgent recurring invoice profiles.
+Credit-covered lessons are settled in FoxTutor without zero-value FreeAgent
+invoices. Definite provider invoice failures compensate local credit
+allocations with auditable reversal entries; unknown outcomes remain
+reconciliation-required.
 The application-side Phase 6 implementation is complete and hardened. The
 phase remains operationally open because the latest attempted acceptance
 handoff supplied literal placeholders rather than executable approvals for
@@ -73,10 +83,16 @@ coverage now verifies successful contact verification through D1 persistence.
 - Fox Mail is accessed only through the server-side `mail.foxtutor.org`
   adapter.
 - Lesson files use the existing D1 metadata and private R2 resource pipeline.
-- FreeAgent remains the accounting authority; Learn stores only integration
-  identity, delivery state and external references.
+- FoxTutor owns recurring lessons, lesson instances, billing events, customer
+  credit and payment readiness; FreeAgent remains authoritative for accounting
+  documents, provider references and exposed payment/mandate state.
 - Accounting follows the boundary `operational event -> accounting
   consequence -> outbox -> scheduled Worker -> FreeAgent adapter`.
+- Phase 7.1 uses individual FreeAgent invoices, not recurring invoice profiles,
+  and retains a separate local payment/alert/reconciliation history. FoxTutor
+  business time is always Europe/London, recurrence is bounded to six weeks,
+  and `PAYMENT_SECURED` means credit coverage or confirmed provider payment,
+  not merely collection submission.
 - The authenticated shell uses the Learn logo, shared FoxTutor footer, and
   legal pages generated as an exact mirror of the public site's canonical
   terms and privacy source.
@@ -121,17 +137,17 @@ migrations/          Forward-only D1 migrations
 tests/               Unit, integration, security and browser contracts
 scripts/              Browser shell and production smoke helpers
 docs/                Architecture, security, deployment and test evidence
-PHASE_PLAN.md        Master phase scope and acceptance gates
-CHANGELOG.md         Material implementation history
+docs/PHASE_PLAN.md   Master phase scope and acceptance gates
+docs/CHANGELOG.md    Material implementation history
 ```
 
 ## Documentation index
 
 | Document | Purpose |
 |---|---|
-| `PHASE_PLAN.md` | Current phase scope and acceptance gates |
-| `PROJECT_STRUCTURE.md` | Filesystem and separation-of-concerns rules |
-| `CHANGELOG.md` | Material implementation history |
+| `docs/PHASE_PLAN.md` | Current phase scope and acceptance gates |
+| `docs/PROJECT_STRUCTURE.md` | Filesystem and separation-of-concerns rules |
+| `docs/CHANGELOG.md` | Material implementation history |
 | `docs/architecture/phase-5.1.md` | Cancellation, exception, rescheduling and billing boundary |
 | `docs/architecture/student-profiles.md` | Student profile fields and academic-year progression |
 | `docs/testing/phase-5.1.md` | Phase 5.1 tests and acceptance matrix |
@@ -139,6 +155,13 @@ CHANGELOG.md         Material implementation history
 | `docs/architecture/learn-branding-legal.md` | Learn shell branding and portal legal policy boundary |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
 | `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
+| `docs/phase-7.1.md` | Current Phase 7.1 implementation status and provider decisions |
+| `docs/phase-7.1-acceptance-report.md` | Phase 7.1 evidence, limitations and GO/NO-GO report |
+| `docs/architecture/phase-7.1.md` | Recurrence, billing, credit and readiness architecture |
+| `docs/architecture/gocardless-freeagent.md` | FreeAgent-GoCardless boundary and safety decision |
+| `docs/testing/phase-7.1.md` | Phase 7.1 test matrix and evidence classification |
+| `docs/deployment/phase-7.1.md` | Local-only migration and deployment gate |
+| `docs/handover/phase-7.1.md` | Provider acceptance and handover boundary |
 | `docs/architecture/phase-6.md` | Current accounting architecture and state model |
 | `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
 | `docs/deployment/phase-6.md` | Current deployment state and rollout order |
@@ -150,7 +173,7 @@ CHANGELOG.md         Material implementation history
 | `docs/deployment/` | Earlier phase deployment records |
 
 Historical Phase 6.1, 6.2 and 6.3 release chronology is retained in
-`CHANGELOG.md`; the current Phase 6 documents above are the only authoritative
+`docs/CHANGELOG.md`; the current Phase 6 documents above are the only authoritative
 operational records.
 
 ## Phase map
@@ -163,7 +186,9 @@ operational records.
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
-| 7 | Optional billing visibility and hardening | Deferred |
+| 7 | Billing engine and long-term operations hardening | Phase 7 programme; provider and commercial gates remain explicit |
+| 7.1 | Recurrent lessons, billing orchestration and payment readiness | Foundational architecture implemented and absorbed into 7.2 completion |
+| 7.2 | Complete billing engine and operationalisation | Implemented locally; deployment and real-provider evidence are separate gates |
 
 ## Security model
 

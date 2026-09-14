@@ -110,7 +110,23 @@ and formatted as fixed two-decimal minor units; no floating-point arithmetic
 is used. This follows FreeAgent's invoice sales-tax model:
 <https://dev.freeagent.com/docs/sales_tax>.
 
-## Non-scope
+## Billing-ledger extension
 
-Learn does not implement direct debit, card charging, payment collection,
-payment methods, balances, bank details or a second accounting ledger.
+The forward-only `0021_billing_ledger.sql` migration adds the durable billing
+boundary described in [billing-freeagent.md](billing-freeagent.md). It keeps
+lesson billing events, customer credits, ledger transactions, invoice
+applications and authorised refunds in FoxTutor while retaining FreeAgent as
+the provider document and payment authority.
+
+The migration deliberately does not invent a category, tax treatment,
+accounting date or commercial price. Those values remain explicit billing
+configuration or human approval inputs.
+
+## Provider acceptance scope
+
+The FreeAgent adapter now has seams for credit-note creation, credit-note
+retrieval/status transitions, contact mandate-state reads and documented
+GoCardless initiation. Credit-note-to-invoice matching is not exposed in the
+official public API documentation, so the application records a recoverable
+provider-reconciliation state instead of creating dummy payments or bank
+transactions.

@@ -63,7 +63,7 @@ No host-level bypass or broader `/learn/*` exception was introduced.
 
 ## Documentation reconciliation
 
-Updated `README.md`, `AGENT_INSTRUCTION.md`, `PHASE_PLAN.md`, `CHANGELOG.md`, `docs/architecture/phase-2.4.md`, `docs/deployment/phase-2.6.md` and this record. Historical Phase 2.5 records remain intact, while current-state wording now identifies Phase 2.6 as the definitive closure pass.
+Updated `README.md`, `docs/AGENT_INSTRUCTION.md`, `docs/PHASE_PLAN.md`, `docs/CHANGELOG.md`, `docs/architecture/phase-2.4.md`, `docs/deployment/phase-2.6.md` and this record. Historical Phase 2.5 records remain intact, while current-state wording now identifies Phase 2.6 as the definitive closure pass.
 
 ## Final acceptance matrix
 

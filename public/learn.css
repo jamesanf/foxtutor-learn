@@ -306,14 +306,13 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .table-wrap { margin-top: 24px; overflow: hidden; border: 1px solid #c3d0dc; border-radius: 10px; background: var(--surface); box-shadow: 0 1px 3px rgb(16 42 67 / 5%); }
 .accounting-contact-table { overflow: visible; }
 .accounting-contact-table table { min-width: 0; table-layout: fixed; }
-.accounting-contact-table th:nth-child(1), .accounting-contact-table td:nth-child(1) { width: 18%; }
-.accounting-contact-table th:nth-child(2), .accounting-contact-table td:nth-child(2) { width: 22%; }
-.accounting-contact-table th:nth-child(3), .accounting-contact-table td:nth-child(3) { width: 16%; }
-.accounting-contact-table th:nth-child(4), .accounting-contact-table td:nth-child(4) { width: 12%; }
-.accounting-contact-table th:nth-child(5), .accounting-contact-table td:nth-child(5) { width: 32%; }
+.accounting-contact-table th:nth-child(1), .accounting-contact-table td:nth-child(1) { width: 22%; }
+.accounting-contact-table th:nth-child(2), .accounting-contact-table td:nth-child(2) { width: 30%; }
+.accounting-contact-table th:nth-child(3), .accounting-contact-table td:nth-child(3) { width: 18%; }
+.accounting-contact-table th:nth-child(4), .accounting-contact-table td:nth-child(4) { width: 30%; }
 .accounting-contact-table .status { white-space: nowrap; }
 .accounting-contact-table .inline-form { align-items: center; flex-wrap: nowrap; margin-top: 0; }
-.accounting-contact-table .inline-form input { width: 0; min-width: 0; flex: 1 1 120px; margin-top: 0; }
+.accounting-contact-table .inline-form input { width: 88px; min-width: 88px; flex: 0 0 88px; margin-top: 0; }
 .accounting-icon-button { display: inline-grid; width: 34px; height: 34px; min-width: 34px; min-height: 34px; flex: 0 0 34px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--action); background: transparent; cursor: pointer; }
 .accounting-icon-button:hover, .accounting-icon-button:focus-visible { color: var(--action-hover); background: color-mix(in srgb, var(--action) 12%, transparent); }
 .accounting-icon-button svg { width: 21px; height: 21px; fill: currentColor; }

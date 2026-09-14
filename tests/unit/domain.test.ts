@@ -41,7 +41,7 @@ describe("lesson domain validation", () => {
   });
 
   it("rejects invalid timezones, reversed intervals and unsafe URLs", () => {
-    expect(localDateTimeToIso("2026-10-09T14:00", "Not/AZone").error).toContain("valid IANA timezone");
+    expect(localDateTimeToIso("2026-10-09T14:00", "Not/AZone").error).toContain("Europe/London");
     expect(validateLessonInput({
       studentId: "student-1",
       startAt: "2026-10-09T15:00",

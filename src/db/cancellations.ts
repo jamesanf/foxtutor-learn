@@ -1,5 +1,8 @@
 import type { BillingConsequence } from "../domain/cancellations";
 import { accountingOutboxStatement } from "./accounting";
+import { cancellationCreditStatements } from "./billing";
+import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
+import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
 
 export type CancellationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type LessonHistoryEventType =
@@ -155,8 +158,25 @@ export async function cancelLesson(
     previousStartAt: string;
     previousEndAt: string;
     previousTimezone: string;
+    creditAmountMinor?: bigint | null;
+    payerStudentId?: string;
   }
 ): Promise<boolean> {
+  if (input.previousTimezone !== FOX_TUTOR_TIMEZONE) {
+    throw new Error(`FoxTutor lessons always use ${FOX_TUTOR_TIMEZONE}.`);
+  }
+  const billedInvoice = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor
+    ? await db.prepare(
+      `SELECT i.id, i.status
+       FROM billing_invoices i
+       JOIN billing_events e ON e.id = i.billing_event_id
+       WHERE e.lesson_id = ?
+       LIMIT 1`
+    ).bind(input.lessonId).first<{ id: string; status: string }>()
+    : null;
+  const providerCorrectionRequired = Boolean(
+    billedInvoice && ["SENT", "PAYMENT_PENDING", "PAID", "FAILED", "UNKNOWN"].includes(billedInvoice.status)
+  );
   const historyId = crypto.randomUUID();
   const accountingStatement = accountingOutboxStatement(db, {
     id: crypto.randomUUID(),
@@ -168,6 +188,20 @@ export async function cancelLesson(
     accountingEffectiveDate: input.now.slice(0, 10),
     now: input.now
   });
+  const creditStatements = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor
+    ? cancellationCreditStatements(db, {
+      creditId: `credit-${historyId}`,
+      accountId: `credit-account-${input.payerStudentId ?? input.studentId}`,
+      studentId: input.studentId,
+      payerStudentId: input.payerStudentId ?? input.studentId,
+      sourceEventId: historyId,
+      lessonId: input.lessonId,
+      cancellationId: historyId,
+      amountMinor: input.creditAmountMinor,
+      now: input.now,
+      createProviderOperation: providerCorrectionRequired
+    })
+    : [];
   const results = await db.batch([
     db.prepare("UPDATE lessons SET status = 'cancelled', updated_at = ? WHERE id = ? AND status = 'scheduled'")
       .bind(input.now, input.lessonId),
@@ -196,6 +230,19 @@ export async function cancelLesson(
       input.previousTimezone,
       input.now
     ),
+    ...(input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor ? [
+      db.prepare(
+        `UPDATE billing_events
+         SET status = 'CANCELLED', updated_at = ?, provider_status = CASE WHEN ? THEN 'CANCELLATION_RECONCILIATION_REQUIRED' ELSE provider_status END
+         WHERE lesson_id = ? AND status NOT IN ('SETTLED', 'CANCELLED')`
+      ).bind(input.now, providerCorrectionRequired ? 1 : 0, input.lessonId),
+      ...(providerCorrectionRequired ? [db.prepare(
+        `UPDATE billing_invoices
+         SET status = 'CANCELLED', provider_status = 'CANCELLATION_RECONCILIATION_REQUIRED', updated_at = ?
+         WHERE id = ?`
+      ).bind(input.now, billedInvoice?.id ?? "")] : [])
+    ] : []),
+    ...creditStatements,
     ...(accountingStatement ? [accountingStatement] : [])
   ]);
   return Boolean(results[0]?.meta.changes);
@@ -343,7 +390,9 @@ export async function rescheduleLesson(
   const results = await db.batch([
     db.prepare(
       `UPDATE lessons
-       SET start_at = ?, end_at = ?, timezone = ?, updated_at = ?
+       SET start_at = ?, end_at = ?, timezone = ?,
+           instance_override = CASE WHEN recurring_series_id IS NULL THEN instance_override ELSE 1 END,
+           updated_at = ?
        WHERE id = ? AND student_id = ? AND status = 'scheduled'
          AND start_at = ? AND end_at = ? AND timezone = ?`
     ).bind(
@@ -361,6 +410,17 @@ export async function rescheduleLesson(
       historyId, input.lessonId, input.studentId, input.actorUserId, input.actorRole, input.reason,
       input.previousStartAt, input.previousEndAt, input.previousTimezone,
       input.startAt, input.endAt, input.timezone, input.now
+    ),
+    db.prepare(
+      `UPDATE billing_events
+       SET lesson_date = ?, billing_date = ?, collection_date = ?, updated_at = ?
+       WHERE lesson_id = ? AND status IN ('PENDING', 'INVOICE_PENDING')`
+    ).bind(
+      input.startAt.slice(0, 10),
+      input.startAt.slice(0, 10),
+      collectionDateSevenDaysBeforeLesson(input.startAt.slice(0, 10)),
+      input.now,
+      input.lessonId
     ),
     ...(accountingStatement ? [accountingStatement] : [])
   ]);

@@ -31,14 +31,14 @@ function mockDb(results: unknown[]): D1Database {
 }
 
 describe("calendar date model", () => {
-  it("uses the configured IANA timezone for the current date", () => {
-    expect(currentCalendarDate(new Date("2026-10-01T00:30:00.000Z"), "America/New_York")).toBe("2026-09-30");
+  it("always uses the FoxTutor Europe/London business timezone", () => {
     expect(currentCalendarDate(new Date("2026-10-01T00:30:00.000Z"), CALENDAR_TIMEZONE)).toBe("2026-10-01");
+    expect(currentCalendarDate(new Date("2026-10-01T00:30:00.000Z"), "America/New_York")).toBe("2026-10-01");
   });
 
-  it("renders a lesson day using the requested calendar timezone", () => {
-    expect(lessonCalendarDate("2026-10-12T00:30:00.000Z", "America/New_York")).toBe("2026-10-11");
+  it("renders lesson days using Europe/London regardless of legacy input", () => {
     expect(lessonCalendarDate("2026-10-12T00:30:00.000Z", CALENDAR_TIMEZONE)).toBe("2026-10-12");
+    expect(lessonCalendarDate("2026-10-12T00:30:00.000Z", "America/New_York")).toBe("2026-10-12");
   });
 });
 

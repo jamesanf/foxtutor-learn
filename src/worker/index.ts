@@ -82,6 +82,27 @@ import {
   saveAccountingBillingSettings,
   updateExternalAccountingLinkStatus
 } from "../db/accounting";
+import {
+  ensureBillingInvoiceForEvent,
+  findCreditById,
+  findBillingInvoice,
+  ensureDueDirectDebitOperations,
+  listCustomerCreditBalances,
+  listDueBillingProviderOperations,
+  listBillingHistory,
+  listUpcomingBillingRows,
+  listOpenBillingAlerts,
+  listPendingBillingEvents,
+  updateBillingAlertStatus
+} from "../db/billing";
+import {
+  addRecurringPause,
+  createRecurringSeries,
+  ensureAllRecurringSeriesMaterialised,
+  listRecurringSeries,
+  setRecurringSeriesStatus
+} from "../db/recurrence";
+import { processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
 import {
   cancelLesson,
@@ -116,6 +137,7 @@ import {
   CALENDAR_TIMEZONE,
   currentCalendarDate
 } from "../domain/calendar";
+import { calculatePaymentReadiness } from "../domain/payment-readiness";
 import {
   academicYearOptions,
   isStudentAcademicSystem,
@@ -136,6 +158,7 @@ import {
   validateLessonInput,
   type LessonStatus
 } from "../domain/validation";
+import { formatMinorUnits } from "../domain/accounting";
 import { privateHeaders } from "../security/headers";
 import { clearSessionCookies, createSession, csrfTokenMatches, csrfValid, readSession, type ActiveSession } from "../security/session";
 import { decryptFeedToken, encryptFeedToken, feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
@@ -144,7 +167,7 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatus, configuredInvoice, connectFreeAgent, processAccountingOutbox, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
+import { accountingIntegrationStatus, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, processAccountingOutbox, processCreditNoteProviderOperation, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
 import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
@@ -185,6 +208,7 @@ export interface Env {
   FREEAGENT_INVOICE_CURRENCY?: string;
   FREEAGENT_INVOICE_SALES_TAX_RATE?: string;
   FREEAGENT_COMPANY_SUBDOMAIN?: string;
+  FREEAGENT_BILLING_PROVIDER_ENABLED?: string;
   RESOURCES_BUCKET?: R2Bucket;
 }
 
@@ -275,10 +299,10 @@ function navigation(role: Role): string {
     students: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3ZM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm8 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5ZM8 13c-2.33 0-7 1.17-7 3.5V19h5v-2.5c0-1.03.42-1.91 1.09-2.63C6.98 13.32 7.5 13.12 8 13Z"
   } as const;
   const icon = (name: keyof typeof icons): string => `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
-  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "accounting", Students: "students", "My lessons": "lessons" };
+  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "accounting", Students: "students", "My lessons": "lessons", Billing: "accounting", "Recurring series": "lessons" };
   const links: Array<[string, string]> = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
-    : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/resources", "Resources"]];
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/series", "Recurring series"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
+    : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/billing", "Billing"], ["/learn/student/resources", "Resources"]];
   return links.map(([href, label]) => `<a href="${href}">${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
 
@@ -468,9 +492,9 @@ function accountingContactList(
   const rows = students.map((student) => {
     const link = byStudent.get(student.id);
     const status = link?.status ?? "UNVERIFIED";
-    return `<tr><td data-label="Payer">${escapeHtml(student.name)}</td><td data-label="Learn email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="FreeAgent contact">${escapeHtml(link?.external_reference ?? "Not mapped")}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Action"><form method="post" action="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="accounting-icon-button accounting-save-button" type="submit" aria-label="Verify and save contact for ${escapeHtml(student.name)}" title="Verify and save"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4m-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6m3-10H5V5h10v4Z"></path></svg></button>${link ? `<button class="accounting-icon-button accounting-remove-button" formaction="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}/remove" type="submit" aria-label="Remove contact mapping for ${escapeHtml(student.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7Z"></path></svg></button>` : ""}</div></form></td></tr>`;
+    return `<tr><td data-label="Payer">${escapeHtml(student.name)}</td><td data-label="Learn email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Action"><form method="post" action="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="accounting-icon-button accounting-save-button" type="submit" aria-label="Verify and save contact for ${escapeHtml(student.name)}" title="Verify and save"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2-2V7l-4-4m-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6m3-10H5v4h10V5h5v4Z"></path></svg></button>${link ? `<button class="accounting-icon-button accounting-remove-button" formaction="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}/remove" type="submit" aria-label="Remove contact mapping for ${escapeHtml(student.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7Z"></path></svg></button>` : ""}</div></form></td></tr>`;
   }).join("");
-  return `<section class="card"><div class="section-heading"><div><h2>FreeAgent contact mappings</h2><p class="muted">Explicit admin-managed Learn payer to FreeAgent contact references. Matching email addresses never create a mapping.</p></div></div>${students.length ? `<div class="table-wrap accounting-contact-table"><table><thead><tr><th>Payer</th><th>Learn email</th><th>FreeAgent contact</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty-state compact-empty"><p>No Learn students exist.</p></div>`}</section>`;
+  return `<section class="card"><div class="section-heading"><div><h2>FreeAgent contact mappings</h2><p class="muted">Contact IDs are currently verified and saved explicitly. Matching email addresses never create a mapping; automatic FreeAgent contact synchronization is planned.</p></div></div>${students.length ? `<div class="table-wrap accounting-contact-table"><table><thead><tr><th>Payer</th><th>Learn email</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty-state compact-empty"><p>No Learn students exist.</p></div>`}</section>`;
 }
 
 function accountingList(
@@ -1682,11 +1706,195 @@ async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database):
   return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><a class="summary-card" href="${nextLessonHref}"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</a><a class="summary-card" href="/learn/admin/bookings"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></a><a class="summary-card" href="/learn/admin/students"><span>Active Students</span><strong>${activeStudents}</strong></a><a class="summary-card" href="/learn/admin/reschedules"><span>Reschedule requests</span><strong>${rescheduleRequests}</strong></a></div><section class="card dashboard-section"><div class="section-heading"><h2>Reports to write</h2><a class="text-link" href="/learn/admin/lessons">Past Lessons</a></div>${reportPreview}</section><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
 
+function billingMoney(value: number | string | bigint | null): string {
+  return value === null ? "—" : `£${formatMinorUnits(BigInt(value))}`;
+}
+
+function billingDateLabel(value: string | null): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: CALENDAR_TIMEZONE
+  }).format(new Date(value.includes("T") ? value : `${value}T12:00:00+00:00`));
+}
+
+function billingReadinessLabel(value: string): string {
+  return value.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (character) => character.toUpperCase());
+}
+
+async function billingOperationsPage(
+  user: AppUser,
+  csrfToken: string,
+  db: D1Database,
+  request: Request
+): Promise<Response> {
+  const now = new Date();
+  const today = currentCalendarDate(now);
+  const nextSeven = new Date(Date.UTC(
+    Number(today.slice(0, 4)),
+    Number(today.slice(5, 7)) - 1,
+    Number(today.slice(8, 10)) + 7
+  )).toISOString().slice(0, 10);
+  const [upcoming, credits, alerts] = await Promise.all([
+    listUpcomingBillingRows(db, today, nextSeven),
+    listCustomerCreditBalances(db),
+    listOpenBillingAlerts(db)
+  ]);
+  const readiness = upcoming.map((row) => {
+    const gross = BigInt(row.amount_minor ?? 0);
+    const invoiceAmount = row.invoice_id ? gross : 0n;
+    const result = calculatePaymentReadiness({
+      lessonDate: row.occurred_at.slice(0, 10),
+      collectionDate: row.collection_date ?? row.occurred_at.slice(0, 10),
+      now: `${today}T12:00:00.000Z`,
+      grossAmountMinor: gross,
+      creditAvailableMinor: BigInt(row.credit_available_minor ?? 0),
+      invoiceAmountMinor: invoiceAmount,
+      invoiceStatus: row.invoice_id ? row.status : null,
+      paymentStatus: row.payment_status,
+      mandateState: null
+    });
+    return { row, result };
+  });
+  const todayRows = readiness.filter(({ row }) => row.occurred_at.slice(0, 10) === today);
+  const attention = readiness.filter(({ result }) => !result.paymentSecuredForLesson && result.state !== "NOT_YET_DUE").length;
+  const secured = readiness.filter(({ result }) => result.paymentSecuredForLesson).length;
+  const failed = readiness.filter(({ result }) => result.state === "PAYMENT_FAILED").length;
+  const creditCovered = readiness.filter(({ result }) => result.state === "CREDIT_COVERED").length;
+  const rowMarkup = readiness.length
+    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a></td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : "Not created"}</td></tr>`).join("")
+    : `<tr><td colspan="8">No upcoming lessons require billing attention.</td></tr>`;
+  const creditRows = credits.length
+    ? credits.map((credit) => `<tr><td><a href="/learn/admin/billing/credits/${encodeURIComponent(credit.credit_id)}">${escapeHtml(credit.student_name ?? credit.student_id)}</a></td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
+    : `<tr><td colspan="4">No customer credits.</td></tr>`;
+  const alertRows = alerts.length
+    ? alerts.map((alert) => `<tr><td>${escapeHtml(alert.severity)}</td><td>${escapeHtml(alert.alert_type)}</td><td>${escapeHtml(alert.student_name ?? alert.student_id ?? "Unknown")}</td><td>${escapeHtml(alert.current_state)}</td><td><form method="post" action="/learn/admin/billing/alerts/${encodeURIComponent(alert.id)}">${hiddenCsrf(csrfToken)}${alert.status === "OPEN" ? `<button class="button secondary" name="action" value="ACKNOWLEDGE" type="submit">Acknowledge</button>` : `<button class="button secondary" name="action" value="RESOLVE" type="submit">Resolve</button>`}</form></td></tr>`).join("")
+    : `<tr><td colspan="5">No open billing alerts.</td></tr>`;
+  const todayLabel = billingDateLabel(today);
+  return appPage(user, csrfToken, "Billing health", `<div class="page-heading"><div><h1>Billing health</h1><p class="lede">Operational payment readiness for ${escapeHtml(todayLabel)} through the next seven days. Business time is always Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Today</span><strong>${todayRows.length}</strong><small>lessons</small></section><section class="summary-card"><span>Payment secured</span><strong>${secured}</strong><small>next seven days</small></section><section class="summary-card"><span>Credit-covered</span><strong>${creditCovered}</strong></section><section class="summary-card"><span>Needs attention</span><strong>${attention}</strong></section><section class="summary-card"><span>Failed payments</span><strong>${failed}</strong></section></div><section class="card"><div class="section-heading"><div><h2>Next seven days</h2><p class="muted">Collection date is seven calendar days before the lesson date. Payment-secured means credit coverage or a confirmed provider payment.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Lesson</th><th>Charge</th><th>Credit available</th><th>Invoice amount</th><th>Readiness</th><th>Collection</th><th>Document</th></tr></thead><tbody>${rowMarkup}</tbody></table></div></section><section class="card"><div class="section-heading"><div><h2>Customer credit</h2><p class="muted">Immutable credit history remains the source of the balance shown here.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Original</th><th>Available</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><div class="section-heading"><h2>Alerts</h2><a class="text-link" href="/learn/admin/billing">Refresh</a></div><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Alert</th><th>Student</th><th>State</th><th>Action</th></tr></thead><tbody>${alertRows}</tbody></table></div></section>`);
+}
+
+async function recurringSeriesPage(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
+  const [series, students] = await Promise.all([listRecurringSeries(db), listStudents(db)]);
+  const studentNames = new Map(students.map((student) => [student.id, student.name]));
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const rows = series.length
+    ? series.map((item) => `<tr><td>${escapeHtml(studentNames.get(item.student_id) ?? item.student_id)}</td><td>${escapeHtml(dayNames[item.day_of_week] ?? "Day")} ${escapeHtml(item.local_start_time)}</td><td>${item.duration_minutes} minutes</td><td>${billingMoney(item.price_minor)}</td><td>${escapeHtml(item.start_date)}${item.end_date ? ` to ${escapeHtml(item.end_date)}` : ""}</td><td><span class="status status-${item.status.toLowerCase()}">${escapeHtml(item.status)}</span></td><td>${item.status === "ACTIVE" ? `<form method="post" action="/learn/admin/series/${encodeURIComponent(item.id)}/pause">${hiddenCsrf(csrfToken)}<input type="hidden" name="startsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="endsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="reason" value="Administrator pause"><button class="button secondary" type="submit">Pause</button></form>` : item.status === "PAUSED" ? `<form method="post" action="/learn/admin/series/${encodeURIComponent(item.id)}/resume">${hiddenCsrf(csrfToken)}<button class="button secondary" type="submit">Resume</button></form>` : "—"}</td></tr>`).join("")
+    : `<tr><td colspan="7">No recurring lesson series.</td></tr>`;
+  return appPage(user, csrfToken, "Recurring series", `<div class="page-heading"><div><h1>Recurring lesson series</h1><p class="lede">FoxTutor owns recurrence. Future lessons are materialised only through the bounded six-week Europe/London horizon.</p></div>${buttonLink("/learn/admin/series/new", "Create series")}</div><section class="card"><div class="table-wrap"><table><thead><tr><th>Student</th><th>Weekly time</th><th>Duration</th><th>Price</th><th>Dates</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>`);
+}
+
+function recurringSeriesForm(csrfToken: string, students: Student[], error?: string): string {
+  const options = students.filter((student) => student.status === "ACTIVE").map((student) => `<option value="${escapeHtml(student.id)}">${escapeHtml(student.name)}</option>`).join("");
+  return `<section class="card form-card"><div class="page-heading"><div><h1>Create recurring series</h1><p class="lede">The first six weeks will be materialised after creation. FoxTutor time is always Europe/London.</p></div></div>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="/learn/admin/series/new"><label>Student and payer<select name="studentId" required>${options}</select></label><div class="form-grid"><label>Day<select name="dayOfWeek" required><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label><label>Local start time<input type="time" name="localStartTime" step="900" required></label><label>Duration (minutes)<input type="number" name="durationMinutes" min="1" max="1440" value="55" required></label><label>Price (£)<input type="number" name="price" min="0.01" step="0.01" value="55.00" required></label><label>Start date<input type="date" name="startDate" value="${escapeHtml(currentCalendarDate())}" required></label><label>End date (optional)<input type="date" name="endDate"></label></div><p class="muted">The payer is currently the selected student. Any future payer relationship workflow must be explicit and audited.</p><div class="form-actions"><a class="button secondary" href="/learn/admin/series">Cancel</a><button class="button" type="submit">${hiddenCsrf(csrfToken)}Create series</button></div></form></section>`;
+}
+
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
   const db = env.DB as D1Database;
   const url = new URL(request.url);
   const csrfToken = active.csrfToken;
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
+  if (route === "admin-series") {
+    if (request.method !== "GET") return messagePage("Method not allowed", "Use the series controls to make changes.", 405);
+    return recurringSeriesPage(active.user, csrfToken, db);
+  }
+  if (route === "admin-series-form") {
+    const students = await listStudents(db);
+    if (request.method === "GET") return appPage(active.user, csrfToken, "Create recurring series", recurringSeriesForm(csrfToken, students));
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const form = await parseForm(request);
+    const studentId = formText(form ?? new FormData(), "studentId");
+    const dayOfWeek = Number(formText(form ?? new FormData(), "dayOfWeek"));
+    const durationMinutes = Number(formText(form ?? new FormData(), "durationMinutes"));
+    const price = formText(form ?? new FormData(), "price");
+    const startDate = formText(form ?? new FormData(), "startDate");
+    const endDate = formText(form ?? new FormData(), "endDate") || null;
+    const localStartTime = formText(form ?? new FormData(), "localStartTime");
+    const student = students.find((candidate) => candidate.id === studentId && candidate.status === "ACTIVE");
+    const validDate = (value: string | null): boolean => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T12:00:00Z`)));
+    const priceMinor = /^\d+(?:\.\d{1,2})?$/.test(price) ? BigInt(Math.round(Number(price) * 100)) : 0n;
+    if (!student || !Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(localStartTime) || !Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1440 || priceMinor <= 0n || !validDate(startDate) || (endDate && !validDate(endDate)) || (endDate && endDate < startDate)) {
+      return appPage(active.user, csrfToken, "Create recurring series", recurringSeriesForm(csrfToken, students, "Enter a valid student, weekly time, price and date range."));
+    }
+    const now = new Date().toISOString();
+    await createRecurringSeries(db, {
+      id: crypto.randomUUID(),
+      studentId: student.id,
+      payerStudentId: student.id,
+      dayOfWeek,
+      localStartTime,
+      durationMinutes,
+      startDate,
+      endDate,
+      priceMinor,
+      now
+    });
+    await ensureAllRecurringSeriesMaterialised(db, currentCalendarDate(new Date(now)), now);
+    return redirect("/learn/admin/series");
+  }
+  if (route === "admin-series-action") {
+    if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const match = /^\/learn\/admin\/series\/([^/]+)\/(pause|resume|end)$/.exec(url.pathname);
+    const seriesId = match ? decodePathSegment(match[1] ?? "") : null;
+    const action = match?.[2];
+    if (!seriesId || !action) return messagePage("Series not found", "That recurring series does not exist.", 404);
+    const form = await parseForm(request);
+    const now = new Date().toISOString();
+    if (action === "pause") {
+      const startsOn = formText(form ?? new FormData(), "startsOn") || currentCalendarDate();
+      const endsOn = formText(form ?? new FormData(), "endsOn") || startsOn;
+      const reason = formText(form ?? new FormData(), "reason") || "Administrator pause";
+      await addRecurringPause(db, { id: crypto.randomUUID(), seriesId, startsOn, endsOn, reason, actorUserId: active.user.id, now });
+      await setRecurringSeriesStatus(db, { id: seriesId, status: "PAUSED", actorUserId: active.user.id, now, details: `${startsOn} to ${endsOn}: ${reason}` });
+    } else if (action === "resume") {
+      await setRecurringSeriesStatus(db, { id: seriesId, status: "ACTIVE", actorUserId: active.user.id, now, details: "Recurring series resumed." });
+      await ensureAllRecurringSeriesMaterialised(db, currentCalendarDate(new Date(now)), now);
+    } else {
+      const endDate = formText(form ?? new FormData(), "endDate") || currentCalendarDate();
+      await setRecurringSeriesStatus(db, { id: seriesId, status: "ENDED", endDate, actorUserId: active.user.id, now, details: `Series ended on ${endDate}.` });
+    }
+    return redirect("/learn/admin/series");
+  }
+  if (route === "admin-billing") {
+    if (request.method !== "GET") return messagePage("Method not allowed", "Use the alert controls provided on the billing dashboard.", 405);
+    return billingOperationsPage(active.user, csrfToken, db, request);
+  }
+  if (route === "admin-billing-action") {
+    const invoiceMatch = /^\/learn\/admin\/billing\/invoices\/([^/]+)$/.exec(url.pathname);
+    if (invoiceMatch && request.method === "GET") {
+      const invoiceId = decodePathSegment(invoiceMatch[1] ?? "");
+      const invoice = invoiceId ? await findBillingInvoice(db, invoiceId) : null;
+      if (!invoice) return messagePage("Invoice not found", "That billing invoice does not exist.", 404);
+      const event = await db.prepare("SELECT * FROM billing_events WHERE id = ?").bind(invoice.billing_event_id).first<{ lesson_id: string | null; lesson_date: string | null; payer_student_id: string; }>();
+      const payment = await db.prepare("SELECT * FROM billing_payments WHERE invoice_id = ?").bind(invoice.id).first<{ status: string; provider_reference: string | null; provider_status: string | null; collection_date: string; }>();
+      const operations = await db.prepare("SELECT * FROM billing_invoice_operations WHERE invoice_id = ? ORDER BY created_at DESC").bind(invoice.id).all<{ operation_type: string; status: string; provider_status: string | null; safe_error_message: string | null; }>();
+      const operationRows = operations.results.length
+        ? operations.results.map((operation) => `<tr><td>${escapeHtml(operation.operation_type)}</td><td>${escapeHtml(operation.status)}</td><td>${escapeHtml(operation.provider_status ?? "—")}</td><td>${escapeHtml(operation.safe_error_message ?? "—")}</td></tr>`).join("")
+        : `<tr><td colspan="4">No provider operations.</td></tr>`;
+      return appPage(active.user, csrfToken, "Invoice detail", `<div class="page-heading"><div><h1>Invoice detail</h1><p class="lede">FoxTutor invoice ${escapeHtml(invoice.id)}</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Amount</dt><dd>${billingMoney(invoice.net_amount_minor)}</dd></div><div><dt>Credit applied</dt><dd>${billingMoney(invoice.credit_applied_minor)}</dd></div><div><dt>Status</dt><dd>${escapeHtml(invoice.status)}</dd></div><div><dt>Provider status</dt><dd>${escapeHtml(invoice.provider_status ?? "—")}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(invoice.freeagent_reference ?? "—")}</dd></div><div><dt>Lesson date</dt><dd>${escapeHtml(billingDateLabel(event?.lesson_date ?? invoice.lesson_date))}</dd></div><div><dt>Collection date</dt><dd>${escapeHtml(billingDateLabel(payment?.collection_date ?? invoice.collection_date))}</dd></div><div><dt>Payment state</dt><dd>${escapeHtml(payment?.status ?? "Not scheduled")}</dd></div></dl>${invoice.freeagent_url ? `<p><a class="text-link" href="${escapeHtml(invoice.freeagent_url)}" target="_blank" rel="noopener">Open provider invoice</a></p>` : ""}</section><section class="card"><h2>Provider operations</h2><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Status</th><th>Provider</th><th>Message</th></tr></thead><tbody>${operationRows}</tbody></table></div></section>`);
+    }
+    const creditMatch = /^\/learn\/admin\/billing\/credits\/([^/]+)$/.exec(url.pathname);
+    if (creditMatch && request.method === "GET") {
+      const creditId = decodePathSegment(creditMatch[1] ?? "");
+      const credit = creditId ? await findCreditById(db, creditId) : null;
+      if (!credit) return messagePage("Credit not found", "That customer credit does not exist.", 404);
+      const transactions = await db.prepare("SELECT * FROM credit_ledger_transactions WHERE credit_id = ? ORDER BY created_at ASC, id ASC").bind(credit.credit_id).all<{ created_at: string; transaction_type: string; amount_minor: number | string; invoice_id: string | null; provider_reference: string | null; }>();
+      const transactionRows = transactions.results.length
+        ? transactions.results.map((transaction) => `<tr><td>${escapeHtml(billingDateLabel(transaction.created_at))}</td><td>${escapeHtml(transaction.transaction_type)}</td><td>${billingMoney(transaction.amount_minor)}</td><td>${escapeHtml(transaction.invoice_id ?? "—")}</td><td>${escapeHtml(transaction.provider_reference ?? "—")}</td></tr>`).join("")
+        : `<tr><td colspan="5">No ledger transactions.</td></tr>`;
+      return appPage(active.user, csrfToken, "Credit detail", `<div class="page-heading"><div><h1>Credit detail</h1><p class="lede">Why this customer is in credit, and where it has been used.</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Student</dt><dd>${escapeHtml(credit.student_name ?? credit.student_id)}</dd></div><div><dt>Original value</dt><dd>${billingMoney(credit.original_amount_minor)}</dd></div><div><dt>Consumed/refunded</dt><dd>${billingMoney(credit.amount_consumed_minor)}</dd></div><div><dt>Remaining</dt><dd>${billingMoney(credit.remaining_amount_minor)}</dd></div><div><dt>Status</dt><dd>${escapeHtml(credit.status)}</dd></div><div><dt>Source lesson</dt><dd>${escapeHtml(credit.source_event_id)}</dd></div><div><dt>Provider credit note</dt><dd>${escapeHtml(credit.freeagent_credit_note_reference ?? "Not created")}</dd></div></dl></section><section class="card"><h2>Immutable ledger</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Invoice</th><th>Provider reference</th></tr></thead><tbody>${transactionRows}</tbody></table></div></section>`);
+    }
+    const alertMatch = /^\/learn\/admin\/billing\/alerts\/([^/]+)$/.exec(url.pathname);
+    if (!alertMatch || request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+    const alertId = decodePathSegment(alertMatch[1] ?? "");
+    const form = await parseForm(request);
+    const action = formText(form ?? new FormData(), "action");
+    if (!alertId || (action !== "ACKNOWLEDGE" && action !== "RESOLVE")) return messagePage("Invalid alert action", "Choose an available alert action.", 400);
+    const changed = await updateBillingAlertStatus(db, alertId, { status: action === "ACKNOWLEDGE" ? "ACKNOWLEDGED" : "RESOLVED", userId: active.user.id }, new Date().toISOString());
+    return changed ? redirect("/learn/admin/billing") : messagePage("Alert unavailable", "That alert has already changed.", 409);
+  }
   if (route === "admin-accounting-connect") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the FreeAgent connection link from the accounting page.", 405);
     if (!env.FREEAGENT_CLIENT_ID || !env.FREEAGENT_CLIENT_SECRET || !env.FREEAGENT_TOKEN_ENCRYPTION_KEY || !env.FREEAGENT_OAUTH_REDIRECT_URI || !env.FREEAGENT_COMPANY_SUBDOMAIN || (env.FREEAGENT_ENVIRONMENT !== "sandbox" && env.FREEAGENT_ENVIRONMENT !== "production")) {
@@ -2531,6 +2739,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       if (!isLessonStatus(nextStatus) || !canTransitionLessonStatus(lesson.status, nextStatus)) return messagePage("Invalid status change", "That lesson lifecycle transition is not allowed.", 409);
       const now = new Date().toISOString();
       if (nextStatus === "cancelled" && lesson.status === "scheduled") {
+        const billingConfiguration = await configuredInvoiceFromDatabase(db, env, now);
         const changed = await cancelLesson(db, {
           lessonId: lesson.id,
           studentId: lesson.student_id,
@@ -2542,7 +2751,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
           now,
           previousStartAt: lesson.start_at,
           previousEndAt: lesson.end_at,
-          previousTimezone: lesson.timezone
+          previousTimezone: lesson.timezone,
+          creditAmountMinor: billingConfiguration?.amountMinorUnits ?? null,
+          payerStudentId: lesson.student_id
         });
         if (!changed) return redirect(`/learn/admin/lessons/${lessonRouteId(lesson.id)}`);
         const student = await findActiveStudentRecipient(db, lesson.student_id);
@@ -2634,12 +2845,37 @@ function studentDashboard(user: AppUser, csrfToken: string): Response {
   return appPage(user, csrfToken, "Dashboard", `<h1>Dashboard</h1><section class="card"><h2>Calendar</h2>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
 }
 
+async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
+  const student = await findActiveStudentForUser(db, user.id);
+  if (!student) return messagePage("Billing unavailable", "Your Learn account is not linked to an active student record.", 409);
+  const today = currentCalendarDate();
+  const nextSeven = new Date(Date.parse(`${today}T12:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  const [credits, history, upcoming] = await Promise.all([
+    listCustomerCreditBalances(db).then((rows) => rows.filter((row) => row.student_id === student.id)),
+    listBillingHistory(db, student.id),
+    listUpcomingBillingRows(db, today, nextSeven, student.id)
+  ]);
+  const availableCredit = credits.reduce((total, credit) => total + BigInt(credit.remaining_amount_minor), 0n);
+  const outstanding = upcoming.reduce((total, row) => total + BigInt(row.amount_minor ?? 0), 0n);
+  const creditRows = credits.length
+    ? credits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>${escapeHtml(credit.source_event_id)}</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
+    : `<tr><td colspan="6">No credit history.</td></tr>`;
+  const upcomingRows = upcoming.length
+    ? upcoming.map((row) => `<tr><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(row.credit_available_minor)}</td><td>${escapeHtml(row.status)}</td><td>${escapeHtml(row.collection_date ? billingDateLabel(row.collection_date) : "Not scheduled")}</td></tr>`).join("")
+    : `<tr><td colspan="5">No lessons in the next seven days.</td></tr>`;
+  const historyRows = history.length
+    ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.provider_reference ?? "—")}</td></tr>`).join("")
+    : `<tr><td colspan="5">No billing history yet.</td></tr>`;
+  return appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">A plain-English view of what you owe, your credit and upcoming collections. All dates use Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Payment method</span><strong>Direct Debit</strong><small>Managed through FreeAgent</small></section></div><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th><th>Provider reference</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
+}
+
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
   const db = env.DB as D1Database;
   const csrfToken = active.csrfToken;
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
   if (route === "student" && pathname === "/learn/student") return studentDashboard(active.user, csrfToken);
+  if (route === "student-billing") return studentBillingPage(active.user, csrfToken, db);
   if (route === "student-calendar") {
     const lessons = await listLessonsForUser(db, active.user.id);
     const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
@@ -2947,11 +3183,24 @@ export default {
     const now = new Date(controller.scheduledTime).toISOString();
     context.waitUntil((async () => {
       await markElapsedScheduledLessonsCompleted(db, now);
+      await ensureAllRecurringSeriesMaterialised(db, now.slice(0, 10), now);
+      const pendingBillingEvents = await listPendingBillingEvents(db, now, 50);
+      await Promise.all(pendingBillingEvents.map((event) => ensureBillingInvoiceForEvent(db, {
+        billingEventId: event.id,
+        now
+      })));
+      await ensureDueDirectDebitOperations(db, now.slice(0, 10), now);
       const dueAccounting = await listDueAccountingOutbox(db, now, 10);
+      const dueBillingProviderOperations = env.FREEAGENT_BILLING_PROVIDER_ENABLED === "true"
+        ? await listDueBillingProviderOperations(db, now, 10)
+        : [];
       await Promise.all([
         runReminderScheduler(db, env, now),
         runDstWarningScheduler(db, env, now),
-        ...dueAccounting.map((event) => processAccountingOutbox(db, env, event.id, now, freeAgentFetch))
+        processDueBillingInvoiceOperations(db, env, now, freeAgentFetch, 20),
+        reconcileBillingInvoices(db, env, now, freeAgentFetch, 20),
+        ...dueAccounting.map((event) => processAccountingOutbox(db, env, event.id, now, freeAgentFetch)),
+        ...dueBillingProviderOperations.map((operation) => processCreditNoteProviderOperation(db, env, operation.id, now, freeAgentFetch))
       ]);
     })());
   }

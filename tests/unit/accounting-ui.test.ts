@@ -77,9 +77,12 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('class="accounting-icon-button accounting-remove-button"');
     expect(workerSource).toContain('title="Verify and save"');
     expect(workerSource).toContain('title="Remove"');
+    expect(workerSource).not.toContain("<th>FreeAgent contact</th>");
+    expect(workerSource).toContain("automatic FreeAgent contact synchronization is planned.");
     expect(cssSource).toContain(".accounting-contact-table table { min-width: 0; table-layout: fixed; }");
     expect(cssSource).toContain(".accounting-contact-table .status { white-space: nowrap; }");
     expect(cssSource).toContain(".accounting-contact-table .inline-form");
+    expect(cssSource).toContain("width: 88px; min-width: 88px; flex: 0 0 88px;");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
     expect(cssSource).toContain(".accounting-icon-button { display: inline-grid; width: 34px;");
   });

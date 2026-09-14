@@ -24,6 +24,24 @@ export class FreeAgentApiError extends Error {
 export interface FreeAgentInvoice {
   url: string;
   reference?: string;
+  status?: string;
+  paymentMethods?: Record<string, boolean>;
+}
+
+export interface FreeAgentCreditNote {
+  url: string;
+  reference?: string;
+  status?: string;
+  dueValue?: string;
+}
+
+export type FreeAgentDirectDebitMandateState = "setup" | "pending" | "inactive" | "active" | "failed" | string;
+
+export interface FreeAgentContact {
+  url: string;
+  directDebitMandateState: FreeAgentDirectDebitMandateState | null;
+  email?: string;
+  billingEmail?: string;
 }
 
 export interface FreeAgentCompany {
@@ -197,7 +215,7 @@ export class FreeAgentClient {
     return result.data.company;
   }
 
-  async findContact(accessToken: string, externalReference: string): Promise<{ url: string } | null> {
+  async getContact(accessToken: string, externalReference: string): Promise<FreeAgentContact | null> {
     const id = externalReference.split("/").pop();
     if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
       code: "VALIDATION",
@@ -207,7 +225,7 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{ contact?: { url?: string } }>(accessToken, `/v2/contacts/${encodeURIComponent(id)}`);
+    const result = await this.requestJson<{ contact?: { url?: string; direct_debit_mandate_state?: FreeAgentDirectDebitMandateState; email?: string; billing_email?: string } }>(accessToken, `/v2/contacts/${encodeURIComponent(id)}`);
     const url = canonicalProviderUrl(result.data.contact?.url ?? externalReference, this.options.environment);
     if (!url) throw new FreeAgentApiError({
       code: "MALFORMED_RESPONSE",
@@ -217,7 +235,16 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
-    return { url };
+    return {
+      url,
+      directDebitMandateState: result.data.contact?.direct_debit_mandate_state ?? null,
+      email: result.data.contact?.email,
+      billingEmail: result.data.contact?.billing_email
+    };
+  }
+
+  async findContact(accessToken: string, externalReference: string): Promise<FreeAgentContact | null> {
+    return this.getContact(accessToken, externalReference);
   }
 
   async findInvoiceByReference(accessToken: string, contactUrl: string, reference: string): Promise<FreeAgentInvoice | null> {
@@ -231,7 +258,7 @@ export class FreeAgentClient {
       retryAfterSeconds: null
     });
     const query = `?contact=${encodeURIComponent(canonicalContactUrl)}&per_page=100`;
-    const result = await this.requestJson<{ invoices?: Array<{ url?: string; reference?: string }> }>(accessToken, `/v2/invoices${query}`);
+    const result = await this.requestJson<{ invoices?: Array<{ url?: string; reference?: string; status?: string; payment_methods?: Record<string, boolean> }> }>(accessToken, `/v2/invoices${query}`);
     const invoice = (result.data.invoices ?? []).find((candidate) => candidate.reference === reference);
     if (!invoice?.url) return null;
     const url = canonicalProviderUrl(invoice.url, this.options.environment);
@@ -243,7 +270,7 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
-    return { url, reference: invoice.reference };
+    return { url, reference: invoice.reference, status: invoice.status, paymentMethods: invoice.payment_methods };
   }
 
   async getInvoice(accessToken: string, externalReference: string): Promise<FreeAgentInvoice | null> {
@@ -256,7 +283,7 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{ invoice?: { url?: string; reference?: string } }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}`);
+    const result = await this.requestJson<{ invoice?: { url?: string; reference?: string; status?: string; payment_methods?: Record<string, boolean> } }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}`);
     const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
     if (!url) throw new FreeAgentApiError({
       code: "MALFORMED_RESPONSE",
@@ -266,7 +293,12 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
-    return { url, reference: result.data.invoice?.reference };
+    return {
+      url,
+      reference: result.data.invoice?.reference,
+      status: result.data.invoice?.status,
+      paymentMethods: result.data.invoice?.payment_methods
+    };
   }
 
   async createDraftInvoice(
@@ -282,6 +314,7 @@ export class FreeAgentClient {
       salesTaxRate: string;
       categoryUrl: string;
       currency: string;
+      enableGoCardless?: boolean;
     }
   ): Promise<FreeAgentInvoice> {
     const invoice = {
@@ -293,6 +326,7 @@ export class FreeAgentClient {
       send_reminder_emails: false,
       send_thank_you_emails: false,
       currency: input.currency,
+      ...(input.enableGoCardless ? { payment_methods: { gocardless_preauth: true } } : {}),
       invoice_items: [{
         item_type: input.itemType,
         description: input.description,
@@ -316,6 +350,194 @@ export class FreeAgentClient {
       retryAfterSeconds: null
     });
     return { url, reference: result.data.invoice?.reference ?? input.reference };
+  }
+
+  async markInvoiceSent(accessToken: string, externalReference: string): Promise<FreeAgentInvoice> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent invoice reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{ invoice?: { url?: string; reference?: string; status?: string; payment_methods?: Record<string, boolean> } }>(
+      accessToken,
+      `/v2/invoices/${encodeURIComponent(id)}/transitions/mark_as_sent`,
+      { method: "PUT", body: JSON.stringify({}) }
+    );
+    const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent invoice transition response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      reference: result.data.invoice?.reference,
+      status: result.data.invoice?.status,
+      paymentMethods: result.data.invoice?.payment_methods
+    };
+  }
+
+  async findCreditNoteByReference(accessToken: string, contactUrl: string, reference: string): Promise<FreeAgentCreditNote | null> {
+    const canonicalContactUrl = canonicalProviderUrl(contactUrl, this.options.environment);
+    if (!canonicalContactUrl) throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent contact URL is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const query = `?contact=${encodeURIComponent(canonicalContactUrl)}&per_page=100`;
+    const result = await this.requestJson<{ credit_notes?: Array<{ url?: string; reference?: string; status?: string; due_value?: string }> }>(accessToken, `/v2/credit_notes${query}`);
+    const creditNote = (result.data.credit_notes ?? []).find((candidate) => candidate.reference === reference);
+    if (!creditNote?.url) return null;
+    const url = canonicalProviderUrl(creditNote.url, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent credit note response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return { url, reference: creditNote.reference, status: creditNote.status, dueValue: creditNote.due_value };
+  }
+
+  async getCreditNote(accessToken: string, externalReference: string): Promise<FreeAgentCreditNote | null> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent credit note reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{ credit_note?: { url?: string; reference?: string; status?: string; due_value?: string } }>(accessToken, `/v2/credit_notes/${encodeURIComponent(id)}`);
+    const url = canonicalProviderUrl(result.data.credit_note?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent credit note response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      reference: result.data.credit_note?.reference,
+      status: result.data.credit_note?.status,
+      dueValue: result.data.credit_note?.due_value
+    };
+  }
+
+  async createDraftCreditNote(
+    accessToken: string,
+    input: {
+      contactUrl: string;
+      reference: string;
+      datedOn: string;
+      paymentTermsInDays: number;
+      itemType: string;
+      description: string;
+      amount: string;
+      salesTaxRate: string;
+      categoryUrl: string;
+      currency: string;
+    }
+  ): Promise<FreeAgentCreditNote> {
+    const creditNote = {
+      contact: input.contactUrl,
+      reference: input.reference,
+      dated_on: input.datedOn,
+      payment_terms_in_days: input.paymentTermsInDays,
+      currency: input.currency,
+      credit_note_items: [{
+        item_type: input.itemType,
+        description: input.description,
+        quantity: "1.0",
+        price: `-${input.amount}`,
+        sales_tax_rate: input.salesTaxRate,
+        category: input.categoryUrl
+      }]
+    };
+    const result = await this.requestJson<{ credit_note?: { url?: string; reference?: string; status?: string; due_value?: string } }>(accessToken, "/v2/credit_notes", {
+      method: "POST",
+      body: JSON.stringify({ credit_note: creditNote })
+    });
+    const url = canonicalProviderUrl(result.data.credit_note?.url ?? result.response.headers.get("Location"), this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent credit note response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      reference: result.data.credit_note?.reference ?? input.reference,
+      status: result.data.credit_note?.status
+    };
+  }
+
+  async markCreditNoteSent(accessToken: string, externalReference: string): Promise<FreeAgentCreditNote> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent credit note reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{ credit_note?: { url?: string; reference?: string; status?: string } }>(accessToken, `/v2/credit_notes/${encodeURIComponent(id)}/transitions/mark_as_sent`, {
+      method: "PUT",
+      body: JSON.stringify({})
+    });
+    const url = canonicalProviderUrl(result.data.credit_note?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent credit note transition response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return { url, reference: result.data.credit_note?.reference, status: result.data.credit_note?.status };
+  }
+
+  async initiateDirectDebit(accessToken: string, externalReference: string): Promise<{ url: string; status?: string }> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent invoice reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{ invoice?: { url?: string; status?: string } }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}/direct_debit`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent Direct Debit response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return { url, status: result.data.invoice?.status };
   }
 }
 

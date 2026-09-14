@@ -5,10 +5,11 @@ This is the current canonical structure. Agents may refine it when implementatio
 ```text
 /
 ├── README.md
-├── AGENT_INSTRUCTION.md
-├── CHANGELOG.md
-├── PHASE_PLAN.md
-├── PROJECT_STRUCTURE.md
+├── docs/
+│   ├── AGENT_INSTRUCTION.md
+│   ├── CHANGELOG.md
+│   ├── PHASE_PLAN.md
+│   └── PROJECT_STRUCTURE.md
 ├── package.json
 ├── tsconfig.json
 ├── wrangler.jsonc
@@ -47,6 +48,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 ├── scripts/
 ├── docs/
 │   ├── phase-6.md
+│   ├── phase-7.1.md
 │   ├── architecture/
 │   ├── security/
 │   ├── deployment/
@@ -62,15 +64,17 @@ This is the current canonical structure. Agents may refine it when implementatio
 - `public/` contains deployable browser assets, not secrets.
 - Learn browser assets are served at `/learn/assets/*`; top-level public-site paths are not Learn routes.
 - `migrations/` is forward-only D1 migration history.
-- The current accounting schema ends at `0020_accounting_company_name.sql`;
-  applied migrations must never be edited in place.
+- The current accounting schema ends at
+  `0023_credit_ledger_reversal_view.sql` locally; remote deployment remains
+  at the Phase 6 boundary. Applied migrations must never be edited in place.
 - `tests/` contains automated checks.
-- `docs/` contains project operating documentation.
+- `docs/` contains project operating documentation, phase plans, changelogs and
+  structural guidance.
 - Current Phase 6 records are consolidated in `docs/phase-6.md`,
   `docs/architecture/phase-6.md`, `docs/security/phase-6.md`,
   `docs/testing/phase-6.md`, `docs/deployment/phase-6.md` and
   `docs/handover/phase-6.md`; historical chronology is retained in
-  `CHANGELOG.md`.
+  `docs/CHANGELOG.md`.
 - The current Phase 6 acceptance gate is explicit in all six records: the
   Sandbox connection and contact mapping are live and verified, but no
   billing configuration or accounting event exists because the latest

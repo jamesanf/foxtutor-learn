@@ -64,9 +64,9 @@ describe("Phase 5 accounting boundary", () => {
       previousTimezone: "Europe/London",
       now: "2026-09-13T12:00:00.000Z"
     });
-    expect(statements).toHaveLength(3);
-    expect(statements[2]?.sql).toContain("INSERT INTO accounting_outbox");
-    expect(statements[2]?.values).toContain("RESCHEDULED");
-    expect(statements[2]?.values).toContain("NOT_REQUIRED");
+    expect(statements).toHaveLength(4);
+    expect(statements[3]?.sql).toContain("INSERT INTO accounting_outbox");
+    expect(statements[3]?.values).toContain("RESCHEDULED");
+    expect(statements[3]?.values).toContain("NOT_REQUIRED");
   });
 });

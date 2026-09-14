@@ -1,0 +1,476 @@
+import {
+  claimBillingInvoiceOperation,
+  createBillingAlert,
+  ensureBillingInvoiceForEvent,
+  findBillingEvent,
+  findBillingInvoice,
+  listDueBillingInvoiceOperations,
+  markBillingInvoiceOperation,
+  applyCreditToInvoice,
+  reverseInvoiceCreditApplications,
+  resetInvoiceCreditAllocation,
+  updateBillingEventStatus,
+  updateBillingInvoice,
+  type BillingInvoiceOperation
+} from "../db/billing";
+import { findExternalAccountingLink } from "../db/accounting";
+import {
+  configuredInvoiceFromDatabase,
+  providerCall,
+  type AccountingEnvironment
+} from "../accounting/service";
+import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
+import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
+import { billingReference } from "../domain/billing";
+
+function providerReference(url: string): string {
+  return url.split("/").pop() ?? url;
+}
+
+function providerFailure(error: unknown): FreeAgentApiError | null {
+  return error instanceof FreeAgentApiError ? error : null;
+}
+
+async function markOperationFailure(
+  db: D1Database,
+  operation: BillingInvoiceOperation,
+  now: string,
+  error: unknown,
+  context: { studentId?: string | null; lessonId?: string | null; billingEventId?: string | null; invoiceId?: string | null }
+): Promise<void> {
+  const apiError = providerFailure(error);
+  const shape = apiError?.shape;
+  const code = shape?.code ?? "UNKNOWN";
+  const message = apiError?.message ?? "Billing provider operation failed.";
+  const unknown = Boolean(shape?.unknown) || code === "NETWORK" || code === "TIMEOUT";
+  const status = unknown ? "UNKNOWN" : shape?.retryable ? "RETRYABLE" : "FAILED";
+  const retryAt = status === "RETRYABLE"
+    ? shape?.retryAfterSeconds
+      ? new Date(Date.parse(now) + shape.retryAfterSeconds * 1000).toISOString()
+      : nextAccountingRetryAt(now, operation.attempt_count)
+    : null;
+  await markBillingInvoiceOperation(db, operation.id, {
+    status,
+    providerStatus: shape?.status ? String(shape.status) : "ERROR",
+    safeErrorCode: code,
+    safeErrorMessage: message,
+    nextAttemptAt: retryAt
+  }, now);
+  if (context.invoiceId && status === "FAILED") {
+    await reverseInvoiceCreditApplications(db, context.invoiceId, now);
+    await updateBillingInvoice(db, context.invoiceId, {
+      status: "FAILED",
+      providerStatus: "PROVIDER_FAILED",
+      now
+    });
+  } else if (context.invoiceId && status === "UNKNOWN") {
+    await updateBillingInvoice(db, context.invoiceId, {
+      status: "UNKNOWN",
+      providerStatus: "RECONCILIATION_REQUIRED",
+      now
+    });
+  }
+  if (context.billingEventId && (status === "FAILED" || status === "UNKNOWN")) {
+    await updateBillingEventStatus(
+      db,
+      context.billingEventId,
+      status === "FAILED" ? "FAILED" : "UNKNOWN",
+      now,
+      null,
+      null,
+      status === "FAILED" ? "PROVIDER_FAILED" : "RECONCILIATION_REQUIRED"
+    );
+  }
+  await createBillingAlert(db, {
+    id: `billing-alert:${operation.id}:${status}`,
+    deduplicationKey: `billing-operation:${operation.id}:${status}`,
+    alertType: unknown ? "PROVIDER_TIMEOUT" : status === "FAILED" ? "INVOICE_CREATION_FAILURE" : "RECONCILIATION_REQUIRED",
+    severity: unknown || status === "FAILED" ? "ERROR" : "WARNING",
+    studentId: context.studentId,
+    lessonId: context.lessonId,
+    billingEventId: context.billingEventId,
+    invoiceId: context.invoiceId,
+    currentState: `${operation.operation_type}:${status}`,
+    recommendedAction: unknown
+      ? "Reconcile the provider reference before retrying."
+      : status === "FAILED"
+        ? "Review the provider error and correct the billing configuration."
+        : "Allow the bounded retry or reconcile the provider operation.",
+    now
+  });
+}
+
+async function processCreateInvoice(
+  db: D1Database,
+  env: AccountingEnvironment,
+  operation: BillingInvoiceOperation,
+  now: string,
+  fetcher: typeof fetch
+): Promise<void> {
+  const invoice = await findBillingInvoice(db, operation.invoice_id);
+  if (!invoice) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "INVOICE_NOT_FOUND",
+      safeErrorCode: "VALIDATION",
+      safeErrorMessage: "The local billing invoice does not exist."
+    }, now);
+    return;
+  }
+  const event = await findBillingEvent(db, invoice.billing_event_id);
+  if (!event || event.status === "CANCELLED") {
+    await updateBillingInvoice(db, invoice.id, { status: "CANCELLED", providerStatus: "LESSON_CANCELLED", now });
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "LESSON_CANCELLED",
+      safeErrorCode: "CANCELLED",
+      safeErrorMessage: "Cancelled lessons are never invoiced."
+    }, now);
+    return;
+  }
+  const allocated = BigInt(invoice.credit_applied_minor) > 0n
+    ? { creditAppliedMinor: BigInt(invoice.credit_applied_minor), netAmountMinor: BigInt(invoice.net_amount_minor) }
+    : await applyCreditToInvoice(db, {
+      invoiceId: invoice.id,
+      billingEventId: event.id,
+      payerStudentId: event.payer_student_id,
+      grossAmountMinor: BigInt(invoice.gross_amount_minor),
+      now
+    });
+  if (allocated.netAmountMinor === 0n) {
+    await updateBillingInvoice(db, invoice.id, {
+      status: "PAID",
+      providerStatus: "CREDIT_COVERED",
+      now
+    });
+    await updateBillingEventStatus(db, event.id, "SETTLED", now, null, null, "CREDIT_COVERED");
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "SUCCEEDED",
+      providerStatus: "CREDIT_COVERED"
+    }, now);
+    return;
+  }
+  const config = await configuredInvoiceFromDatabase(db, env, now);
+  const link = await findExternalAccountingLink(db, event.student_id);
+  if (!config || !link || link.status !== "VERIFIED") {
+    await reverseInvoiceCreditApplications(db, invoice.id, now);
+    await resetInvoiceCreditAllocation(db, invoice.id, event.id, BigInt(invoice.gross_amount_minor), now);
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "RETRYABLE",
+      providerStatus: !config ? "BILLING_MAPPING_REQUIRED" : "CONTACT_MAPPING_REQUIRED",
+      safeErrorCode: "CONFIGURATION",
+      safeErrorMessage: !config
+        ? "FreeAgent billing mapping is not configured."
+        : "A verified FreeAgent contact mapping is required.",
+      nextAttemptAt: nextAccountingRetryAt(now, operation.attempt_count)
+    }, now);
+    await createBillingAlert(db, {
+      id: `billing-alert:${operation.id}:configuration`,
+      deduplicationKey: `billing-operation:${operation.id}:configuration`,
+      alertType: !config ? "INVOICE_CREATION_FAILURE" : "INVOICE_NOT_CREATED",
+      severity: "ERROR",
+      studentId: event.student_id,
+      payerStudentId: event.payer_student_id,
+      lessonId: event.lesson_id,
+      billingEventId: event.id,
+      invoiceId: invoice.id,
+      currentState: "INVOICE_BLOCKED",
+      recommendedAction: !config ? "Configure the approved FreeAgent billing mapping." : "Verify the payer's FreeAgent contact mapping.",
+      now
+    });
+    return;
+  }
+  const reference = billingReference("INV", event.id);
+  try {
+    const existing = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.findInvoiceByReference(token, link.external_url, reference)
+    );
+    const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
+      client.createDraftInvoice(token, {
+        contactUrl: link.external_url,
+        reference,
+        datedOn: event.billing_date ?? now.slice(0, 10),
+        paymentTermsInDays: config.paymentTermsInDays,
+        itemType: config.itemType,
+        description: `FoxTutor lesson ${event.lesson_date ?? ""}`.trim(),
+        price: formatMinorUnits(allocated.netAmountMinor),
+        categoryUrl: config.categoryUrl,
+        currency: config.currency,
+        salesTaxRate: config.salesTaxRate
+      })
+    );
+    const sent = draft.status === "Draft"
+      ? await providerCall(db, env, now, fetcher, (client, token) => client.markInvoiceSent(token, draft.url))
+      : draft;
+    const referenceId = providerReference(sent.url);
+    await updateBillingInvoice(db, invoice.id, {
+      status: "SENT",
+      creditAppliedMinor: allocated.creditAppliedMinor,
+      netAmountMinor: allocated.netAmountMinor,
+      freeagentReference: referenceId,
+      freeagentUrl: sent.url,
+      providerStatus: sent.status ?? "SENT",
+      now
+    });
+    await updateBillingEventStatus(db, event.id, "INVOICE_CREATED", now, referenceId, sent.url, sent.status ?? "SENT");
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "SUCCEEDED",
+      providerReference: referenceId,
+      providerUrl: sent.url,
+      providerStatus: sent.status ?? "SENT"
+    }, now);
+  } catch (error) {
+    await markOperationFailure(db, operation, now, error, {
+      studentId: event.student_id,
+      lessonId: event.lesson_id,
+      billingEventId: event.id,
+      invoiceId: invoice.id
+    });
+  }
+}
+
+async function processDirectDebit(
+  db: D1Database,
+  env: AccountingEnvironment,
+  operation: BillingInvoiceOperation,
+  now: string,
+  fetcher: typeof fetch
+): Promise<void> {
+  const invoice = await findBillingInvoice(db, operation.invoice_id);
+  if (!invoice || !invoice.freeagent_reference || BigInt(invoice.net_amount_minor) <= 0n) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "ZERO_OR_MISSING_INVOICE",
+      safeErrorCode: "VALIDATION",
+      safeErrorMessage: "Direct Debit requires a sent invoice with a positive outstanding amount."
+    }, now);
+    return;
+  }
+  const event = await findBillingEvent(db, invoice.billing_event_id);
+  if (!event || event.status === "CANCELLED") {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "LESSON_CANCELLED",
+      safeErrorCode: "CANCELLED",
+      safeErrorMessage: "Cancelled lessons are never collected."
+    }, now);
+    return;
+  }
+  if (!invoice.collection_date || invoice.collection_date > now.slice(0, 10)) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "RETRYABLE",
+      providerStatus: "NOT_YET_DUE",
+      nextAttemptAt: `${invoice.collection_date ?? now.slice(0, 10)}T00:00:00.000Z`
+    }, now);
+    return;
+  }
+  const link = await findExternalAccountingLink(db, event.student_id);
+  if (!link || link.status !== "VERIFIED") {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "CONTACT_MAPPING_REQUIRED",
+      safeErrorCode: "CONTACT_MAPPING_REQUIRED",
+      safeErrorMessage: "A verified FreeAgent contact mapping is required before collection."
+    }, now);
+    return;
+  }
+  try {
+    const mandate = await providerCall(db, env, now, fetcher, (client, token) => client.getContact(token, link.external_url));
+    if (!mandate || mandate.directDebitMandateState !== "active") {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: mandate?.directDebitMandateState ?? "missing",
+        safeErrorCode: "MANDATE_INACTIVE",
+        safeErrorMessage: "The FreeAgent GoCardless mandate is not active."
+      }, now);
+      await createBillingAlert(db, {
+        id: `billing-alert:${operation.id}:mandate`,
+        deduplicationKey: `billing-operation:${operation.id}:mandate`,
+        alertType: "MANDATE_INACTIVE",
+        severity: "ERROR",
+        studentId: event.student_id,
+        payerStudentId: event.payer_student_id,
+        lessonId: event.lesson_id,
+        billingEventId: event.id,
+        invoiceId: invoice.id,
+        currentState: `MANDATE_${mandate?.directDebitMandateState ?? "MISSING"}`,
+        recommendedAction: "Complete or repair the customer's FreeAgent Direct Debit mandate.",
+        now
+      });
+      return;
+    }
+    const payment = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.initiateDirectDebit(token, invoice.freeagent_reference!)
+    );
+    const providerStatus = payment.status ?? "Unknown";
+    const paymentStatus = providerStatus === "Paid"
+      ? "CONFIRMED"
+      : providerStatus === "Payment pending"
+        ? "PENDING"
+        : providerStatus === "Payment failed"
+          ? "FAILED"
+          : "UNKNOWN";
+    await db.prepare(
+      `INSERT INTO billing_payments
+       (id, invoice_id, method, status, provider_reference, provider_status,
+        collection_date, first_payment, idempotency_key, created_at, updated_at)
+       VALUES (?, ?, 'FREEAGENT_GOCARDLESS', ?, ?, ?, ?, 0, ?, ?, ?)
+       ON CONFLICT(invoice_id) DO UPDATE SET
+         status = excluded.status, provider_reference = excluded.provider_reference,
+         provider_status = excluded.provider_status, updated_at = excluded.updated_at`
+    ).bind(
+      `payment:${invoice.id}`,
+      invoice.id,
+      paymentStatus,
+      invoice.freeagent_reference,
+      providerStatus,
+      invoice.collection_date,
+      `payment:${invoice.id}`,
+      now,
+      now
+    ).run();
+    await updateBillingInvoice(db, invoice.id, {
+      status: paymentStatus === "CONFIRMED" ? "PAID" : paymentStatus === "FAILED" ? "FAILED" : paymentStatus === "UNKNOWN" ? "UNKNOWN" : "PAYMENT_PENDING",
+      providerStatus,
+      now
+    });
+    if (paymentStatus === "CONFIRMED") await updateBillingEventStatus(db, event.id, "SETTLED", now, invoice.freeagent_reference, payment.url, providerStatus);
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "SUCCEEDED",
+      providerReference: invoice.freeagent_reference,
+      providerUrl: payment.url,
+      providerStatus
+    }, now);
+    if (paymentStatus === "FAILED" || paymentStatus === "UNKNOWN") {
+      await createBillingAlert(db, {
+        id: `billing-alert:${operation.id}:${paymentStatus}`,
+        deduplicationKey: `billing-operation:${operation.id}:${paymentStatus}`,
+        alertType: paymentStatus === "FAILED" ? "COLLECTION_FAILURE" : "PAYMENT_UNKNOWN",
+        severity: "ERROR",
+        studentId: event.student_id,
+        payerStudentId: event.payer_student_id,
+        lessonId: event.lesson_id,
+        billingEventId: event.id,
+        invoiceId: invoice.id,
+        providerReference: invoice.freeagent_reference,
+        currentState: providerStatus,
+        recommendedAction: paymentStatus === "FAILED" ? "Review the failed collection and contact the payer." : "Reconcile the FreeAgent payment before retrying collection.",
+        now
+      });
+    }
+  } catch (error) {
+    await markOperationFailure(db, operation, now, error, {
+      studentId: event.student_id,
+      lessonId: event.lesson_id,
+      billingEventId: event.id,
+      invoiceId: invoice.id
+    });
+  }
+}
+
+export async function processBillingInvoiceOperation(
+  db: D1Database,
+  env: AccountingEnvironment,
+  id: string,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch
+): Promise<BillingInvoiceOperation | null> {
+  const operation = await claimBillingInvoiceOperation(
+    db,
+    id,
+    now,
+    new Date(Date.parse(now) - 15 * 60_000).toISOString()
+  );
+  if (!operation) return null;
+  if (operation.operation_type === "CREATE_INVOICE") await processCreateInvoice(db, env, operation, now, fetcher);
+  else if (operation.operation_type === "INITIATE_DIRECT_DEBIT") await processDirectDebit(db, env, operation, now, fetcher);
+  else await markBillingInvoiceOperation(db, operation.id, { status: "BLOCKED", providerStatus: "NOT_SUPPORTED" }, now);
+  return db.prepare("SELECT * FROM billing_invoice_operations WHERE id = ?").bind(id).first<BillingInvoiceOperation>();
+}
+
+export async function processDueBillingInvoiceOperations(
+  db: D1Database,
+  env: AccountingEnvironment,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch,
+  limit = 20
+): Promise<void> {
+  const operations = await listDueBillingInvoiceOperations(db, now, limit);
+  await Promise.all(operations.map((operation) => processBillingInvoiceOperation(db, env, operation.id, now, fetcher)));
+}
+
+export async function reconcileBillingInvoices(
+  db: D1Database,
+  env: AccountingEnvironment,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch,
+  limit = 20
+): Promise<void> {
+  const invoices = await db.prepare(
+    `SELECT i.*, e.student_id, e.lesson_id, e.id AS billing_event_id
+     FROM billing_invoices i
+     JOIN billing_events e ON e.id = i.billing_event_id
+     WHERE i.freeagent_reference IS NOT NULL
+       AND i.status IN ('SENT', 'PAYMENT_PENDING', 'UNKNOWN', 'FAILED')
+     ORDER BY i.updated_at ASC, i.id ASC LIMIT ?`
+  ).bind(limit).all<{
+    id: string;
+    freeagent_reference: string;
+    status: string;
+    student_id: string;
+    lesson_id: string | null;
+    billing_event_id: string;
+    net_amount_minor: number | string;
+  }>();
+  await Promise.all(invoices.results.map(async (invoice) => {
+    try {
+      const provider = await providerCall(db, env, now, fetcher, (client, token) =>
+        client.getInvoice(token, invoice.freeagent_reference)
+      );
+      if (!provider) throw new Error("FreeAgent invoice was not found.");
+      const providerStatus = provider.status ?? "Unknown";
+      const paid = providerStatus === "Paid";
+      await updateBillingInvoice(db, invoice.id, {
+        status: paid ? "PAID" : providerStatus === "Cancelled" ? "CANCELLED" : "SENT",
+        providerStatus,
+        now
+      });
+      if (paid) {
+        await db.prepare(
+          `INSERT INTO billing_payments
+           (id, invoice_id, method, status, provider_reference, provider_status,
+            collection_date, first_payment, idempotency_key, created_at, updated_at)
+           SELECT ?, ?, 'FREEAGENT_GOCARDLESS', 'CONFIRMED', ?, ?, COALESCE(collection_date, ?), 0, ?, ?, ?
+           FROM billing_invoices WHERE id = ?
+           ON CONFLICT(invoice_id) DO UPDATE SET status = 'CONFIRMED', provider_status = excluded.provider_status, updated_at = excluded.updated_at`
+        ).bind(
+          `payment:${invoice.id}`, invoice.id, invoice.freeagent_reference, providerStatus,
+          now.slice(0, 10), `payment:${invoice.id}`, now, now, invoice.id
+        ).run();
+        await updateBillingEventStatus(db, invoice.billing_event_id, "SETTLED", now, invoice.freeagent_reference, provider.url, providerStatus);
+      }
+    } catch (error) {
+      const apiError = providerFailure(error);
+      await updateBillingInvoice(db, invoice.id, {
+        status: "UNKNOWN",
+        providerStatus: apiError?.shape.code ?? "RECONCILIATION_REQUIRED",
+        now
+      });
+      await updateBillingEventStatus(db, invoice.billing_event_id, "UNKNOWN", now, invoice.freeagent_reference, null, "RECONCILIATION_REQUIRED");
+      await createBillingAlert(db, {
+        id: `billing-alert:reconcile:${invoice.id}`,
+        deduplicationKey: `billing-invoice-reconcile:${invoice.id}`,
+        alertType: "RECONCILIATION_REQUIRED",
+        severity: "ERROR",
+        studentId: invoice.student_id,
+        lessonId: invoice.lesson_id,
+        billingEventId: invoice.billing_event_id,
+        invoiceId: invoice.id,
+        providerReference: invoice.freeagent_reference,
+        currentState: "RECONCILIATION_REQUIRED",
+        recommendedAction: "Check the FreeAgent invoice by provider reference before retrying collection.",
+        now
+      });
+    }
+  }));
+}

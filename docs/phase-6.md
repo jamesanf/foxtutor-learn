@@ -15,7 +15,7 @@ has been attempted.
 This is the single current Phase 6 status record. The supporting architecture,
 security, testing, deployment and handover records in this directory are the
 only current Phase 6 documents; historical release chronology is preserved in
-`CHANGELOG.md`.
+`docs/CHANGELOG.md`.
 
 ## What Phase 6 guarantees
 
@@ -44,7 +44,9 @@ only current Phase 6 documents; historical release chronology is preserved in
   **Reauthenticate FreeAgent** action; the accounting page uses a matching
   settings cog and Billing settings uses a matching back arrow.
 - Contact mappings use compact accessible save/remove icon controls without a
-  forced horizontal table width.
+  forced horizontal table width. The contact-ID field has a fixed compact
+  width, and the redundant FreeAgent-contact display column has been removed;
+  automatic provider contact synchronization remains future work.
 - The deployed contact persistence defect was fixed: the
   `external_accounting_links` insert now supplies exactly 15 values for its
   15 declared columns. A regression verifies a successful `VERIFIED` link

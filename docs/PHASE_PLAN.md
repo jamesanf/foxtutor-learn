@@ -83,8 +83,11 @@ Create the repository structure, project brief, architecture record, test strate
 ```text
 /
 ├── README.md
-├── AGENT_INSTRUCTION.md
-├── CHANGELOG.md
+├── docs/
+│   ├── AGENT_INSTRUCTION.md
+│   ├── CHANGELOG.md
+│   ├── PHASE_PLAN.md
+│   └── PROJECT_STRUCTURE.md
 ├── package.json
 ├── wrangler.toml / wrangler.jsonc
 ├── src/
@@ -824,42 +827,130 @@ blocked the deployed mapping path has been corrected.
 
 ---
 
-## Phase 7 — Optional billing visibility and long-term operations hardening
+## Phase 7 — Billing engine and long-term operations hardening
 
-### Objective
+Phase 7 is intentionally split into implementation increments. It is not
+complete until the relevant increment's implementation, provider boundary and
+acceptance evidence have all been recorded.
 
-Add useful read-only billing history only when the core portal is stable.
+### Phase 7.1 — RECURRENT LESSONS + BILLING ORCHESTRATION + PAYMENT READINESS
 
-### Possible capabilities
+#### Scope
 
-- Payment history.
-- Invoice list.
-- Invoice detail links.
-- Account balance/status.
-- Provider-hosted direct debit setup link only if genuinely required.
+- Keep recurring lesson series authoritative in FoxTutor.
+- Materialise a bounded rolling lesson horizon of six weeks.
+- Support instance cancellation, series cancellation, rescheduling, pauses and
+  explicit series end dates without rewriting historical records.
+- Create one deterministic lesson billing event per billable lesson.
+- Carry future-cancellation credit in an immutable FoxTutor ledger and apply
+  it oldest-first to later billing events.
+- Orchestrate individual FreeAgent invoices and credit notes through durable,
+  idempotent provider operations.
+- Calculate payment readiness separately from invoice, collection and
+  settlement dates.
+- Use the existing FreeAgent GoCardless path; do not create a second direct
+  GoCardless mandate unless the provider boundary is later proven safe.
+- Surface actionable billing alerts and recoverable reconciliation work.
 
-### Explicit non-goal
+#### Architecture
 
-Do not build bank-detail editing or direct-debit administration into the Foxtutor database unless a clear operational requirement emerges.
+```text
+FoxTutor recurring series
+  -> six-week materialised lesson instances
+  -> lesson billing event
+  -> FoxTutor customer-credit ledger
+  -> invoice/credit-note provider operation
+  -> individual FreeAgent document
+  -> FreeAgent payment and mandate state
+  -> payment-readiness calculation and alerts
+```
 
-### Operations hardening
+FoxTutor owns lesson entitlement, payer relationships, recurrence, exceptions,
+credits, billing readiness and audit history. FreeAgent owns accounting
+documents, provider references and payment state exposed by its API. GoCardless
+is not a second FoxTutor credit ledger or a parallel mandate authority.
 
-- Scheduled retention jobs.
-- Storage reports.
-- Largest-file report.
-- Failed integrations dashboard.
-- Failed notification dashboard.
-- Backup/export procedures.
-- Dependency update policy.
-- Security review.
-- Accessibility review.
-- Browser compatibility checks.
-- Production smoke tests.
-- Incident/runbook documentation.
+#### Dependencies
 
-### Exit criteria
+- Phase 2 lesson and student records.
+- Phase 5 immutable cancellation and reschedule history.
+- Phase 6 FreeAgent OAuth, contact mapping, outbox and provider safety.
+- Explicit commercial invoice configuration and provider Sandbox access before
+  any financial mutation.
+- Provider-side confirmation of any credit-note matching operation; the public
+  API currently documents no matching endpoint.
 
-The platform can be left running with routine monitoring limited to meaningful failures and occasional maintenance rather than day-to-day administration.
+#### Acceptance criteria
+
+- Every active series is materialised only through today plus six weeks,
+  respecting timezone, DST, pauses and end dates.
+- Repeated or concurrent horizon runs do not duplicate or rewrite history.
+- Instance-only and future-series cancellation are idempotent and auditable.
+- A rescheduled instance keeps one billing identity and follows its actual
+  lesson date.
+- Future cancellation creates no premature provider credit note and produces
+  one local credit grant.
+- Credit allocation is deterministic, atomic, oldest-first and replay-safe.
+- A zero-net lesson never schedules a Direct Debit collection.
+- Collection cannot occur before lesson date minus seven calendar days, for a
+  cancelled lesson, without an active mandate, or more than once.
+- Provider timeouts and unknown results become reconciliation work rather than
+  duplicate creation attempts.
+- Payment readiness distinguishes mandate, invoice, collection, settlement,
+  failure and unknown states.
+- Billing alerts are actionable, deduplicated and linked to the affected
+  payer, lesson, event and provider reference.
+- Local migrations, unit tests, integration tests, build and schema checks
+  pass before any remote deployment is considered.
+
+#### Phase 7.1 current state
+
+The local implementation and controlled evidence are complete. Migrations
+`0021` through `0023` apply locally; `npm test` passes with 31 test files and
+168 tests; `npm run check` passes; and the expected D1 tables and views are
+present locally. Remote D1, the deployed Worker and provider financial state
+remain at the Phase 6 boundary. Phase 7.1 is **NO-GO** for remote deployment
+until the documented FreeAgent/GoCardless Sandbox evidence and Phase 6
+commercial/provider approvals are available.
+
+### Phase 7.2 — Completion and operationalisation
+
+Phase 7.2 absorbs every unfinished Phase 7.1 technical item. It is the
+production-hardening increment, not a holding area for deferred engineering.
+
+- Enforce the global `Europe/London` business-time invariant for recurrence,
+  materialisation, cancellation, pause/resume, billing dates, collection dates,
+  alerts and displays; no per-series timezone is user-selectable.
+- Complete recurring-series administration, six-week recovery, idempotency,
+  instance cancellation, future cancellation, pause/resume, end dates and
+  rescheduling interactions.
+- Operate deterministic lesson-level invoice creation, credit allocation,
+  collection scheduling, unknown-result recovery and concurrent claims.
+- Reconcile FreeAgent invoice status and FreeAgent-GoCardless payment state;
+  retain explicit mandate, collection, payment and settlement concepts.
+- Complete credit-note creation/status tracking, cancellation-after-invoice
+  reconciliation and safe local refund records without fake provider
+  settlement. The undocumented FreeAgent credit-note matching limitation
+  remains an explicit manual/provider reconciliation path.
+- Provide deterministic payment readiness using `CREDIT_COVERED`,
+  `NOT_YET_DUE`, `INVOICE_OPEN`, `MANDATE_PENDING`, `COLLECTION_SCHEDULED`,
+  `COLLECTION_PENDING`, `PAYMENT_SECURED`, `PAYMENT_FAILED`,
+  `PAYMENT_UNKNOWN` and `RECONCILIATION_REQUIRED`.
+- Provide billing history, invoice detail, credit detail, customer billing
+  visibility and an administrator dashboard for today, the next seven days,
+  alerts and reconciliation work.
+- Provide deduplicated actionable alerts with acknowledgement/resolution
+  audit, provider mismatch visibility and operational runbook guidance.
+- Assess contact synchronisation fail-closed; explicit verified mapping remains
+  the safe default where FreeAgent identity is ambiguous.
+- Complete local migration checks, browser/build/security regression checks,
+  deployment smoke checks, remote schema verification and the separated
+  real-provider versus controlled-seam acceptance report.
+
+Phase 7.2 is complete only when implementation, tests, documentation,
+deployment evidence and handover all agree. Provider financial mutations remain
+blocked unless approved Sandbox configuration and explicit human acceptance
+evidence exist.
 
 ---
 
@@ -889,10 +980,10 @@ The phase is complete only when:
 Coding agents must work from discrete task prompts. Agents must not assume conversational context. Every task begins by reading:
 
 1. `README.md`
-2. `AGENT_INSTRUCTION.md`
+2. `docs/AGENT_INSTRUCTION.md`
 3. the current phase document
 4. relevant architecture/decision documents
-5. current `CHANGELOG.md`
+5. current `docs/CHANGELOG.md`
 
 Agents must inspect the current repository state before changing files.
 

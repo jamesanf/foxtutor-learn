@@ -1,5 +1,41 @@
 # Changelog
 
+### 2026-09-14 - Complete Phase 7.2 billing operations locally
+
+- Enforced the Europe/London business-time invariant in validation, recurrence,
+  calendar rendering, persistence and forward-only D1 triggers.
+- Added recurring-series administration for creation, pause, resume and end
+  operations while retaining the bounded six-week materialisation model.
+- Added canonical payment-readiness names, billing history projections, invoice
+  and credit detail, student billing visibility, operational dashboard metrics,
+  alert acknowledgement/resolution audit and provider invoice reconciliation.
+- Added migration `0024_phase72_global_timezone_operations.sql`, reconciliation
+  task storage and operational runbook/architecture/testing/handover records.
+- Preserved the existing FreeAgent-GoCardless authority boundary and documented
+  the manual reconciliation exception for undocumented credit-note matching.
+- Real provider financial acceptance remains a separately evidenced human gate;
+  no provider mutation is claimed by the controlled local evidence.
+
+### 2026-09-14 - File project documentation under docs
+
+- Moved the project instructions, phase plan, changelog and repository
+  structure documentation from the repository root into `docs/`.
+- Updated canonical paths and the README phase/documentation map.
+
+### 2026-09-14 - Implement Phase 7.1 locally
+
+- Added FoxTutor-owned weekly recurring lesson series with a six-week rolling
+  materialisation horizon, timezone/DST handling, pauses, end dates,
+  instance overrides and calendar-style cancellation semantics.
+- Added deterministic lesson billing events, customer-credit allocation,
+  compensating credit reversals for definite provider failures, invoice and
+  Direct Debit operation state, payment readiness and billing alerts.
+- Added local-only Phase 7.1 migrations through `0023`, admin credit lifecycle
+  visibility, controlled tests and a formal NO-GO acceptance report.
+- Confirmed the existing FreeAgent-GoCardless path remains the only payment
+  authority; no direct GoCardless integration, remote migration, deployment or
+  financial mutation was performed.
+
 ### 2026-09-14 - Reconcile Phase 6 acceptance gate
 
 - Reconciled every current Phase 6 record with the latest live state:
@@ -1001,9 +1037,9 @@ All material changes to the Foxtutor Learn project are recorded here in chronolo
 **Files introduced by this planning pass:**
 
 - `README.md`
-- `AGENT_INSTRUCTION.md`
-- `CHANGELOG.md`
-- `PHASE_PLAN.md`
+- `docs/AGENT_INSTRUCTION.md`
+- `docs/CHANGELOG.md`
+- `docs/PHASE_PLAN.md`
 
 **Tests:** documentation review only; implementation test suite not yet established.
 

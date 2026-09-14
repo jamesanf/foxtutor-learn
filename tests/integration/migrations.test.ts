@@ -160,4 +160,40 @@ describe("D1 foundation", () => {
     const migration = readFileSync("migrations/0020_accounting_company_name.sql", "utf8");
     expect(migration).toContain("ALTER TABLE accounting_connections ADD COLUMN company_name TEXT");
   });
+
+  it("adds an auditable first-class credit ledger and lesson billing links", () => {
+    const migration = readFileSync("migrations/0021_billing_ledger.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_events");
+    expect(migration).toContain("lesson_date TEXT");
+    expect(migration).toContain("collection_date TEXT");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS customer_credits");
+    expect(migration).toContain("source_cancellation_id TEXT");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS credit_ledger_transactions");
+    expect(migration).toContain("credit_ledger_reject_overconsumption");
+    expect(migration).toContain("amount_refunded_minor");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_invoice_credit_applications");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_refunds");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_provider_operations");
+    expect(migration).toContain("customer_credit_balances");
+  });
+
+  it("adds the Phase 7 recurring-series and payment-readiness boundary", () => {
+    const migration = readFileSync("migrations/0022_phase7_recurrence_readiness.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS recurring_lesson_series");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS recurring_lesson_pauses");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS recurring_series_history");
+    expect(migration).toContain("ALTER TABLE lessons ADD COLUMN recurring_series_id");
+    expect(migration).toContain("idx_lessons_series_occurrence");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_payments");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_invoice_operations");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_alerts");
+    expect(migration).toContain("RECONCILIATION_REQUIRED");
+  });
+
+  it("keeps credit balance views and statuses correct after allocation reversal", () => {
+    const migration = readFileSync("migrations/0023_credit_ledger_reversal_view.sql", "utf8");
+    expect(migration).toContain("DROP TRIGGER IF EXISTS credit_ledger_refresh_status");
+    expect(migration).toContain("transaction_type = 'REVERSAL'");
+    expect(migration).toContain("DROP VIEW IF EXISTS customer_credit_balances");
+  });
 });
