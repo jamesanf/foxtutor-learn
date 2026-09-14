@@ -91,10 +91,15 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('class="accounting-icon-button accounting-remove-button"');
     expect(workerSource).toContain('title="Verify and save"');
     expect(workerSource).toContain('title="Remove"');
+    expect(workerSource).toContain("<th>Student</th><th>Email</th><th>Status</th><th>ID</th>");
+    expect(workerSource).toContain('data-label="Student"');
+    expect(workerSource).toContain('data-label="Email"');
+    expect(workerSource).toContain('data-label="ID"');
     expect(workerSource).not.toContain("<th>FreeAgent contact</th>");
     expect(workerSource).toContain("automatic FreeAgent contact synchronization is planned.");
     expect(cssSource).toContain(".accounting-contact-table table { min-width: 0; table-layout: fixed; }");
     expect(cssSource).toContain(".accounting-contact-table th, .accounting-contact-table td { width: 25%; }");
+    expect(cssSource).toContain(".accounting-contact-table th:nth-child(3) { text-align: center; }");
     expect(cssSource).toContain(".accounting-contact-table th:last-child, .accounting-contact-table td:last-child { text-align: right; }");
     expect(cssSource).toContain(".accounting-contact-table .status { display: flex; width: 112px; min-width: 112px;");
     expect(cssSource).toContain("justify-content: flex-end;");

@@ -318,6 +318,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-contact-table { overflow: visible; }
 .accounting-contact-table table { min-width: 0; table-layout: fixed; }
 .accounting-contact-table th, .accounting-contact-table td { width: 25%; }
+.accounting-contact-table th:nth-child(3) { text-align: center; }
 .accounting-contact-table th:last-child, .accounting-contact-table td:last-child { text-align: right; }
 .accounting-contact-table .status { display: flex; width: 112px; min-width: 112px; min-height: 30px; box-sizing: border-box; align-items: center; justify-content: center; margin: 0 auto; text-align: center; white-space: nowrap; }
 .accounting-contact-table .inline-form { align-items: center; justify-content: flex-end; flex-wrap: nowrap; margin-top: 0; }
