@@ -99,7 +99,10 @@ The following capabilities were confirmed from the official documentation:
 | `/v2/company` | Read company identity, including subdomain. |
 | `/v2/contacts` and `/v2/contacts/:id` | List/get contacts; create/update is documented. Contact responses expose `direct_debit_mandate_state` values `setup`, `pending`, `inactive`, `active`, and `failed`. |
 
-## Phase 7.9 environment isolation
+## Phase 7.11 environment isolation and provider contracts
+
+> This section supersedes the Phase 7.9 environment-isolation wording for the
+> current implementation. Phase 7.9 remains available as historical evidence.
 
 FreeAgent Sandbox and Production are separate provider trust domains. The
 runtime selects exactly one with the `FREEAGENT_ENVIRONMENT` binding, accepting

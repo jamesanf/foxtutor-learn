@@ -106,3 +106,19 @@ The Phase 7.4 incident was caused by a six-way `UNION ALL` in
 `listBillingHistory`; production D1 rejected it with
 `SQLITE_ERROR: too many terms in compound SELECT`. The permanent fix uses
 bounded independent queries and deterministic application-side merging.
+
+## FreeAgent environment and category operations
+
+Use the configured server-side `FREEAGENT_ENVIRONMENT`; never construct or
+accept a Production/Sandbox choice from an unvalidated client-only parameter.
+Sandbox uses `https://api.sandbox.freeagent.com` and Production uses
+`https://api.freeagent.com` for API calls, OAuth approval and token exchange.
+The OAuth callback must match the persisted environment-bound state.
+
+The category selector consumes the four FreeAgent collections
+`admin_expenses_categories`, `cost_of_sales_categories`, `income_categories`
+and `general_categories`. Display `description` and `nominal_code`; treat
+provider URLs as identifiers only. A category may be saved only when it was
+returned for the connected company and its URL matches the active environment.
+If categories fail to load, preserve the provider/status diagnostic and do not
+silently substitute an empty or guessed category.

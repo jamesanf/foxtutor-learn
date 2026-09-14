@@ -3,34 +3,32 @@
 ## Current status
 
 Phase 7 has a deployed operational baseline, but it is **not complete** and
-must not be treated as production-ready. The implementation covers recurring
-lessons, lesson-level billing, customer credit, payment readiness, alerts and
-reconciliation state. Phase 7.4 diagnosed and repaired the billing route
-failure, but the release is still awaiting:
+must not be treated as production-ready. The current increment is Phase 7.11,
+which repaired the FreeAgent provider contract and environment-specific OAuth
+route while preserving the existing FreeAgent-to-GoCardless authority
+boundary. The release is still awaiting:
 
-- authenticated post-deployment acceptance of `/learn/student/billing`;
-- authenticated runtime acceptance of the Phase 7 student and admin surfaces;
-- controlled FreeAgent Sandbox financial acceptance;
-- observed payment/Direct Debit lifecycle evidence through the existing
-  FreeAgent-GoCardless path; and
-- the remaining commercial/accounting approvals required before financial
-  mutations can be enabled.
+- Production FreeAgent credentials and human OAuth authorization;
+- read-only Production company, James contact and mandate verification;
+- live Sandbox category response evidence and explicit approved category
+  selection; and
+- any later, separately authorized financial acceptance.
 
-Phase 7.5 is the active financial acceptance gate. It remains **NOT READY**:
-the customer-facing Direct Debit status journey and formal state/invariant
-model are now recorded, but comprehensive failure-injection, concurrency,
-reconciliation, Sandbox financial, and authenticated browser evidence is not
-complete.
+The current provider acceptance gate is Phase 7.11. It remains **NOT READY —
+PRODUCTION FREEAGENT AUTHORIZATION REQUIRED** because Production credentials
+and human authorization are not available in this execution context. The
+earlier Phase 7.5 financial safety gate remains part of the historical
+acceptance record; it is not superseded by this provider-contract repair.
 
 ## Deployed baseline
 
-- Source commit: `1be5758`
-- Worker version: `e8dff528-34c6-48d6-90c6-9dedaec2df10`
+- Source commit: `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`
+- Worker version: `8cd9b99f-de03-466a-8a37-46ad3e78696b`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
-- D1 migrations: `0001` through `0024_phase72_global_timezone_operations.sql`
+- D1 migrations: `0001` through `0029_accounting_category_environment.sql`
 - Scheduler: `*/5 * * * *`
 - Business timezone: `Europe/London`
-- Automated validation: 32 test files and 171 passing tests
+- Automated validation: 38 test files and 229 passing tests
 
 The release keeps FoxTutor authoritative for recurring series, lesson
 instances, billing events, credit, readiness and operational audit. FreeAgent
@@ -54,11 +52,36 @@ Direct Debit authority; FoxTutor does not create a parallel mandate.
   `setup`, `pending`, `active`, `inactive`, `failed` and unknown states.
 - Customer instructions that keep bank details inside the provider mandate
   flow and omit provider/internal references from student billing HTML.
+- Environment-bound FreeAgent OAuth using the configured Sandbox or Production
+  API origin, credential set, token endpoint and company mapping.
+- Documented FreeAgent category normalization across
+  `admin_expenses_categories`, `cost_of_sales_categories`, `income_categories`
+  and `general_categories`, with readable labels, search, deduplication and
+  environment validation.
 
 The Phase 7.5 executable deployment was made at
 `2026-09-14T17:10:45Z`. The unauthenticated perimeter probe returned the
 expected Cloudflare Access challenge; authenticated application acceptance
 remains open.
+
+## Phase 7 increment chronology
+
+| Increment | Recorded boundary |
+| --- | --- |
+| 7.1 | Recurring lessons, billing orchestration and payment readiness foundation |
+| 7.2 | Billing engine completion and operationalisation |
+| 7.3 | No separate repository record; intervening technical work was absorbed into the 7.2 operationalisation and later remediation records |
+| 7.4 | Student billing Worker 1101 forensic diagnosis and D1 query repair |
+| 7.5 | Financial safety state model and acceptance gate |
+| 7.6 | Direct Debit-first provisioning, emergency policy and sentinel |
+| 7.7 | Mandate/payment chain validation and reconciliation |
+| 7.8 | FreeAgent billing acceptance finalisation |
+| 7.9 | Sandbox/Production environment isolation |
+| 7.10 | Category mapping and broad environment/accounting plumbing |
+| 7.11 | Provider category-contract repair and environment-specific OAuth routing |
+
+The absence of a separate 7.3 file is intentional historical numbering; no
+unrecorded completion claim is made for that increment.
 
 ## Acceptance boundary
 
@@ -101,3 +124,13 @@ The decimal records remain useful evidence and implementation history:
   operational and human gates.
 - [`docs/phase-7.4.md`](phase-7.4.md) — forensic diagnosis, regression,
   deployment evidence and remaining authenticated-runtime gate.
+- [`docs/phase-7.5-financial-acceptance-report.md`](phase-7.5-financial-acceptance-report.md) —
+  financial safety acceptance boundary.
+- [`docs/phase-7.6.md`](phase-7.6.md) — Direct Debit-first provisioning and
+  reliability.
+- [`docs/phase-7.7.md`](phase-7.7.md) — mandate/payment chain validation.
+- [`docs/phase-7.8.md`](phase-7.8.md) — FreeAgent acceptance finalisation.
+- [`docs/phase-7.9.md`](phase-7.9.md) — environment isolation.
+- [`docs/phase-7.10.md`](phase-7.10.md) — category mapping preparation.
+- [`docs/phase-7.11.md`](phase-7.11.md) — current provider-contract and OAuth
+  routing repair.

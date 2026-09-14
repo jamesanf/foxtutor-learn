@@ -8,14 +8,14 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.10 — FreeAgent Sandbox/Production acceptance preparation
+**Phase:** Phase 7.11 — FreeAgent provider-contract and environment-routing repair
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source commit:** `ce85e6f3d89a6eeddb0e99b94a643af6e04ae5f8`
-**Worker version:** recorded in the final Phase 7.10 release report after deployment
+**Deployed source commit:** `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`
+**Worker version:** `8cd9b99f-de03-466a-8a37-46ad3e78696b`
 **D1 migrations:** `0001_foundation.sql` through `0029_accounting_category_environment.sql` deployed
-**Automated validation:** 38 test files, 222 tests passing
+**Automated validation:** 38 test files, 229 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -29,12 +29,11 @@ lifecycle evidence also remain outstanding; the application must continue to
 fail closed until those gates and the remaining commercial approvals are
 complete.
 
-Phase 7.5 is the financial safety and acceptance gate. It formalises billing
-states and invariants, adds the customer-facing Direct Debit status journey,
-and requires comprehensive failure, concurrency, reconciliation, provider
-Sandbox and authenticated runtime evidence. It remains **NOT READY** until
-those engineering and provider gates are evidenced; only genuine commercial
-decisions may remain human approval gates.
+Phase 7.5 was the financial safety and acceptance gate. It formalised billing
+states and invariants, added the customer-facing Direct Debit status journey,
+and established the failure, concurrency, reconciliation, provider Sandbox
+and authenticated runtime evidence boundary. Its historical acceptance status
+is retained in the Phase 7.5 records; the current provider gate is Phase 7.11.
 
 Phase 7.6 makes Direct Debit the only normal customer-facing billing rail,
 adds customer-level provisioning and mandate reconciliation, keeps the
@@ -72,11 +71,20 @@ replaced, no real financial mutation is performed, and the final provider/API
 and authenticated-browser evidence remains a human-assisted acceptance gate.
 See [`docs/phase-7.8.md`](docs/phase-7.8.md).
 
-Phase 7.10 keeps Sandbox and Production as separate FreeAgent trust domains,
-adds business-facing invoice mapping diagnostics and category lookup, and
-records the Direct Debit setup email as instructional/support-only. No
-Production OAuth, invoice, payment, mandate mutation or £1 collection is
-claimed by this release. See [`docs/phase-7.10.md`](docs/phase-7.10.md).
+Phase 7.10 kept Sandbox and Production as separate FreeAgent trust domains,
+added business-facing invoice mapping diagnostics and category lookup, and
+recorded the Direct Debit setup email as instructional/support-only.
+
+Phase 7.11 repairs the remaining provider contract and environment-routing
+defects. FreeAgent categories are now normalized from the four documented
+collections using `description` and `nominal_code`; duplicate and
+wrong-environment URLs are rejected; and the admin selector provides readable
+labels and search. The OAuth action now uses the server-selected environment
+to generate `/v2/approve_app` on the correct Sandbox or Production API host,
+with environment-bound state and credentials. The release remains
+**NOT READY — PRODUCTION FREEAGENT AUTHORIZATION REQUIRED**: no Production
+authorization, company, contact, mandate or financial mutation is claimed.
+See [`docs/phase-7.11.md`](docs/phase-7.11.md).
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -213,8 +221,20 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
 | `docs/architecture/gocardless-freeagent.md` | FreeAgent-GoCardless boundary and safety decision |
 | `docs/phase-7.md` | Current Phase 7 summary, status and acceptance boundary |
+| `docs/phase-7.1.md` | Phase 7.1 foundational recurring lessons and billing history |
+| `docs/phase-7.2.md` | Phase 7.2 billing engine operationalisation |
+| `docs/phase-7.4.md` | Phase 7.4 Worker 1101 diagnosis and repair |
+| `docs/phase-7.5-financial-acceptance-report.md` | Phase 7.5 financial safety gate |
 | `docs/phase-7.6.md` | Direct Debit-first provisioning, emergency policy and sentinel boundary |
-| `docs/phase-7.4.md` | Worker 1101 diagnosis, fix, deployment evidence and remaining gates |
+| `docs/phase-7.7.md` | Mandate/payment reconciliation and chain validation |
+| `docs/phase-7.8.md` | FreeAgent billing acceptance finalisation |
+| `docs/phase-7.9.md` | Environment-aware FreeAgent isolation |
+| `docs/phase-7.10.md` | FreeAgent acceptance and category mapping preparation |
+| `docs/phase-7.11.md` | Provider contract, category normalization and OAuth routing repair |
+| `docs/architecture/phase-7.11.md` | Phase 7.11 environment and provider-contract decisions |
+| `docs/testing/phase-7.11.md` | Phase 7.11 automated coverage and evidence boundary |
+| `docs/deployment/phase-7.11.md` | Phase 7.11 deployment provenance and safety boundary |
+| `docs/handover/phase-7.11.md` | Phase 7.11 human handover and next gate |
 | `docs/architecture/phase-6.md` | Current accounting architecture and state model |
 | `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
 | `docs/deployment/phase-6.md` | Current deployment state and rollout order |

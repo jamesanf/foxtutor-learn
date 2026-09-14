@@ -1,5 +1,8 @@
 # Phase 7.9 - Environment-aware FreeAgent acceptance
 
+> Historical environment-isolation record. Phase 7.11 contains the current
+> provider-contract and OAuth-routing repair built on this boundary.
+
 ## Status
 
 The local Phase 7.9 isolation and fail-closed configuration work is complete.

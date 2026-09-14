@@ -1,5 +1,8 @@
 # Phase 7.10 — FreeAgent acceptance and evidence report
 
+> Historical Phase 7.10 record. Phase 7.11 supersedes its category parser and
+> admin OAuth-routing boundary; see `docs/phase-7.11.md`.
+
 ## Scope
 
 Phase 7.10 completes the remaining Sandbox/Production integration plumbing

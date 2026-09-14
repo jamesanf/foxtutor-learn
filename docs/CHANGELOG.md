@@ -1,5 +1,29 @@
 # Changelog
 
+### 2026-09-14 - Phase 7.11 FreeAgent contract and environment-routing repair
+
+- **Intent:** Repair the malformed FreeAgent category selector and remove the
+  Sandbox-bound admin OAuth behavior before any Production financial test.
+- **Implementation:** Normalized the four documented `/v2/categories`
+  collections, mapped `description`/`nominal_code`, deduplicated and sorted
+  options, added environment/company URL validation and category search, and
+  made the actual admin OAuth action use the server-configured Sandbox or
+  Production authorization and token hosts.
+- **Safety:** OAuth state and credentials remain environment-bound; company
+  verification requires configured identity and currency; the
+  FreeAgent-to-GoCardless boundary is unchanged. No Production financial
+  mutation was performed.
+- **Validation:** 38 test files and 229 tests passed; build, legal check,
+  Wrangler dry-run, production smoke and remote migration verification passed.
+- **Deployment:** Functional source commit
+  `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`, Worker version
+  `8cd9b99f-de03-466a-8a37-46ad3e78696b`.
+- **Known limitations:** Production credentials and human authorization are
+  still required. Live Sandbox category response evidence and approved
+  category selection were not available in this execution context.
+- **Handover:** Continue with read-only Production company/contact/mandate and
+  category acceptance; do not create an invoice, payment or collection.
+
 ### 2026-09-14 - Add Phase 7.5 Direct Debit safety boundary
 
 - Added an explicit Phase 7.5 billing state model and financial invariant

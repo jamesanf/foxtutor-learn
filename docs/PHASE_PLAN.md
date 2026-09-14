@@ -955,6 +955,61 @@ deployment evidence and handover all agree. Provider financial mutations remain
 blocked unless approved Sandbox configuration and explicit human acceptance
 evidence exist.
 
+### Phase 7.3 — Numbering note
+
+There is no separate Phase 7.3 repository record. The intervening technical
+work was absorbed into the Phase 7.2 operationalisation and subsequent 7.4
+remediation records. This is a historical numbering decision, not a claim
+that an unrecorded provider or financial acceptance occurred.
+
+### Phase 7.4 through Phase 7.10 — Recorded increments
+
+The later Phase 7 increments are recorded in their dedicated evidence files:
+
+- **7.4:** Student billing Worker 1101 forensic diagnosis and repair.
+- **7.5:** Financial safety state model and acceptance gate.
+- **7.6:** Direct Debit-first provisioning, emergency policy and sentinel.
+- **7.7:** Mandate/payment chain validation and reconciliation.
+- **7.8:** FreeAgent billing acceptance finalisation.
+- **7.9:** Sandbox/Production environment isolation.
+- **7.10:** Broad environment isolation, accounting mapping and category
+  selector preparation.
+
+Each increment remains historical evidence; the consolidated current status is
+maintained in `docs/phase-7.md`.
+
+### Phase 7.11 — Provider contract and environment-routing repair
+
+#### Objective
+
+Repair the deployed FreeAgent category parser and ensure the admin OAuth
+action follows the single server-configured `FREEAGENT_ENVIRONMENT` without
+crossing Sandbox and Production credentials, tokens, mappings or company
+identity.
+
+#### Delivered
+
+- Normalize the documented four-collection `/v2/categories` response using
+  `description`, `nominal_code`, provider URL, group and optional tax rate.
+- Deduplicate and deterministically sort category options.
+- Reject malformed items, null collections, unsafe URLs and wrong-environment
+  category URLs.
+- Display readable category descriptions and nominal codes with simple search.
+- Generate `/v2/approve_app` on the environment-specific FreeAgent API host.
+- Bind OAuth state to provider, environment, administrator, expiry and
+  one-time consumption.
+- Select Production credentials only from Production configuration; legacy
+  generic credentials remain Sandbox-only.
+- Verify company subdomain and currency before persisting a connected
+  environment.
+
+#### Acceptance
+
+The implementation and deployment gates passed with 38 test files and 229
+tests. No Production authorization was available in this pass, so Production
+company/contact/mandate/category evidence remains a human-gated next step.
+No financial mutation was performed.
+
 ---
 
 ## Universal definition of done for every phase
