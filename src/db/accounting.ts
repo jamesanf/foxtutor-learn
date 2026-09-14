@@ -688,14 +688,16 @@ export async function saveAccountingConnection(
     refreshTokenCiphertext: string;
     accessTokenExpiresAt: string;
     refreshTokenExpiresAt: string | null;
+    lastSuccessAt: string | null;
     now: string;
   }
 ): Promise<void> {
-  await db.prepare(
+  const result = await db.prepare(
     `INSERT INTO accounting_connections_by_environment
      (id, environment, company_name, company_subdomain, access_token_ciphertext, refresh_token_ciphertext,
-      access_token_expires_at, refresh_token_expires_at, status, updated_at)
-     VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?)
+      access_token_expires_at, refresh_token_expires_at, status, last_success_at,
+      last_error_code, last_error_message, updated_at)
+     VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?, NULL, NULL, ?)
      ON CONFLICT(id, environment) DO UPDATE SET
        company_name = excluded.company_name,
        company_subdomain = excluded.company_subdomain,
@@ -703,7 +705,8 @@ export async function saveAccountingConnection(
        refresh_token_ciphertext = excluded.refresh_token_ciphertext,
        access_token_expires_at = excluded.access_token_expires_at,
        refresh_token_expires_at = excluded.refresh_token_expires_at,
-       status = 'CONNECTED', last_error_code = NULL, last_error_message = NULL,
+       status = 'CONNECTED', last_success_at = excluded.last_success_at,
+       last_error_code = NULL, last_error_message = NULL,
        updated_at = excluded.updated_at`
   ).bind(
     input.environment,
@@ -713,8 +716,10 @@ export async function saveAccountingConnection(
     input.refreshTokenCiphertext,
     input.accessTokenExpiresAt,
     input.refreshTokenExpiresAt,
+    input.lastSuccessAt,
     input.now
   ).run();
+  if (!result.meta.changes) throw new Error("FreeAgent connection upsert did not change a row.");
 }
 
 export async function updateAccountingConnectionStatus(

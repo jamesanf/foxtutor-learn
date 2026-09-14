@@ -23,6 +23,9 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('name="categoryUrl" required');
     expect(workerSource).not.toContain('name="categoryUrl" type="url"');
     expect(workerSource).toContain("provider URL is stored internally");
+    expect(workerSource).toContain("accounting-fixed-category");
+    expect(workerSource).toContain("resolveFoxTutorCategoryMapping");
+    expect(readFileSync("src/accounting/service.ts", "utf8")).toContain("Multiple Production FreeAgent categories match the approved FoxTutor sales mapping.");
     expect(workerSource).toContain("FreeAgent ${environmentLabel} integration active");
     expect(workerSource).toContain('status.connected ? "Reauthenticate" : "Connect"');
     expect(workerSource).toContain('`/learn/admin/accounting/connect/${environment}`');

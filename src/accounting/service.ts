@@ -92,6 +92,18 @@ export interface AccountingIntegrationStatus {
   };
 }
 
+export type AccountingCategoryResolutionStatus =
+  | "CONFIGURED"
+  | "NO_MATCH"
+  | "AMBIGUOUS"
+  | "REFERENCE_UNAVAILABLE";
+
+export interface AccountingCategoryResolution {
+  status: AccountingCategoryResolutionStatus;
+  category: FreeAgentCategory | null;
+  message: string | null;
+}
+
 export interface InvoiceConfiguration {
   amount: string;
   amountMinorUnits: bigint;
@@ -419,6 +431,7 @@ export async function configuredInvoiceFromDatabase(
   ) return null;
   if (
     settings.provider_company_subdomain &&
+    settings.provider_company_subdomain !== (await findAccountingConnection(db, targetEnvironment ?? undefined))?.company_subdomain &&
     settings.provider_company_subdomain !== credentials?.companySubdomain
   ) return null;
   return invoiceConfigurationFromValues({
@@ -439,6 +452,112 @@ export async function listFreeAgentCategories(
   targetEnvironment = configuredEnvironment(env)
 ): Promise<FreeAgentCategory[]> {
   return providerCallForEnvironment(db, env, targetEnvironment, now, fetcher, (client, token) => client.listCategories(token));
+}
+
+function sameCategoryDescription(left: string, right: string): boolean {
+  return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
+}
+
+export function matchApprovedFreeAgentCategory(
+  reference: FreeAgentCategory | null,
+  candidates: FreeAgentCategory[]
+): AccountingCategoryResolution {
+  if (!reference) {
+    return {
+      status: "REFERENCE_UNAVAILABLE",
+      category: null,
+      message: "The approved FoxTutor Sandbox sales category could not be read."
+    };
+  }
+  const matches = candidates.filter((candidate) =>
+    candidate.group === reference.group
+    && sameCategoryDescription(candidate.description, reference.description)
+    && (reference.nominalCode === null || candidate.nominalCode === reference.nominalCode)
+  );
+  if (matches.length === 1) {
+    return { status: "CONFIGURED", category: matches[0] ?? null, message: null };
+  }
+  if (matches.length > 1) {
+    return {
+      status: "AMBIGUOUS",
+      category: null,
+      message: "Multiple Production FreeAgent categories match the approved FoxTutor sales mapping. An explicit accounting decision is required."
+    };
+  }
+  return {
+    status: "NO_MATCH",
+    category: null,
+    message: "The approved FoxTutor sales category could not be matched in Production."
+  };
+}
+
+export async function resolveFoxTutorCategoryMapping(
+  db: D1Database,
+  env: AccountingEnvironment,
+  targetEnvironment: FreeAgentEnvironment,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch
+): Promise<{ categories: FreeAgentCategory[]; resolution: AccountingCategoryResolution }> {
+  const categories = await listFreeAgentCategories(db, env, now, fetcher, targetEnvironment);
+  const targetSettings = await findAccountingBillingSettings(db, targetEnvironment);
+  const targetCategory = targetSettings?.category_url
+    ? categories.find((category) => category.url === targetSettings.category_url) ?? null
+    : null;
+  if (targetEnvironment === "sandbox") {
+    return {
+      categories,
+      resolution: targetCategory
+        ? { status: "CONFIGURED", category: targetCategory, message: null }
+        : {
+          status: "NO_MATCH",
+          category: null,
+          message: "Configure the approved FoxTutor Sandbox sales category once before using billing."
+        }
+    };
+  }
+
+  const sandboxSettings = await findAccountingBillingSettings(db, "sandbox");
+  let reference: FreeAgentCategory | null = null;
+  if (sandboxSettings?.category_url) {
+    try {
+      const sandboxCategories = await listFreeAgentCategories(db, env, now, fetcher, "sandbox");
+      reference = sandboxCategories.find((category) => category.url === sandboxSettings.category_url) ?? null;
+    } catch (error) {
+      reference = null;
+      if (error instanceof FreeAgentApiError) {
+        console.error("FreeAgent Sandbox category reference read failed", {
+          environment: "sandbox",
+          endpoint: "/v2/categories",
+          code: error.shape.code,
+          status: error.shape.status,
+          message: error.shape.message
+        });
+      } else {
+        console.error("FreeAgent Sandbox category reference read failed", {
+          environment: "sandbox",
+          endpoint: "/v2/categories",
+          message: "Unexpected category loading failure."
+        });
+      }
+    }
+  }
+  const resolution = matchApprovedFreeAgentCategory(reference, categories);
+  if (resolution.status === "CONFIGURED" && resolution.category) {
+    const connection = await findAccountingConnection(db, "production");
+    const values = billingSettingsValues(targetSettings, env);
+    await saveAccountingBillingSettings(db, {
+      amount: values.amount,
+      itemType: values.itemType,
+      categoryUrl: resolution.category.url,
+      providerEnvironment: "production",
+      providerCompanySubdomain: connection?.company_subdomain ?? null,
+      paymentTermsDays: Number(values.paymentTermsDays),
+      salesTaxRate: values.salesTaxRate,
+      updatedByUserId: targetSettings?.updated_by_user_id ?? null,
+      now
+    });
+  }
+  return { categories, resolution };
 }
 
 async function accessToken(
@@ -488,6 +607,7 @@ async function accessToken(
     refreshTokenCiphertext: await encryptCredential(refreshed.refreshToken, credentials.tokenEncryptionKey),
     accessTokenExpiresAt: new Date(Date.parse(now) + refreshed.expiresIn * 1000).toISOString(),
     refreshTokenExpiresAt: refreshed.refreshTokenExpiresIn === null ? connection.refresh_token_expires_at : new Date(Date.parse(now) + refreshed.refreshTokenExpiresIn * 1000).toISOString(),
+    lastSuccessAt: connection.last_success_at,
     now
   });
   return refreshed.accessToken;
@@ -682,7 +802,9 @@ export async function accountingIntegrationStatus(
   );
   const settingsCompanyMismatch = Boolean(
     persistedSettings?.provider_company_subdomain &&
-    persistedSettings.provider_company_subdomain !== credentials?.companySubdomain
+    persistedSettings.provider_company_subdomain !== (
+      connection?.company_subdomain ?? credentials?.companySubdomain
+    )
   );
   const configurationMessage = settingsEnvironmentMismatch
     ? "FreeAgent invoice category belongs to a different environment."
@@ -696,15 +818,16 @@ export async function accountingIntegrationStatus(
     ...invoiceMappingBase,
     category: invoiceMappingBase.category && !settingsEnvironmentMismatch && !settingsCompanyMismatch
   };
+  const compatibilityDiscovery = environment === "production" && temporaryProductionCompatibilityEnabled(env);
   const configured = Boolean(
     credentials &&
-    credentials.companySubdomain &&
-    credentials.oauthRedirectUri
+    credentials.oauthRedirectUri &&
+    (credentials.companySubdomain || compatibilityDiscovery)
   );
   const environmentLabel = environment === "production" ? "Production" : "Sandbox";
   const configurationError = !credentials
     ? `${environmentLabel} FreeAgent credentials are not configured.`
-    : !credentials.companySubdomain || !credentials.oauthRedirectUri
+    : !credentials.oauthRedirectUri || (!credentials.companySubdomain && !compatibilityDiscovery)
       ? `${environmentLabel} FreeAgent OAuth configuration is incomplete.`
       : configurationMessage;
   if (!configured || !connection) {
@@ -723,8 +846,9 @@ export async function accountingIntegrationStatus(
     };
   }
 
-  const identityMatches = connection.environment === environment &&
-    connection.company_subdomain === credentials?.companySubdomain;
+  const identityMatches = connection.environment === environment
+    && Boolean(connection.company_subdomain)
+    && (connection.company_subdomain === credentials?.companySubdomain || compatibilityDiscovery);
   return {
     configured,
     connected: connection.status === "CONNECTED" && identityMatches,
@@ -759,7 +883,7 @@ export async function connectFreeAgent(
   input: { code: string; environment: FreeAgentEnvironment; redirectUri: string; now: string },
   fetcher: typeof fetch = freeAgentFetch
 ): Promise<void> {
-  let stage = "configuration validation";
+  let stage = "configuration";
   const stageError = (error: unknown): FreeAgentApiError => {
     if (error instanceof FreeAgentApiError) {
       return new FreeAgentApiError({ ...error.shape, message: `${stage}: ${error.shape.message}` });
@@ -789,17 +913,17 @@ export async function connectFreeAgent(
         retryAfterSeconds: null
       });
     }
-    stage = "exchangeAuthorizationCode";
+    stage = "token exchange";
     const tokens = await exchangeAuthorizationCode(input.environment, {
       clientId: credentials.clientId,
       clientSecret: credentials.clientSecret,
       code: input.code,
       redirectUri: input.redirectUri
     }, fetcher);
-    stage = `${input.environment} /v2/company`;
+    stage = "company verification";
     const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
     const company = await client.company(tokens.accessToken);
-    stage = "company subdomain comparison";
+    stage = "company identity verification";
     const expectedCurrency = env.FREEAGENT_INVOICE_CURRENCY ?? NORMAL_LESSON_CURRENCY;
     const expectedOrigin = input.environment === "sandbox"
       ? "https://api.sandbox.freeagent.com"
@@ -826,7 +950,7 @@ export async function connectFreeAgent(
         retryAfterSeconds: null
       });
     }
-    stage = "findAccountingConnection";
+    stage = "connection persistence";
     const existing = await findAccountingConnection(db, input.environment);
     if (existing && existing.environment !== input.environment) {
       throw new FreeAgentApiError({
@@ -838,10 +962,10 @@ export async function connectFreeAgent(
         retryAfterSeconds: null
       });
     }
-    stage = "token encryption";
+    stage = "token persistence";
     const accessTokenCiphertext = await encryptCredential(tokens.accessToken, credentials.tokenEncryptionKey);
     const refreshTokenCiphertext = await encryptCredential(tokens.refreshToken, credentials.tokenEncryptionKey);
-    stage = "saveAccountingConnection";
+    stage = "connection persistence";
     await saveAccountingConnection(db, {
       environment: input.environment,
       companyName: company.name ?? null,
@@ -850,6 +974,7 @@ export async function connectFreeAgent(
       refreshTokenCiphertext,
       accessTokenExpiresAt: new Date(Date.parse(input.now) + tokens.expiresIn * 1000).toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresIn === null ? null : new Date(Date.parse(input.now) + tokens.refreshTokenExpiresIn * 1000).toISOString(),
+      lastSuccessAt: input.now,
       now: input.now
     });
   } catch (error) {

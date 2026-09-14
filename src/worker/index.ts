@@ -80,6 +80,7 @@ import {
   recordAccountingRetryAudit,
   removeExternalAccountingLink,
   saveAccountingBillingSettings,
+  updateAccountingConnectionStatus,
   updateExternalAccountingLinkStatus
 } from "../db/accounting";
 import {
@@ -174,7 +175,7 @@ import { feedRange, generateIcs } from "../domain/icalendar";
 import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
-import { accountingIntegrationStatuses, accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, freeAgentEnvironmentConfigIssue, listFreeAgentCategories, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, temporaryProductionCompatibilityEnabled, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
+import { accountingIntegrationStatuses, accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, freeAgentEnvironmentConfigIssue, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, resolveFoxTutorCategoryMapping, temporaryProductionCompatibilityEnabled, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
 import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, parseFreeAgentEnvironment, type FreeAgentCategory, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
@@ -586,8 +587,12 @@ function accountingBillingSettingsPage(
   const mappingRow = (label: string, configured: boolean): string => `<div><dt>${label}</dt><dd>${configured ? "Configured" : "Not configured"}</dd></div>`;
   const categoryHelp = categoryError
     ? `<span class="field-help form-error">${escapeHtml(categoryError)}</span>`
-    : `<span class="field-help">Choose the approved category for the connected FreeAgent company. The provider URL is stored internally.</span>`;
-  return `<section class="card form-card billing-settings-card"><div class="page-heading"><div><h1>${environmentLabel} billing settings</h1></div><div class="form-actions billing-settings-actions">${connectionAction}${backAction}</div></div>${connectionDetails}${warning}<p class="info-box">FreeAgent credentials are managed as Cloudflare secrets. Category choices are read from the connected ${escapeHtml(environmentLabel)} company; no raw provider URL is required.</p><section class="accounting-mapping-status"><h2>${environmentLabel} invoice mapping</h2><dl class="accounting-connection-details">${mappingRow("Amount", mapping.amount)}${mappingRow("Item type", mapping.itemType)}${mappingRow("Category", mapping.category)}${mappingRow("Payment terms", mapping.paymentTerms)}${mappingRow("Currency", mapping.currency)}${mappingRow("VAT / sales tax", mapping.salesTax)}</dl></section><form method="post" action="/learn/admin/accounting/settings?environment=${environment}"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Normal lesson value: £55.00.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required><span class="field-help">Hours is the established default.</span></label><label class="field-wide">FreeAgent accounting category<input type="search" placeholder="Search description, nominal code or group" data-accounting-category-search aria-label="Search FreeAgent accounting categories"><select name="categoryUrl" required data-accounting-category-select>${categoryOptions}</select>${categoryHelp}</label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required><span class="field-help">The approved default is 0 days.</span></label><label>VAT / sales-tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0% means the established non-VAT setting.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save ${environmentLabel} billing settings</button></div></form></section>`;
+    : `<span class="field-help">The approved FoxTutor sales mapping is fixed for normal operation. The provider URL is stored internally.</span>`;
+  const selectedCategory = categories.find((category) => category.url === values.categoryUrl) ?? null;
+  const categoryField = selectedCategory && !categoryError
+    ? `<div class="accounting-fixed-category"><strong>${escapeHtml(selectedCategory.description)}${selectedCategory.nominalCode ? ` / ${escapeHtml(selectedCategory.nominalCode)}` : ""}</strong><span class="status status-active">Configured</span></div><input type="hidden" name="categoryUrl" required value="${escapeHtml(selectedCategory.url)}">`
+    : `<input type="search" placeholder="Search description, nominal code or group" data-accounting-category-search aria-label="Search FreeAgent accounting categories"><select name="categoryUrl" required data-accounting-category-select>${categoryOptions}</select>`;
+  return `<section class="card form-card billing-settings-card"><div class="page-heading"><div><h1>${environmentLabel} billing settings</h1></div><div class="form-actions billing-settings-actions">${connectionAction}${backAction}</div></div>${connectionDetails}${warning}<p class="info-box">FreeAgent credentials are managed as Cloudflare secrets. Category choices are read from the connected ${escapeHtml(environmentLabel)} company; no raw provider URL is required.</p><section class="accounting-mapping-status"><h2>${environmentLabel} invoice mapping</h2><dl class="accounting-connection-details">${mappingRow("Amount", mapping.amount)}${mappingRow("Item type", mapping.itemType)}${mappingRow("Category", mapping.category)}${mappingRow("Payment terms", mapping.paymentTerms)}${mappingRow("Currency", mapping.currency)}${mappingRow("VAT / sales tax", mapping.salesTax)}</dl></section><form method="post" action="/learn/admin/accounting/settings?environment=${environment}"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Normal lesson value: £55.00.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required><span class="field-help">Hours is the established default.</span></label><label class="field-wide">FreeAgent accounting category${categoryField}${categoryHelp}</label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required><span class="field-help">The approved default is 0 days.</span></label><label>VAT / sales-tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0% means the established non-VAT setting.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save ${environmentLabel} billing settings</button></div></form></section>`;
 }
 
 function lessonReportForm(
@@ -1493,12 +1498,22 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
   return { active: created.active, setCookies: created.setCookies };
 }
 
-function freeAgentOAuthFailure(error: unknown): Response {
+function freeAgentOAuthFailure(error: unknown, environment: FreeAgentEnvironment): Response {
   const diagnostic = error instanceof FreeAgentApiError
     ? { code: error.shape.code, status: error.shape.status, message: error.shape.message }
     : { code: "UNKNOWN", status: null, message: "Unexpected OAuth callback failure." };
   console.error("FreeAgent OAuth callback failed", diagnostic);
-  return messagePage("FreeAgent connection failed", "FreeAgent could not verify the configured company connection.", 502);
+  const label = freeAgentEnvironmentLabel(environment);
+  const failureMessage = diagnostic.message.toLowerCase().includes("token exchange")
+    ? `${label} FreeAgent token exchange failed.`
+    : diagnostic.message.toLowerCase().includes("company")
+      ? `${label} FreeAgent company verification failed.`
+      : diagnostic.message.toLowerCase().includes("token persistence")
+        ? `${label} FreeAgent token could not be saved.`
+        : diagnostic.message.toLowerCase().includes("connection persistence")
+          ? `${label} FreeAgent connection could not be saved.`
+          : `${label} FreeAgent authorization failed.`;
+  return messagePage(`${label} FreeAgent authorization failed`, failureMessage, 502);
 }
 
 async function handleAccountingOAuthCallback(request: Request, env: Env): Promise<Response> {
@@ -1507,11 +1522,27 @@ async function handleAccountingOAuthCallback(request: Request, env: Env): Promis
   const url = new URL(request.url);
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
-  if (!state || !code) return messagePage("FreeAgent connection failed", "FreeAgent did not return an authorization code.", 400);
+  if (!state || !code) {
+    console.error("FreeAgent OAuth state validation failed", { stage: "state validation", reason: "missing callback parameters" });
+    return messagePage("FreeAgent authorization failed", "FreeAgent did not return an authorization code.", 400);
+  }
   const consumed = await consumeAccountingOAuthState(db, await hashOAuthState(state), new Date().toISOString());
-  if (!consumed) return messagePage("FreeAgent connection failed", "That authorization request is invalid or expired.", 403);
+  if (!consumed) {
+    console.error("FreeAgent OAuth state validation failed", { stage: "state validation", reason: "missing, expired, or consumed state" });
+    return messagePage("FreeAgent authorization failed", "That authorization request is invalid, expired, or already used.", 403);
+  }
+  console.info("FreeAgent OAuth state validated", {
+    provider: consumed.provider,
+    environment: consumed.environment,
+    redirectIntent: consumed.redirect_intent,
+    stateValidated: true,
+    stateConsumed: true
+  });
   const admin = await findActiveUserById(db, consumed.admin_user_id);
-  if (!admin || admin.role !== "ADMIN") return messagePage("FreeAgent connection failed", "That authorization request is not assigned to an active administrator.", 403);
+  if (!admin || admin.role !== "ADMIN") {
+    console.error("FreeAgent OAuth state validation failed", { stage: "state validation", reason: "administrator inactive or not an admin" });
+    return messagePage("FreeAgent authorization failed", "That authorization request is not assigned to an active administrator.", 403);
+  }
   try {
     await connectFreeAgent(db, env, {
       code,
@@ -1519,10 +1550,74 @@ async function handleAccountingOAuthCallback(request: Request, env: Env): Promis
       redirectUri: freeAgentEnvironmentConfig(env, consumed.environment)?.oauthRedirectUri ?? "",
       now: new Date().toISOString()
     }, freeAgentFetch);
+    let categoryMapping = "NOT_ATTEMPTED";
+    try {
+      const categoryResult = await resolveFoxTutorCategoryMapping(
+        db,
+        env,
+        consumed.environment,
+        new Date().toISOString(),
+        freeAgentFetch
+      );
+      categoryMapping = categoryResult.resolution.status;
+      if (categoryResult.resolution.message) {
+        console.error("FreeAgent category mapping requires attention", {
+          environment: consumed.environment,
+          stage: "category matching",
+          status: categoryResult.resolution.status,
+          message: categoryResult.resolution.message
+        });
+      }
+    } catch (error) {
+      categoryMapping = "FAILED";
+      if (error instanceof FreeAgentApiError) {
+        console.error("FreeAgent category load failed", {
+          environment: consumed.environment,
+          stage: "category read",
+          endpoint: "/v2/categories",
+          code: error.shape.code,
+          status: error.shape.status,
+          message: error.shape.message
+        });
+      } else {
+        console.error("FreeAgent category load failed", {
+          environment: consumed.environment,
+          stage: "category read",
+          message: "Unexpected category loading failure."
+        });
+      }
+    }
+    console.info("FreeAgent OAuth callback completed", {
+      provider: "FREEAGENT",
+      environment: consumed.environment,
+      authorizationCodeReceived: true,
+      stateValidated: true,
+      tokenExchange: "SUCCESS",
+      companyRead: "SUCCESS",
+      companyVerified: true,
+      connectionPersisted: true,
+      categoryMapping
+    });
     const session = await createSession(db, admin, env.ENVIRONMENT === "production");
     return withSessionCookies(redirect("/learn/admin/accounting"), session.setCookies);
   } catch (error) {
-    return freeAgentOAuthFailure(error);
+    const diagnostic = error instanceof FreeAgentApiError
+      ? { code: error.shape.code, message: error.shape.message }
+      : { code: "UNKNOWN", message: "Unexpected OAuth connection failure." };
+    try {
+      await updateAccountingConnectionStatus(db, "ATTENTION", {
+        environment: consumed.environment,
+        code: diagnostic.code,
+        message: diagnostic.message,
+        now: new Date().toISOString()
+      });
+    } catch (statusError) {
+      console.error("FreeAgent OAuth failure status update failed", {
+        environment: consumed.environment,
+        code: statusError instanceof Error ? statusError.name : "UNKNOWN"
+      });
+    }
+    return freeAgentOAuthFailure(error, consumed.environment);
   }
 }
 
@@ -2043,6 +2138,12 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       expiresAt: new Date(Date.parse(now) + 10 * 60_000).toISOString(),
       createdAt: now
     });
+    console.info("FreeAgent OAuth state created", {
+      provider: "FREEAGENT",
+      environment,
+      redirectIntent: "accounting",
+      expiresAt: new Date(Date.parse(now) + 10 * 60_000).toISOString()
+    });
     return redirect(freeAgentAuthorizationUrl(environment, {
       clientId: credentials.clientId,
       redirectUri: credentials.oauthRedirectUri,
@@ -2065,7 +2166,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       }, freeAgentFetch);
       return redirect("/learn/admin/accounting");
     } catch (error) {
-      return freeAgentOAuthFailure(error);
+      return freeAgentOAuthFailure(error, consumed.environment);
     }
   }
   if (route === "admin-accounting") {
@@ -2083,25 +2184,18 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const environment = parseFreeAgentEnvironment(url.searchParams.get("environment"))
       ?? configuredEnvironment(env)
       ?? "sandbox";
-    const persisted = await findAccountingBillingSettings(db, environment);
-    const fallback = configuredInvoice(env, environment);
-    const status = await accountingIntegrationStatus(db, env, environment);
-    const values = {
-      amount: persisted?.amount ?? fallback?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
-      itemType: persisted?.item_type ?? fallback?.itemType ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours",
-      categoryUrl: persisted?.category_url ?? fallback?.categoryUrl ?? env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
-      paymentTermsDays: String(persisted?.payment_terms_days ?? fallback?.paymentTermsInDays ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"),
-      salesTaxRate: persisted?.sales_tax_rate ?? fallback?.salesTaxRate ?? env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"
-    };
+    let status = await accountingIntegrationStatus(db, env, environment);
     let categories: FreeAgentCategory[] = [];
     let categoryError: string | undefined;
     if (status.connected && environment) {
       try {
-        categories = await listFreeAgentCategories(db, env, new Date().toISOString(), freeAgentFetch, environment);
-        if (!categories.length) categoryError = "The connected FreeAgent company returned no accounting categories.";
+        const categoryResult = await resolveFoxTutorCategoryMapping(db, env, environment, new Date().toISOString(), freeAgentFetch);
+        categories = categoryResult.categories;
+        if (categoryResult.resolution.status !== "CONFIGURED") categoryError = categoryResult.resolution.message ?? "FreeAgent accounting category mapping requires attention.";
+        status = await accountingIntegrationStatus(db, env, environment);
       } catch (error) {
         if (error instanceof FreeAgentApiError) {
-          console.log("FreeAgent category load failed", {
+          console.error("FreeAgent category load failed", {
             environment,
             endpoint: "/v2/categories",
             code: error.shape.code,
@@ -2112,8 +2206,17 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         categoryError = "FreeAgent accounting categories could not be loaded. Check the connected FreeAgent account or reconnect it.";
       }
     } else if (!status.connected) {
-      categoryError = "Connect FreeAgent before selecting a company accounting category.";
+      categoryError = `${freeAgentEnvironmentLabel(environment)} FreeAgent integration is not connected.`;
     }
+    const persisted = await findAccountingBillingSettings(db, environment);
+    const fallback = configuredInvoice(env, environment);
+    const values = {
+      amount: persisted?.amount ?? fallback?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
+      itemType: persisted?.item_type ?? fallback?.itemType ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours",
+      categoryUrl: persisted?.category_url ?? fallback?.categoryUrl ?? env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
+      paymentTermsDays: String(persisted?.payment_terms_days ?? fallback?.paymentTermsInDays ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"),
+      salesTaxRate: persisted?.sales_tax_rate ?? fallback?.salesTaxRate ?? env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"
+    };
     if (request.method === "GET") {
       return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status, categories, categoryError));
     }

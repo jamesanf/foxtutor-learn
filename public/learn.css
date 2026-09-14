@@ -335,6 +335,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-connection-actions .accounting-settings-link { justify-self: end; }
 .accounting-connection-actions .status { justify-self: center; }
 .billing-settings-card { max-width: none; }
+.accounting-fixed-category { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #b9dce4; border-radius: 7px; background: #f7fcfd; }
 .billing-settings-card .page-heading > div:first-child { min-width: 0; }
 .billing-settings-card .page-heading h1 { min-width: 0; white-space: nowrap; font-size: clamp(1.5rem, 3vw, 2.35rem); }
 .billing-settings-actions { margin-top: 0; }

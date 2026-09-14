@@ -27,6 +27,7 @@ import {
   connectFreeAgent,
   configuredInvoice,
   invoiceConfigurationIssue,
+  matchApprovedFreeAgentCategory,
   processAccountingOutbox,
   reconcileAccountingOutbox,
   validateBillingSettings,
@@ -40,6 +41,22 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Respo
     status,
     headers: responseHeaders
   });
+}
+
+function emptyAccountingDb(run: () => Promise<{ meta: { changes: number } }> = async () => ({ meta: { changes: 1 } })): D1Database {
+  return {
+    prepare() {
+      return {
+        first: async () => null,
+        bind() {
+          return {
+            first: async () => null,
+            run
+          };
+        }
+      };
+    }
+  } as unknown as D1Database;
 }
 
 async function accountingProcessHarness() {
@@ -320,6 +337,47 @@ describe("invoice configuration", () => {
   });
 });
 
+describe("FoxTutor category policy", () => {
+  const reference = {
+    url: "https://api.sandbox.freeagent.com/v2/categories/21",
+    description: "Sales",
+    nominalCode: "001",
+    group: "INCOME" as const,
+    autoSalesTaxRate: null
+  };
+
+  it("resolves a unique Production category by group, description and nominal code", () => {
+    expect(matchApprovedFreeAgentCategory(reference, [{
+      ...reference,
+      url: "https://api.freeagent.com/v2/categories/91"
+    }])).toMatchObject({
+      status: "CONFIGURED",
+      category: { url: "https://api.freeagent.com/v2/categories/91" }
+    });
+  });
+
+  it("does not guess when multiple Production categories match", () => {
+    expect(matchApprovedFreeAgentCategory(reference, [
+      { ...reference, url: "https://api.freeagent.com/v2/categories/91" },
+      { ...reference, url: "https://api.freeagent.com/v2/categories/92" }
+    ])).toMatchObject({
+      status: "AMBIGUOUS",
+      category: null
+    });
+  });
+
+  it("reports an explicit exception when no Production category matches", () => {
+    expect(matchApprovedFreeAgentCategory(reference, [{
+      ...reference,
+      url: "https://api.freeagent.com/v2/categories/91",
+      nominalCode: "002"
+    }])).toMatchObject({
+      status: "NO_MATCH",
+      category: null
+    });
+  });
+});
+
 describe("FreeAgent adapter", () => {
   it("builds explicit sandbox and production OAuth URLs", () => {
     const sandbox = new URL(freeAgentAuthorizationUrl("sandbox", {
@@ -564,6 +622,74 @@ describe("FreeAgent adapter", () => {
     } finally {
       fetchMock.mockRestore();
     }
+  });
+
+  it("classifies token exchange failures at the token exchange stage", async () => {
+    const fetcher = async () => jsonResponse({ error: "invalid_grant" }, 400);
+    await expect(connectFreeAgent(emptyAccountingDb(), {
+      FREEAGENT_ENVIRONMENT: "sandbox",
+      FREEAGENT_CLIENT_ID: "client-1",
+      FREEAGENT_CLIENT_SECRET: "secret-1",
+      FREEAGENT_TOKEN_ENCRYPTION_KEY: "encryption-key",
+      FREEAGENT_OAUTH_REDIRECT_URI: "https://learn.example.test/callback",
+      FREEAGENT_COMPANY_SUBDOMAIN: "sandbox-company"
+    }, {
+      code: "code-1",
+      environment: "sandbox",
+      redirectUri: "https://learn.example.test/callback",
+      now: "2026-09-14T12:00:00.000Z"
+    }, fetcher)).rejects.toMatchObject({
+      shape: { message: "token exchange: FreeAgent token request was rejected." }
+    });
+  });
+
+  it("classifies an unexpected company at the company verification stage", async () => {
+    const fetcher = async (input: RequestInfo | URL) =>
+      String(input).endsWith("/token_endpoint")
+        ? jsonResponse({ access_token: "access", refresh_token: "refresh", expires_in: 3600 })
+        : jsonResponse({ company: { name: "Wrong Company", subdomain: "wrong-company", currency: "GBP" } });
+    await expect(connectFreeAgent(emptyAccountingDb(), {
+      FREEAGENT_ENVIRONMENT: "sandbox",
+      FREEAGENT_CLIENT_ID: "client-1",
+      FREEAGENT_CLIENT_SECRET: "secret-1",
+      FREEAGENT_TOKEN_ENCRYPTION_KEY: "encryption-key",
+      FREEAGENT_OAUTH_REDIRECT_URI: "https://learn.example.test/callback",
+      FREEAGENT_COMPANY_SUBDOMAIN: "sandbox-company"
+    }, {
+      code: "code-1",
+      environment: "sandbox",
+      redirectUri: "https://learn.example.test/callback",
+      now: "2026-09-14T12:00:00.000Z"
+    }, fetcher)).rejects.toMatchObject({
+      shape: { message: "company identity verification: Sandbox FreeAgent company verification failed." }
+    });
+  });
+
+  it("classifies a D1 failure at connection persistence", async () => {
+    const fetcher = async (input: RequestInfo | URL) =>
+      String(input).endsWith("/token_endpoint")
+        ? jsonResponse({ access_token: "access", refresh_token: "refresh", expires_in: 3600 })
+        : jsonResponse({ company: { name: "Sandbox Company", subdomain: "sandbox-company", currency: "GBP" } });
+    await expect(connectFreeAgent(
+      emptyAccountingDb(async () => { throw new Error("D1 unavailable"); }),
+      {
+        FREEAGENT_ENVIRONMENT: "sandbox",
+        FREEAGENT_CLIENT_ID: "client-1",
+        FREEAGENT_CLIENT_SECRET: "secret-1",
+        FREEAGENT_TOKEN_ENCRYPTION_KEY: "encryption-key",
+        FREEAGENT_OAUTH_REDIRECT_URI: "https://learn.example.test/callback",
+        FREEAGENT_COMPANY_SUBDOMAIN: "sandbox-company"
+      },
+      {
+        code: "code-1",
+        environment: "sandbox",
+        redirectUri: "https://learn.example.test/callback",
+        now: "2026-09-14T12:00:00.000Z"
+      },
+      fetcher
+    )).rejects.toMatchObject({
+      shape: { message: "connection persistence: Unexpected OAuth connection failure." }
+    });
   });
 
   it("allows temporary Production OAuth reuse without a pre-pinned company", async () => {

@@ -325,6 +325,14 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
+    console.info("freeagent_company_response", {
+      environment: this.options.environment,
+      providerOrigin: this.baseUrl,
+      status: result.response.status,
+      companyName: result.data.company.name ?? null,
+      subdomain: result.data.company.subdomain ?? null,
+      currency: result.data.company.currency ?? null
+    });
     return result.data.company;
   }
 
@@ -938,6 +946,14 @@ async function tokenRequest(
       retryAfterSeconds: null
     });
   }
+  console.info("freeagent_token_exchange", {
+    environment,
+    tokenEndpointHost: new URL("/v2/token_endpoint", freeAgentBaseUrl(environment)).hostname,
+    status: response.status,
+    responseShape: Object.keys(body).sort(),
+    tokenReceived: true,
+    refreshTokenReceived: true
+  });
   const expiresIn = Number(body.expires_in);
   return {
     accessToken: body.access_token,
