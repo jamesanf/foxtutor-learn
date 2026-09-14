@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-14 - Correct accounting layout width cascades
+
+- Fixed the desktop five-column accounting summary rule and removed the
+  paragraph-width constraint from the full-width FreeAgent notice.
+- Fixed the Billing settings action buttons with equal desktop flex
+  dimensions and a responsive small-screen override.
+- Deployed executable commit `13af4f7` as Worker version
+  `890be944-debd-462f-8fb5-8160b4910fa6`.
+
 ### 2026-09-14 - Balance accounting status cards
 
 - Accounting status cards now render as five equal columns when space allows,
