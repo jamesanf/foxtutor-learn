@@ -354,62 +354,85 @@ export async function connectFreeAgent(
   input: { code: string; environment: FreeAgentEnvironment; redirectUri: string; now: string },
   fetcher: typeof fetch = fetch
 ): Promise<void> {
-  if (
-    !env.FREEAGENT_CLIENT_ID ||
-    !env.FREEAGENT_CLIENT_SECRET ||
-    !env.FREEAGENT_TOKEN_ENCRYPTION_KEY ||
-    !env.FREEAGENT_COMPANY_SUBDOMAIN ||
-    !configuredEnvironment(env) ||
-    input.environment !== configuredEnvironment(env) ||
-    input.redirectUri !== env.FREEAGENT_OAUTH_REDIRECT_URI
-  ) {
-    throw new FreeAgentApiError({
-      code: "CONFIGURATION",
+  let stage = "configuration validation";
+  const stageError = (error: unknown): FreeAgentApiError => {
+    if (error instanceof FreeAgentApiError) {
+      return new FreeAgentApiError({ ...error.shape, message: `${stage}: ${error.shape.message}` });
+    }
+    return new FreeAgentApiError({
+      code: "UNKNOWN",
       status: null,
-      message: "FreeAgent OAuth configuration is incomplete.",
+      message: `${stage}: Unexpected OAuth connection failure.`,
       retryable: false,
-      unknown: false,
+      unknown: true,
       retryAfterSeconds: null
     });
-  }
-  const tokens = await exchangeAuthorizationCode(input.environment, {
-    clientId: env.FREEAGENT_CLIENT_ID,
-    clientSecret: env.FREEAGENT_CLIENT_SECRET,
-    code: input.code,
-    redirectUri: input.redirectUri
-  }, fetcher);
-  const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
-  const company = await client.company(tokens.accessToken);
-  if (env.FREEAGENT_COMPANY_SUBDOMAIN && company.subdomain !== env.FREEAGENT_COMPANY_SUBDOMAIN) {
-    throw new FreeAgentApiError({
-      code: "CONFIGURATION",
-      status: null,
-      message: "FreeAgent authenticated company does not match the configured company.",
-      retryable: false,
-      unknown: false,
-      retryAfterSeconds: null
+  };
+  try {
+    if (
+      !env.FREEAGENT_CLIENT_ID ||
+      !env.FREEAGENT_CLIENT_SECRET ||
+      !env.FREEAGENT_TOKEN_ENCRYPTION_KEY ||
+      !env.FREEAGENT_COMPANY_SUBDOMAIN ||
+      !configuredEnvironment(env) ||
+      input.environment !== configuredEnvironment(env) ||
+      input.redirectUri !== env.FREEAGENT_OAUTH_REDIRECT_URI
+    ) {
+      throw new FreeAgentApiError({
+        code: "CONFIGURATION",
+        status: null,
+        message: "FreeAgent OAuth configuration is incomplete.",
+        retryable: false,
+        unknown: false,
+        retryAfterSeconds: null
+      });
+    }
+    stage = "authorization-code exchange";
+    const tokens = await exchangeAuthorizationCode(input.environment, {
+      clientId: env.FREEAGENT_CLIENT_ID,
+      clientSecret: env.FREEAGENT_CLIENT_SECRET,
+      code: input.code,
+      redirectUri: input.redirectUri
+    }, fetcher);
+    stage = "Sandbox /v2/company request";
+    const client = new FreeAgentClient({ environment: input.environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
+    const company = await client.company(tokens.accessToken);
+    stage = "company subdomain comparison";
+    if (env.FREEAGENT_COMPANY_SUBDOMAIN && company.subdomain !== env.FREEAGENT_COMPANY_SUBDOMAIN) {
+      throw new FreeAgentApiError({
+        code: "CONFIGURATION",
+        status: null,
+        message: "FreeAgent authenticated company does not match the configured company.",
+        retryable: false,
+        unknown: false,
+        retryAfterSeconds: null
+      });
+    }
+    stage = "existing accounting_connections lookup";
+    const existing = await findAccountingConnection(db);
+    if (existing && existing.environment !== input.environment) {
+      throw new FreeAgentApiError({
+        code: "CONFIGURATION",
+        status: null,
+        message: "FreeAgent environment cannot be changed without replacing the stored connection.",
+        retryable: false,
+        unknown: false,
+        retryAfterSeconds: null
+      });
+    }
+    stage = "encrypted token persistence";
+    await saveAccountingConnection(db, {
+      environment: input.environment,
+      companySubdomain: company.subdomain ?? null,
+      accessTokenCiphertext: await encryptCredential(tokens.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
+      refreshTokenCiphertext: await encryptCredential(tokens.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
+      accessTokenExpiresAt: new Date(Date.parse(input.now) + tokens.expiresIn * 1000).toISOString(),
+      refreshTokenExpiresAt: tokens.refreshTokenExpiresIn === null ? null : new Date(Date.parse(input.now) + tokens.refreshTokenExpiresIn * 1000).toISOString(),
+      now: input.now
     });
+  } catch (error) {
+    throw stageError(error);
   }
-  const existing = await findAccountingConnection(db);
-  if (existing && existing.environment !== input.environment) {
-    throw new FreeAgentApiError({
-      code: "CONFIGURATION",
-      status: null,
-      message: "FreeAgent environment cannot be changed without replacing the stored connection.",
-      retryable: false,
-      unknown: false,
-      retryAfterSeconds: null
-    });
-  }
-  await saveAccountingConnection(db, {
-    environment: input.environment,
-    companySubdomain: company.subdomain ?? null,
-    accessTokenCiphertext: await encryptCredential(tokens.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
-    refreshTokenCiphertext: await encryptCredential(tokens.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
-    accessTokenExpiresAt: new Date(Date.parse(input.now) + tokens.expiresIn * 1000).toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresIn === null ? null : new Date(Date.parse(input.now) + tokens.refreshTokenExpiresIn * 1000).toISOString(),
-    now: input.now
-  });
 }
 
 export async function processAccountingOutbox(

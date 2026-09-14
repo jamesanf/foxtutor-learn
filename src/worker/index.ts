@@ -1669,7 +1669,11 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         now: new Date().toISOString()
       });
       return redirect("/learn/admin/accounting");
-    } catch {
+    } catch (error) {
+      const diagnostic = error instanceof FreeAgentApiError
+        ? { code: error.shape.code, status: error.shape.status, message: error.shape.message }
+        : { code: "UNKNOWN", status: null, message: "Unexpected OAuth callback failure." };
+      console.error("FreeAgent OAuth callback failed", diagnostic);
       return messagePage("FreeAgent connection failed", "FreeAgent could not verify the configured company connection.", 502);
     }
   }

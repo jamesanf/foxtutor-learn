@@ -21,6 +21,12 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
   });
 
+  it("logs only staged, safe OAuth diagnostics on callback failure", () => {
+    expect(workerSource).toContain('console.error("FreeAgent OAuth callback failed", diagnostic)');
+    expect(workerSource).toContain("{ code: error.shape.code, status: error.shape.status, message: error.shape.message }");
+    expect(workerSource).not.toContain("console.error(\"FreeAgent OAuth callback failed\", error)");
+  });
+
   it("keeps contact mappings readable on desktop and mobile", () => {
     expect(workerSource).toContain('class="table-wrap accounting-contact-table"');
     expect(cssSource).toContain(".accounting-contact-table table { min-width: 980px");
