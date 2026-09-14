@@ -1014,11 +1014,9 @@ export async function listBillingHistory(
   limit = 100
 ): Promise<BillingHistoryItem[]> {
   const boundedLimit = Math.max(1, Math.min(limit, 500));
-  const result = await db.prepare(
-    `SELECT id, kind, occurred_at, student_id, student_name, lesson_id, billing_event_id,
-            invoice_id, credit_id, amount_minor, status, description, provider_reference
-     FROM (
-       SELECT e.id, 'LESSON_CHARGE' AS kind, COALESCE(e.lesson_date, e.created_at) AS occurred_at,
+  const [lessonCharges, cancellations, credits, ledgerTransactions, invoices, payments] = await Promise.all([
+    db.prepare(
+      `SELECT e.id, 'LESSON_CHARGE' AS kind, COALESCE(e.lesson_date, e.created_at) AS occurred_at,
               e.student_id, s.name AS student_name, e.lesson_id, e.id AS billing_event_id,
               i.id AS invoice_id, NULL AS credit_id, e.gross_amount_minor AS amount_minor,
               e.status, 'Lesson charge' AS description, e.external_reference AS provider_reference
@@ -1026,47 +1024,89 @@ export async function listBillingHistory(
        JOIN students s ON s.id = e.student_id
        LEFT JOIN billing_invoices i ON i.billing_event_id = e.id
        WHERE e.student_id = ?
-       UNION ALL
-       SELECT h.id, 'CANCELLATION', h.created_at, h.student_id, s.name, h.lesson_id, NULL, NULL, NULL,
-              NULL, h.event_type, 'Lesson cancellation', NULL
+       ORDER BY occurred_at DESC, e.id DESC
+       LIMIT ?`
+    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    db.prepare(
+      `SELECT h.id, 'CANCELLATION' AS kind, h.created_at AS occurred_at,
+              h.student_id, s.name AS student_name, h.lesson_id, NULL AS billing_event_id,
+              NULL AS invoice_id, NULL AS credit_id, NULL AS amount_minor,
+              h.event_type AS status, 'Lesson cancellation' AS description, NULL AS provider_reference
        FROM lesson_history h
        JOIN students s ON s.id = h.student_id
-       WHERE h.student_id = ? AND h.event_type IN ('ADMIN_CANCELLED', 'STUDENT_CANCELLED', 'CANCELLATION_APPROVED')
-       UNION ALL
-       SELECT c.id, 'CREDIT', c.created_at, c.student_id, s.name, c.source_lesson_id, c.source_event_id,
-              NULL, c.id, c.original_amount_minor, c.status, 'Customer credit granted',
-              c.freeagent_credit_note_reference
+       WHERE h.student_id = ?
+         AND h.event_type IN ('ADMIN_CANCELLED', 'STUDENT_CANCELLED', 'CANCELLATION_APPROVED')
+       ORDER BY h.created_at DESC, h.id DESC
+       LIMIT ?`
+    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    db.prepare(
+      `SELECT c.id, 'CREDIT' AS kind, c.created_at AS occurred_at,
+              c.student_id, s.name AS student_name, c.source_lesson_id AS lesson_id,
+              c.source_event_id AS billing_event_id, NULL AS invoice_id, c.id AS credit_id,
+              c.original_amount_minor AS amount_minor, c.status,
+              'Customer credit granted' AS description, c.freeagent_credit_note_reference AS provider_reference
        FROM customer_credits c
        JOIN students s ON s.id = c.student_id
        WHERE c.student_id = ?
-       UNION ALL
-       SELECT t.id, CASE WHEN t.transaction_type = 'CONSUMPTION' THEN 'CREDIT_CONSUMED' ELSE 'CREDIT' END,
-              t.created_at, c.student_id, s.name, t.source_lesson_id, t.source_event_id, t.invoice_id,
-              c.id, t.amount_minor, t.transaction_type, 'Credit ledger transaction', t.provider_reference
+       ORDER BY c.created_at DESC, c.id DESC
+       LIMIT ?`
+    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    db.prepare(
+      `SELECT t.id,
+              CASE WHEN t.transaction_type = 'CONSUMPTION' THEN 'CREDIT_CONSUMED' ELSE 'CREDIT' END AS kind,
+              t.created_at AS occurred_at, c.student_id, s.name AS student_name,
+              t.source_lesson_id AS lesson_id, t.source_event_id AS billing_event_id,
+              t.invoice_id, c.id AS credit_id, t.amount_minor, t.transaction_type AS status,
+              'Credit ledger transaction' AS description, t.provider_reference
        FROM credit_ledger_transactions t
        JOIN customer_credits c ON c.id = t.credit_id
        JOIN students s ON s.id = c.student_id
        WHERE c.student_id = ?
-       UNION ALL
-       SELECT i.id, 'INVOICE', i.created_at, i.student_id, s.name, e.lesson_id, e.id, i.id, NULL,
-              i.net_amount_minor, i.status, 'Invoice', i.freeagent_reference
+       ORDER BY t.created_at DESC, t.id DESC
+       LIMIT ?`
+    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    db.prepare(
+      `SELECT i.id, 'INVOICE' AS kind, i.created_at AS occurred_at,
+              i.student_id, s.name AS student_name, e.lesson_id,
+              e.id AS billing_event_id, i.id AS invoice_id, NULL AS credit_id,
+              i.net_amount_minor AS amount_minor, i.status, 'Invoice' AS description,
+              i.freeagent_reference AS provider_reference
        FROM billing_invoices i
        JOIN billing_events e ON e.id = i.billing_event_id
        JOIN students s ON s.id = i.student_id
        WHERE i.student_id = ?
-       UNION ALL
-       SELECT p.id, 'PAYMENT', p.created_at, i.student_id, s.name, e.lesson_id, e.id, i.id, NULL,
-              i.net_amount_minor, p.status, 'Direct Debit collection', p.provider_reference
+       ORDER BY i.created_at DESC, i.id DESC
+       LIMIT ?`
+    ).bind(studentId, boundedLimit).all<BillingHistoryItem>(),
+    db.prepare(
+      `SELECT p.id, 'PAYMENT' AS kind, p.created_at AS occurred_at,
+              i.student_id, s.name AS student_name, e.lesson_id,
+              e.id AS billing_event_id, i.id AS invoice_id, NULL AS credit_id,
+              i.net_amount_minor AS amount_minor, p.status,
+              'Direct Debit collection' AS description, p.provider_reference
        FROM billing_payments p
        JOIN billing_invoices i ON i.id = p.invoice_id
        JOIN billing_events e ON e.id = i.billing_event_id
        JOIN students s ON s.id = i.student_id
        WHERE i.student_id = ?
-     )
-     ORDER BY occurred_at DESC, id DESC
-     LIMIT ?`
-  ).bind(studentId, studentId, studentId, studentId, studentId, studentId, boundedLimit).all<BillingHistoryItem>();
-  return result.results;
+       ORDER BY p.created_at DESC, p.id DESC
+       LIMIT ?`
+    ).bind(studentId, boundedLimit).all<BillingHistoryItem>()
+  ]);
+  return [
+    ...lessonCharges.results,
+    ...cancellations.results,
+    ...credits.results,
+    ...ledgerTransactions.results,
+    ...invoices.results,
+    ...payments.results
+  ]
+    .sort((left, right) => {
+      if (left.occurred_at !== right.occurred_at) return left.occurred_at < right.occurred_at ? 1 : -1;
+      if (left.id === right.id) return 0;
+      return left.id < right.id ? 1 : -1;
+    })
+    .slice(0, boundedLimit);
 }
 
 export async function listUpcomingBillingRows(

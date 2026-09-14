@@ -1706,18 +1706,29 @@ async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database):
   return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonLink("/learn/admin/lessons/new", "Add lesson")}</div><div class="summary-grid"><a class="summary-card" href="${nextLessonHref}"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</a><a class="summary-card" href="/learn/admin/bookings"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></a><a class="summary-card" href="/learn/admin/students"><span>Active Students</span><strong>${activeStudents}</strong></a><a class="summary-card" href="/learn/admin/reschedules"><span>Reschedule requests</span><strong>${rescheduleRequests}</strong></a></div><section class="card dashboard-section"><div class="section-heading"><h2>Reports to write</h2><a class="text-link" href="/learn/admin/lessons">Past Lessons</a></div>${reportPreview}</section><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>`);
 }
 
-function billingMoney(value: number | string | bigint | null): string {
-  return value === null ? "—" : `£${formatMinorUnits(BigInt(value))}`;
+function billingMinorValue(value: number | string | bigint | null | undefined): bigint | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number") return Number.isSafeInteger(value) ? BigInt(value) : null;
+  if (!/^-?\d+$/.test(value)) return null;
+  return BigInt(value);
 }
 
-function billingDateLabel(value: string | null): string {
+function billingMoney(value: number | string | bigint | null | undefined): string {
+  const minor = billingMinorValue(value);
+  return minor === null ? "—" : `£${formatMinorUnits(minor)}`;
+}
+
+function billingDateLabel(value: string | null | undefined): string {
   if (!value) return "—";
+  const parsed = new Date(value.includes("T") ? value : `${value}T12:00:00+00:00`);
+  if (!Number.isFinite(parsed.getTime())) return "—";
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
     timeZone: CALENDAR_TIMEZONE
-  }).format(new Date(value.includes("T") ? value : `${value}T12:00:00+00:00`));
+  }).format(parsed);
 }
 
 function billingReadinessLabel(value: string): string {
@@ -2845,18 +2856,57 @@ function studentDashboard(user: AppUser, csrfToken: string): Response {
   return appPage(user, csrfToken, "Dashboard", `<h1>Dashboard</h1><section class="card"><h2>Calendar</h2>${buttonLink("/learn/student/calendar", "View calendar")}</section>`);
 }
 
+function studentBillingStage(stage: string, context: { userId: string; studentId?: string | null }): void {
+  console.info("student_billing_stage", {
+    stage,
+    userId: context.userId,
+    studentId: context.studentId ?? null
+  });
+}
+
+async function runStudentBillingStage<T>(
+  stage: string,
+  context: { userId: string; studentId?: string | null },
+  operation: () => Promise<T>
+): Promise<T> {
+  studentBillingStage(`${stage}_START`, context);
+  try {
+    const result = await operation();
+    studentBillingStage(`${stage}_COMPLETE`, context);
+    return result;
+  } catch (error) {
+    console.error("student_billing_stage_failed", {
+      stage,
+      userId: context.userId,
+      studentId: context.studentId ?? null,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message.slice(0, 240) : "Unknown billing failure"
+    });
+    throw error;
+  }
+}
+
 async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
-  const student = await findActiveStudentForUser(db, user.id);
-  if (!student) return messagePage("Billing unavailable", "Your Learn account is not linked to an active student record.", 409);
+  const context = { userId: user.id };
+  studentBillingStage("STUDENT_BILLING_START", context);
+  studentBillingStage("AUTHENTICATED_USER_RESOLVED", context);
+  const student = await runStudentBillingStage("ACTIVE_STUDENT_RESOLVED", context, () => findActiveStudentForUser(db, user.id));
+  if (!student) {
+    studentBillingStage("STUDENT_BILLING_END", context);
+    return messagePage("Billing unavailable", "Your Learn account is not linked to an active student record.", 409);
+  }
+  const studentContext = { userId: user.id, studentId: student.id };
   const today = currentCalendarDate();
   const nextSeven = new Date(Date.parse(`${today}T12:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  studentBillingStage("CURRENT_DATE_RESOLVED", studentContext);
   const [credits, history, upcoming] = await Promise.all([
-    listCustomerCreditBalances(db).then((rows) => rows.filter((row) => row.student_id === student.id)),
-    listBillingHistory(db, student.id),
-    listUpcomingBillingRows(db, today, nextSeven, student.id)
+    runStudentBillingStage("CREDIT_QUERY", studentContext, async () => (await listCustomerCreditBalances(db)).filter((row) => row.student_id === student.id)),
+    runStudentBillingStage("HISTORY_QUERY", studentContext, () => listBillingHistory(db, student.id)),
+    runStudentBillingStage("UPCOMING_QUERY", studentContext, () => listUpcomingBillingRows(db, today, nextSeven, student.id))
   ]);
-  const availableCredit = credits.reduce((total, credit) => total + BigInt(credit.remaining_amount_minor), 0n);
-  const outstanding = upcoming.reduce((total, row) => total + BigInt(row.amount_minor ?? 0), 0n);
+  studentBillingStage("TOTALS_CALCULATED", { ...studentContext, studentId: student.id });
+  const availableCredit = credits.reduce((total, credit) => total + (billingMinorValue(credit.remaining_amount_minor) ?? 0n), 0n);
+  const outstanding = upcoming.reduce((total, row) => total + (billingMinorValue(row.amount_minor) ?? 0n), 0n);
   const creditRows = credits.length
     ? credits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>${escapeHtml(credit.source_event_id)}</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
     : `<tr><td colspan="6">No credit history.</td></tr>`;
@@ -2866,7 +2916,11 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
   const historyRows = history.length
     ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.provider_reference ?? "—")}</td></tr>`).join("")
     : `<tr><td colspan="5">No billing history yet.</td></tr>`;
-  return appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">A plain-English view of what you owe, your credit and upcoming collections. All dates use Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Payment method</span><strong>Direct Debit</strong><small>Managed through FreeAgent</small></section></div><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th><th>Provider reference</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
+  studentBillingStage("BILLING_HTML_RENDER_START", studentContext);
+  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">A plain-English view of what you owe, your credit and upcoming collections. All dates use Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Payment method</span><strong>Direct Debit</strong><small>Managed through FreeAgent</small></section></div><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th><th>Provider reference</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
+  studentBillingStage("BILLING_HTML_RENDER_COMPLETE", studentContext);
+  studentBillingStage("STUDENT_BILLING_END", studentContext);
+  return response;
 }
 
 async function handleStudent(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
