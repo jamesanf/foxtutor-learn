@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-14 - Use official cash multiple icon
+
+- Replaced the custom accounting glyph with the official Material Design
+  Icons `mdiCashMultiple` path.
+- Deployed executable commit
+  `b4de7a5cd24acd16e4d3e7363e81856e4304c183` as Worker version
+  `083d0665-ec06-4873-a93f-4898cad38e04`.
+
 ### 2026-09-14 - Use coins icon for accounting
 
 - Replaced the accounting sidebar pound glyph with an MDI-style stacked coins
