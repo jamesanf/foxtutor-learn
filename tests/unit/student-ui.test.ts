@@ -8,6 +8,11 @@ describe("student profile form UI", () => {
   it("requires only pupil name and pupil email in the form", () => {
     expect(workerSource).toContain("Pupil name<input type=\"text\" name=\"name\"");
     expect(workerSource).toContain("name=\"email\" value=");
+  });
+
+  it("shows the Direct Debit mandate state in the admin student detail", () => {
+    expect(workerSource).toContain("<strong>Direct Debit mandate</strong>");
+    expect(workerSource).toContain("billingAccount?.mandate_state");
     expect(workerSource).toContain("required autocomplete=\"email\"");
     expect(workerSource).toContain("name=\"parentName\"");
     expect(workerSource).toContain("name=\"parentEmail\"");

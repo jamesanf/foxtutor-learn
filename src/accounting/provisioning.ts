@@ -39,8 +39,20 @@ function localState(status: DirectDebitStatus): { mandateState: BillingMandateSt
   return { mandateState: status, provisioningState: status };
 }
 
+export function shouldSendDirectDebitSetupNotification(
+  account: Pick<BillingAccount, "mandate_state" | "last_error_code">,
+  status: DirectDebitStatus
+): boolean {
+  return status === "SETUP_REQUIRED"
+    || (
+      status === "UNKNOWN"
+      && account.mandate_state === "NOT_CONFIGURED"
+      && account.last_error_code === "MANDATE_STATE_MISSING"
+    );
+}
+
 function notificationDue(account: BillingAccount, status: DirectDebitStatus, now: string): boolean {
-  if (status !== "SETUP_REQUIRED" && status !== "AUTHORISATION_PENDING") return false;
+  if (!shouldSendDirectDebitSetupNotification(account, status) && status !== "AUTHORISATION_PENDING") return false;
   if (!account.last_notification_at) return true;
   return Date.parse(now) - Date.parse(account.last_notification_at) >= 7 * 24 * 60 * 60_000;
 }
@@ -275,7 +287,9 @@ export async function provisionBillingAccount(
       });
     }
     if (student.learn_user_id && notificationDue(account, status, now)) {
-      const type = status === "SETUP_REQUIRED" ? "BILLING_DIRECT_DEBIT_SETUP" : "BILLING_DIRECT_DEBIT_REMINDER";
+      const type = shouldSendDirectDebitSetupNotification(account, status)
+        ? "BILLING_DIRECT_DEBIT_SETUP"
+        : "BILLING_DIRECT_DEBIT_REMINDER";
       const notification = await createDirectDebitNotification(db, env, {
         type,
         eventId: `${account.id}:${type}:${Math.floor(Date.parse(now) / (7 * 24 * 60 * 60_000))}`,
