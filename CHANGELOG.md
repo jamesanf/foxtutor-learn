@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-14 - Normalize billing settings layout
+
+- Made the Billing settings card full-width with equal-sized
+  **Reauthenticate FreeAgent** and **Back to accounting** actions.
+- Removed redundant explanatory copy and prevented the connection notice and
+  validation warning from being constrained to the paragraph text width.
+- Added shared site-style hover context to billing validation warnings with
+  field-specific guidance.
+- The full suite passes with 27 test files and 137 tests.
+- Deployed executable commit `0dd25b1` as Worker version
+  `ad6ddec2-9acc-45b7-a577-a2664294b623`.
+
 ### 2026-09-14 - Show the connected FreeAgent company
 
 - Added migration `0020_accounting_company_name.sql` and persisted the
