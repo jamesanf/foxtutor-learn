@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-14 - Refine dashboard and accounting controls
+
+- Replaced the accounting navigation question-mark glyph with a pound-style
+  money icon.
+- Changed dashboard summary cards to four columns when space allows and two
+  columns at compressed widths.
+- Stacked the Billing settings and Connect FreeAgent actions at equal width.
+- Deployed executable commit
+  `df4d5ac8c36d7950921ff8ae247bfbb9d79ee98b` as Worker version
+  `c29a360e-f1de-4f15-bd0f-8c7d36ce884d`.
+- The full suite now passes with 27 test files and 132 tests.
+
 ### 2026-09-14 - Narrow FreeAgent OAuth callback perimeter
 
 - Added an exact-path Cloudflare Access application for
