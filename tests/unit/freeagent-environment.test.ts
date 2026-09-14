@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   FreeAgentClient,
+  freeAgentAuthorizationUrl,
   parseFreeAgentEnvironment
 } from "../../src/accounting/freeagent/client";
 import {
@@ -73,5 +74,24 @@ describe("FreeAgent environment isolation", () => {
     });
     await new FreeAgentClient({ environment: "sandbox", fetcher }).requestJson("sandbox-token", "/v2/company");
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the complete OAuth host matrix environment-specific", async () => {
+    const sandboxApproval = new URL(freeAgentAuthorizationUrl("sandbox", {
+      clientId: "sandbox-client",
+      redirectUri: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      state: "sandbox-state",
+      accessLevel: "4"
+    }));
+    const productionApproval = new URL(freeAgentAuthorizationUrl("production", {
+      clientId: "production-client",
+      redirectUri: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      state: "production-state",
+      accessLevel: "4"
+    }));
+    expect(sandboxApproval.origin).toBe("https://api.sandbox.freeagent.com");
+    expect(productionApproval.origin).toBe("https://api.freeagent.com");
+    expect(sandboxApproval.searchParams.get("client_id")).toBe("sandbox-client");
+    expect(productionApproval.searchParams.get("client_id")).toBe("production-client");
   });
 });

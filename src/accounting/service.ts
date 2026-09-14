@@ -114,6 +114,8 @@ export function configuredEnvironment(env: AccountingEnvironment): FreeAgentEnvi
   return parseFreeAgentEnvironment(env.FREEAGENT_ENVIRONMENT);
 }
 
+export const FREEAGENT_ENVIRONMENTS: readonly FreeAgentEnvironment[] = ["sandbox", "production"];
+
 export interface FreeAgentEnvironmentConfig {
   clientId: string;
   clientSecret: string;
@@ -202,10 +204,22 @@ function invoiceConfigurationIssueForValues(
 
 function categoryUrlIssue(categoryUrl: string, environment: FreeAgentEnvironment | null): string | null {
   if (!categoryUrl) return "FreeAgent invoice category is missing.";
-  if (!/^https:\/\/api(?:\.sandbox)?\.freeagent\.com\/v2\/categories\/[^/]+$/.test(categoryUrl)) return "FreeAgent invoice category URL is invalid.";
   if (!environment) return "FreeAgent environment is not configured.";
   const origin = environment === "sandbox" ? "https://api.sandbox.freeagent.com" : "https://api.freeagent.com";
-  if (!categoryUrl.startsWith(`${origin}/`)) return "FreeAgent invoice category does not match the configured environment.";
+  let parsed: URL;
+  try {
+    parsed = new URL(categoryUrl);
+  } catch {
+    return "FreeAgent invoice category URL is invalid.";
+  }
+  if (
+    parsed.origin !== origin ||
+    !/^\/v2\/categories\/[^/]+$/.test(parsed.pathname) ||
+    parsed.search ||
+    parsed.hash
+  ) return parsed.origin === origin
+    ? "FreeAgent invoice category URL is invalid."
+    : "FreeAgent invoice category does not match the configured environment.";
   return null;
 }
 
@@ -237,7 +251,10 @@ export function invoiceConfigurationIssue(env: AccountingEnvironment, environmen
   }, environment);
 }
 
-export function configuredInvoice(env: AccountingEnvironment): InvoiceConfiguration | null {
+export function configuredInvoice(
+  env: AccountingEnvironment,
+  environment = configuredEnvironment(env)
+): InvoiceConfiguration | null {
   return invoiceConfigurationFromValues({
     amount: env.FREEAGENT_INVOICE_AMOUNT ?? "",
     itemType: env.FREEAGENT_INVOICE_ITEM_TYPE ?? "",
@@ -245,7 +262,7 @@ export function configuredInvoice(env: AccountingEnvironment): InvoiceConfigurat
     paymentTermsDays: env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "",
     currency: env.FREEAGENT_INVOICE_CURRENCY ?? "",
     salesTaxRate: env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? ""
-  }, configuredEnvironment(env));
+  }, environment);
 }
 
 function billingSettingsValues(
@@ -317,49 +334,49 @@ export function validateBillingSettings(
 async function ensureAccountingBillingSettings(
   db: D1Database,
   env: AccountingEnvironment,
-  now: string
+  now: string,
+  targetEnvironment = configuredEnvironment(env)
 ): Promise<Awaited<ReturnType<typeof findAccountingBillingSettings>>> {
-  const existing = await findAccountingBillingSettings(db);
+  const existing = await findAccountingBillingSettings(db, targetEnvironment ?? undefined);
   if (existing) {
-    const environment = configuredEnvironment(env);
-    const credentials = freeAgentEnvironmentConfig(env, environment);
+    const credentials = freeAgentEnvironmentConfig(env, targetEnvironment);
     if (
-      environment &&
+      targetEnvironment &&
       credentials?.companySubdomain &&
-      existing.provider_environment === environment &&
+      existing.provider_environment === targetEnvironment &&
       existing.provider_company_subdomain === credentials.companySubdomain
     ) return existing;
-    if (!existing.provider_environment && environment && credentials?.companySubdomain) return existing;
+    if (!existing.provider_environment && targetEnvironment && credentials?.companySubdomain) return existing;
     return existing;
   }
-  const initial = configuredInvoice(env);
+  const initial = configuredInvoice(env, targetEnvironment);
   if (!initial) return null;
   await saveAccountingBillingSettings(db, {
     amount: initial.amount,
     itemType: initial.itemType,
     categoryUrl: initial.categoryUrl,
-    providerEnvironment: configuredEnvironment(env),
-    providerCompanySubdomain: freeAgentEnvironmentConfig(env, configuredEnvironment(env))?.companySubdomain ?? null,
+    providerEnvironment: targetEnvironment,
+    providerCompanySubdomain: freeAgentEnvironmentConfig(env, targetEnvironment)?.companySubdomain ?? null,
     paymentTermsDays: initial.paymentTermsInDays,
     salesTaxRate: initial.salesTaxRate,
     updatedByUserId: null,
     now
   });
-  return findAccountingBillingSettings(db);
+  return findAccountingBillingSettings(db, targetEnvironment ?? undefined);
 }
 
 export async function configuredInvoiceFromDatabase(
   db: D1Database,
   env: AccountingEnvironment,
-  now: string
+  now: string,
+  targetEnvironment = configuredEnvironment(env)
 ): Promise<InvoiceConfiguration | null> {
-  const settings = await ensureAccountingBillingSettings(db, env, now);
+  const settings = await ensureAccountingBillingSettings(db, env, now, targetEnvironment);
   if (!settings) return null;
-  const environment = configuredEnvironment(env);
-  const credentials = freeAgentEnvironmentConfig(env, environment);
+  const credentials = freeAgentEnvironmentConfig(env, targetEnvironment);
   if (
     settings.provider_environment &&
-    settings.provider_environment !== environment
+    settings.provider_environment !== targetEnvironment
   ) return null;
   if (
     settings.provider_company_subdomain &&
@@ -372,33 +389,34 @@ export async function configuredInvoiceFromDatabase(
     paymentTermsDays: String(settings.payment_terms_days),
     currency: settings.currency,
     salesTaxRate: settings.sales_tax_rate
-  }, configuredEnvironment(env));
+  }, targetEnvironment);
 }
 
 export async function listFreeAgentCategories(
   db: D1Database,
   env: AccountingEnvironment,
   now: string,
-  fetcher: typeof fetch = freeAgentFetch
+  fetcher: typeof fetch = freeAgentFetch,
+  targetEnvironment = configuredEnvironment(env)
 ): Promise<FreeAgentCategory[]> {
-  return providerCall(db, env, now, fetcher, (client, token) => client.listCategories(token));
+  return providerCallForEnvironment(db, env, targetEnvironment, now, fetcher, (client, token) => client.listCategories(token));
 }
 
 async function accessToken(
   db: D1Database,
   env: AccountingEnvironment,
+  environment: FreeAgentEnvironment,
   now: string,
   fetcher: typeof fetch,
   forceRefresh = false
 ): Promise<string> {
-  const environment = configuredEnvironment(env);
   const credentials = freeAgentEnvironmentConfig(env, environment);
   const connection = await findAccountingConnection(db, environment ?? undefined);
   if (!environment || !connection?.refresh_token_ciphertext || !credentials) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
       status: null,
-      message: "FreeAgent OAuth connection is not configured.",
+      message: `${environment === "production" ? "Production" : "Sandbox"} FreeAgent OAuth connection is not configured.`,
       retryable: false,
       unknown: false,
       retryAfterSeconds: null
@@ -455,14 +473,35 @@ export async function providerCall<T>(
     });
   }
 
+  return providerCallForEnvironment(db, env, environment, now, fetcher, operation);
+}
+
+export async function providerCallForEnvironment<T>(
+  db: D1Database,
+  env: AccountingEnvironment,
+  environment: FreeAgentEnvironment | null,
+  now: string,
+  fetcher: typeof fetch,
+  operation: (client: FreeAgentClient, token: string) => Promise<T>
+): Promise<T> {
+  if (!environment) {
+    throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent environment is not configured.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+  }
   const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
-  let token = await accessToken(db, env, now, fetcher);
+  let token = await accessToken(db, env, environment, now, fetcher);
   try {
     return await operation(client, token);
   } catch (error) {
     const apiError = providerError(error);
     if (!apiError || apiError.shape.code !== "AUTHENTICATION") throw error;
-    token = await accessToken(db, env, now, fetcher, true);
+    token = await accessToken(db, env, environment, now, fetcher, true);
     return operation(client, token);
   }
 }
@@ -588,11 +627,15 @@ export async function processCreditNoteProviderOperation(
   return findBillingProviderOperation(db, id);
 }
 
-export async function accountingIntegrationStatus(db: D1Database, env: AccountingEnvironment): Promise<AccountingIntegrationStatus> {
-  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
-  const environment = configuredEnvironment(env);
+export async function accountingIntegrationStatus(
+  db: D1Database,
+  env: AccountingEnvironment,
+  targetEnvironment = configuredEnvironment(env) ?? "sandbox"
+): Promise<AccountingIntegrationStatus> {
+  const connection = await findAccountingConnection(db, targetEnvironment);
+  const environment = targetEnvironment;
   const credentials = freeAgentEnvironmentConfig(env, environment);
-  const persistedSettings = await findAccountingBillingSettings(db);
+  const persistedSettings = await findAccountingBillingSettings(db, environment);
   const settingsValues = billingSettingsValues(persistedSettings, env);
   const settingsEnvironmentMismatch = Boolean(
     persistedSettings?.provider_environment &&
@@ -615,26 +658,32 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
     category: invoiceMappingBase.category && !settingsEnvironmentMismatch && !settingsCompanyMismatch
   };
   const configured = Boolean(
-    environment &&
     credentials &&
     credentials.companySubdomain &&
     credentials.oauthRedirectUri
   );
+  const environmentLabel = environment === "production" ? "Production" : "Sandbox";
+  const configurationError = !credentials
+    ? `${environmentLabel} FreeAgent credentials are not configured.`
+    : !credentials.companySubdomain || !credentials.oauthRedirectUri
+      ? `${environmentLabel} FreeAgent OAuth configuration is incomplete.`
+      : configurationMessage;
   if (!configured || !connection) {
     return {
       configured,
       connected: false,
-      environment: environment ?? "sandbox",
+      environment,
       companyName: connection?.company_name ?? null,
       companySubdomain: connection?.company_subdomain ?? credentials?.companySubdomain ?? null,
       updatedAt: connection?.updated_at ?? null,
       label: !configured ? "Not configured" : configurationMessage ? "Invoice mapping incomplete" : "Connection requires attention",
       lastSuccessAt: connection?.last_success_at ?? null,
-      errorCode: connection?.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
-      errorMessage: connection?.last_error_message ?? configurationMessage,
+      errorCode: connection?.last_error_code ?? (configurationError ? "CONFIGURATION" : null),
+      errorMessage: connection?.last_error_message ?? configurationError,
       invoiceMapping
     };
   }
+
   const identityMatches = connection.environment === environment &&
     connection.company_subdomain === credentials?.companySubdomain;
   return {
@@ -648,10 +697,21 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
       ? configurationMessage ? "Invoice mapping incomplete" : "Connected to FreeAgent"
       : "Connection requires attention",
     lastSuccessAt: connection.last_success_at,
-    errorCode: connection.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
-    errorMessage: connection.last_error_message ?? configurationMessage,
+    errorCode: connection.last_error_code ?? (configurationError ? "CONFIGURATION" : null),
+    errorMessage: connection.last_error_message ?? configurationError,
     invoiceMapping
   };
+}
+
+export async function accountingIntegrationStatuses(
+  db: D1Database,
+  env: AccountingEnvironment
+): Promise<Record<FreeAgentEnvironment, AccountingIntegrationStatus>> {
+  const [sandbox, production] = await Promise.all([
+    accountingIntegrationStatus(db, env, "sandbox"),
+    accountingIntegrationStatus(db, env, "production")
+  ]);
+  return { sandbox, production };
 }
 
 export async function connectFreeAgent(
@@ -678,8 +738,6 @@ export async function connectFreeAgent(
     const credentials = freeAgentEnvironmentConfig(env, input.environment);
     if (
       !credentials ||
-      !configuredEnvironment(env) ||
-      input.environment !== configuredEnvironment(env) ||
       !credentials.companySubdomain ||
       !credentials.oauthRedirectUri ||
       input.redirectUri !== credentials.oauthRedirectUri
@@ -705,11 +763,25 @@ export async function connectFreeAgent(
     const company = await client.company(tokens.accessToken);
     stage = "company subdomain comparison";
     const expectedCurrency = env.FREEAGENT_INVOICE_CURRENCY ?? NORMAL_LESSON_CURRENCY;
-    if (company.subdomain !== credentials.companySubdomain || company.currency !== expectedCurrency) {
+    const expectedOrigin = input.environment === "sandbox"
+      ? "https://api.sandbox.freeagent.com"
+      : "https://api.freeagent.com";
+    const companyOriginMatches = !company.url || (() => {
+      try {
+        return new URL(company.url).origin === expectedOrigin;
+      } catch {
+        return false;
+      }
+    })();
+    if (
+      company.subdomain !== credentials.companySubdomain ||
+      company.currency !== expectedCurrency ||
+      !companyOriginMatches
+    ) {
       throw new FreeAgentApiError({
         code: "CONFIGURATION",
         status: null,
-        message: "FreeAgent authenticated company does not match the configured company or currency.",
+        message: `${input.environment === "production" ? "Production" : "Sandbox"} FreeAgent company verification failed.`,
         retryable: false,
         unknown: false,
         retryAfterSeconds: null
@@ -928,7 +1000,7 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
     const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
-    const token = await accessToken(db, env, input.now, fetcher);
+    const token = await accessToken(db, env, environment, input.now, fetcher);
     stage = "FreeAgent contact GET";
     let contact: { url: string };
     try {

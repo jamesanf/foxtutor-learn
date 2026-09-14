@@ -8,15 +8,15 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.11 — FreeAgent provider-contract and environment-routing repair
+**Phase:** Phase 7.12 — FreeAgent dual Sandbox/Production connections
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
 **Deployed source commit:** `6067e837c3e4b9ada48cbe19ad71fb0d70e6e159`
 **Worker version:** `8cd9b99f-de03-466a-8a37-46ad3e78696b`
 **Latest documentation deployment:** commit `1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a`, Worker `b8782a16-fbac-4a53-a0ea-4f4c04fccb96`
-**D1 migrations:** `0001_foundation.sql` through `0029_accounting_category_environment.sql` deployed
-**Automated validation:** 38 test files, 229 tests passing
+**D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` in source; remote rollout pending
+**Automated validation:** 38 test files, 231 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -76,16 +76,21 @@ Phase 7.10 kept Sandbox and Production as separate FreeAgent trust domains,
 added business-facing invoice mapping diagnostics and category lookup, and
 recorded the Direct Debit setup email as instructional/support-only.
 
-Phase 7.11 repairs the remaining provider contract and environment-routing
-defects. FreeAgent categories are now normalized from the four documented
-collections using `description` and `nominal_code`; duplicate and
-wrong-environment URLs are rejected; and the admin selector provides readable
-labels and search. The OAuth action now uses the server-selected environment
-to generate `/v2/approve_app` on the correct Sandbox or Production API host,
-with environment-bound state and credentials. The release remains
-**NOT READY — PRODUCTION FREEAGENT AUTHORIZATION REQUIRED**: no Production
-authorization, company, contact, mandate or financial mutation is claimed.
-See [`docs/phase-7.11.md`](docs/phase-7.11.md).
+Phase 7.11's provider-contract repairs remain the adapter baseline: FreeAgent
+categories are normalized from the four documented collections using
+`description` and `nominal_code`, and wrong-environment URLs are rejected.
+
+Phase 7.12 source replaces the ambiguous single FreeAgent connection action with two
+independent connection identities: `FREEAGENT:SANDBOX` and
+`FREEAGENT:PRODUCTION`. The admin page exposes separate Connect and
+Reauthenticate actions, OAuth state stores the selected environment, and each
+environment has isolated credentials, encrypted tokens, company verification
+and category mapping. Sandbox remains allowed to use legacy generic credential
+names as a compatibility fallback; Production never does. This release is
+read-only with respect to Production FreeAgent and does not claim Production
+authorization or financial acceptance. See
+[`docs/architecture/phase-7.12.md`](docs/architecture/phase-7.12.md) and the
+Phase 7.12 testing, deployment and handover records.
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -232,6 +237,10 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/phase-7.9.md` | Environment-aware FreeAgent isolation |
 | `docs/phase-7.10.md` | FreeAgent acceptance and category mapping preparation |
 | `docs/phase-7.11.md` | Provider contract, category normalization and OAuth routing repair |
+| `docs/architecture/phase-7.12.md` | Independent FreeAgent Sandbox and Production connections |
+| `docs/testing/phase-7.12.md` | Phase 7.12 automated coverage and evidence boundary |
+| `docs/deployment/phase-7.12.md` | Phase 7.12 deployment provenance and safety boundary |
+| `docs/handover/phase-7.12.md` | Phase 7.12 human handover and next gate |
 | `docs/architecture/phase-7.11.md` | Phase 7.11 environment and provider-contract decisions |
 | `docs/testing/phase-7.11.md` | Phase 7.11 automated coverage and evidence boundary |
 | `docs/deployment/phase-7.11.md` | Phase 7.11 deployment provenance and safety boundary |

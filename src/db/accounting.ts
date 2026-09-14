@@ -106,6 +106,11 @@ export interface AccountingBillingSettings {
   updated_at: string;
 }
 
+export interface AccountingBillingSettingsByEnvironment extends Omit<AccountingBillingSettings, "id"> {
+  provider: "FREEAGENT";
+  environment: AccountingEnvironmentName;
+}
+
 const outboxSelect = `SELECT a.*, s.name AS student_name, l.start_at AS lesson_start_at,
   l.end_at AS lesson_end_at, l.timezone AS lesson_timezone
   FROM accounting_outbox a
@@ -572,7 +577,28 @@ export async function findAccountingConnection(db: D1Database, environment?: Acc
   ).bind(environment ?? null, environment ?? null).first<AccountingConnection>();
 }
 
-export async function findAccountingBillingSettings(db: D1Database): Promise<AccountingBillingSettings | null> {
+export async function findAccountingBillingSettings(
+  db: D1Database,
+  environment?: AccountingEnvironmentName
+): Promise<AccountingBillingSettings | null> {
+  if (environment) {
+    const isolated = await db.prepare(
+      `SELECT 'FREEAGENT' AS id, amount, item_type, category_url,
+              environment AS provider_environment, provider_company_subdomain,
+              payment_terms_days, currency, sales_tax_rate, updated_by_user_id,
+              created_at, updated_at
+       FROM accounting_billing_settings_by_environment
+       WHERE provider = 'FREEAGENT' AND environment = ?`
+    ).bind(environment).first<AccountingBillingSettings>();
+    if (isolated) return isolated;
+  }
+  if (environment) {
+    return db.prepare(
+      `SELECT * FROM accounting_billing_settings
+       WHERE id = 'FREEAGENT'
+         AND (provider_environment = ? OR (provider_environment IS NULL AND ? = 'sandbox'))`
+    ).bind(environment, environment).first<AccountingBillingSettings>();
+  }
   return db.prepare("SELECT * FROM accounting_billing_settings WHERE id = 'FREEAGENT'").first<AccountingBillingSettings>();
 }
 
@@ -588,8 +614,40 @@ export async function saveAccountingBillingSettings(
     salesTaxRate: string;
     updatedByUserId: string | null;
     now: string;
+    environment?: AccountingEnvironmentName | null;
   }
 ): Promise<void> {
+  const environment = input.environment ?? input.providerEnvironment;
+  if (environment) {
+    await db.prepare(
+      `INSERT INTO accounting_billing_settings_by_environment
+       (provider, environment, amount, item_type, category_url, provider_company_subdomain,
+        payment_terms_days, currency, sales_tax_rate, updated_by_user_id, created_at, updated_at)
+       VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, 'GBP', ?, ?, ?, ?)
+       ON CONFLICT(provider, environment) DO UPDATE SET
+         amount = excluded.amount,
+         item_type = excluded.item_type,
+         category_url = excluded.category_url,
+         provider_company_subdomain = excluded.provider_company_subdomain,
+         payment_terms_days = excluded.payment_terms_days,
+         currency = 'GBP',
+         sales_tax_rate = excluded.sales_tax_rate,
+         updated_by_user_id = excluded.updated_by_user_id,
+         updated_at = excluded.updated_at`
+    ).bind(
+      environment,
+      input.amount,
+      input.itemType,
+      input.categoryUrl,
+      input.providerCompanySubdomain ?? null,
+      input.paymentTermsDays,
+      input.salesTaxRate,
+      input.updatedByUserId,
+      input.now,
+      input.now
+    ).run();
+    return;
+  }
   await db.prepare(
     `INSERT INTO accounting_billing_settings
      (id, amount, item_type, category_url, provider_environment, provider_company_subdomain, payment_terms_days, currency,
@@ -673,18 +731,43 @@ export async function updateAccountingConnectionStatus(
 
 export async function createAccountingOAuthState(
   db: D1Database,
-  input: { stateHash: string; adminUserId: string; environment: "sandbox" | "production"; expiresAt: string; createdAt: string }
+  input: {
+    stateHash: string;
+    adminUserId: string;
+    environment: "sandbox" | "production";
+    expiresAt: string;
+    createdAt: string;
+    provider?: "FREEAGENT";
+    redirectIntent?: "accounting";
+  }
 ): Promise<void> {
   await db.prepare(
-    `INSERT INTO accounting_oauth_states(state_hash, admin_user_id, environment, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).bind(input.stateHash, input.adminUserId, input.environment, input.expiresAt, input.createdAt).run();
+    `INSERT INTO accounting_oauth_states
+     (state_hash, admin_user_id, provider, environment, expires_at, created_at, redirect_intent)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    input.stateHash,
+    input.adminUserId,
+    input.provider ?? "FREEAGENT",
+    input.environment,
+    input.expiresAt,
+    input.createdAt,
+    input.redirectIntent ?? "accounting"
+  ).run();
 }
 
-export async function consumeAccountingOAuthState(db: D1Database, stateHash: string, now: string): Promise<{ admin_user_id: string; environment: "sandbox" | "production" } | null> {
+export async function consumeAccountingOAuthState(
+  db: D1Database,
+  stateHash: string,
+  now: string
+): Promise<{ admin_user_id: string; provider: "FREEAGENT"; environment: "sandbox" | "production"; redirect_intent: "accounting" } | null> {
   const row = await db.prepare(
-    "SELECT admin_user_id, environment FROM accounting_oauth_states WHERE state_hash = ? AND consumed_at IS NULL AND expires_at > ?"
-  ).bind(stateHash, now).first<{ admin_user_id: string; environment: "sandbox" | "production" }>();
+    `SELECT admin_user_id, provider, environment, redirect_intent
+     FROM accounting_oauth_states
+     WHERE state_hash = ? AND provider = 'FREEAGENT'
+       AND redirect_intent = 'accounting'
+       AND consumed_at IS NULL AND expires_at > ?`
+  ).bind(stateHash, now).first<{ admin_user_id: string; provider: "FREEAGENT"; environment: "sandbox" | "production"; redirect_intent: "accounting" }>();
   if (!row) return null;
   const updated = await db.prepare(
     "UPDATE accounting_oauth_states SET consumed_at = ? WHERE state_hash = ? AND consumed_at IS NULL"

@@ -233,4 +233,13 @@ describe("D1 foundation", () => {
     expect(migration).toContain("ALTER TABLE accounting_billing_settings ADD COLUMN provider_company_subdomain");
     expect(migration).toContain("accounting_connections_by_environment");
   });
+
+  it("stores independent FreeAgent billing mappings and OAuth bindings", () => {
+    const migration = readFileSync("migrations/0030_freeagent_dual_connections.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE accounting_oauth_states ADD COLUMN provider");
+    expect(migration).toContain("ALTER TABLE accounting_oauth_states ADD COLUMN redirect_intent");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_billing_settings_by_environment");
+    expect(migration).toContain("PRIMARY KEY (provider, environment)");
+    expect(migration).toContain("CHECK (environment IN ('sandbox', 'production'))");
+  });
 });

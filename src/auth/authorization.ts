@@ -109,7 +109,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (path === "/learn/admin/series/new") return "admin-series-form";
   if (/^\/learn\/admin\/series\/[^/]+\/(?:pause|resume|end)$/.test(path)) return "admin-series-action";
   if (path === "/learn/admin/accounting/settings") return "admin-accounting-settings";
-  if (path === "/learn/admin/accounting/connect") return "admin-accounting-connect";
+  if (path === "/learn/admin/accounting/connect" || /^\/learn\/admin\/accounting\/connect\/(sandbox|production)$/.test(path)) return "admin-accounting-connect";
   if (path === "/learn/admin/accounting/oauth/callback") return "admin-accounting-callback";
   if (/^\/learn\/admin\/accounting\/contacts\/[^/]+(?:\/remove)?$/.test(path)) return "admin-accounting-contact";
   if (/^\/learn\/admin\/accounting\/[^/]+\/retry$/.test(path)) return "admin-accounting-retry";

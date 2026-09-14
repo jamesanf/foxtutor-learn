@@ -566,6 +566,101 @@ describe("FreeAgent adapter", () => {
     }
   });
 
+  it("keeps Sandbox and Production OAuth connections in separate records", async () => {
+    const connections: Record<string, Record<string, unknown>> = {};
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/v2/token_endpoint")) {
+        const body = String(init?.body ?? "");
+        const production = body.includes("code=production-code");
+        return jsonResponse({
+          access_token: production ? "production-access" : "sandbox-access",
+          refresh_token: production ? "production-refresh" : "sandbox-refresh",
+          expires_in: 3600,
+          refresh_token_expires_in: 86_400
+        });
+      }
+      const production = url.startsWith("https://api.freeagent.com/");
+      return jsonResponse({
+        company: {
+          name: production ? "Production Company" : "Sandbox Company",
+          subdomain: production ? "production-company" : "sandbox-company",
+          currency: "GBP",
+          url: `${production ? "https://api.freeagent.com" : "https://api.sandbox.freeagent.com"}/v2/company`
+        }
+      });
+    };
+    const db = {
+      prepare(sql: string) {
+        const execute = async (values: unknown[] = []) => {
+          if (sql.startsWith("SELECT * FROM accounting_connections_by_environment")) {
+            return connections[String(values[0])] ?? null;
+          }
+          return null;
+        };
+        return {
+          first: async () => execute(),
+          bind(...values: unknown[]) {
+            return {
+              first: async () => execute(values),
+              async run() {
+                if (sql.startsWith("INSERT INTO accounting_connections_by_environment")) {
+                  connections[String(values[0])] = {
+                    id: "FREEAGENT",
+                    environment: values[0],
+                    company_name: values[1],
+                    company_subdomain: values[2],
+                    access_token_ciphertext: values[3],
+                    refresh_token_ciphertext: values[4],
+                    access_token_expires_at: values[5],
+                    refresh_token_expires_at: values[6],
+                    status: "CONNECTED",
+                    updated_at: values[7]
+                  };
+                }
+                return { meta: { changes: 1 } };
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+    const baseEnv = {
+      FREEAGENT_ENVIRONMENT: "sandbox",
+      FREEAGENT_INVOICE_CURRENCY: "GBP",
+      FREEAGENT_SANDBOX_CLIENT_ID: "sandbox-client",
+      FREEAGENT_SANDBOX_CLIENT_SECRET: "sandbox-secret",
+      FREEAGENT_SANDBOX_TOKEN_ENCRYPTION_KEY: "sandbox-key",
+      FREEAGENT_SANDBOX_OAUTH_REDIRECT_URI: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      FREEAGENT_SANDBOX_COMPANY_SUBDOMAIN: "sandbox-company",
+      FREEAGENT_PRODUCTION_CLIENT_ID: "production-client",
+      FREEAGENT_PRODUCTION_CLIENT_SECRET: "production-secret",
+      FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY: "production-key",
+      FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      FREEAGENT_PRODUCTION_COMPANY_SUBDOMAIN: "production-company"
+    };
+    await connectFreeAgent(db, baseEnv, {
+      code: "sandbox-code",
+      environment: "sandbox",
+      redirectUri: baseEnv.FREEAGENT_SANDBOX_OAUTH_REDIRECT_URI,
+      now: "2026-09-14T12:00:00.000Z"
+    }, fetcher);
+    const sandboxBefore = connections.sandbox;
+    await connectFreeAgent(db, baseEnv, {
+      code: "production-code",
+      environment: "production",
+      redirectUri: baseEnv.FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI,
+      now: "2026-09-14T12:01:00.000Z"
+    }, fetcher);
+    expect(connections.sandbox).toEqual(sandboxBefore);
+    expect(connections.production).toMatchObject({
+      environment: "production",
+      company_subdomain: "production-company",
+      status: "CONNECTED"
+    });
+    expect(connections.production?.access_token_ciphertext).not.toBe(connections.sandbox?.access_token_ciphertext);
+  });
+
   it("persists a verified contact through the D1 mapping path", async () => {
     const studentId = "student-1";
     const now = "2026-09-14T12:00:00.000Z";

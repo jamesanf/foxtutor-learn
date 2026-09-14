@@ -23,8 +23,9 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('name="categoryUrl" required');
     expect(workerSource).not.toContain('name="categoryUrl" type="url"');
     expect(workerSource).toContain("provider URL is stored internally");
-    expect(workerSource).toContain("FreeAgent integration active");
-    expect(workerSource).toContain("Reauthenticate FreeAgent");
+    expect(workerSource).toContain("FreeAgent ${environmentLabel} integration active");
+    expect(workerSource).toContain("Reauthenticate ${environmentLabel}");
+    expect(workerSource).toContain("Connect ${environmentLabel}");
     expect(workerSource).toContain('class="accounting-icon-link accounting-settings-link"');
     expect(workerSource).toContain('aria-label="Billing settings"');
     expect(workerSource).toContain("M12 15.5A3.5 3.5 0 1 1 15.5 12");
@@ -67,12 +68,13 @@ describe("accounting admin presentation contract", () => {
   });
 
   it("generates the admin OAuth target from the server-selected environment", () => {
-    expect(workerSource).toContain('const environment = configuredEnvironment(env);');
+    expect(workerSource).toContain('const environment = parseFreeAgentEnvironment(connectionMatch?.[1]);');
     expect(workerSource).toContain('return redirect(freeAgentAuthorizationUrl(environment, {');
     expect(workerSource).toContain('clientId: credentials.clientId');
     expect(workerSource).not.toContain("login.sandbox.freeagent.com");
-    expect(workerSource).toContain("const connectionLabel = status.connected ? \"Connected\" : \"Not connected\";");
-    expect(workerSource).toContain("freeAgentEnvironmentLabel(status.environment)");
+    expect(workerSource).toContain("FreeAgent ${label}");
+    expect(workerSource).toContain('buttonLink(`/learn/admin/accounting/connect/${environment}`');
+    expect(workerSource).toContain('freeAgentEnvironmentLabel(environment)');
   });
 
   it("handles the bypassed callback with one-time admin-bound OAuth state", () => {
