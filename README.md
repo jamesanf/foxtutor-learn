@@ -8,15 +8,15 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.7 — Direct Debit chain validation and reconciliation
+**Phase:** Phase 7.8 — FreeAgent billing acceptance and finalisation
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source baseline:** `e97a07e` plus the Phase 7.7 working-tree changes
+**Deployed source baseline:** Phase 7.7 Worker `9d3d0252-57e2-4f0d-af7f-5f790923badb`; Phase 7.8 deployment record is pending final committed-source deployment
 **Previous Worker version:** `a57d4b20-93de-4c72-8af6-3b1f8eed54ea`
 **Current Worker version:** `9d3d0252-57e2-4f0d-af7f-5f790923badb`
 **D1 migrations:** `0001_foundation.sql` through `0027_phase77_payment_submitted.sql` deployed
-**Automated validation:** 37 test files, 206 tests passing
+**Automated validation:** 37 test files, 210 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -60,6 +60,17 @@ mapping, outbox row, retry audit row or financial mutation. Billing settings
 show the connection status, environment, company identity and reauthentication
 action; invoice-producing acceptance remains fail-closed until the approved
 FreeAgent category/accounting mapping and cancellation consequence exist.
+
+Phase 7.8 identifies the real production chain as student
+`2dba78cd-0ce9-4aa2-918f-c3fb9d3b683b` -> verified FreeAgent contact `257175`
+in Sandbox. The stored local mandate state remains honestly `UNKNOWN` because
+the prior release did not retain the exact raw contact mandate field. The
+current release distinguishes missing, malformed, unexpected, contact
+mismatch, and provider transport/authentication outcomes rather than
+presenting them as one generic provider failure. The existing mandate is not
+replaced, no real financial mutation is performed, and the final provider/API
+and authenticated-browser evidence remains a human-assisted acceptance gate.
+See [`docs/phase-7.8.md`](docs/phase-7.8.md).
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,

@@ -22,6 +22,7 @@ import {
 import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
 import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
 import { billingReference } from "../domain/billing";
+import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentPaymentStatus } from "../domain/payment-status";
 
 function providerReference(url: string): string {
@@ -277,24 +278,26 @@ async function processDirectDebit(
   }
   try {
     const mandate = await providerCall(db, env, now, fetcher, (client, token) => client.getContact(token, link.external_url));
-    if (!mandate || mandate.directDebitMandateState !== "active") {
+    const mandateState = classifyDirectDebitState(mandate?.directDebitMandateState ?? null, Boolean(mandate));
+    if (mandateState.status !== "ACTIVE") {
+      const isUnknown = mandateState.status === "UNKNOWN";
       await markBillingInvoiceOperation(db, operation.id, {
         status: "BLOCKED",
-        providerStatus: mandate?.directDebitMandateState ?? "missing",
-        safeErrorCode: "MANDATE_INACTIVE",
-        safeErrorMessage: "The FreeAgent GoCardless mandate is not active."
+        providerStatus: mandateState.diagnosticCode ?? mandateState.status,
+        safeErrorCode: isUnknown ? mandateState.diagnosticCode ?? "UNKNOWN" : "MANDATE_INACTIVE",
+        safeErrorMessage: mandateState.diagnosticMessage ?? "The FreeAgent GoCardless mandate is not active."
       }, now);
       await createBillingAlert(db, {
         id: `billing-alert:${operation.id}:mandate`,
         deduplicationKey: `billing-operation:${operation.id}:mandate`,
-        alertType: "MANDATE_INACTIVE",
+        alertType: isUnknown ? "RECONCILIATION_REQUIRED" : "MANDATE_INACTIVE",
         severity: "ERROR",
         studentId: event.student_id,
         payerStudentId: event.payer_student_id,
         lessonId: event.lesson_id,
         billingEventId: event.id,
         invoiceId: invoice.id,
-        currentState: `MANDATE_${mandate?.directDebitMandateState ?? "MISSING"}`,
+        currentState: `MANDATE_${mandateState.status}`,
         recommendedAction: "Complete or repair the customer's FreeAgent Direct Debit mandate.",
         now
       });

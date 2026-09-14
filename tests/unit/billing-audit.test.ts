@@ -10,8 +10,11 @@ const base: BillingChainSnapshot = {
     provisioningState: "ACTIVE",
     providerContactReference: "900001",
     providerContactUrl: "https://api.sandbox.freeagent.com/v2/contacts/900001",
+    verifiedAt: "2026-09-14T12:00:00.000Z",
     lastReconciledAt: "2026-09-14T12:00:00.000Z",
-    lastErrorCode: null
+    nextReconcileAt: "2026-09-15T12:00:00.000Z",
+    lastErrorCode: null,
+    lastErrorMessage: null
   },
   accountingLink: {
     status: "VERIFIED",
@@ -62,5 +65,22 @@ describe("billing chain audit", () => {
     }, "2026-09-14T12:00:00.000Z");
     expect(audit.status).toBe("UNKNOWN");
     expect(audit.reasons.map((reason) => reason.code)).toContain("PROVIDER_UNAVAILABLE");
+  });
+
+  it("reports a missing mandate field distinctly from transport failure", () => {
+    const audit = evaluateBillingChain("student-1", {
+      ...base,
+      billingAccount: {
+        ...base.billingAccount!,
+        mandateState: "UNKNOWN",
+        lastErrorCode: "MANDATE_STATE_MISSING",
+        lastErrorMessage: "FreeAgent returned the mapped contact without a Direct Debit mandate state."
+      }
+    }, "2026-09-14T12:00:00.000Z");
+    expect(audit.status).toBe("UNKNOWN");
+    expect(audit.reasons).toContainEqual({
+      code: "MANDATE_UNKNOWN",
+      detail: "FreeAgent returned the mapped contact without a Direct Debit mandate state."
+    });
   });
 });

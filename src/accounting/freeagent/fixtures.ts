@@ -1,11 +1,11 @@
 import type { FreeAgentDirectDebitMandateState, FreeAgentInvoice } from "./client";
 
 export type SyntheticFixtureLabel =
-  | "LOCAL_PROVIDER_FIXTURE"
+  | "SYNTHETIC_FREEAGENT_FIXTURE"
   | "SYNTHETIC_GOCARDLESS_FIXTURE";
 
 export interface FreeAgentContactFixture {
-  label: "LOCAL_PROVIDER_FIXTURE";
+  label: "SYNTHETIC_FREEAGENT_FIXTURE";
   contact: {
     url: string;
     first_name: string;
@@ -41,7 +41,7 @@ export function freeAgentContactFixture(
 ): FreeAgentContactFixture {
   const id = input.id ?? "900001";
   return {
-    label: "LOCAL_PROVIDER_FIXTURE",
+    label: "SYNTHETIC_FREEAGENT_FIXTURE",
     contact: {
       url: `https://api.sandbox.freeagent.com/v2/contacts/${id}`,
       first_name: "Synthetic",

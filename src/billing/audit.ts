@@ -39,8 +39,11 @@ export interface BillingChainSnapshot {
     provisioningState: string;
     providerContactReference: string | null;
     providerContactUrl: string | null;
+    verifiedAt: string | null;
     lastReconciledAt: string | null;
+    nextReconcileAt: string | null;
     lastErrorCode: string | null;
+    lastErrorMessage: string | null;
   } | null;
   accountingLink: {
     status: string;
@@ -140,7 +143,11 @@ export function evaluateBillingChain(
       push(reasons, "MANDATE_INACTIVE", "The Direct Debit mandate is inactive.");
       break;
     default:
-      push(reasons, "MANDATE_UNKNOWN", "The provider mandate state is unavailable or unexpected.");
+      push(
+        reasons,
+        "MANDATE_UNKNOWN",
+        snapshot.billingAccount.lastErrorMessage ?? "The provider mandate state is unavailable or unexpected."
+      );
   }
 
   if (snapshot.invoice) {
@@ -195,7 +202,8 @@ export async function auditBillingChain(
   ).bind(studentId).first<{ id: string; name: string; status: string }>();
   const billingAccount = await db.prepare(
     `SELECT id, payment_method, mandate_state, provisioning_state,
-            provider_contact_reference, provider_contact_url, last_reconciled_at, last_error_code
+            provider_contact_reference, provider_contact_url, verified_at,
+            last_reconciled_at, next_reconcile_at, last_error_code, last_error_message
      FROM billing_accounts WHERE student_id = ?`
   ).bind(studentId).first<{
     id: string;
@@ -204,8 +212,11 @@ export async function auditBillingChain(
     provisioning_state: string;
     provider_contact_reference: string | null;
     provider_contact_url: string | null;
+    verified_at: string | null;
     last_reconciled_at: string | null;
+    next_reconcile_at: string | null;
     last_error_code: string | null;
+    last_error_message: string | null;
   }>();
   const accountingLink = await db.prepare(
     `SELECT status, provider, external_resource_type, external_reference, external_url
@@ -248,8 +259,11 @@ export async function auditBillingChain(
       provisioningState: billingAccount.provisioning_state,
       providerContactReference: billingAccount.provider_contact_reference,
       providerContactUrl: billingAccount.provider_contact_url,
+      verifiedAt: billingAccount.verified_at,
       lastReconciledAt: billingAccount.last_reconciled_at,
-      lastErrorCode: billingAccount.last_error_code
+      nextReconcileAt: billingAccount.next_reconcile_at,
+      lastErrorCode: billingAccount.last_error_code,
+      lastErrorMessage: billingAccount.last_error_message
     } : null,
     accountingLink: accountingLink ? {
       status: accountingLink.status,

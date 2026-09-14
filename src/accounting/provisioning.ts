@@ -11,7 +11,7 @@ import {
   type BillingProvisioningState
 } from "../db/billing-accounts";
 import { findAccountingConnection, findExternalAccountingLink, upsertExternalAccountingLink } from "../db/accounting";
-import { mapDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
+import { classifyDirectDebitState, type DirectDebitStatus } from "../domain/direct-debit";
 import { providerCall, type AccountingEnvironment } from "./service";
 import { freeAgentFetch, FreeAgentApiError, type FreeAgentContact } from "./freeagent/client";
 import { createDirectDebitNotification, type NotificationEnvironment } from "../notifications/service";
@@ -153,7 +153,8 @@ export async function provisionBillingAccount(
 
   try {
     const { contact } = await findOrCreateContact(db, env, student, account, now, fetcher);
-    const status = mapDirectDebitStatus(contact.directDebitMandateState, true);
+    const state = classifyDirectDebitState(contact.directDebitMandateState, true);
+    const status = state.status;
     const states = localState(status);
     const prior = account.mandate_state;
     await updateBillingAccount(db, account.id, {
@@ -164,10 +165,21 @@ export async function provisionBillingAccount(
       verifiedAt: status === "ACTIVE" ? now : null,
       lastReconciledAt: now,
       nextReconcileAt: new Date(Date.parse(now) + (status === "ACTIVE" ? 24 : 1) * 60 * 60_000).toISOString(),
-      lastErrorCode: null,
-      lastErrorMessage: null,
+      lastErrorCode: state.diagnosticCode,
+      lastErrorMessage: state.diagnosticMessage,
       claimExpiresAt: null
     }, now);
+    console.info("billing_mandate_reconciled", {
+      studentId: student.id,
+      billingAccountId: account.id,
+      provider: "FREEAGENT",
+      externalContactReference: contact.url.split("/").pop() ?? null,
+      providerState: typeof contact.directDebitMandateState === "string"
+        ? contact.directDebitMandateState.slice(0, 64)
+        : contact.directDebitMandateState,
+      normalizedState: status,
+      diagnosticCode: state.diagnosticCode
+    });
     if (prior !== states.mandateState) {
       await recordBillingProvisioningEvent(db, {
         id: crypto.randomUUID(),
@@ -248,7 +260,8 @@ export async function reconcileBillingAccountMandate(
         retryAfterSeconds: null
       });
     }
-    const status = mapDirectDebitStatus(contact?.directDebitMandateState ?? null, true);
+    const state = classifyDirectDebitState(contact?.directDebitMandateState ?? null, true);
+    const status = state.status;
     const states = localState(status);
     await updateBillingAccount(db, account.id, {
       mandateState: states.mandateState,
@@ -258,13 +271,31 @@ export async function reconcileBillingAccountMandate(
       verifiedAt: status === "ACTIVE" ? now : null,
       lastReconciledAt: now,
       nextReconcileAt: new Date(Date.parse(now) + (status === "ACTIVE" ? 24 : 1) * 60 * 60_000).toISOString(),
-      lastErrorCode: null,
-      lastErrorMessage: null,
+      lastErrorCode: state.diagnosticCode,
+      lastErrorMessage: state.diagnosticMessage,
       claimExpiresAt: null
     }, now);
+    console.info("billing_mandate_reconciled", {
+      studentId,
+      billingAccountId: account.id,
+      provider: "FREEAGENT",
+      externalContactReference: providerContactReference,
+      providerState: typeof contact.directDebitMandateState === "string"
+        ? contact.directDebitMandateState.slice(0, 64)
+        : contact.directDebitMandateState,
+      normalizedState: status,
+      diagnosticCode: state.diagnosticCode
+    });
     return status;
   } catch (error) {
     const failure = safeProviderError(error);
+    console.error("billing_mandate_reconciliation_failed", {
+      studentId,
+      billingAccountId: account.id,
+      provider: "FREEAGENT",
+      externalContactReference: link.external_reference,
+      errorCode: failure.code
+    });
     await updateBillingAccount(db, account.id, {
       mandateState: "UNKNOWN",
       provisioningState: "UNKNOWN",

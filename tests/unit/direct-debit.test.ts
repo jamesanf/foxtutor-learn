@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyDirectDebitState,
   directDebitStatusCopy,
   mapDirectDebitStatus
 } from "../../src/domain/direct-debit";
@@ -21,6 +22,19 @@ describe("Direct Debit mandate state mapping", () => {
   it("does not treat an unconfigured contact as an unknown provider state", () => {
     expect(mapDirectDebitStatus(null, false)).toBe("SETUP_REQUIRED");
     expect(mapDirectDebitStatus("active", false)).toBe("SETUP_REQUIRED");
+  });
+
+  it("classifies a mapped contact with no mandate field as an observable provider gap", () => {
+    expect(classifyDirectDebitState(null, true)).toEqual({
+      status: "UNKNOWN",
+      diagnosticCode: "MANDATE_STATE_MISSING",
+      diagnosticMessage: "FreeAgent returned the mapped contact without a Direct Debit mandate state."
+    });
+  });
+
+  it("classifies malformed and unexpected provider values separately", () => {
+    expect(classifyDirectDebitState(42 as never, true).diagnosticCode).toBe("MALFORMED_PROVIDER_RESPONSE");
+    expect(classifyDirectDebitState("future-provider-state", true).diagnosticCode).toBe("UNEXPECTED_MANDATE_STATE");
   });
 
   it("keeps customer copy free of provider identifiers and bank-data instructions", () => {

@@ -31,10 +31,17 @@ export type DirectDebitDiagnosticCode =
   | "ENVIRONMENT_MISMATCH"
   | "SANDBOX_CAPABILITY_LIMIT"
   | "STALE_LOCAL_STATE"
+  | "MANDATE_STATE_MISSING"
   | "CORRECT_NO_MANDATE_STATE"
   | "CORRECT_PENDING_STATE"
   | "CORRECT_ACTIVE_STATE"
   | "OTHER";
+
+export interface DirectDebitStateResult {
+  status: DirectDebitStatus;
+  diagnosticCode: DirectDebitDiagnosticCode | null;
+  diagnosticMessage: string | null;
+}
 
 export function normalizeProviderMandateState(value: unknown): ProviderMandateState {
   if (value === null || value === undefined) return null;
@@ -47,14 +54,45 @@ export function mapDirectDebitStatus(
   providerState: ProviderMandateState,
   hasVerifiedContact: boolean
 ): DirectDebitStatus {
-  if (!hasVerifiedContact) return "SETUP_REQUIRED";
+  return classifyDirectDebitState(providerState, hasVerifiedContact).status;
+}
+
+export function classifyDirectDebitState(
+  providerState: ProviderMandateState,
+  hasVerifiedContact: boolean
+): DirectDebitStateResult {
+  if (!hasVerifiedContact) {
+    return {
+      status: "SETUP_REQUIRED",
+      diagnosticCode: "MISSING_CONTACT_LINK",
+      diagnosticMessage: "A verified FreeAgent contact is required before mandate state can be read."
+    };
+  }
   const normalized = normalizeProviderMandateState(providerState);
-  if (normalized === "setup") return "SETUP_REQUIRED";
-  if (normalized === "pending") return "AUTHORISATION_PENDING";
-  if (normalized === "active") return "ACTIVE";
-  if (normalized === "inactive") return "INACTIVE";
-  if (normalized === "failed") return "FAILED";
-  return "UNKNOWN";
+  if (normalized === "setup") return { status: "SETUP_REQUIRED", diagnosticCode: null, diagnosticMessage: null };
+  if (normalized === "pending") return { status: "AUTHORISATION_PENDING", diagnosticCode: null, diagnosticMessage: null };
+  if (normalized === "active") return { status: "ACTIVE", diagnosticCode: null, diagnosticMessage: null };
+  if (normalized === "inactive") return { status: "INACTIVE", diagnosticCode: null, diagnosticMessage: null };
+  if (normalized === "failed") return { status: "FAILED", diagnosticCode: null, diagnosticMessage: null };
+  if (normalized === null) {
+    return {
+      status: "UNKNOWN",
+      diagnosticCode: "MANDATE_STATE_MISSING",
+      diagnosticMessage: "FreeAgent returned the mapped contact without a Direct Debit mandate state."
+    };
+  }
+  if (normalized === "__MALFORMED__") {
+    return {
+      status: "UNKNOWN",
+      diagnosticCode: "MALFORMED_PROVIDER_RESPONSE",
+      diagnosticMessage: "FreeAgent returned a malformed Direct Debit mandate state."
+    };
+  }
+  return {
+    status: "UNKNOWN",
+    diagnosticCode: "UNEXPECTED_MANDATE_STATE",
+    diagnosticMessage: "FreeAgent returned an unrecognised Direct Debit mandate state."
+  };
 }
 
 export function directDebitStatusCopy(status: DirectDebitStatus): DirectDebitStatusCopy {
