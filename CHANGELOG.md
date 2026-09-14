@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-14 - Keep billing settings title on one line
+
+- Prevented the Billing settings heading from wrapping beside the fixed-size
+  accounting actions.
+- Added responsive typography so the heading stays on one line without
+  changing the equal button dimensions.
+- Deployed executable commit `3eae32a` as Worker version
+  `f5a2612b-98d2-4656-a23b-bfacb49cdb8c`.
+
 ### 2026-09-14 - Diagnose contact mapping persistence
 
 - Confirmed the deployed `external_accounting_links` schema contains all
