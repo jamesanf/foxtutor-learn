@@ -73,10 +73,15 @@ describe("accounting admin presentation contract", () => {
 
   it("keeps contact mappings readable on desktop and mobile", () => {
     expect(workerSource).toContain('class="table-wrap accounting-contact-table"');
-    expect(cssSource).toContain(".accounting-contact-table table { min-width: 980px");
+    expect(workerSource).toContain('class="accounting-icon-button accounting-save-button"');
+    expect(workerSource).toContain('class="accounting-icon-button accounting-remove-button"');
+    expect(workerSource).toContain('title="Verify and save"');
+    expect(workerSource).toContain('title="Remove"');
+    expect(cssSource).toContain(".accounting-contact-table table { min-width: 0; table-layout: fixed; }");
     expect(cssSource).toContain(".accounting-contact-table .status { white-space: nowrap; }");
     expect(cssSource).toContain(".accounting-contact-table .inline-form");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
+    expect(cssSource).toContain(".accounting-icon-button { display: inline-grid; width: 34px;");
   });
 
   it("uses a four-card dashboard grid and stacked accounting actions", () => {
