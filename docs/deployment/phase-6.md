@@ -9,9 +9,9 @@
 - D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `fcc2ae79eeafc425f5a53ee611daea57483ceca5`
-- Deployed source commit: `fcc2ae79eeafc425f5a53ee611daea57483ceca5`
-- Deployed Worker version: `a3e8f035-8977-4028-b771-e198e7128461`
+- Repository HEAD at executable deployment: `b25cd52fbb799d50735e2f1a913038c7b2587b01`
+- Deployed source commit: `b25cd52fbb799d50735e2f1a913038c7b2587b01`
+- Deployed Worker version: `115c510a-cd02-441f-99b0-cbeffdef1fe1`
 - FreeAgent Sandbox secret bindings: configured
 - FreeAgent OAuth connection: not completed; `accounting_connections` has no
   persisted connection

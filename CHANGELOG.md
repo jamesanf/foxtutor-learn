@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-14 - Use coins icon for accounting
+
+- Replaced the accounting sidebar pound glyph with an MDI-style stacked coins
+  icon.
+- Deployed executable commit
+  `b25cd52fbb799d50735e2f1a913038c7b2587b01` as Worker version
+  `115c510a-cd02-441f-99b0-cbeffdef1fe1`.
+
 ### 2026-09-14 - Simplify dashboard summary cards
 
 - Removed redundant View bookings, View students and View reschedules helper
