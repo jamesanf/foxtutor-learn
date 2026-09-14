@@ -28,7 +28,7 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-connection-details");
     expect(workerSource).toContain('class="card form-card billing-settings-card"');
     expect(workerSource).not.toContain("Configure future FreeAgent lesson invoices.");
-    expect(cssSource).toContain(".billing-settings-actions .button { width: 190px; min-width: 190px; max-width: 190px; flex: 0 0 190px;");
+    expect(cssSource).toContain(".billing-settings-actions .button { width: 220px; min-width: 220px; max-width: 220px; flex: 0 0 220px;");
     expect(cssSource).toContain(".card .info-box { max-width: none; }");
   });
 
