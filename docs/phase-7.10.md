@@ -115,8 +115,8 @@ credit note is performed.
 The Phase 7.10 release was committed before deployment:
 
 - source commit: `ce85e6f3d89a6eeddb0e99b94a643af6e04ae5f8`;
-- Worker version: `dc886b4a-5f00-4ace-ac2d-a8162a826b8e`;
-- Worker version creation time: `2026-09-14T19:42:43.693Z`;
+- Worker version and creation time: recorded in the final Phase 7.10 release
+  report after deployment;
 - remote migration: `0029_accounting_category_environment.sql` applied;
 - post-deploy migration check: no migrations to apply;
 - smoke test: `/learn` returned the expected Cloudflare Access `302`;
