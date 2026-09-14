@@ -595,30 +595,66 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
   }
-  const contact = await providerCall(db, env, input.now, fetcher, (client, token) =>
-    client.findContact(token, input.externalReference)
-  );
-  if (!contact) {
-    throw new FreeAgentApiError({
-      code: "NOT_FOUND",
-      status: 404,
-      message: "The FreeAgent contact was not found.",
+  let stage = "access-token retrieval / refresh";
+  const logFailure = (error: unknown, failureStage: string): void => {
+    const shape = error instanceof FreeAgentApiError ? error.shape : null;
+    console.log("FreeAgent contact mapping stage failed", {
+      stage: failureStage,
+      status: shape?.status ?? null,
+      errorCode: shape?.code ?? "UNKNOWN",
+      retryable: shape?.retryable ?? false,
+      unknown: shape?.unknown ?? true,
+      targetPath: failureStage === "FreeAgent contact GET" || failureStage === "contact response validation" ? "/v2/contacts/:id" : null,
+      fetcherType: fetcher === freeAgentFetch ? "bound-wrapper" : "injected"
+    });
+  };
+  try {
+    const environment = configuredEnvironment(env);
+    if (!environment) throw new FreeAgentApiError({
+      code: "CONFIGURATION",
+      status: null,
+      message: "FreeAgent environment is not configured.",
       retryable: false,
       unknown: false,
       retryAfterSeconds: null
     });
+    const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
+    const token = await accessToken(db, env, input.now, fetcher);
+    stage = "FreeAgent contact GET";
+    let contact: { url: string };
+    try {
+      const found = await client.findContact(token, input.externalReference);
+      if (!found) throw new FreeAgentApiError({
+        code: "MALFORMED_RESPONSE",
+        status: null,
+        message: "FreeAgent contact response was incomplete.",
+        retryable: false,
+        unknown: true,
+        retryAfterSeconds: null
+      });
+      contact = found;
+    } catch (error) {
+      stage = error instanceof FreeAgentApiError && error.shape.code === "MALFORMED_RESPONSE"
+        ? "contact response validation"
+        : "FreeAgent contact GET";
+      throw error;
+    }
+    stage = "D1 mapping persistence";
+    await upsertExternalAccountingLink(db, {
+      id: crypto.randomUUID(),
+      studentId: input.studentId,
+      externalReference: input.externalReference,
+      externalUrl: contact.url,
+      status: "VERIFIED",
+      verifiedAt: input.now,
+      verifiedEnvironment: connection.environment,
+      verifiedCompanySubdomain: connection.company_subdomain,
+      now: input.now
+    });
+  } catch (error) {
+    logFailure(error, stage);
+    throw error;
   }
-  await upsertExternalAccountingLink(db, {
-    id: crypto.randomUUID(),
-    studentId: input.studentId,
-    externalReference: input.externalReference,
-    externalUrl: contact.url,
-    status: "VERIFIED",
-    verifiedAt: input.now,
-    verifiedEnvironment: connection.environment,
-    verifiedCompanySubdomain: connection.company_subdomain,
-    now: input.now
-  });
 }
 
 export async function reconcileAccountingOutbox(

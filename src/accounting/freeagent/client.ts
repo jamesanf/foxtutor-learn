@@ -42,6 +42,10 @@ export interface FreeAgentClientOptions {
 
 export const freeAgentFetch: typeof fetch = (input, init) => globalThis.fetch(input, init);
 
+function safeFetchTargetPath(target: URL): string {
+  return /^\/v2\/contacts\/[^/]+$/.test(target.pathname) ? "/v2/contacts/:id" : target.pathname;
+}
+
 function logFetchFailure(error: unknown, target: URL, timedOut: boolean, fetcher: typeof fetch): void {
   const errorName = error instanceof Error ? error.name : "UnknownError";
   const errorMessage = error instanceof Error ? error.message : "Non-Error fetch failure.";
@@ -55,7 +59,7 @@ function logFetchFailure(error: unknown, target: URL, timedOut: boolean, fetcher
     constructorName,
     timeout: timedOut,
     targetHostname: target.hostname,
-    targetPath: target.pathname
+    targetPath: safeFetchTargetPath(target)
   });
 }
 
