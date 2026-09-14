@@ -27,6 +27,13 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).not.toContain("console.error(\"FreeAgent OAuth callback failed\", error)");
   });
 
+  it("handles the bypassed callback with one-time admin-bound OAuth state", () => {
+    expect(workerSource).toContain('if (route === "admin-accounting-callback") return handleAccountingOAuthCallback(request, env);');
+    expect(workerSource).toContain("findActiveUserById(db, consumed.admin_user_id)");
+    expect(workerSource).toContain('admin.role !== "ADMIN"');
+    expect(workerSource).toContain('createSession(db, admin, env.ENVIRONMENT === "production")');
+  });
+
   it("keeps contact mappings readable on desktop and mobile", () => {
     expect(workerSource).toContain('class="table-wrap accounting-contact-table"');
     expect(cssSource).toContain(".accounting-contact-table table { min-width: 980px");

@@ -1,7 +1,7 @@
 import type { AppUser, LearnRoute, Role } from "../auth/authorization";
 import { canAccess, classifyLearnRoute, requiredRole } from "../auth/authorization";
 import { identityEmail } from "../auth/identity";
-import { findActiveUser } from "../db/users";
+import { findActiveUser, findActiveUserById } from "../db/users";
 import {
   deactivateStudent,
   findStudent,
@@ -1406,6 +1406,39 @@ async function requireApplicationSession(request: Request, env: Env): Promise<{ 
   return { active: created.active, setCookies: created.setCookies };
 }
 
+function freeAgentOAuthFailure(error: unknown): Response {
+  const diagnostic = error instanceof FreeAgentApiError
+    ? { code: error.shape.code, status: error.shape.status, message: error.shape.message }
+    : { code: "UNKNOWN", status: null, message: "Unexpected OAuth callback failure." };
+  console.error("FreeAgent OAuth callback failed", diagnostic);
+  return messagePage("FreeAgent connection failed", "FreeAgent could not verify the configured company connection.", 502);
+}
+
+async function handleAccountingOAuthCallback(request: Request, env: Env): Promise<Response> {
+  if (!env.DB) return messagePage("Service unavailable", "The Learn database is not configured for this environment.", 503);
+  const db = env.DB;
+  const url = new URL(request.url);
+  const state = url.searchParams.get("state");
+  const code = url.searchParams.get("code");
+  if (!state || !code) return messagePage("FreeAgent connection failed", "FreeAgent did not return an authorization code.", 400);
+  const consumed = await consumeAccountingOAuthState(db, await hashOAuthState(state), new Date().toISOString());
+  if (!consumed) return messagePage("FreeAgent connection failed", "That authorization request is invalid or expired.", 403);
+  const admin = await findActiveUserById(db, consumed.admin_user_id);
+  if (!admin || admin.role !== "ADMIN") return messagePage("FreeAgent connection failed", "That authorization request is not assigned to an active administrator.", 403);
+  try {
+    await connectFreeAgent(db, env, {
+      code,
+      environment: consumed.environment,
+      redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI ?? "",
+      now: new Date().toISOString()
+    });
+    const session = await createSession(db, admin, env.ENVIRONMENT === "production");
+    return withSessionCookies(redirect("/learn/admin/accounting"), session.setCookies);
+  } catch (error) {
+    return freeAgentOAuthFailure(error);
+  }
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const input = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(input).set(bytes);
@@ -1670,11 +1703,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       });
       return redirect("/learn/admin/accounting");
     } catch (error) {
-      const diagnostic = error instanceof FreeAgentApiError
-        ? { code: error.shape.code, status: error.shape.status, message: error.shape.message }
-        : { code: "UNKNOWN", status: null, message: "Unexpected OAuth callback failure." };
-      console.error("FreeAgent OAuth callback failed", diagnostic);
-      return messagePage("FreeAgent connection failed", "FreeAgent could not verify the configured company connection.", 502);
+      return freeAgentOAuthFailure(error);
     }
   }
   if (route === "admin-accounting") {
@@ -2858,6 +2887,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
     const headers = privateHeaders(asset.headers.get("Content-Type") ?? "text/plain");
     return new Response(asset.body, { status: asset.status, headers });
   }
+  if (route === "admin-accounting-callback") return handleAccountingOAuthCallback(request, env);
   const sessionResult = await requireApplicationSession(request, env);
   if (sessionResult.response) return sessionResult.response;
   const active = sessionResult.active;

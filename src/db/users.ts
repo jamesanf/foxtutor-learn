@@ -9,3 +9,10 @@ export async function findActiveUser(db: D1Database, rawEmail: string): Promise<
     .bind(email)
     .first<AppUser>();
 }
+
+export async function findActiveUserById(db: D1Database, userId: string): Promise<AppUser | null> {
+  return db
+    .prepare("SELECT id, email, display_name, role, status FROM users WHERE id = ? AND status = 'ACTIVE'")
+    .bind(userId)
+    .first<AppUser>();
+}
