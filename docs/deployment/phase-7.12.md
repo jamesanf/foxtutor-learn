@@ -1,5 +1,9 @@
 # Phase 7.12 deployment record
 
+> **Historical deployment record.** Phase 7.13 is the current deployed
+> revision. The commit, Worker version and migration facts below describe the
+> earlier Phase 7.12 deployment and are retained as release history.
+
 ## Source and migration
 
 Migration `0030_freeagent_dual_connections.sql` adds provider and redirect

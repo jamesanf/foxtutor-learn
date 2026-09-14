@@ -1038,6 +1038,40 @@ evidence, live Sandbox provider evidence and Production OAuth/company/contact/
 category evidence remain human-gated. No Production financial mutation is
 allowed in this phase.
 
+### Phase 7.13 — Production OAuth callback completion
+
+#### Objective
+
+Complete the post-authorization Production callback without changing the
+temporary credential architecture. A connection becomes `CONNECTED` only
+after state validation, Production token exchange, read-only company
+verification, encrypted token persistence and environment-specific connection
+persistence.
+
+#### Delivered
+
+- Safe callback diagnostics and environment-specific failure messages.
+- One-time OAuth state validation and consumption bound to provider,
+  environment, administrator and redirect intent.
+- Production token exchange through `api.freeagent.com`, followed by
+  `/v2/company` verification.
+- Discovered Production company persistence under the temporary compatibility
+  flag, with `last_success_at` and stale-error clearing.
+- Explicit callback failure status handling and Sandbox/Production isolation.
+- Fixed FoxTutor sales-category policy resolution from the approved Sandbox
+  reference; ambiguous and missing matches do not guess.
+- Fixed configured-category UI for normal operation, with exceptional
+  selection only when the mapping is unresolved.
+
+#### Acceptance boundary
+
+The deployed source is commit
+`6db5a1c581e3c326c7d8927eee8568c66292bebf`, Worker version
+`50eda89c-8729-446c-902b-eb9e10ec3015`, with 38 test files and 242 passing
+tests. The supplied HAR proves the authorization journey through the callback,
+but authenticated post-callback connection and category evidence remains
+pending. No Production financial mutation is allowed.
+
 ---
 
 ## Universal definition of done for every phase

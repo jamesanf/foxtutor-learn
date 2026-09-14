@@ -2,33 +2,25 @@
 
 ## Current status
 
-Phase 7 has a deployed operational baseline, but it is **not complete** and
-must not be treated as production-ready. The current increment is Phase 7.12,
-which replaces the ambiguous single FreeAgent connection action with
-independent Sandbox and Production connections while preserving the existing
-FreeAgent-to-GoCardless authority boundary. The release is still awaiting:
+Phase 7 has a deployed operational baseline and the current increment is
+Phase 7.13. The release repairs the post-authorization Production FreeAgent
+callback and fixed sales-category mapping while preserving the existing
+FreeAgent-to-GoCardless authority boundary.
 
-- Production FreeAgent credentials and human OAuth authorization;
-- read-only Production company, James contact and mandate verification;
-- live Sandbox category response evidence and explicit approved category
-  selection; and
-- any later, separately authorized financial acceptance.
-
-The current provider acceptance gate is Phase 7.12. It remains **NOT READY —
-PRODUCTION FREEAGENT AUTHORIZATION REQUIRED** because Production credentials
-and human authorization are not available in this execution context. The
-earlier Phase 7.5 financial safety gate remains part of the historical
-acceptance record; it is not superseded by this provider-contract repair.
+The supplied HAR proves the complete Production authorization journey through
+the FoxTutor callback. Post-callback live connection, company and category
+evidence still requires an authenticated browser acceptance run. No
+Production financial acceptance is claimed.
 
 ## Deployed baseline
 
-- Source commit: `7ef5c76`
-- Worker version: `46e84b42-6201-4141-ad7e-f567ddd45b80`
+- Source commit: `6db5a1c581e3c326c7d8927eee8568c66292bebf`
+- Worker version: `50eda89c-8729-446c-902b-eb9e10ec3015`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0030_freeagent_dual_connections.sql`
 - Scheduler: `*/5 * * * *`
 - Business timezone: `Europe/London`
-- Automated validation: 38 test files and 232 passing tests
+- Automated validation: 38 test files and 242 passing tests
 
 The release keeps FoxTutor authoritative for recurring series, lesson
 instances, billing events, credit, readiness and operational audit. FreeAgent
@@ -57,6 +49,12 @@ Direct Debit authority; FoxTutor does not create a parallel mandate.
   company verification and encrypted token keys.
 - Environment-bound FreeAgent OAuth using the selected Sandbox or Production
   API origin, credential set, token endpoint and company mapping.
+- Production callback diagnostics for state validation, token exchange,
+  company verification, token persistence and connection persistence.
+- `last_success_at` persistence, stale-error clearing and explicit
+  `ATTENTION` status on callback failure.
+- Fixed FoxTutor sales-category policy resolution using the approved Sandbox
+  reference, with explicit ambiguity and no-match exceptions.
 - Documented FreeAgent category normalization across
   `admin_expenses_categories`, `cost_of_sales_categories`, `income_categories`
   and `general_categories`, with readable labels, search, deduplication and
@@ -83,7 +81,7 @@ remains open.
 | 7.10 | Category mapping and broad environment/accounting plumbing |
 | 7.11 | Provider contract and initial environment-aware OAuth routing |
 | 7.12 | Independent Sandbox/Production connections and explicit admin actions |
-| 7.11 | Provider category-contract repair and environment-specific OAuth routing |
+| 7.13 | Production OAuth callback completion, verified persistence and fixed sales-category mapping |
 
 The absence of a separate 7.3 file is intentional historical numbering; no
 unrecorded completion claim is made for that increment.
@@ -97,17 +95,9 @@ issued invoice remains an explicit reconciliation path because the public
 FreeAgent API documentation does not provide a safe credit-note matching
 operation.
 
-The reported student billing 1101 has been diagnosed from the deployed
-dependency path, fixed at the root cause and covered by a regression test.
-Phase 7.4 established the root cause:
-the six-way `UNION ALL` in `listBillingHistory` exceeded the production D1
-compound-select limit and raised `SQLITE_ERROR: too many terms in compound
-SELECT` (Cloudflare D1 error code `7500`). The query failed even for the
-real empty-billing student state, so `Promise.all` propagated the D1 rejection
-as Worker 1101. The fix is deployed and the split queries execute successfully
-against remote D1. The authenticated page has not been accepted from this
-execution environment because no legitimate Cloudflare Access student session
-is available. The status therefore remains **NOT READY**.
+The historical Phase 7.4 record retains the diagnosis and regression evidence
+for the student billing Worker 1101 D1 query failure. It is not duplicated
+here as a current Phase 7.13 blocker.
 
 ## Detailed records
 
@@ -137,5 +127,9 @@ The decimal records remain useful evidence and implementation history:
 - [`docs/phase-7.8.md`](phase-7.8.md) — FreeAgent acceptance finalisation.
 - [`docs/phase-7.9.md`](phase-7.9.md) — environment isolation.
 - [`docs/phase-7.10.md`](phase-7.10.md) — category mapping preparation.
-- [`docs/phase-7.11.md`](phase-7.11.md) — current provider-contract and OAuth
-  routing repair.
+- [`docs/phase-7.11.md`](phase-7.11.md) — historical provider-contract and
+  OAuth routing repair.
+- [`docs/phase-7.12.md`](phase-7.12.md) — historical independent
+  Sandbox/Production connection model.
+- [`docs/phase-7.13.md`](phase-7.13.md) — current Production callback,
+  connection verification and fixed category mapping.

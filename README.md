@@ -8,89 +8,39 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.12 — FreeAgent dual Sandbox/Production connections
+**Phase:** Phase 7.13 — Production OAuth callback completion
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Phase 7.12 source commit:** `9c992fa`
-**Worker version:** `682d2fce-3398-467c-8615-534d74a3d1c3`
-**Latest documentation deployment:** commit `1c14e7c1ab5f44ef77af5afebdc6580a03c20f3a`, Worker `b8782a16-fbac-4a53-a0ea-4f4c04fccb96`
+**Phase 7.13 source commit:** `6db5a1c581e3c326c7d8927eee8568c66292bebf`
+**Worker version:** `50eda89c-8729-446c-902b-eb9e10ec3015`
 **D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` deployed
-**Automated validation:** 38 test files, 231 tests passing
+**Automated validation:** 38 test files, 242 tests passing
 
-The Phase 7 implementation has a deployed operational baseline but is not
-production-ready. Phase 7.4 diagnosed the reported authenticated
-`/learn/student/billing` Worker 1101 as Cloudflare D1 rejecting the former
-six-way `UNION ALL` billing-history query with `SQLITE_ERROR: too many terms in
-compound SELECT`; the route fix is deployed with regression coverage.
-Authenticated post-deployment page acceptance is still outstanding because
-this execution environment has no legitimate Cloudflare Access student
-session. Real FreeAgent Sandbox financial mutations and payment/Direct Debit
-lifecycle evidence also remain outstanding; the application must continue to
-fail closed until those gates and the remaining commercial approvals are
-complete.
+Phase 7.13 repairs the post-authorization Production OAuth pipeline:
+environment-bound state validation, Production token exchange, read-only
+company verification, isolated connection persistence, explicit callback
+errors and fixed FoxTutor sales-category resolution. The temporary
+`FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP=true` compatibility path remains
+enabled.
 
-Phase 7.5 was the financial safety and acceptance gate. It formalised billing
-states and invariants, added the customer-facing Direct Debit status journey,
-and established the failure, concurrency, reconciliation, provider Sandbox
-and authenticated runtime evidence boundary. Its historical acceptance status
-is retained in the Phase 7.5 records; the current provider gate is Phase 7.12.
+The supplied authenticated HAR proves Production approval, FreeAgent login,
+app approval, authorization-code return and callback reachability. It does
+not prove the post-callback live connection record or final Accounting page
+state. Authenticated browser acceptance therefore remains open; this
+documentation does not claim that Production is connected without that
+evidence.
 
-Phase 7.6 makes Direct Debit the only normal customer-facing billing rail,
-adds customer-level provisioning and mandate reconciliation, keeps the
-unavoidable FreeAgent UI initiation explicit, removes payment-choice language
-from student billing, adds an audited admin-only emergency exception, and
-adds a cheap once-daily sentinel to the existing Worker schedule. The
-sentinel is non-destructive and does not run the Vitest suite in production.
+Production remains read-only in this phase. No invoice, payment, Direct Debit,
+credit note or £1 test has been performed. The current implementation and
+evidence boundary are consolidated in
+[`docs/phase-7.13.md`](docs/phase-7.13.md), with architecture, testing,
+deployment and handover records alongside it.
 
-Phase 7.7 repairs stale unresolved mandate reads, preserves submitted versus
-pending versus confirmed collection state, adds synthetic provider fixtures, a
-read-only admin billing-chain audit, and bounded sentinel checks for stale
-mandate/payment state. It keeps FreeAgent as the sole FoxTutor payment
-integration boundary and adds no direct GoCardless API authority. The detailed
-evidence and remaining release gate are in
-[`docs/phase-7.7.md`](docs/phase-7.7.md).
-
-The Worker has the approved FreeAgent Sandbox secret bindings and company pin
-configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
-the connection tokens are encrypted and persisted in D1. The live D1 state has
-one verified Sandbox contact mapping for contact `257175`, with no conflicting
-mapping, outbox row, retry audit row or financial mutation. Phase 7.10 replaces
-raw category-URL entry with a provider-backed company category selector and
-binds the saved category to its environment and company. Invoice-producing
-acceptance remains fail-closed until an administrator explicitly selects and
-saves the approved category mapping.
-
-Phase 7.8 identifies the real production chain as student
-`2dba78cd-0ce9-4aa2-918f-c3fb9d3b683b` -> verified FreeAgent contact `257175`
-in Sandbox. The stored local mandate state remains honestly `UNKNOWN` because
-the prior release did not retain the exact raw contact mandate field. The
-current release distinguishes missing, malformed, unexpected, contact
-mismatch, and provider transport/authentication outcomes rather than
-presenting them as one generic provider failure. The existing mandate is not
-replaced, no real financial mutation is performed, and the final provider/API
-and authenticated-browser evidence remains a human-assisted acceptance gate.
-See [`docs/phase-7.8.md`](docs/phase-7.8.md).
-
-Phase 7.10 kept Sandbox and Production as separate FreeAgent trust domains,
-added business-facing invoice mapping diagnostics and category lookup, and
-recorded the Direct Debit setup email as instructional/support-only.
-
-Phase 7.11's provider-contract repairs remain the adapter baseline: FreeAgent
-categories are normalized from the four documented collections using
-`description` and `nominal_code`, and wrong-environment URLs are rejected.
-
-Phase 7.12 source replaces the ambiguous single FreeAgent connection action with two
-independent connection identities: `FREEAGENT:SANDBOX` and
-`FREEAGENT:PRODUCTION`. The admin page exposes separate Connect and
-Reauthenticate actions, OAuth state stores the selected environment, and each
-environment has isolated credentials, encrypted tokens, company verification
-and category mapping. Sandbox remains allowed to use legacy generic credential
-names as a compatibility fallback; Production never does. This release is
-read-only with respect to Production FreeAgent and does not claim Production
-authorization or financial acceptance. See
-[`docs/architecture/phase-7.12.md`](docs/architecture/phase-7.12.md) and the
-Phase 7.12 testing, deployment and handover records.
+Earlier Phase 7 records remain available as historical implementation and
+acceptance evidence. The current status is maintained here and in
+[`docs/phase-7.md`](docs/phase-7.md); historical phase documents are not
+additional current blockers unless the current record explicitly links them.
 
 The current release includes structured D1 lesson reports, historical student
 level snapshots, report attachments through the existing R2 resource pipeline,
@@ -237,11 +187,16 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/phase-7.9.md` | Environment-aware FreeAgent isolation |
 | `docs/phase-7.10.md` | FreeAgent acceptance and category mapping preparation |
 | `docs/phase-7.11.md` | Provider contract, category normalization and OAuth routing repair |
-| `docs/phase-7.12.md` | Dual FreeAgent Sandbox and Production connections |
-| `docs/architecture/phase-7.12.md` | Independent FreeAgent Sandbox and Production connections |
-| `docs/testing/phase-7.12.md` | Phase 7.12 automated coverage and evidence boundary |
-| `docs/deployment/phase-7.12.md` | Phase 7.12 deployment provenance and safety boundary |
-| `docs/handover/phase-7.12.md` | Phase 7.12 human handover and next gate |
+| `docs/phase-7.13.md` | Current Production OAuth callback, connection verification and fixed category mapping |
+| `docs/architecture/phase-7.13.md` | Current FreeAgent callback and category-policy architecture |
+| `docs/testing/phase-7.13.md` | Current automated coverage and live-evidence boundary |
+| `docs/deployment/phase-7.13.md` | Current deployment provenance and safety boundary |
+| `docs/handover/phase-7.13.md` | Current human acceptance handover |
+| `docs/phase-7.12.md` | Historical dual FreeAgent Sandbox and Production connections |
+| `docs/architecture/phase-7.12.md` | Historical independent connection architecture |
+| `docs/testing/phase-7.12.md` | Historical automated coverage and evidence boundary |
+| `docs/deployment/phase-7.12.md` | Historical deployment provenance and safety boundary |
+| `docs/handover/phase-7.12.md` | Historical human handover and next gate |
 | `docs/architecture/phase-7.11.md` | Phase 7.11 environment and provider-contract decisions |
 | `docs/testing/phase-7.11.md` | Phase 7.11 automated coverage and evidence boundary |
 | `docs/deployment/phase-7.11.md` | Phase 7.11 deployment provenance and safety boundary |
@@ -270,9 +225,10 @@ operational records.
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
-| 7 | Billing engine and long-term operations hardening | 1101 diagnosed and fixed in source/deployment; authenticated runtime, provider acceptance and commercial gates remain open |
+| 7 | Billing engine and long-term operations hardening | Phase 7.13 deployed; authenticated post-callback Production/provider acceptance remains open |
 | 7.5 | Financial safety and acceptance | Direct Debit UX and formal acceptance model added; comprehensive engineering/provider/runtime evidence remains open |
 | 7.6 | Direct Debit-first provisioning and reliability | Implemented in source with forward-only migrations, bounded sentinel and automated coverage; production deployment and authenticated/provider acceptance remain release gates |
+| 7.13 | Production OAuth callback and fixed sales-category mapping | Deployed and automatically validated; authenticated post-callback connection/category evidence remains open |
 
 ## Security model
 

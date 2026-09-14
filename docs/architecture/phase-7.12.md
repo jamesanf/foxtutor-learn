@@ -1,5 +1,9 @@
 # Phase 7.12 architecture
 
+> **Historical architecture record.** Phase 7.13 extends this model with the
+> complete callback pipeline, explicit failure status handling and fixed
+> FoxTutor category resolution. See `docs/architecture/phase-7.13.md`.
+
 Phase 7.12 models FreeAgent Sandbox and Production as two independent
 connections rather than one global accounting environment.
 

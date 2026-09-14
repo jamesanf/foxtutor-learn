@@ -1,5 +1,9 @@
 # Phase 7.12 handover
 
+> **Historical handover record.** Phase 7.13 supersedes this as the current
+> provider handover. Use `docs/handover/phase-7.13.md` for the current
+> acceptance boundary.
+
 ## Delivered
 
 - Independent Sandbox and Production FreeAgent connection records.

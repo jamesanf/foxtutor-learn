@@ -2,9 +2,10 @@
 
 ## Status
 
-The post-authorization Production OAuth pipeline is implemented and
-automatically validated. Live authenticated browser acceptance remains
-required before declaring Production connected.
+The post-authorization Production OAuth pipeline is implemented, committed as
+`6db5a1c581e3c326c7d8927eee8568c66292bebf` and deployed as Worker version
+`50eda89c-8729-446c-902b-eb9e10ec3015`. Live authenticated browser
+acceptance remains required before declaring Production connected.
 
 ## Delivered
 
@@ -36,6 +37,15 @@ Production and Sandbox connections, tokens, company identities and category
 mappings remain environment-specific. Provider category URLs are never copied
 between environments. No Production invoice, payment, Direct Debit, credit
 note or £1 test was created.
+
+## Automated validation
+
+- 38 test files, 242 tests passed.
+- TypeScript/client build passed.
+- Legal synchronization passed.
+- Wrangler deployment dry-run passed.
+- Production smoke passed; `/learn` returned the Cloudflare Access `302`.
+- Remote D1 migration check reported no migrations to apply.
 
 ## Known evidence boundary
 

@@ -1,9 +1,9 @@
 # Phase 7.11 - FreeAgent provider contract and initial environment routing
 
-> **Historical record.** Phase 7.12 supersedes this phase's single
+> **Historical record.** Phase 7.13 supersedes this phase's single
 > `FREEAGENT_ENVIRONMENT` connection model with independent Sandbox and
-> Production connections. See the Phase 7.12 architecture and handover
-> records for the current implementation.
+> Production connections plus complete callback verification. See the Phase
+> 7.13 architecture and handover records for the current implementation.
 
 ## Status
 

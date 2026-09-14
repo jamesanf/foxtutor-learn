@@ -1,8 +1,11 @@
 # Phase 7.12 testing and evidence
 
+> **Historical testing record.** Phase 7.13 is the current provider
+> acceptance record. This document preserves the Phase 7.12 evidence boundary.
+
 ## Automated validation
 
-The Phase 7.12 source currently passes:
+The Phase 7.12 source passed:
 
 ```text
 npm test

@@ -1,10 +1,15 @@
 # Phase 7.12 - FreeAgent dual Sandbox/Production connections
 
+> **Historical implementation record.** Phase 7.13 supersedes this record as
+> the current provider status. The dual-connection schema and isolation remain
+> the active foundation; the Production callback, persistence diagnostics and
+> fixed category policy are documented in `docs/phase-7.13.md`.
+
 ## Status
 
-Phase 7.12 is implemented, tested, migrated and deployed. It remains
-**NOT READY - PRODUCTION FREEAGENT AUTHORIZATION REQUIRED** until legitimate
-Production credentials and human authorization are available.
+Phase 7.12 established the independent Sandbox/Production connection model.
+Its deployment facts remain historical evidence; current deployment status is
+recorded in Phase 7.13.
 
 ## Temporary OAuth compatibility test
 

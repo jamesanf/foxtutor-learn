@@ -1,5 +1,17 @@
 # Phase 7.13 deployment record
 
+## Deployed revision
+
+| Item | Value |
+| --- | --- |
+| Commit | `6db5a1c581e3c326c7d8927eee8568c66292bebf` |
+| Worker version | `50eda89c-8729-446c-902b-eb9e10ec3015` |
+| Routes | `foxtutor.org/learn`, `foxtutor.org/learn/*` |
+| Scheduler | `*/5 * * * *` |
+| D1 | `foxtutor-learn` |
+| Migrations | No migrations pending; schema through `0030` |
+| Git status | Clean after deployment |
+
 ## Deployment requirements
 
 Deploy only the committed Phase 7.13 source. Keep
@@ -22,8 +34,8 @@ npx wrangler deploy --dry-run --config wrangler.jsonc
 npm run test:production
 ```
 
-Then deploy the exact commit and record the Worker version. Verify the
-production D1 migration list before authenticated browser acceptance.
+The exact commit was deployed and the Worker version recorded above. The
+production D1 migration list reported no migrations to apply.
 
 ## Acceptance boundary
 

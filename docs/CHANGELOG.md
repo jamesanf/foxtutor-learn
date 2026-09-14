@@ -1,5 +1,27 @@
 # Changelog
 
+### 2026-09-14 - Phase 7.13 Production OAuth callback completion
+
+- Repaired the post-authorization Production callback pipeline from hashed
+  OAuth state consumption through Production token exchange, `/v2/company`
+  verification, encrypted token persistence and environment-specific
+  connection persistence.
+- Added safe stage diagnostics and environment-specific administrator errors
+  for state, token exchange, company verification, token persistence and D1
+  connection persistence failures.
+- Persisted `last_success_at`, cleared stale connection errors and marked
+  existing connections `ATTENTION` after callback failure.
+- Resolved the temporary Production company-subdomain status mismatch without
+  borrowing Sandbox identity.
+- Replaced normal unrestricted category selection with fixed FoxTutor
+  sales-category mapping using provider attributes; ambiguous and missing
+  matches remain explicit exceptions.
+- Passed 38 test files and 242 tests, build, legal check, Wrangler dry-run,
+  production smoke and remote migration verification.
+- Deployed commit `6db5a1c581e3c326c7d8927eee8568c66292bebf` as Worker version
+  `50eda89c-8729-446c-902b-eb9e10ec3015`. No Production financial mutation
+  was performed. Authenticated post-callback browser acceptance remains open.
+
 ### 2026-09-14 - Phase 7.12 FreeAgent dual connections
 
 - Replaced the single ambiguous FreeAgent admin connection action with

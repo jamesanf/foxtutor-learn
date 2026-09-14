@@ -98,12 +98,19 @@ The following capabilities were confirmed from the official documentation:
 | --- | --- |
 | `/v2/company` | Read company identity, including subdomain. |
 | `/v2/contacts` and `/v2/contacts/:id` | List/get contacts; create/update is documented. Contact responses expose `direct_debit_mandate_state` values `setup`, `pending`, `inactive`, `active`, and `failed`. |
+| `/v2/categories` | Read company-specific categories; category URLs must come from the intended company. |
+| `/v2/invoices` | Create/read/update invoices. New invoices begin as `Draft`; invoice items accept explicit `sales_tax_rate`; invoice responses expose `payment_methods`. |
+| `/v2/invoices/:id/transitions/mark_as_sent` | Mark an invoice sent. |
+| `/v2/invoices/:id/direct_debit` | Initiate GoCardless Direct Debit for a sent, eligible GBP invoice with an active pre-authorised mandate and no previous payment. |
+| `/v2/credit_notes` | Create/read/update/delete credit notes. New credit notes begin as `Draft`; status transitions include `mark_as_sent` and `mark_as_draft`. |
+| `/v2/recurring_invoices` | Read recurring invoice profiles, including frequency, next recurrence and status. This is not a safe source of truth for variable lesson entitlement. |
+| `/v2/accounting/transactions` | Read accounting transactions for reconciliation. |
 
-## Phase 7.12 independent FreeAgent connections
+## Phase 7.13 independent FreeAgent connections and callback verification
 
-> This section supersedes the Phase 7.9 and Phase 7.11 environment-selection
-> wording for the current implementation. Those records remain historical
-> evidence.
+> This section supersedes the Phase 7.9, Phase 7.11 and Phase 7.12
+> environment-selection wording for the current implementation. Those records
+> remain historical evidence.
 
 FreeAgent Sandbox and Production are separate provider connection identities:
 `FREEAGENT:SANDBOX` and `FREEAGENT:PRODUCTION`. Both may be connected at once.
@@ -121,8 +128,11 @@ The admin page exposes explicit `Connect/Reauthenticate Sandbox` and
 `Connect/Reauthenticate Production` actions. Each action generates
 `/v2/approve_app` on its own FreeAgent API host. The one-time OAuth state is
 bound to provider, environment, administrator, redirect intent, expiry and
-consumption; the callback uses only that validated state to exchange the code
-and verify the selected company before storing the connection.
+consumption; the callback uses only that validated state to exchange the code,
+verify the selected company and persist the selected connection. A callback
+failure is surfaced to the administrator and marks an existing connection
+`ATTENTION`; a successful upsert records `last_success_at` and clears stale
+errors.
 
 ### Invoice category mapping
 
@@ -132,24 +142,21 @@ environment. FreeAgent returns four collections:
 `admin_expenses_categories`, `cost_of_sales_categories`, `income_categories`
 and `general_categories`. FoxTutor maps their `description`, `nominal_code`,
 provider URL and group into one deterministic list, removes duplicate URLs and
-displays the description and nominal code. The administrator selects the
-approved category; FoxTutor stores the provider URL only as an implementation
-value. A category URL is accepted only when its API origin matches the
-selected environment, and the persisted mapping is also bound to the
-connected company subdomain. A Sandbox category can therefore never be
-reused for Production, even if the URL shape is otherwise valid.
+displays the description and nominal code. The approved Sandbox category
+defines the FoxTutor sales policy. Production resolves its own
+company-specific category by group, normalized description and nominal code; a
+unique match is stored, while ambiguity and no-match conditions require an
+explicit administrative decision. Normal operation shows the fixed configured
+mapping rather than the full provider catalogue. A category URL is accepted
+only when its API origin matches the selected environment, and the persisted
+mapping is also bound to the connected company subdomain. A Sandbox category
+can therefore never be reused for Production, even if the URL shape is
+otherwise valid.
 
 The established defaults remain £55.00, `Hours`, 0 payment terms days, GBP
 and 0% sales tax. These defaults describe normal lesson accounting and do not
 authorize a provider invoice. A controlled Sandbox acceptance amount is a
 separate operation.
-| `/v2/categories` | Read company-specific categories; category URLs must come from the intended company. |
-| `/v2/invoices` | Create/read/update invoices. New invoices begin as `Draft`; invoice items accept explicit `sales_tax_rate`; invoice responses expose `payment_methods`. |
-| `/v2/invoices/:id/transitions/mark_as_sent` | Mark an invoice sent. |
-| `/v2/invoices/:id/direct_debit` | Initiate GoCardless Direct Debit for a sent, eligible GBP invoice with an active pre-authorised mandate and no previous payment. |
-| `/v2/credit_notes` | Create/read/update/delete credit notes. New credit notes begin as `Draft`; status transitions include `mark_as_sent` and `mark_as_draft`. |
-| `/v2/recurring_invoices` | Read recurring invoice profiles, including frequency, next recurrence and status. This is not a safe source of truth for variable lesson entitlement. |
-| `/v2/accounting/transactions` | Read accounting transactions for reconciliation. |
 
 The FreeAgent support documentation confirms that GoCardless can be
 configured for invoice date, payment due date or manual triggering. It also
