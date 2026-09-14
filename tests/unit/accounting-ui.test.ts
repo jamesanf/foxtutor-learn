@@ -24,8 +24,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).not.toContain('name="categoryUrl" type="url"');
     expect(workerSource).toContain("provider URL is stored internally");
     expect(workerSource).toContain("FreeAgent ${environmentLabel} integration active");
-    expect(workerSource).toContain("Reauthenticate ${environmentLabel}");
-    expect(workerSource).toContain("Connect ${environmentLabel}");
+    expect(workerSource).toContain('status.connected ? "Reauthenticate" : "Connect"');
     expect(workerSource).toContain('`/learn/admin/accounting/connect/${environment}`');
     expect(workerSource).toContain('class="accounting-icon-link accounting-settings-link"');
     expect(workerSource).toContain('aria-label="Billing settings"');
@@ -97,7 +96,7 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-contact-table table { min-width: 0; table-layout: fixed; }");
     expect(cssSource).toContain(".accounting-contact-table th, .accounting-contact-table td { width: 25%; }");
     expect(cssSource).toContain(".accounting-contact-table th:last-child, .accounting-contact-table td:last-child { text-align: right; }");
-    expect(cssSource).toContain(".accounting-contact-table .status { white-space: nowrap; }");
+    expect(cssSource).toContain(".accounting-contact-table .status { display: flex; width: 112px; min-width: 112px;");
     expect(cssSource).toContain("justify-content: flex-end;");
     expect(cssSource).toContain("width: 88px; min-width: 88px; flex: 0 0 88px;");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
@@ -108,7 +107,7 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
     expect(cssSource).toContain("@media (max-width: 900px) {\n  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
     expect(workerSource).toContain('class="form-actions accounting-connection-actions"');
-    expect(cssSource).toContain(".accounting-connection-actions .button { width: 100%; justify-content: center; }");
+    expect(cssSource).toContain(".accounting-connection-actions .button { width: 100%; justify-content: center; white-space: nowrap; }");
     expect(workerSource).toContain('class="summary-grid accounting-summary-grid"');
     expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }");
     expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }");
