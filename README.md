@@ -8,15 +8,21 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.2 deployed; real provider acceptance recorded separately
+**Phase:** Phase 7 — billing engine and long-term operations hardening
 **Production URL:** <https://foxtutor.org/learn>
-**Application/runtime release:** Phase 7.2 recurring lessons, billing operations and payment readiness
-**Repository HEAD:** `main` (pushed; final commit is reported with deployment evidence)
-**Executable deployment commit:** `9da2c03`
-**Deployed source:** `9da2c03`
+**Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
+**Repository branch:** `main`
+**Deployed source commit:** `9da2c03`
 **Worker version:** `bba7fcaf-dfa6-42dd-aa77-11ac66e04125`
 **D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally and remotely
 **Automated validation:** 31 test files, 169 tests passing
+
+The Phase 7 implementation has a deployed operational baseline but is not
+production-ready. The authenticated `/learn/student/billing` route currently
+has a reported Cloudflare Worker 1101 failure that must be diagnosed and fixed.
+Real FreeAgent Sandbox financial mutations and payment/Direct Debit lifecycle
+evidence remain outstanding; the application must continue to fail closed
+until those gates and the remaining commercial approvals are complete.
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -51,7 +57,7 @@ changed. A zero rate is the current non-VAT setting, and every saved rate is
 sent explicitly so FreeAgent defaults cannot add tax. `ADMIN_CANCELLED` remains
 an explicitly unresolved accounting consequence and is not treated as an
 invoice decision.
-Phase 7.2 adds the operational completion of that architecture: the
+Phase 7 adds the operational completion of that architecture: the
 Europe/London invariant, recurring-series administration, billing history,
 invoice and credit detail, student billing visibility, canonical payment
 readiness, provider status reconciliation, actionable alert controls and
@@ -124,9 +130,10 @@ git diff --check
 
 Use `npm run deploy` only for an authorised production deployment. Apply
 forward-only migrations before deploying code that depends on them. The
-current Phase 7.2 deployment state and acceptance boundary are documented in
-[`docs/deployment/phase-7.2.md`](docs/deployment/phase-7.2.md) and
-[`docs/handover/phase-7.2.md`](docs/handover/phase-7.2.md).
+current Phase 7 summary, deployment boundary and acceptance status are
+documented in
+[`docs/phase-7.md`](docs/phase-7.md). Detailed decimal phase records remain
+linked from that summary.
 
 ## Repository map
 
@@ -155,19 +162,8 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/architecture/learn-branding-legal.md` | Learn shell branding and portal legal policy boundary |
 | `docs/security/phase-5.1.md` | Cancellation and rescheduling security controls |
 | `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
-| `docs/phase-7.1.md` | Historical Phase 7.1 foundation and provider decisions |
-| `docs/phase-7.1-acceptance-report.md` | Historical Phase 7.1 evidence and boundary |
-| `docs/architecture/phase-7.1.md` | Foundational recurrence, billing, credit and readiness architecture |
 | `docs/architecture/gocardless-freeagent.md` | FreeAgent-GoCardless boundary and safety decision |
-| `docs/testing/phase-7.1.md` | Historical Phase 7.1 test matrix and evidence classification |
-| `docs/deployment/phase-7.1.md` | Historical Phase 7.1 deployment boundary |
-| `docs/handover/phase-7.1.md` | Historical Phase 7.1 handover boundary |
-| `docs/phase-7.2.md` | Current Phase 7.2 scope, invariants and acceptance boundary |
-| `docs/phase-7.2-acceptance-report.md` | Current Phase 7.2 evidence and provider gates |
-| `docs/architecture/phase-7.2.md` | Current billing operations architecture |
-| `docs/testing/phase-7.2.md` | Current Phase 7.2 test matrix and evidence classification |
-| `docs/deployment/phase-7.2.md` | Current Phase 7.2 deployment record |
-| `docs/handover/phase-7.2.md` | Current Phase 7.2 handover boundary |
+| `docs/phase-7.md` | Current Phase 7 summary, status and acceptance boundary |
 | `docs/architecture/phase-6.md` | Current accounting architecture and state model |
 | `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
 | `docs/deployment/phase-6.md` | Current deployment state and rollout order |
@@ -192,9 +188,7 @@ operational records.
 | 4 | Notifications and structured lesson reports | Complete |
 | 5 | Cancellation and rescheduling automation | Deployed; authenticated acceptance pending |
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
-| 7 | Billing engine and long-term operations hardening | Current programme; Phase 7.2 is the active increment |
-| 7.1 | Recurrent lessons, billing orchestration and payment readiness | Foundational scope complete; absorbed into Phase 7.2 |
-| 7.2 | Complete billing engine and operationalisation | Current; deployed; real provider evidence and commercial approval remain separate gates |
+| 7 | Billing engine and long-term operations hardening | Deployed baseline; runtime defect, provider acceptance and commercial gates remain open |
 
 ## Security model
 

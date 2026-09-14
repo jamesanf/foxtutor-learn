@@ -833,6 +833,11 @@ Phase 7 is intentionally split into implementation increments. It is not
 complete until the relevant increment's implementation, provider boundary and
 acceptance evidence have all been recorded.
 
+The repository README presents Phase 7 as one programme, consistent with the
+earlier phase summaries. The consolidated current status is maintained in
+[`docs/phase-7.md`](phase-7.md); the detailed 7.1 and 7.2 records below are
+retained as implementation history and evidence.
+
 ### Phase 7.1 — RECURRENT LESSONS + BILLING ORCHESTRATION + PAYMENT READINESS
 
 #### Scope

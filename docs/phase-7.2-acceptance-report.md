@@ -1,5 +1,10 @@
 # PHASE 7.2 ACCEPTANCE REPORT
 
+> Detailed Phase 7.2 deployment record. The consolidated current status is
+> `docs/phase-7.md`. A post-deployment authenticated request to
+> `/learn/student/billing` reported a Cloudflare Worker 1101 on 2026-09-14;
+> this report therefore does not constitute final Phase 7 runtime acceptance.
+
 ## Controlled-seam evidence
 
 - Local migrations through `0024_phase72_global_timezone_operations.sql` apply.

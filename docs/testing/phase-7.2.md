@@ -1,5 +1,10 @@
 # Phase 7.2 testing
 
+> This is controlled local evidence for the Phase 7 baseline, not final
+> authenticated runtime or provider acceptance. The current open runtime issue
+> is the reported 1101 on `/learn/student/billing`; a route-level regression
+> must be added when the root cause is reproduced.
+
 The controlled suite covers the existing Phase 7.1 boundary plus:
 
 - the hard `Europe/London` invariant and rejection of arbitrary timezones;

@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-14 - Consolidate Phase 7 documentation
+
+- Added `docs/phase-7.md` as the single current Phase 7 status and acceptance
+  summary.
+- Simplified the README phase map and documentation index so Phase 7 is
+  presented as one programme, while retaining decimal records as detailed
+  evidence.
+- Recorded the reported authenticated student-billing 1101 as an open
+  acceptance blocker rather than implying that deployment or local tests
+  constitute runtime/provider acceptance.
+
 ### 2026-09-14 - Complete Phase 7.2 billing operations locally
 
 - Enforced the Europe/London business-time invariant in validation, recurrence,
