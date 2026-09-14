@@ -20,6 +20,9 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"');
     expect(workerSource).toContain("FreeAgent credentials are managed as Cloudflare secrets.");
     expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
+    expect(workerSource).toContain("FreeAgent integration active");
+    expect(workerSource).toContain("Reauthenticate FreeAgent");
+    expect(cssSource).toContain(".info-box { display: block; width: 100%;");
   });
 
   it("logs only staged, safe OAuth diagnostics on callback failure", () => {

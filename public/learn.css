@@ -318,6 +318,8 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-connection-actions { display: grid; width: min(100%, 190px); grid-template-columns: 1fr; justify-items: stretch; }
 .accounting-connection-actions .button { width: 100%; justify-content: center; }
 .accounting-connection-actions .status { justify-self: center; }
+.billing-settings-actions { margin-top: 0; }
+.billing-settings-actions .status { white-space: nowrap; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 13px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 th { color: #334e68; background: #e8f0f5; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
@@ -342,7 +344,7 @@ textarea { min-height: 5.5rem; resize: vertical; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); outline: 0; box-shadow: 0 0 0 3px rgb(6 182 212 / 20%); }
 .help { margin: -4px 0 22px; font-size: .9rem; font-weight: 400; }
 .field-help { display: block; margin-top: 6px; color: var(--muted); font-size: .78rem; font-weight: 400; }
-.info-box { display: block; margin-top: 7px; padding: 8px 10px; border: 1px solid #b9dce4; border-radius: 7px; color: #155e75; background: #effafd; font-size: .78rem; font-weight: 450; }
+.info-box { display: block; width: 100%; box-sizing: border-box; margin-top: 7px; padding: 8px 10px; border: 1px solid #b9dce4; border-radius: 7px; color: #155e75; background: #effafd; font-size: .78rem; font-weight: 450; }
 .field-info { position: relative; display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; margin-left: 5px; border: 1px solid #75b7c4; border-radius: 50%; color: #0e7490; background: #effafd; cursor: pointer; font-size: .7rem; font-weight: 750; line-height: 1; vertical-align: 1px; }
 .field-info::before, .field-info::after { position: absolute; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .14s ease, transform .14s ease; }
 .field-info::before { bottom: calc(100% + 4px); left: 50%; border: 5px solid transparent; border-top-color: #9ccfd9; content: ""; transform: translate(-50%, 3px); }

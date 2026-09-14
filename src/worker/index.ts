@@ -498,9 +498,16 @@ function accountingBillingSettingsPage(
     paymentTermsDays: string;
     salesTaxRate: string;
   },
+  status: Awaited<ReturnType<typeof accountingIntegrationStatus>>,
   error?: string
 ): string {
-  return `<section class="card form-card"><div class="page-heading"><div><h1>Billing settings</h1><p class="lede">Configure future FreeAgent lesson invoices.</p></div><a class="button secondary" href="/learn/admin/accounting">Back to accounting</a></div>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<p class="muted">GBP is fixed. Defaults are £55.00, Hours, 0 days and no VAT. Change the other billing values below.</p><p class="info-box">FreeAgent credentials are managed as Cloudflare secrets. Category and contact mappings come from FreeAgent.</p><form method="post" action="/learn/admin/accounting/settings"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Use pounds and pence, for example 55.00.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required><span class="field-help">Hours is the default.</span></label><label>FreeAgent category URL<input name="categoryUrl" type="url" value="${escapeHtml(values.categoryUrl)}" required><span class="field-help">Use the category URL from FreeAgent.</span></label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required></label><label>Sales tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0 means no VAT.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save billing settings</button></div></form></section>`;
+  const integrationTag = status.connected
+    ? `<span class="status status-active">FreeAgent integration active</span>`
+    : `<span class="status status-failed">FreeAgent integration not connected</span>`;
+  const connectionAction = status.configured
+    ? `<a class="button secondary" href="/learn/admin/accounting/connect">${status.connected ? "Reauthenticate FreeAgent" : "Connect FreeAgent"}</a>`
+    : "";
+  return `<section class="card form-card"><div class="page-heading"><div><h1>Billing settings</h1><p class="lede">Configure future FreeAgent lesson invoices.</p></div><div class="form-actions billing-settings-actions">${integrationTag}${connectionAction}<a class="button secondary" href="/learn/admin/accounting">Back to accounting</a></div></div>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<p class="muted">GBP is fixed. Defaults are £55.00, Hours, 0 days and no VAT. Change the other billing values below.</p><p class="info-box">FreeAgent credentials are managed as Cloudflare secrets. Category and contact mappings come from FreeAgent.</p><form method="post" action="/learn/admin/accounting/settings"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><div class="lesson-form-grid"><label>Lesson amount<input name="amount" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.amount)}" required><span class="field-help">Use pounds and pence, for example 55.00.</span></label><label>Currency<input name="currency" value="GBP" readonly aria-readonly="true"><span class="field-help">GBP is fixed by the accounting contract.</span></label><label>FreeAgent item type<input name="itemType" maxlength="240" value="${escapeHtml(values.itemType)}" required><span class="field-help">Hours is the default.</span></label><label>FreeAgent category URL<input name="categoryUrl" type="url" value="${escapeHtml(values.categoryUrl)}" required><span class="field-help">Use the category URL from FreeAgent.</span></label><label>Payment terms (days)<input name="paymentTermsDays" type="number" min="0" max="365" step="1" value="${escapeHtml(values.paymentTermsDays)}" required></label><label>Sales tax rate<input name="salesTaxRate" inputmode="decimal" pattern="\\d+(\\.\\d{1,2})?" value="${escapeHtml(values.salesTaxRate)}" required><span class="field-help">0 means no VAT.</span></label></div><div class="form-actions"><a class="button secondary" href="/learn/admin/accounting">Cancel</a><button class="button" type="submit">Save billing settings</button></div></form></section>`;
 }
 
 function lessonReportForm(
@@ -1720,6 +1727,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-accounting-settings") {
     const persisted = await findAccountingBillingSettings(db);
     const fallback = configuredInvoice(env);
+    const status = await accountingIntegrationStatus(db, env);
     const values = {
       amount: persisted?.amount ?? fallback?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
       itemType: persisted?.item_type ?? fallback?.itemType ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours",
@@ -1728,7 +1736,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       salesTaxRate: persisted?.sales_tax_rate ?? fallback?.salesTaxRate ?? env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"
     };
     if (request.method === "GET") {
-      return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values));
+      return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status));
     }
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     const form = await parseForm(request);
@@ -1741,7 +1749,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       currency: formText(form, "currency"),
       salesTaxRate: formText(form, "salesTaxRate")
     }, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : null);
-    if (!result.value) return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, result.error ?? "Billing settings are invalid."), false);
+    if (!result.value) return appPage(active.user, csrfToken, "Billing settings", accountingBillingSettingsPage(csrfToken, values, status, result.error ?? "Billing settings are invalid."), false);
     await saveAccountingBillingSettings(db, {
       ...result.value,
       updatedByUserId: active.user.id,
