@@ -104,7 +104,8 @@ import {
   setRecurringSeriesStatus
 } from "../db/recurrence";
 import { processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
-import { provisionBillingAccount, runBillingProvisioningScheduler } from "../accounting/provisioning";
+import { auditBillingChain } from "../billing/audit";
+import { provisionBillingAccount, reconcileBillingAccountMandate, runBillingProvisioningScheduler } from "../accounting/provisioning";
 import { createEmergencyPaygOverride, findBillingAccount } from "../db/billing-accounts";
 import { canRecordEmergencyPayg, validateEmergencyPaygReason } from "../domain/billing-policy";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
@@ -1781,7 +1782,7 @@ async function billingOperationsPage(
   const failed = readiness.filter(({ result }) => result.state === "PAYMENT_FAILED").length;
   const creditCovered = readiness.filter(({ result }) => result.state === "CREDIT_COVERED").length;
   const rowMarkup = readiness.length
-    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a></td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(row.billing_event_id)}">Emergency exception</a>` : "Not created"}</td></tr>`).join("")
+    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a>${row.student_id ? ` <a class="text-link" href="/learn/admin/billing/audit/${encodeURIComponent(row.student_id)}">Audit</a>` : ""}</td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(row.billing_event_id)}">Emergency exception</a>` : "Not created"}</td></tr>`).join("")
     : `<tr><td colspan="8">No upcoming lessons require billing attention.</td></tr>`;
   const creditRows = credits.length
     ? credits.map((credit) => `<tr><td><a href="/learn/admin/billing/credits/${encodeURIComponent(credit.credit_id)}">${escapeHtml(credit.student_name ?? credit.student_id)}</a></td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
@@ -1877,6 +1878,27 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-billing") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the alert controls provided on the billing dashboard.", 405);
     return billingOperationsPage(active.user, csrfToken, db, request);
+  }
+  if (route === "admin-billing-audit") {
+    if (request.method !== "GET") return messagePage("Method not allowed", "Use the read-only billing audit page.", 405);
+    const match = /^\/learn\/admin\/billing\/audit\/([^/]+)$/.exec(url.pathname);
+    const studentId = match ? decodePathSegment(match[1] ?? "") : "";
+    if (!studentId) return messagePage("Student not found", "That student does not exist.", 404);
+    const student = await findStudent(db, studentId);
+    if (!student) return messagePage("Student not found", "That student does not exist.", 404);
+    await reconcileBillingAccountMandate(db, env, studentId, new Date().toISOString(), freeAgentFetch);
+    const audit = await auditBillingChain(db, studentId, new Date().toISOString());
+    const reasonRows = audit.reasons.length
+      ? audit.reasons.map((reason) => `<tr><td>${escapeHtml(reason.code)}</td><td>${escapeHtml(reason.detail)}</td></tr>`).join("")
+      : `<tr><td colspan="2">No exceptions detected.</td></tr>`;
+    const account = audit.snapshot.billingAccount;
+    const link = audit.snapshot.accountingLink;
+    return appPage(
+      active.user,
+      csrfToken,
+      "Billing chain audit",
+      `<div class="page-heading"><div><h1>Billing chain audit</h1><p class="lede">Read-only FreeAgent reconciliation for ${escapeHtml(student.name)}.</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Overall status</dt><dd>${escapeHtml(audit.status)}</dd></div><div><dt>Billing account</dt><dd>${escapeHtml(account?.id ?? "Missing")}</dd></div><div><dt>FreeAgent link</dt><dd>${escapeHtml(link?.status ?? "Missing")}</dd></div><div><dt>Contact reference</dt><dd>${escapeHtml(account?.providerContactReference ?? "—")}</dd></div><div><dt>Mandate state</dt><dd>${escapeHtml(account?.mandateState ?? "—")}</dd></div><div><dt>Last reconciled</dt><dd>${escapeHtml(account?.lastReconciledAt ?? "—")}</dd></div><div><dt>Invoice</dt><dd>${escapeHtml(audit.snapshot.invoice?.id ?? "None")}</dd></div><div><dt>Payment state</dt><dd>${escapeHtml(audit.snapshot.payment?.status ?? "Not recorded")}</dd></div></dl></section><section class="card"><h2>Reasons</h2><div class="table-wrap"><table><thead><tr><th>Code</th><th>Detail</th></tr></thead><tbody>${reasonRows}</tbody></table></div></section>`
+    );
   }
   if (route === "admin-billing-action") {
     const emergencyMatch = /^\/learn\/admin\/billing\/emergency-payg\/([^/]+)$/.exec(url.pathname);
@@ -2930,6 +2952,14 @@ async function studentDirectDebitStatus(
 ): Promise<DirectDebitStatus> {
   const account = await findBillingAccount(db, studentId);
   if (account) {
+    const nextReconcileAt = account.next_reconcile_at ? Date.parse(account.next_reconcile_at) : Number.NaN;
+    const reconciliationDue = !Number.isFinite(nextReconcileAt) || nextReconcileAt <= Date.now();
+    const reconciledAt = account.last_reconciled_at ? Date.parse(account.last_reconciled_at) : Number.NaN;
+    const stale = !Number.isFinite(reconciledAt) || reconciledAt <= Date.now() - 24 * 60 * 60_000;
+    const unresolvedWithoutRecordedError = account.mandate_state === "UNKNOWN" && !account.last_error_code;
+    if (unresolvedWithoutRecordedError || (reconciliationDue && (account.mandate_state === "UNKNOWN" || stale))) {
+      return reconcileBillingAccountMandate(db, env, studentId, new Date().toISOString(), freeAgentFetch);
+    }
     return account.mandate_state;
   }
   const link = await findExternalAccountingLink(db, studentId);
@@ -2951,6 +2981,7 @@ async function studentDirectDebitStatus(
 
 function billingCustomerStatusLabel(kind: BillingHistoryItem["kind"], status: string): string {
   const normalized = status.toUpperCase();
+  if (normalized === "SUBMITTED") return "Collection submitted";
   if (normalized === "PAYMENT_PENDING" || normalized === "PENDING") return "Payment processing";
   if (normalized === "SCHEDULED") return "Collection scheduled";
   if (normalized === "CONFIRMED" || normalized === "PAID") return "Payment confirmed";

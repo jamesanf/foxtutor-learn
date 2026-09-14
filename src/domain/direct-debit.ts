@@ -16,16 +16,44 @@ export interface DirectDebitStatusCopy {
   tone: "neutral" | "info" | "success" | "warning" | "error";
 }
 
+export type DirectDebitDiagnosticCode =
+  | "WRONG_CONTACT_MAPPING"
+  | "MISSING_CONTACT_LINK"
+  | "UNVERIFIED_ACCOUNTING_LINK"
+  | "FREEAGENT_AUTH_FAILURE"
+  | "FREEAGENT_NOT_FOUND"
+  | "FREEAGENT_5XX"
+  | "FREEAGENT_RATE_LIMIT"
+  | "FREEAGENT_TIMEOUT"
+  | "MALFORMED_PROVIDER_RESPONSE"
+  | "UNEXPECTED_MANDATE_STATE"
+  | "PROPERTY_MAPPING_BUG"
+  | "ENVIRONMENT_MISMATCH"
+  | "SANDBOX_CAPABILITY_LIMIT"
+  | "STALE_LOCAL_STATE"
+  | "CORRECT_NO_MANDATE_STATE"
+  | "CORRECT_PENDING_STATE"
+  | "CORRECT_ACTIVE_STATE"
+  | "OTHER";
+
+export function normalizeProviderMandateState(value: unknown): ProviderMandateState {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return "__MALFORMED__";
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
 export function mapDirectDebitStatus(
   providerState: ProviderMandateState,
   hasVerifiedContact: boolean
 ): DirectDebitStatus {
   if (!hasVerifiedContact) return "SETUP_REQUIRED";
-  if (providerState === "setup") return "SETUP_REQUIRED";
-  if (providerState === "pending") return "AUTHORISATION_PENDING";
-  if (providerState === "active") return "ACTIVE";
-  if (providerState === "inactive") return "INACTIVE";
-  if (providerState === "failed") return "FAILED";
+  const normalized = normalizeProviderMandateState(providerState);
+  if (normalized === "setup") return "SETUP_REQUIRED";
+  if (normalized === "pending") return "AUTHORISATION_PENDING";
+  if (normalized === "active") return "ACTIVE";
+  if (normalized === "inactive") return "INACTIVE";
+  if (normalized === "failed") return "FAILED";
   return "UNKNOWN";
 }
 

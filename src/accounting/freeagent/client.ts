@@ -26,6 +26,8 @@ export interface FreeAgentInvoice {
   reference?: string;
   status?: string;
   paymentMethods?: Record<string, boolean>;
+  paymentStatus?: string | null;
+  paymentUrl?: string | null;
 }
 
 export interface FreeAgentCreditNote {
@@ -403,7 +405,17 @@ export class FreeAgentClient {
       retryAfterSeconds: null
     });
     const query = `?contact=${encodeURIComponent(canonicalContactUrl)}&per_page=100`;
-    const result = await this.requestJson<{ invoices?: Array<{ url?: string; reference?: string; status?: string; payment_methods?: Record<string, boolean> }> }>(accessToken, `/v2/invoices${query}`);
+    const result = await this.requestJson<{
+      invoices?: Array<{
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        payment_url?: string;
+      }>
+    }>(accessToken, `/v2/invoices${query}`);
     const invoice = (result.data.invoices ?? []).find((candidate) => candidate.reference === reference);
     if (!invoice?.url) return null;
     const url = canonicalProviderUrl(invoice.url, this.options.environment);
@@ -415,7 +427,14 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
-    return { url, reference: invoice.reference, status: invoice.status, paymentMethods: invoice.payment_methods };
+    return {
+      url,
+      reference: invoice.reference,
+      status: invoice.status,
+      paymentMethods: invoice.payment_methods,
+      paymentStatus: invoice.payment_status ?? invoice.gocardless_payment_status ?? null,
+      paymentUrl: invoice.payment_url ?? null
+    };
   }
 
   async getInvoice(accessToken: string, externalReference: string): Promise<FreeAgentInvoice | null> {
@@ -428,7 +447,17 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{ invoice?: { url?: string; reference?: string; status?: string; payment_methods?: Record<string, boolean> } }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}`);
+    const result = await this.requestJson<{
+      invoice?: {
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        payment_url?: string;
+      }
+    }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}`);
     const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
     if (!url) throw new FreeAgentApiError({
       code: "MALFORMED_RESPONSE",
@@ -442,7 +471,9 @@ export class FreeAgentClient {
       url,
       reference: result.data.invoice?.reference,
       status: result.data.invoice?.status,
-      paymentMethods: result.data.invoice?.payment_methods
+      paymentMethods: result.data.invoice?.payment_methods,
+      paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paymentUrl: result.data.invoice?.payment_url ?? null
     };
   }
 
@@ -507,7 +538,17 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{ invoice?: { url?: string; reference?: string; status?: string; payment_methods?: Record<string, boolean> } }>(
+    const result = await this.requestJson<{
+      invoice?: {
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        payment_url?: string;
+      }
+    }>(
       accessToken,
       `/v2/invoices/${encodeURIComponent(id)}/transitions/mark_as_sent`,
       { method: "PUT", body: JSON.stringify({}) }
@@ -525,7 +566,9 @@ export class FreeAgentClient {
       url,
       reference: result.data.invoice?.reference,
       status: result.data.invoice?.status,
-      paymentMethods: result.data.invoice?.payment_methods
+      paymentMethods: result.data.invoice?.payment_methods,
+      paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paymentUrl: result.data.invoice?.payment_url ?? null
     };
   }
 

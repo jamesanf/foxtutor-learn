@@ -8,6 +8,7 @@ export type PaymentReadiness =
   | "PAYMENT_SECURED"
   | "PAYMENT_FAILED"
   | "PAYMENT_UNKNOWN"
+  | "COLLECTION_SUBMITTED"
   | "RECONCILIATION_REQUIRED";
 
 export type MandateState = "setup" | "pending" | "inactive" | "active" | "failed" | null;
@@ -91,6 +92,9 @@ export function calculatePaymentReadiness(input: PaymentReadinessInput): Payment
   }
   if (input.paymentStatus === "PENDING") {
     return result("COLLECTION_PENDING", false);
+  }
+  if (input.paymentStatus === "SUBMITTED") {
+    return result("COLLECTION_SUBMITTED", false);
   }
   if (input.paymentStatus === "SCHEDULED") {
     return result("COLLECTION_SCHEDULED", false);

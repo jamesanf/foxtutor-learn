@@ -8,14 +8,15 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.6 — Direct Debit-first billing and reliability
+**Phase:** Phase 7.7 — Direct Debit chain validation and reconciliation
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source commit:** `42b021b`
-**Worker version:** `a57d4b20-93de-4c72-8af6-3b1f8eed54ea`
-**D1 migrations:** `0001_foundation.sql` through `0026_phase76_billing_notifications.sql` locally and remotely
-**Automated validation:** 35 test files, 185 tests passing
+**Deployed source baseline:** `e97a07e` plus the Phase 7.7 working-tree changes
+**Previous Worker version:** `a57d4b20-93de-4c72-8af6-3b1f8eed54ea`
+**Current Worker version:** `9d3d0252-57e2-4f0d-af7f-5f790923badb`
+**D1 migrations:** `0001_foundation.sql` through `0027_phase77_payment_submitted.sql` deployed
+**Automated validation:** 37 test files, 206 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -42,6 +43,14 @@ unavoidable FreeAgent UI initiation explicit, removes payment-choice language
 from student billing, adds an audited admin-only emergency exception, and
 adds a cheap once-daily sentinel to the existing Worker schedule. The
 sentinel is non-destructive and does not run the Vitest suite in production.
+
+Phase 7.7 repairs stale unresolved mandate reads, preserves submitted versus
+pending versus confirmed collection state, adds synthetic provider fixtures, a
+read-only admin billing-chain audit, and bounded sentinel checks for stale
+mandate/payment state. It keeps FreeAgent as the sole FoxTutor payment
+integration boundary and adds no direct GoCardless API authority. The detailed
+evidence and remaining release gate are in
+[`docs/phase-7.7.md`](docs/phase-7.7.md).
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and

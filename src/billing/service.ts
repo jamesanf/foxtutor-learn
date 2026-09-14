@@ -22,6 +22,7 @@ import {
 import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
 import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
 import { billingReference } from "../domain/billing";
+import { mapFreeAgentPaymentStatus } from "../domain/payment-status";
 
 function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
@@ -303,13 +304,7 @@ async function processDirectDebit(
       client.initiateDirectDebit(token, invoice.freeagent_reference!)
     );
     const providerStatus = payment.status ?? "Unknown";
-    const paymentStatus = providerStatus === "Paid"
-      ? "CONFIRMED"
-      : providerStatus === "Payment pending"
-        ? "PENDING"
-        : providerStatus === "Payment failed"
-          ? "FAILED"
-          : "UNKNOWN";
+    const paymentStatus = mapFreeAgentPaymentStatus(providerStatus);
     await db.prepare(
       `INSERT INTO billing_payments
        (id, invoice_id, method, status, provider_reference, provider_status,
@@ -330,7 +325,13 @@ async function processDirectDebit(
       now
     ).run();
     await updateBillingInvoice(db, invoice.id, {
-      status: paymentStatus === "CONFIRMED" ? "PAID" : paymentStatus === "FAILED" ? "FAILED" : paymentStatus === "UNKNOWN" ? "UNKNOWN" : "PAYMENT_PENDING",
+      status: paymentStatus === "CONFIRMED"
+        ? "PAID"
+        : paymentStatus === "FAILED"
+          ? "FAILED"
+          : paymentStatus === "UNKNOWN"
+            ? "UNKNOWN"
+            : "PAYMENT_PENDING",
       providerStatus,
       now
     });
@@ -430,24 +431,48 @@ export async function reconcileBillingInvoices(
       if (!provider) throw new Error("FreeAgent invoice was not found.");
       const providerStatus = provider.status ?? "Unknown";
       const paid = providerStatus === "Paid";
+      const cancelled = providerStatus === "Cancelled";
       await updateBillingInvoice(db, invoice.id, {
-        status: paid ? "PAID" : providerStatus === "Cancelled" ? "CANCELLED" : "SENT",
+        status: paid ? "PAID" : cancelled ? "CANCELLED" : "SENT",
         providerStatus,
         now
       });
-      if (paid) {
+      const paymentStatus = paid
+        ? "CONFIRMED"
+        : cancelled
+          ? "NOT_STARTED"
+          : provider.paymentStatus
+            ? mapFreeAgentPaymentStatus(provider.paymentStatus)
+            : "NOT_STARTED";
+      if (paymentStatus !== "NOT_STARTED") {
         await db.prepare(
           `INSERT INTO billing_payments
            (id, invoice_id, method, status, provider_reference, provider_status,
             collection_date, first_payment, idempotency_key, created_at, updated_at)
-           SELECT ?, ?, 'FREEAGENT_GOCARDLESS', 'CONFIRMED', ?, ?, COALESCE(collection_date, ?), 0, ?, ?, ?
+           SELECT ?, ?, 'FREEAGENT_GOCARDLESS', ?, ?, ?, COALESCE(collection_date, ?), 0, ?, ?, ?
            FROM billing_invoices WHERE id = ?
-           ON CONFLICT(invoice_id) DO UPDATE SET status = 'CONFIRMED', provider_status = excluded.provider_status, updated_at = excluded.updated_at`
+           ON CONFLICT(invoice_id) DO UPDATE SET
+             status = excluded.status,
+             provider_reference = COALESCE(excluded.provider_reference, billing_payments.provider_reference),
+             provider_status = excluded.provider_status,
+             updated_at = excluded.updated_at`
         ).bind(
-          `payment:${invoice.id}`, invoice.id, invoice.freeagent_reference, providerStatus,
-          now.slice(0, 10), `payment:${invoice.id}`, now, now, invoice.id
+          `payment:${invoice.id}`, invoice.id, paymentStatus, invoice.freeagent_reference,
+          provider.paymentStatus ?? provider.status ?? null, now.slice(0, 10),
+          `payment:${invoice.id}`, now, now, invoice.id
         ).run();
+      }
+      if (paymentStatus === "CONFIRMED") {
+        await db.prepare(
+          "UPDATE billing_invoices SET status = 'PAID', provider_status = ?, updated_at = ? WHERE id = ?"
+        ).bind(providerStatus, now, invoice.id).run();
         await updateBillingEventStatus(db, invoice.billing_event_id, "SETTLED", now, invoice.freeagent_reference, provider.url, providerStatus);
+      } else if (paymentStatus === "FAILED") {
+        await updateBillingInvoice(db, invoice.id, { status: "FAILED", providerStatus, now });
+      } else if (paymentStatus === "UNKNOWN") {
+        await updateBillingInvoice(db, invoice.id, { status: "UNKNOWN", providerStatus, now });
+      } else {
+        await updateBillingInvoice(db, invoice.id, { status: "PAYMENT_PENDING", providerStatus, now });
       }
     } catch (error) {
       const apiError = providerFailure(error);

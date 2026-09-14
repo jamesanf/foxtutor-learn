@@ -50,6 +50,10 @@ function safeProviderError(error: unknown): { code: string; message: string } {
   return { code: "UNKNOWN", message: "FreeAgent provisioning failed unexpectedly." };
 }
 
+function providerRetryAt(now: string, code: string): string {
+  return new Date(Date.parse(now) + (code === "RATE_LIMIT" ? 60 : 15) * 60_000).toISOString();
+}
+
 async function studentRow(db: D1Database, studentId: string): Promise<StudentProvisioningRow | null> {
   return db.prepare(
     "SELECT id, name, email, learn_user_id, status FROM students WHERE id = ?"
@@ -187,7 +191,7 @@ export async function provisionBillingAccount(
     }
   } catch (error) {
     const failure = safeProviderError(error);
-    const retryAt = new Date(Date.parse(now) + (failure.code === "RATE_LIMIT" ? 60 : 15) * 60_000).toISOString();
+    const retryAt = providerRetryAt(now, failure.code);
     await updateBillingAccount(db, account.id, {
       mandateState: "UNKNOWN",
       provisioningState: "UNKNOWN",
@@ -207,6 +211,71 @@ export async function provisionBillingAccount(
     });
   }
   return findBillingAccount(db, studentId);
+}
+
+export async function reconcileBillingAccountMandate(
+  db: D1Database,
+  env: ProvisioningEnvironment,
+  studentId: string,
+  now: string,
+  fetcher: typeof fetch = freeAgentFetch
+): Promise<DirectDebitStatus> {
+  const account = await findBillingAccount(db, studentId);
+  const link = await findExternalAccountingLink(db, studentId);
+  if (!account || !link || link.status !== "VERIFIED") return "SETUP_REQUIRED";
+  try {
+    const contact = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.getContact(token, link.external_url)
+    );
+    if (!contact) {
+      throw new FreeAgentApiError({
+        code: "NOT_FOUND",
+        status: 404,
+        message: "The mapped FreeAgent contact no longer exists.",
+        retryable: false,
+        unknown: false,
+        retryAfterSeconds: null
+      });
+    }
+    const providerContactReference = contact.url.split("/").pop() ?? contact.url;
+    if (providerContactReference !== link.external_reference) {
+      throw new FreeAgentApiError({
+        code: "CONFLICT",
+        status: 409,
+        message: "FreeAgent returned a different contact from the verified mapping.",
+        retryable: false,
+        unknown: false,
+        retryAfterSeconds: null
+      });
+    }
+    const status = mapDirectDebitStatus(contact?.directDebitMandateState ?? null, true);
+    const states = localState(status);
+    await updateBillingAccount(db, account.id, {
+      mandateState: states.mandateState,
+      provisioningState: states.provisioningState,
+      providerContactReference,
+      providerContactUrl: contact.url,
+      verifiedAt: status === "ACTIVE" ? now : null,
+      lastReconciledAt: now,
+      nextReconcileAt: new Date(Date.parse(now) + (status === "ACTIVE" ? 24 : 1) * 60 * 60_000).toISOString(),
+      lastErrorCode: null,
+      lastErrorMessage: null,
+      claimExpiresAt: null
+    }, now);
+    return status;
+  } catch (error) {
+    const failure = safeProviderError(error);
+    await updateBillingAccount(db, account.id, {
+      mandateState: "UNKNOWN",
+      provisioningState: "UNKNOWN",
+      lastReconciledAt: now,
+      nextReconcileAt: providerRetryAt(now, failure.code),
+      lastErrorCode: failure.code,
+      lastErrorMessage: failure.message,
+      claimExpiresAt: null
+    }, now);
+    return "UNKNOWN";
+  }
 }
 
 export async function runBillingProvisioningScheduler(

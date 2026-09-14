@@ -64,4 +64,15 @@ describe("payment readiness", () => {
     expect(calculatePaymentReadiness({ ...base, paymentStatus: "FAILED" }).state).toBe("PAYMENT_FAILED");
     expect(calculatePaymentReadiness({ ...base, paymentStatus: "UNKNOWN" }).state).toBe("PAYMENT_UNKNOWN");
   });
+
+  it("does not secure a lesson when collection has only been submitted", () => {
+    const result = calculatePaymentReadiness({
+      ...base,
+      now: "2026-09-15T12:00:00.000Z",
+      mandateState: "active",
+      paymentStatus: "SUBMITTED"
+    });
+    expect(result.state).toBe("COLLECTION_SUBMITTED");
+    expect(result.paymentSecuredForLesson).toBe(false);
+  });
 });

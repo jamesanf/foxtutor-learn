@@ -3,6 +3,7 @@ import {
   directDebitStatusCopy,
   mapDirectDebitStatus
 } from "../../src/domain/direct-debit";
+import { freeAgentContactFixture } from "../../src/accounting/freeagent/fixtures";
 
 describe("Direct Debit mandate state mapping", () => {
   it.each([
@@ -30,5 +31,18 @@ describe("Direct Debit mandate state mapping", () => {
     }
     expect(directDebitStatusCopy("AUTHORISATION_PENDING").description).toContain("being completed");
     expect(directDebitStatusCopy("UNKNOWN").action).not.toContain("bank details");
+  });
+
+  it.each([
+    ["setup", "SETUP_REQUIRED"],
+    ["pending", "AUTHORISATION_PENDING"],
+    ["inactive", "INACTIVE"],
+    ["active", "ACTIVE"],
+    ["failed", "FAILED"],
+    ["null", "UNKNOWN"],
+    ["unknown", "UNKNOWN"]
+  ] as const)("maps the synthetic provider fixture %s without losing state", (fixtureState, expected) => {
+    const fixture = freeAgentContactFixture(fixtureState);
+    expect(mapDirectDebitStatus(fixture.contact.direct_debit_mandate_state ?? null, true)).toBe(expected);
   });
 });

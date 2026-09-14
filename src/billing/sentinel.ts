@@ -86,6 +86,38 @@ export async function runBillingSentinel(
       context: "missing customer or active provider contact link",
     },
     {
+      code: "BILLING_SENTINEL_VERIFIED_CONTACT_MAPPING",
+      query: `SELECT 1 FROM billing_accounts b
+        JOIN external_accounting_links e
+          ON e.local_entity_type = 'STUDENT'
+         AND e.local_entity_id = b.student_id
+         AND e.provider = 'FREEAGENT'
+         AND e.external_resource_type = 'CONTACT'
+         AND e.status = 'VERIFIED'
+        WHERE b.provider_contact_reference IS NULL
+           OR b.provider_contact_reference <> e.external_reference
+        LIMIT 1`,
+      context: "verified FreeAgent contact does not match the billing account",
+    },
+    {
+      code: "BILLING_SENTINEL_STALE_UNKNOWN_MANDATE",
+      query: `SELECT 1 FROM billing_accounts
+        WHERE mandate_state = 'UNKNOWN'
+          AND (last_reconciled_at IS NULL OR last_reconciled_at < datetime(?, '-1 day'))
+        LIMIT 1`,
+      bindings: [now],
+      context: "mandate state remains unknown beyond the reconciliation threshold",
+    },
+    {
+      code: "BILLING_SENTINEL_ACTIVE_MANDATE_RECONCILIATION",
+      query: `SELECT 1 FROM billing_accounts
+        WHERE mandate_state = 'ACTIVE'
+          AND (last_reconciled_at IS NULL OR last_reconciled_at < datetime(?, '-1 day'))
+        LIMIT 1`,
+      bindings: [now],
+      context: "active mandate has not been reconciled recently",
+    },
+    {
       code: "BILLING_SENTINEL_ACCOUNTING_LINK",
       query: `SELECT 1 FROM external_accounting_links e
         JOIN external_accounting_links duplicate
@@ -141,7 +173,7 @@ export async function runBillingSentinel(
     {
       code: "BILLING_SENTINEL_STALE_COLLECTION",
       query: `SELECT 1 FROM billing_payments
-        WHERE status IN ('SCHEDULED', 'PENDING')
+        WHERE status IN ('SCHEDULED', 'SUBMITTED', 'PENDING')
           AND updated_at < datetime(?, '-3 days')
         LIMIT 1`,
       bindings: [now],

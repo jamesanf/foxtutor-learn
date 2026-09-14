@@ -5,7 +5,10 @@
 Open `/learn/admin/billing`. Review `Needs attention`, failed payments,
 mandate-pending lessons and reconciliation-required items before lessons begin.
 Use invoice detail to inspect provider references and credit detail to explain
-the ledger balance.
+the ledger balance. Use the **Audit** link beside a billing row to open the
+read-only chain check for a student. It refreshes the verified FreeAgent
+contact mapping before reporting the local mandate, invoice, payment and alert
+state.
 
 At approximately 03:00 Europe/London the existing Worker scheduler runs the
 bounded billing sentinel once for the London business date. Review open
@@ -54,6 +57,22 @@ request for it, or mark a payment as confirmed without provider evidence.
 
 A submitted or pending collection is not `PAYMENT_SECURED`; only full credit
 coverage or confirmed provider payment is secure.
+
+### Billing-chain audit outcomes
+
+* `HEALTHY`: the verified mapping and current billing state have no unresolved
+  exception.
+* `WARNING`: provider work is scheduled, submitted or pending, but no payment
+  is yet secured.
+* `ACTION_REQUIRED`: mandate setup, authorisation, failure, inactivity or an
+  open operational alert needs attention.
+* `UNKNOWN`: FreeAgent could not be read safely or the provider returned an
+  unexpected state.
+* `BROKEN`: the local billing account and verified FreeAgent contact mapping
+  disagree.
+
+The audit is read-only with respect to invoices and payments. It must not be
+used as a reason to retry an ambiguous Direct Debit mutation.
 
 ## Recovery
 

@@ -38,6 +38,7 @@ export type LearnRoute =
   | "admin-accounting"
   | "admin-billing"
   | "admin-billing-action"
+  | "admin-billing-audit"
   | "admin-series"
   | "admin-series-form"
   | "admin-series-action"
@@ -102,6 +103,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/notifications\/[^/]+$/.test(path)) return "admin-notification";
   if (path === "/learn/admin/accounting") return "admin-accounting";
   if (path === "/learn/admin/billing") return "admin-billing";
+  if (/^\/learn\/admin\/billing\/audit\/[^/]+$/.test(path)) return "admin-billing-audit";
   if (/^\/learn\/admin\/billing\/(?:alerts|invoices|credits|emergency-payg)\//.test(path)) return "admin-billing-action";
   if (path === "/learn/admin/series") return "admin-series";
   if (path === "/learn/admin/series/new") return "admin-series-form";
