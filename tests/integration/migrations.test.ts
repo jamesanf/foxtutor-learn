@@ -196,4 +196,23 @@ describe("D1 foundation", () => {
     expect(migration).toContain("transaction_type = 'REVERSAL'");
     expect(migration).toContain("DROP VIEW IF EXISTS customer_credit_balances");
   });
+
+  it("adds customer-level Direct Debit provisioning, audit, emergency and sentinel state", () => {
+    const migration = readFileSync("migrations/0025_phase76_direct_debit_provisioning.sql", "utf8");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_accounts");
+    expect(migration).toContain("CHECK (payment_method = 'DIRECT_DEBIT')");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_provisioning_events");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_emergency_payg_overrides");
+    expect(migration).toContain("reason TEXT NOT NULL");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_sentinel_runs");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS billing_sentinel_alerts");
+  });
+
+  it("extends the notification outbox without exposing a second delivery path", () => {
+    const migration = readFileSync("migrations/0026_phase76_billing_notifications.sql", "utf8");
+    expect(migration).toContain("'BILLING_DIRECT_DEBIT_SETUP'");
+    expect(migration).toContain("'BILLING_DIRECT_DEBIT_REMINDER'");
+    expect(migration).toContain("ALTER TABLE notifications RENAME TO notifications_phase76");
+    expect(migration).toContain("ALTER TABLE notification_settings RENAME TO notification_settings_phase76");
+  });
 });

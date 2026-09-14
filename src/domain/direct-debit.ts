@@ -2,10 +2,11 @@ export type ProviderMandateState = "setup" | "pending" | "inactive" | "active" |
 
 export type DirectDebitStatus =
   | "NOT_CONFIGURED"
-  | "SETUP_REQUESTED"
-  | "PENDING_AUTHORISATION"
+  | "SETUP_REQUIRED"
+  | "AUTHORISATION_PENDING"
   | "ACTIVE"
   | "FAILED"
+  | "INACTIVE"
   | "UNKNOWN";
 
 export interface DirectDebitStatusCopy {
@@ -19,56 +20,58 @@ export function mapDirectDebitStatus(
   providerState: ProviderMandateState,
   hasVerifiedContact: boolean
 ): DirectDebitStatus {
-  if (!hasVerifiedContact) return "NOT_CONFIGURED";
-  if (providerState === "setup") return "SETUP_REQUESTED";
-  if (providerState === "pending") return "PENDING_AUTHORISATION";
+  if (!hasVerifiedContact) return "SETUP_REQUIRED";
+  if (providerState === "setup") return "SETUP_REQUIRED";
+  if (providerState === "pending") return "AUTHORISATION_PENDING";
   if (providerState === "active") return "ACTIVE";
-  if (providerState === "inactive" || providerState === "failed") return "FAILED";
+  if (providerState === "inactive") return "INACTIVE";
+  if (providerState === "failed") return "FAILED";
   return "UNKNOWN";
 }
 
 export function directDebitStatusCopy(status: DirectDebitStatus): DirectDebitStatusCopy {
   switch (status) {
     case "NOT_CONFIGURED":
+    case "SETUP_REQUIRED":
       return {
-        label: "Setup has not been started",
-        description: "FoxTutor will send a secure Direct Debit authorisation request when setup is started.",
-        action: "If you expected a request, contact billing.",
+        label: "Direct Debit setup required",
+        description: "Direct Debit setup is required before automatic billing can begin.",
+        action: "Your billing administrator will start the secure provider setup when required.",
         tone: "neutral"
       };
-    case "SETUP_REQUESTED":
+    case "AUTHORISATION_PENDING":
       return {
-        label: "Authorisation request sent",
-        description: "Open the secure request from your email and complete the bank authorisation there.",
-        action: "If the request is missing or expired, contact billing.",
-        tone: "info"
-      };
-    case "PENDING_AUTHORISATION":
-      return {
-        label: "Setup is awaiting your authorisation",
-        description: "Complete the secure authorisation request. The provider may then take up to three working days to finish setup.",
+        label: "Direct Debit authorisation pending",
+        description: "Your Direct Debit authorisation is being completed.",
         action: "Return here after authorising to check whether Direct Debit is active.",
-        tone: "warning"
+        tone: "info"
       };
     case "ACTIVE":
       return {
-        label: "Direct Debit is active",
-        description: "Your payment method is ready for eligible FoxTutor lesson collections.",
+        label: "Direct Debit active",
+        description: "Your lessons will be billed automatically using Direct Debit.",
         action: "No action is needed.",
         tone: "success"
       };
     case "FAILED":
       return {
-        label: "Direct Debit setup needs attention",
-        description: "The payment provider has not confirmed an active mandate.",
+        label: "Direct Debit needs attention",
+        description: "The provider could not confirm an active Direct Debit authorisation.",
         action: "Contact billing so the setup can be checked safely.",
+        tone: "error"
+      };
+    case "INACTIVE":
+      return {
+        label: "Direct Debit needs attention",
+        description: "The previous Direct Debit authorisation is no longer active.",
+        action: "Contact billing so a new secure provider authorisation can be arranged.",
         tone: "error"
       };
     case "UNKNOWN":
       return {
-        label: "We're checking the status of your Direct Debit",
-        description: "FoxTutor could not safely confirm the current provider status.",
-        action: "Do not submit bank details to FoxTutor Learn. Contact billing if this persists.",
+        label: "Direct Debit status unavailable",
+        description: "FoxTutor is temporarily unable to confirm the current Direct Debit status.",
+        action: "No action is needed unless FoxTutor asks you to take one.",
         tone: "warning"
       };
   }

@@ -104,6 +104,9 @@ import {
   setRecurringSeriesStatus
 } from "../db/recurrence";
 import { processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
+import { provisionBillingAccount, runBillingProvisioningScheduler } from "../accounting/provisioning";
+import { createEmergencyPaygOverride, findBillingAccount } from "../db/billing-accounts";
+import { canRecordEmergencyPayg, validateEmergencyPaygReason } from "../domain/billing-policy";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
 import {
   cancelLesson,
@@ -140,6 +143,7 @@ import {
 } from "../domain/calendar";
 import { calculatePaymentReadiness } from "../domain/payment-readiness";
 import { directDebitStatusCopy, mapDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
+import { runBillingSentinel } from "../billing/sentinel";
 import {
   academicYearOptions,
   isStudentAcademicSystem,
@@ -1777,7 +1781,7 @@ async function billingOperationsPage(
   const failed = readiness.filter(({ result }) => result.state === "PAYMENT_FAILED").length;
   const creditCovered = readiness.filter(({ result }) => result.state === "CREDIT_COVERED").length;
   const rowMarkup = readiness.length
-    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a></td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : "Not created"}</td></tr>`).join("")
+    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a></td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(row.billing_event_id)}">Emergency exception</a>` : "Not created"}</td></tr>`).join("")
     : `<tr><td colspan="8">No upcoming lessons require billing attention.</td></tr>`;
   const creditRows = credits.length
     ? credits.map((credit) => `<tr><td><a href="/learn/admin/billing/credits/${encodeURIComponent(credit.credit_id)}">${escapeHtml(credit.student_name ?? credit.student_id)}</a></td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
@@ -1875,6 +1879,36 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     return billingOperationsPage(active.user, csrfToken, db, request);
   }
   if (route === "admin-billing-action") {
+    const emergencyMatch = /^\/learn\/admin\/billing\/emergency-payg\/([^/]+)$/.exec(url.pathname);
+    if (emergencyMatch) {
+      const billingEventId = decodePathSegment(emergencyMatch[1] ?? "");
+      if (!billingEventId) return messagePage("Billing event not found", "That billing event does not exist.", 404);
+      const event = await db.prepare(
+        "SELECT id, student_id, status FROM billing_events WHERE id = ?"
+      ).bind(billingEventId).first<{ id: string; student_id: string; status: string }>();
+      if (!event) return messagePage("Billing event not found", "That billing event does not exist.", 404);
+      if (request.method === "GET") {
+        return appPage(active.user, csrfToken, "Emergency billing exception", `<div class="page-heading"><div><h1>Emergency billing exception</h1><p class="lede">This admin-only exception prevents Direct Debit collection for one billing event. It is never shown as a customer payment choice.</p></div></div><section class="card form-card"><form method="post" action="/learn/admin/billing/emergency-payg/${encodeURIComponent(event.id)}">${hiddenCsrf(csrfToken)}<label>Reason<textarea name="reason" minlength="10" maxlength="500" required></textarea><span class="field-help">Use only for a last-minute addition where a normal Direct Debit authorisation cannot reasonably be established in time.</span></label><div class="form-actions"><a class="button secondary" href="/learn/admin/billing">Cancel</a><button class="button danger" type="submit">Record emergency exception</button></div></form></section>`);
+      }
+      if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+      const form = await parseForm(request);
+      const reason = formText(form ?? new FormData(), "reason");
+      const reasonError = validateEmergencyPaygReason(reason);
+      if (reasonError) return messagePage("Reason required", reasonError, 400);
+      const existingInvoice = await db.prepare("SELECT 1 FROM billing_invoices WHERE billing_event_id = ?").bind(event.id).first();
+      if (!canRecordEmergencyPayg({ actorRole: active.user.role, reason, lessonAlreadySecured: Boolean(existingInvoice) })) {
+        return messagePage("Exception unavailable", "An emergency exception is only available to an administrator before provider invoicing or collection.", 409);
+      }
+      const created = await createEmergencyPaygOverride(db, {
+        id: crypto.randomUUID(),
+        billingEventId: event.id,
+        studentId: event.student_id,
+        reason,
+        createdByUserId: active.user.id,
+        now: new Date().toISOString()
+      });
+      return created ? redirect("/learn/admin/billing") : messagePage("Exception already recorded", "That billing event already has an emergency exception.", 409);
+    }
     const invoiceMatch = /^\/learn\/admin\/billing\/invoices\/([^/]+)$/.exec(url.pathname);
     if (invoiceMatch && request.method === "GET") {
       const invoiceId = decodePathSegment(invoiceMatch[1] ?? "");
@@ -2417,6 +2451,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (await findStudentLinkedToUser(db, account.id)) return messagePage("Conflict", "That Learn account is already linked to another student record.", 409);
     const studentId = crypto.randomUUID();
     await insertStudent(db, { ...profile.value, id: studentId, learnUserId: account.id, now });
+    await provisionBillingAccount(db, env, studentId, now);
     const createdStudent = await findActiveStudentRecipient(db, studentId);
     if (createdStudent?.learn_user_id && createdStudent.learn_user_email) {
       const content = renderEmail("STUDENT_INVITED", { studentName: createdStudent.name, origin: canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin) }, canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
@@ -2893,8 +2928,12 @@ async function studentDirectDebitStatus(
   env: Env,
   studentId: string
 ): Promise<DirectDebitStatus> {
+  const account = await findBillingAccount(db, studentId);
+  if (account) {
+    return account.mandate_state;
+  }
   const link = await findExternalAccountingLink(db, studentId);
-  if (!link || link.status !== "VERIFIED") return "NOT_CONFIGURED";
+  if (!link || link.status !== "VERIFIED") return "SETUP_REQUIRED";
   try {
     const contact = await providerCall(db, env, new Date().toISOString(), freeAgentFetch, (client, token) =>
       client.getContact(token, link.external_url)
@@ -2925,9 +2964,9 @@ function billingCustomerStatusLabel(kind: BillingHistoryItem["kind"], status: st
 
 function directDebitStatusClass(status: DirectDebitStatus): string {
   if (status === "ACTIVE") return "active";
-  if (status === "FAILED") return "failed";
-  if (status === "PENDING_AUTHORISATION") return "pending";
-  if (status === "SETUP_REQUESTED") return "sent";
+  if (status === "FAILED" || status === "INACTIVE") return "failed";
+  if (status === "AUTHORISATION_PENDING") return "pending";
+  if (status === "SETUP_REQUIRED") return "sent";
   if (status === "UNKNOWN") return "unknown";
   return "suppressed";
 }
@@ -2970,7 +3009,7 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
     ? ""
     : `<div class="direct-debit-actions"><a class="button secondary" href="mailto:billing@foxtutor.org?subject=Direct%20Debit%20setup%20help">Contact billing</a></div><p class="direct-debit-support">Billing support: <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a></p>`;
   studentBillingStage("BILLING_HTML_RENDER_START", studentContext);
-  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Payment method</span><strong>Direct Debit</strong><small>${escapeHtml(mandateCopy.label)}</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit setup</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses a secure payment provider for Direct Debit. We will send a secure authorisation request by email. Open that request directly and enter bank details only in the provider's secure mandate flow, not in FoxTutor Learn. FoxTutor Learn stores the payment status needed for billing, not your bank account number or sort code.</p><ol><li>Open the secure authorisation request from the email.</li><li>Complete the bank authorisation there.</li><li>Return to this page to check the status. Setup can remain pending for up to three working days after authorisation.</li></ol><p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
+  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1><p class="lede">Your billing summary and Direct Debit status.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section><section class="summary-card"><span>Billing rail</span><strong>Direct Debit</strong><small>${escapeHtml(mandateCopy.label)}</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses the secure provider flow for Direct Debit. Bank details must be entered only through that provider flow, never by email or in FoxTutor Learn. FoxTutor stores only the status needed to run billing.</p>${mandateStatus === "AUTHORISATION_PENDING" ? "<p>Use the secure provider authorisation request you received. The provider may take a few working days to confirm it.</p>" : ""}<p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`);
   studentBillingStage("BILLING_HTML_RENDER_COMPLETE", studentContext);
   studentBillingStage("STUDENT_BILLING_END", studentContext);
   return response;
@@ -3291,6 +3330,7 @@ export default {
     context.waitUntil((async () => {
       await markElapsedScheduledLessonsCompleted(db, now);
       await ensureAllRecurringSeriesMaterialised(db, now.slice(0, 10), now);
+      await runBillingProvisioningScheduler(db, env, now, freeAgentFetch, 5);
       const pendingBillingEvents = await listPendingBillingEvents(db, now, 50);
       await Promise.all(pendingBillingEvents.map((event) => ensureBillingInvoiceForEvent(db, {
         billingEventId: event.id,
@@ -3309,6 +3349,17 @@ export default {
         ...dueAccounting.map((event) => processAccountingOutbox(db, env, event.id, now, freeAgentFetch)),
         ...dueBillingProviderOperations.map((operation) => processCreditNoteProviderOperation(db, env, operation.id, now, freeAgentFetch))
       ]);
+      const london = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/London",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).formatToParts(new Date(controller.scheduledTime));
+      const londonHour = london.find((part) => part.type === "hour")?.value;
+      const londonMinute = london.find((part) => part.type === "minute")?.value;
+      if (londonHour === "03" && londonMinute === "00") {
+        await runBillingSentinel(db, now);
+      }
     })());
   }
 };

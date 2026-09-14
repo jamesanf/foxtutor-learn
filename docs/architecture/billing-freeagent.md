@@ -143,6 +143,23 @@ recurring profile. A provider payment can remain pending, fail, or become
 unknown; those states are retained for reconciliation and are not treated as
 successful payment.
 
+## Customer-level Direct Debit provisioning
+
+Each student has one `billing_accounts` row with immutable
+`payment_method = DIRECT_DEBIT`. It stores only safe provider contact
+references, mapped mandate/provisioning state, reconciliation timestamps,
+notification cooldown metadata and bounded safe errors. It never stores bank
+account details, sort codes, payment credentials or raw provider payloads.
+
+Student creation and scheduled retries use documented FreeAgent contact
+list/get/create/update operations. A verified local mapping is read first;
+an exact email match is reused; ambiguous matches fail closed; and a contact
+is created only when no match exists. A local claim prevents concurrent
+duplicate work and a timeout is reconciled before retrying. Mandate setup is
+not created through FoxTutor because the public API does not document that
+capability. The administrator performs the one-time FreeAgent UI initiation;
+the secure provider flow then remains outside FoxTutor.
+
 ## Contact mapping
 
 The current admin screen uses a compact numeric FreeAgent contact-ID control
@@ -152,10 +169,10 @@ email is a contact-synchronisation concern, while an existing mapping conflict
 is a fail-closed condition. The company environment and subdomain are pinned
 when the mapping is verified.
 
-Automatic find-or-create/update synchronization is the intended future
-workflow. It must preserve the explicit local mapping, prevent duplicate
-contacts, verify the intended company, and fail closed on ambiguous matches
-before it replaces the current manual verification boundary.
+The automatic find-or-create synchronization now preserves the explicit local
+mapping, prevents duplicate contacts, verifies the connected company
+environment, and fails closed on ambiguous matches. Existing manual mapping
+remains available for exceptional reconciliation.
 
 ## Current implementation boundary
 
@@ -169,6 +186,10 @@ Implemented locally:
 - lesson-level invoice and Direct Debit orchestration with payment readiness;
 - billing alerts, payment history and provider reconciliation state;
 - FreeAgent contact mandate, credit-note and Direct Debit adapter methods;
+- customer-level Direct Debit provisioning, idempotent notifications and
+  provider-state reconciliation;
+- a once-per-London-day bounded billing sentinel integrated into the existing
+  Worker scheduler;
 - feature-flagged, retryable credit-note provider operations.
 
 Not deployed or provider-verified:
@@ -176,8 +197,9 @@ Not deployed or provider-verified:
 - automatic credit-note-to-invoice matching, because no public API endpoint is
   documented;
 - automatic refund provider mutation;
-- customer-facing mandate setup through FoxTutor, because FreeAgent does not
-  document a mandate-request creation endpoint.
+- customer-facing mandate initiation through FoxTutor, because FreeAgent does
+  not document a mandate-request creation endpoint; the one-time FreeAgent UI
+  action remains explicit.
 
 ## Phase 7 links
 

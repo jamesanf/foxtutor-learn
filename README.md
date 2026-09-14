@@ -8,14 +8,14 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.5 — financial safety and acceptance
+**Phase:** Phase 7.6 — Direct Debit-first billing and reliability
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source commit:** `1be5758`
-**Worker version:** `e8dff528-34c6-48d6-90c6-9dedaec2df10`
-**D1 migrations:** `0001_foundation.sql` through `0024_phase72_global_timezone_operations.sql` locally and remotely
-**Automated validation:** 33 test files, 181 tests passing
+**Deployed source commit:** Phase 7.6 release commit (current `main` after release)
+**Worker version:** `a57d4b20-93de-4c72-8af6-3b1f8eed54ea`
+**D1 migrations:** `0001_foundation.sql` through `0026_phase76_billing_notifications.sql` locally and remotely
+**Automated validation:** 35 test files, 185 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated
@@ -35,6 +35,13 @@ and requires comprehensive failure, concurrency, reconciliation, provider
 Sandbox and authenticated runtime evidence. It remains **NOT READY** until
 those engineering and provider gates are evidenced; only genuine commercial
 decisions may remain human approval gates.
+
+Phase 7.6 makes Direct Debit the only normal customer-facing billing rail,
+adds customer-level provisioning and mandate reconciliation, keeps the
+unavoidable FreeAgent UI initiation explicit, removes payment-choice language
+from student billing, adds an audited admin-only emergency exception, and
+adds a cheap once-daily sentinel to the existing Worker schedule. The
+sentinel is non-destructive and does not run the Vitest suite in production.
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -104,6 +111,10 @@ coverage now verifies successful contact verification through D1 persistence.
 - FoxTutor owns recurring lessons, lesson instances, billing events, customer
   credit and payment readiness; FreeAgent remains authoritative for accounting
   documents, provider references and exposed payment/mandate state.
+- Normal customers use Direct Debit. Student pages never expose PAYG,
+  payment-method selection, bank-transfer instructions or provider IDs.
+- FreeAgent/GoCardless remains the sensitive payment boundary. FoxTutor stores
+  only safe provider references and reconciled lifecycle state.
 - Accounting follows the boundary `operational event -> accounting
   consequence -> outbox -> scheduled Worker -> FreeAgent adapter`.
 -   Phase 7 uses individual FreeAgent invoices, not recurring invoice profiles,
@@ -176,6 +187,7 @@ docs/CHANGELOG.md    Material implementation history
 | `docs/phase-6.md` | Current Phase 6 status, evidence matrix and closure gate |
 | `docs/architecture/gocardless-freeagent.md` | FreeAgent-GoCardless boundary and safety decision |
 | `docs/phase-7.md` | Current Phase 7 summary, status and acceptance boundary |
+| `docs/phase-7.6.md` | Direct Debit-first provisioning, emergency policy and sentinel boundary |
 | `docs/phase-7.4.md` | Worker 1101 diagnosis, fix, deployment evidence and remaining gates |
 | `docs/architecture/phase-6.md` | Current accounting architecture and state model |
 | `docs/testing/phase-6.md` | Current automated coverage and external acceptance boundary |
@@ -203,6 +215,7 @@ operational records.
 | 6 | FreeAgent/accounting boundary | Engineering-complete; external commercial/provider acceptance pending |
 | 7 | Billing engine and long-term operations hardening | 1101 diagnosed and fixed in source/deployment; authenticated runtime, provider acceptance and commercial gates remain open |
 | 7.5 | Financial safety and acceptance | Direct Debit UX and formal acceptance model added; comprehensive engineering/provider/runtime evidence remains open |
+| 7.6 | Direct Debit-first provisioning and reliability | Implemented in source with forward-only migrations, bounded sentinel and automated coverage; production deployment and authenticated/provider acceptance remain release gates |
 
 ## Security model
 

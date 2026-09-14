@@ -40,6 +40,8 @@ export type FreeAgentDirectDebitMandateState = "setup" | "pending" | "inactive" 
 export interface FreeAgentContact {
   url: string;
   directDebitMandateState: FreeAgentDirectDebitMandateState | null;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   billingEmail?: string;
 }
@@ -225,7 +227,16 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{ contact?: { url?: string; direct_debit_mandate_state?: FreeAgentDirectDebitMandateState; email?: string; billing_email?: string } }>(accessToken, `/v2/contacts/${encodeURIComponent(id)}`);
+    const result = await this.requestJson<{
+      contact?: {
+        url?: string;
+        first_name?: string;
+        last_name?: string;
+        direct_debit_mandate_state?: FreeAgentDirectDebitMandateState;
+        email?: string;
+        billing_email?: string;
+      }
+    }>(accessToken, `/v2/contacts/${encodeURIComponent(id)}`);
     const url = canonicalProviderUrl(result.data.contact?.url ?? externalReference, this.options.environment);
     if (!url) throw new FreeAgentApiError({
       code: "MALFORMED_RESPONSE",
@@ -237,6 +248,8 @@ export class FreeAgentClient {
     });
     return {
       url,
+      firstName: result.data.contact?.first_name,
+      lastName: result.data.contact?.last_name,
       directDebitMandateState: result.data.contact?.direct_debit_mandate_state ?? null,
       email: result.data.contact?.email,
       billingEmail: result.data.contact?.billing_email
@@ -245,6 +258,138 @@ export class FreeAgentClient {
 
   async findContact(accessToken: string, externalReference: string): Promise<FreeAgentContact | null> {
     return this.getContact(accessToken, externalReference);
+  }
+
+  async listContacts(accessToken: string, page = 1): Promise<FreeAgentContact[]> {
+    const query = new URLSearchParams({ view: "active", page: String(page), per_page: "100" });
+    const result = await this.requestJson<{
+      contacts?: Array<{
+        url?: string;
+        first_name?: string;
+        last_name?: string;
+        direct_debit_mandate_state?: FreeAgentDirectDebitMandateState;
+        email?: string;
+        billing_email?: string;
+      }>
+    }>(accessToken, `/v2/contacts?${query.toString()}`);
+    const contacts: FreeAgentContact[] = [];
+    for (const contact of result.data.contacts ?? []) {
+      const url = canonicalProviderUrl(contact.url, this.options.environment);
+      if (!url) throw new FreeAgentApiError({
+        code: "MALFORMED_RESPONSE",
+        status: result.response.status,
+        message: "FreeAgent contact list contained an unsafe URL.",
+        retryable: false,
+        unknown: true,
+        retryAfterSeconds: null
+      });
+      contacts.push({
+        url,
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        directDebitMandateState: contact.direct_debit_mandate_state ?? null,
+        email: contact.email,
+        billingEmail: contact.billing_email
+      });
+    }
+    return contacts;
+  }
+
+  async createContact(
+    accessToken: string,
+    input: { firstName: string; lastName: string; email: string; billingEmail?: string; address1?: string }
+  ): Promise<FreeAgentContact> {
+    const contact = {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      email: input.email,
+      billing_email: input.billingEmail ?? input.email,
+      ...(input.address1 ? { address1: input.address1 } : {})
+    };
+    const result = await this.requestJson<{
+      contact?: {
+        url?: string;
+        first_name?: string;
+        last_name?: string;
+        direct_debit_mandate_state?: FreeAgentDirectDebitMandateState;
+        email?: string;
+        billing_email?: string;
+      }
+    }>(accessToken, "/v2/contacts", {
+      method: "POST",
+      body: JSON.stringify({ contact })
+    });
+    const url = canonicalProviderUrl(result.data.contact?.url ?? result.response.headers.get("Location"), this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent contact creation response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      firstName: result.data.contact?.first_name ?? input.firstName,
+      lastName: result.data.contact?.last_name ?? input.lastName,
+      directDebitMandateState: result.data.contact?.direct_debit_mandate_state ?? null,
+      email: result.data.contact?.email ?? input.email,
+      billingEmail: result.data.contact?.billing_email ?? input.billingEmail ?? input.email
+    };
+  }
+
+  async updateContact(
+    accessToken: string,
+    externalReference: string,
+    input: { firstName: string; lastName: string; email: string; billingEmail?: string; address1?: string }
+  ): Promise<FreeAgentContact> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent contact reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{
+      contact?: {
+        url?: string;
+        first_name?: string;
+        last_name?: string;
+        direct_debit_mandate_state?: FreeAgentDirectDebitMandateState;
+        email?: string;
+        billing_email?: string;
+      }
+    }>(accessToken, `/v2/contacts/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        contact: {
+          first_name: input.firstName,
+          last_name: input.lastName,
+          email: input.email,
+          billing_email: input.billingEmail ?? input.email,
+          ...(input.address1 ? { address1: input.address1 } : {})
+        }
+      })
+    });
+    const url = canonicalProviderUrl(result.data.contact?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent contact update response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      firstName: result.data.contact?.first_name ?? input.firstName,
+      lastName: result.data.contact?.last_name ?? input.lastName,
+      directDebitMandateState: result.data.contact?.direct_debit_mandate_state ?? null,
+      email: result.data.contact?.email ?? input.email,
+      billingEmail: result.data.contact?.billing_email ?? input.billingEmail ?? input.email
+    };
   }
 
   async findInvoiceByReference(accessToken: string, contactUrl: string, reference: string): Promise<FreeAgentInvoice | null> {

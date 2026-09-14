@@ -53,7 +53,11 @@ export function calculatePaymentReadiness(input: PaymentReadinessInput): Payment
   if (!isIsoDate(input.lessonDate) || !isIsoDate(input.collectionDate)) throw new Error("Payment dates must be ISO calendar dates.");
   const creditToApplyMinor = input.grossAmountMinor < input.creditAvailableMinor ? input.grossAmountMinor : input.creditAvailableMinor;
   const expectedInvoiceAmount = input.grossAmountMinor - creditToApplyMinor;
-  const remainingAmountMinor = input.invoiceAmountMinor || expectedInvoiceAmount;
+  // Zero is a meaningful net invoice amount when credit covers the lesson;
+  // do not let BigInt truthiness decide whether an invoice amount exists.
+  const remainingAmountMinor = input.invoiceAmountMinor === 0n && expectedInvoiceAmount > 0n
+    ? expectedInvoiceAmount
+    : input.invoiceAmountMinor;
   const result = (state: PaymentReadiness, paymentSecuredForLesson: boolean): PaymentReadinessResult => ({
     lessonPriceMinor: input.grossAmountMinor,
     currentCreditMinor: input.creditAvailableMinor,

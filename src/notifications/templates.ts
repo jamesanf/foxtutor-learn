@@ -57,6 +57,11 @@ export interface CancellationProcessedEmailData extends LessonEmailData {
   undoPath?: string;
 }
 
+export interface DirectDebitEmailData {
+  studentName: string;
+  status: "setup" | "pending";
+}
+
 function requireFields(data: Record<string, unknown>, fields: string[]): void {
   for (const field of fields) {
     if (typeof data[field] !== "string" || !(data[field] as string).trim()) throw new Error(`Missing notification template field: ${field}`);
@@ -239,6 +244,18 @@ export function renderDstWarning(data: DstWarningEmailData): EmailContent {
   };
 }
 
+export function renderDirectDebitStatus(data: DirectDebitEmailData): EmailContent {
+  const pending = data.status === "pending";
+  const title = pending ? "Direct Debit authorisation pending" : "Direct Debit setup required";
+  const text = pending
+    ? `Hello ${data.studentName},\n\nYour Direct Debit authorisation is being completed. Use the secure provider authorisation request you received; do not send bank details by email or enter them into FoxTutor Learn.\n\nThe provider may take a few working days to confirm the authorisation. FoxTutor will stop sending setup reminders once Direct Debit is active.`
+    : `Hello ${data.studentName},\n\nDirect Debit setup is required before automatic FoxTutor billing can begin. Your billing administrator will start the secure provider setup when required. Bank details must be entered only through the provider's secure flow; do not send them by email or enter them into FoxTutor Learn.`;
+  const body = pending
+    ? `<p>Hello ${escapeHtml(data.studentName)},</p><p>Your Direct Debit authorisation is being completed.</p><p>Use the secure provider authorisation request you received. The provider may take a few working days to confirm the authorisation.</p><p>Do not send bank details by email or enter them into FoxTutor Learn.</p>`
+    : `<p>Hello ${escapeHtml(data.studentName)},</p><p>Direct Debit setup is required before automatic FoxTutor billing can begin.</p><p>Your billing administrator will start the secure provider setup when required.</p><p>Bank details must be entered only through the provider's secure flow. Do not send them by email or enter them into FoxTutor Learn.</p>`;
+  return { subject: title, text, html: frame(title, "FoxTutor Learn", body) };
+}
+
 export function renderEmail(type: NotificationType, data: Record<string, unknown>, origin: string): EmailContent {
   if (type === "STUDENT_INVITED") {
     requireFields(data, ["studentName", "origin"]);
@@ -263,6 +280,13 @@ export function renderEmail(type: NotificationType, data: Record<string, unknown
     requireFields(data, ["studentName", "changeDate", "direction"]);
     if (data.direction !== "forward" && data.direction !== "backward") throw new Error("Invalid DST warning direction");
     return renderDstWarning(data as unknown as DstWarningEmailData);
+  }
+  if (type === "BILLING_DIRECT_DEBIT_SETUP" || type === "BILLING_DIRECT_DEBIT_REMINDER") {
+    requireFields(data, ["studentName"]);
+    return renderDirectDebitStatus({
+      studentName: data.studentName as string,
+      status: type === "BILLING_DIRECT_DEBIT_REMINDER" ? "pending" : "setup"
+    });
   }
   requireFields(data, ["studentName", "startAt", "endAt", "timezone", "lessonPath", "pupilName", "level", "reportPath", "thisLessonsFocus"]);
   return renderLessonReport(data as unknown as ReportEmailData, origin);

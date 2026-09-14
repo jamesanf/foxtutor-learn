@@ -24,6 +24,17 @@ describe("payment readiness", () => {
     expect(result.paymentSecuredForLesson).toBe(true);
   });
 
+  it("preserves a meaningful zero invoice amount instead of using truthiness", () => {
+    const result = calculatePaymentReadiness({ ...base, invoiceAmountMinor: 0n, creditAvailableMinor: 5500n });
+    expect(result.invoiceAmountMinor).toBe(0n);
+    expect(result.state).toBe("CREDIT_COVERED");
+  });
+
+  it("rejects negative money values", () => {
+    expect(() => calculatePaymentReadiness({ ...base, invoiceAmountMinor: -1n })).toThrow();
+    expect(() => calculatePaymentReadiness({ ...base, creditAvailableMinor: -1n })).toThrow();
+  });
+
   it("does not treat a pending Direct Debit as secured cash", () => {
     const result = calculatePaymentReadiness({
       ...base,

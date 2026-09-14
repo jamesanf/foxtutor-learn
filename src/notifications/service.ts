@@ -46,6 +46,22 @@ export interface NotificationDraft {
   scheduledAt?: string | null;
 }
 
+export async function createDirectDebitNotification(
+  db: D1Database,
+  env: NotificationEnvironment,
+  input: { type: "BILLING_DIRECT_DEBIT_SETUP" | "BILLING_DIRECT_DEBIT_REMINDER"; eventId: string; recipientUserId: string; studentId: string; studentName: string },
+  now: string,
+  fetcher: typeof fetch = fetch
+): Promise<Notification> {
+  return createAndDeliverNotification(db, env, {
+    type: input.type,
+    eventId: input.eventId,
+    recipientUserId: input.recipientUserId,
+    studentId: input.studentId,
+    content: renderEmail(input.type, { studentName: input.studentName }, canonicalLearnOrigin(env.PUBLIC_ORIGIN))
+  }, now, fetcher);
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character] ?? character

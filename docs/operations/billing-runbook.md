@@ -7,6 +7,12 @@ mandate-pending lessons and reconciliation-required items before lessons begin.
 Use invoice detail to inspect provider references and credit detail to explain
 the ledger balance.
 
+At approximately 03:00 Europe/London the existing Worker scheduler runs the
+bounded billing sentinel once for the London business date. Review open
+sentinel diagnostics if the billing dashboard or logs report a
+`BILLING_SENTINEL_*` code. Sentinel checks are read-only against financial
+state; they must never be "fixed" by creating a test invoice or payment.
+
 ## Unknown provider result
 
 Do not retry blindly. Confirm the provider document by the stored reference,
@@ -23,15 +29,28 @@ bank transaction.
 ## Direct Debit
 
 Mandates are managed by the existing FreeAgent-GoCardless workflow. FoxTutor
-does not create a parallel mandate. The student billing page reads only the
-current student's verified contact and maps provider state to plain English:
-setup/request sent, authorisation pending, active, failed, or status unknown.
+does not create a parallel mandate. The student billing page presents
+Direct Debit as the normal billing rail and maps the customer-level state to
+plain English: setup required, authorisation pending, active, failed/inactive,
+or status unavailable.
 It never displays provider IDs or bank details.
 
-The customer must open the secure authorisation request from the provider
-email and enter bank details there, not in FoxTutor Learn. FreeAgent guidance
-states that setup can take up to three working days after authorisation. A
-missing or expired request is handled through `billing@foxtutor.org`.
+FreeAgent's public API does not support creating the mandate request or
+authorisation link. The administrator performs the one-time setup initiation
+in FreeAgent; the customer then opens the secure provider request and enters
+bank details there, not in FoxTutor Learn. A missing or expired request is
+handled through `billing@foxtutor.org`. Setup and pending notifications are
+idempotent and cooldown-controlled; they stop once the mandate is active.
+
+### Emergency billing exception
+
+PAYG is not a student-facing option. For an exceptional last-minute lesson
+only, an administrator may open the billing dashboard's **Emergency
+exception** action before an invoice exists, enter a reason of at least ten
+characters, and submit it. FoxTutor records the actor, reason and billing
+event in an immutable audit row and excludes that event from automatic Direct
+Debit initiation. Never expose the action to a student, accept a student
+request for it, or mark a payment as confirmed without provider evidence.
 
 A submitted or pending collection is not `PAYMENT_SECURED`; only full credit
 coverage or confirmed provider payment is secure.

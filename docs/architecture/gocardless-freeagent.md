@@ -17,11 +17,20 @@ payment-secured; only full local credit coverage or a confirmed provider
 payment is considered secure for lesson readiness. First collection timing is
 kept separate from later recurring collections.
 
-The official public FreeAgent API does not document a customer-facing mandate
-request endpoint or credit-note-to-invoice matching endpoint. The customer
-setup experience remains the FreeAgent-supported workflow, and a local credit
-application remains reconciliation-required until supported provider state
-confirms its accounting effect.
+The official public FreeAgent API documents contact create/read/update and
+contact `direct_debit_mandate_state`, plus invoice Direct Debit initiation. It
+does not document a mandate-request creation endpoint, invitation endpoint,
+authorisation-link generator or supported redirect for starting setup. The
+customer setup experience therefore remains the FreeAgent-supported UI
+workflow: one administrator initiation per customer, followed by secure
+provider-side authorisation and automatic FoxTutor reconciliation. FoxTutor
+must not scrape the UI or call private endpoints.
+
+Phase 7.6 stores one customer-level Direct Debit billing account and sends
+idempotent setup/pending notifications. It stores no bank details or raw
+provider payment payloads. A local credit application remains
+reconciliation-required until supported provider state confirms its
+accounting effect.
 
 This decision avoids duplicate mandates, conflicting payment ownership and
 unreconcilable provider state. A direct GoCardless Billing Request integration

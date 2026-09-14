@@ -102,7 +102,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/admin\/notifications\/[^/]+$/.test(path)) return "admin-notification";
   if (path === "/learn/admin/accounting") return "admin-accounting";
   if (path === "/learn/admin/billing") return "admin-billing";
-  if (/^\/learn\/admin\/billing\/(?:alerts|invoices|credits)\//.test(path)) return "admin-billing-action";
+  if (/^\/learn\/admin\/billing\/(?:alerts|invoices|credits|emergency-payg)\//.test(path)) return "admin-billing-action";
   if (path === "/learn/admin/series") return "admin-series";
   if (path === "/learn/admin/series/new") return "admin-series-form";
   if (/^\/learn\/admin\/series\/[^/]+\/(?:pause|resume|end)$/.test(path)) return "admin-series-action";

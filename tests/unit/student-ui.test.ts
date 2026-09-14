@@ -27,14 +27,14 @@ describe("student profile form UI", () => {
       workerSource.indexOf("async function studentBillingPage"),
       workerSource.indexOf("async function handleStudent")
     );
-    expect(billingSource).toContain("Direct Debit setup");
-    expect(billingSource).toContain("secure authorisation request");
-    expect(billingSource).toContain("up to three working days");
-    expect(billingSource).toContain("not in FoxTutor Learn");
+    expect(billingSource).toContain("<h2 id=\"direct-debit-heading\">Direct Debit</h2>");
+    expect(billingSource).toContain("secure provider flow");
+    expect(billingSource).toContain("in FoxTutor Learn");
     expect(billingSource).toContain("Contact billing");
     expect(billingSource).toContain("mailto:billing@foxtutor.org");
     expect(billingSource).toContain(">billing@foxtutor.org</a>");
     expect(billingSource).not.toContain("provider reference</th>");
     expect(billingSource).not.toContain("source_event_id");
+    expect(billingSource).not.toMatch(/PAYG|pay as you go|choose how to pay|payment method/i);
   });
 });

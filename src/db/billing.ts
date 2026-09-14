@@ -848,6 +848,10 @@ export async function ensureDueDirectDebitOperations(db: D1Database, today: stri
      WHERE i.status = 'SENT' AND i.net_amount_minor > 0
        AND i.collection_date IS NOT NULL AND i.collection_date <= ?
        AND e.status != 'CANCELLED' AND op.id IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM billing_emergency_payg_overrides p
+         WHERE p.billing_event_id = e.id AND p.status = 'ACTIVE'
+       )
      ON CONFLICT(invoice_id, operation_type) DO NOTHING`
   ).bind(now, now, today).run();
   return result.meta.changes;
