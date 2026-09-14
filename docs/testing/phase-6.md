@@ -20,8 +20,12 @@ The automated suite covers:
   provider outcomes;
 - admin-only route classification, billing-settings persistence and
   CSRF-protected accounting actions;
+- successful `verifyFreeAgentContactMapping()` persistence through the
+  `external_accounting_links` D1 insert, including a `VERIFIED` stored link and
+  exact bound-value count;
 - migration structure through `0020_accounting_company_name.sql`;
-- browser shell accessibility and no-index contracts;
+- browser shell accessibility, accounting icon/action contracts and no-index
+  contracts;
 - production perimeter smoke.
 
 Current result: **27 test files and 139 tests passed**.
@@ -58,6 +62,10 @@ The deployed OAuth callback emits a stage-labelled diagnostic containing only
 a safe error code, HTTP status, fixed stage message and the non-sensitive
 fetcher type. Sandbox OAuth completed successfully after the Worker fetcher
 binding was corrected; no financial mutation has been performed.
+
+The current contact-mapping UI contract also verifies compact MDI save/remove
+controls, accessible labels and the absence of a forced desktop table width or
+horizontal scrolling.
 
 The callback perimeter was verified separately: an invalid-state request to
 the exact callback path reaches the Worker and returns its application-level

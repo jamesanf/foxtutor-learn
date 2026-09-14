@@ -62,3 +62,8 @@ encryption keys and provider response bodies are excluded.
 Contact-mapping diagnostics use the same safe boundary and redact the
 provider contact path to `/v2/contacts/:id`; they record only the stage,
 status, error code, retryability, unknown-result flag and fetcher type.
+
+D1 persistence diagnostics are separately restricted to the stage, error name,
+constructor name, a message truncated to 240 characters and an optional safe
+SQLite code. They never log contact payloads, contact identifiers, tokens,
+secrets, authorization headers or response bodies.

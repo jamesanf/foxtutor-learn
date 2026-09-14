@@ -15,6 +15,7 @@ replacement, payment system or accounting ledger.
 **Deployed source:** `4afa705`
 **Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`
 **D1 migrations:** `0001_foundation.sql` through `0020_accounting_company_name.sql`
+**Automated validation:** 27 test files, 139 tests passing
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and
@@ -50,6 +51,8 @@ The application-side Phase 6 implementation is complete and hardened. The
 phase remains operationally open only because the remaining external
 commercial/provider acceptance requires human-owned approval/credentials and
 controlled real FreeAgent mutations.
+The deployed contact-mapping persistence defect was corrected, and regression
+coverage now verifies successful contact verification through D1 persistence.
 
 ## Architecture
 

@@ -31,6 +31,8 @@ commercial approval and separate production credentials.
    diagnostic and repeat only after identifying the failing stage.
 6. For the approved test payer, enter the numeric FreeAgent contact ID.
    Confirm the server verifies the contact in the pinned company before saving.
+   Use the save icon in the contact-mapping table; use the adjacent trash icon
+   only when removal is approved and no active accounting dependency exists.
 7. After the consequence is approved, create or select the approved
    `ADMIN_CANCELLED` test event. Confirm one
    outbox row, the deterministic accounting reference and the visible blocked
@@ -47,6 +49,11 @@ commercial approval and separate production credentials.
 12. Verify that replacing or removing a mapping is blocked while dependent
     accounting work is active and permitted only after the dependency is
     resolved.
+
+The deployed contact-mapping insert defect has been corrected and covered by a
+successful D1 persistence regression. If verification still fails, inspect
+the safe `D1 mapping persistence` diagnostic before changing provider
+configuration or contact mappings.
 
 ## Production
 

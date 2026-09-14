@@ -62,7 +62,7 @@ This is the current canonical structure. Agents may refine it when implementatio
 - `public/` contains deployable browser assets, not secrets.
 - Learn browser assets are served at `/learn/assets/*`; top-level public-site paths are not Learn routes.
 - `migrations/` is forward-only D1 migration history.
-- The current accounting schema ends at `0019_accounting_billing_settings.sql`;
+- The current accounting schema ends at `0020_accounting_company_name.sql`;
   applied migrations must never be edited in place.
 - `tests/` contains automated checks.
 - `docs/` contains project operating documentation.

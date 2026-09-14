@@ -810,6 +810,13 @@ mutation has been fabricated, and
 `phase-6-complete` must not be created until the external closure evidence is
 recorded.
 
+The deployed Phase 6 UI includes admin billing management with connection
+identity and reauthentication, matching settings/back navigation icons, and
+compact save/remove controls for explicit FreeAgent contact mappings. The
+contact verification path has regression coverage for successful D1
+persistence with a `VERIFIED` link, and the malformed 15-column insert that
+blocked the deployed mapping path has been corrected.
+
 ---
 
 ## Phase 7 — Optional billing visibility and long-term operations hardening

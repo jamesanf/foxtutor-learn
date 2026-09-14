@@ -1,5 +1,21 @@
 # Changelog
 
+### 2026-09-14 - Consolidate Phase 6 documentation
+
+- Reconciled the current README, master phase plan, repository structure and
+  all current Phase 6 architecture, security, testing, deployment and handover
+  records.
+- Documented the deployed D1 contact-persistence fix, successful persistence
+  regression, final billing/contact-mapping UI controls, current migration
+  state and the distinction between deployed source and later
+  documentation-only commits.
+- Current automated validation remains 27 test files and 139 tests passing.
+- Retained implementation chronology below as historical changelog records;
+  redundant superseded current-state claims were removed from the active
+  records.
+- No executable code or production configuration changed in this
+  documentation pass.
+
 ### 2026-09-14 - Compact contact mapping actions
 
 - Replaced the contact mapping text actions with accessible MDI save and

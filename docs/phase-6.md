@@ -38,6 +38,15 @@ only current Phase 6 documents; historical release chronology is preserved in
 - Students cannot access accounting routes or objects.
 - Operational deletion nulls local references without deleting authoritative
   accounting history or provider references.
+- Billing settings exposes the connected company identity and
+  **Reauthenticate FreeAgent** action; the accounting page uses a matching
+  settings cog and Billing settings uses a matching back arrow.
+- Contact mappings use compact accessible save/remove icon controls without a
+  forced horizontal table width.
+- The deployed contact persistence defect was fixed: the
+  `external_accounting_links` insert now supplies exactly 15 values for its
+  15 declared columns. A regression verifies a successful `VERIFIED` link
+  through `verifyFreeAgentContactMapping()`.
 
 ## Evidence matrix
 
@@ -67,9 +76,10 @@ only current Phase 6 documents; historical release chronology is preserved in
 
 These values must always be reported separately:
 
-- **Repository HEAD at executable deployment:** `3d52084`.
-- **Deployed source commit:** `3d52084`.
-- **Deployed Worker version:** `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`.
+- **Repository state:** documentation-only reconciliation commits may follow
+  the executable deployment.
+- **Deployed source commit:** `4afa705`.
+- **Deployed Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`.
 - **D1 state:** production migrations through
   `0020_accounting_company_name.sql`, with no pending migration reported
   after deployment of the executable change.
@@ -101,12 +111,12 @@ Only the following external actions remain:
    the current billing-management values; GBP is always enforced and the
    initial normal lesson amount is 55.00 GBP with an explicit zero tax rate.
 3. Supply and verify the approved sandbox contact and provider mappings.
-5. Run the approved sandbox event only after the `ADMIN_CANCELLED`
+4. Run the approved sandbox event only after the `ADMIN_CANCELLED`
    consequence is decided, then verify the provider object.
-6. Supply production credentials through the approved secret channel.
-7. Verify the production company and repeat the approved mapping checks.
-8. Approve and execute exactly one controlled production accounting event.
-9. Independently verify the provider object and retention result.
+5. Supply production credentials through the approved secret channel.
+6. Verify the production company and repeat the approved mapping checks.
+7. Approve and execute exactly one controlled production accounting event.
+8. Independently verify the provider object and retention result.
 
 There are no technical TODOs in this checklist.
 
