@@ -25,6 +25,6 @@ through another student's route.
 
 ## Deployment provenance
 
-- Git commit: `d8c830f724162841413ad9418527f64819c7031c`
-- Worker version: `862fc392-fe23-4e65-b659-6e34b2107b76`
+- Git commit: `bde4a183fb786e5c0af51a4ff9fee96f25c21600`
+- Worker version: `b972ac5b-46d2-4a30-ba57-a8ab8ae7daa7`
 - Production routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
