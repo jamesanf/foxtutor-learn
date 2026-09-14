@@ -114,6 +114,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .empty-icon { display: grid; width: 46px; height: 46px; place-items: center; margin-bottom: 20px; border-radius: 10px; color: var(--action); background: #cffafe; font-size: 1.4rem; }
 .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
 .page-heading h2 { margin: 0; }
+.student-lesson-title { font-size: clamp(1.2rem, 2.2vw, 1.6rem); letter-spacing: -.015em; }
 .calendar-page h1 { font-size: clamp(1.8rem, 3vw, 2.35rem); }
 .calendar-shell { margin-top: var(--space-4); }
 .calendar-surface { padding: clamp(16px, 2.5vw, 24px); overflow: visible; border: 1px solid #d6dee8; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 2px 5px rgb(16 42 67 / 7%); }

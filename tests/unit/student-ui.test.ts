@@ -87,4 +87,10 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain('listUpcomingLessonsForUser');
     expect(workerSource).toContain('listPastLessonsForUser');
   });
+
+  it("keeps the student lesson-detail heading compact", () => {
+    expect(workerSource).toContain('class="page-heading student-lesson-heading"');
+    expect(workerSource).toContain('class="student-lesson-title"');
+    expect(cssSource).toContain(".student-lesson-title { font-size: clamp(1.2rem, 2.2vw, 1.6rem);");
+  });
 });
