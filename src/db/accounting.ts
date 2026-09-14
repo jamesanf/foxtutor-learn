@@ -43,6 +43,7 @@ export interface AccountingOutbox {
 export interface AccountingConnection {
   id: "FREEAGENT";
   environment: "sandbox" | "production";
+  company_name: string | null;
   company_subdomain: string | null;
   access_token_ciphertext: string | null;
   refresh_token_ciphertext: string | null;
@@ -515,6 +516,7 @@ export async function saveAccountingConnection(
   db: D1Database,
   input: {
     environment: "sandbox" | "production";
+    companyName: string | null;
     companySubdomain: string | null;
     accessTokenCiphertext: string;
     refreshTokenCiphertext: string;
@@ -525,11 +527,12 @@ export async function saveAccountingConnection(
 ): Promise<void> {
   await db.prepare(
     `INSERT INTO accounting_connections
-     (id, environment, company_subdomain, access_token_ciphertext, refresh_token_ciphertext,
+     (id, environment, company_name, company_subdomain, access_token_ciphertext, refresh_token_ciphertext,
       access_token_expires_at, refresh_token_expires_at, status, updated_at)
-     VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, 'CONNECTED', ?)
+     VALUES ('FREEAGENT', ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?)
      ON CONFLICT(id) DO UPDATE SET
-       environment = excluded.environment, company_subdomain = excluded.company_subdomain,
+       environment = excluded.environment, company_name = excluded.company_name,
+       company_subdomain = excluded.company_subdomain,
        access_token_ciphertext = excluded.access_token_ciphertext,
        refresh_token_ciphertext = excluded.refresh_token_ciphertext,
        access_token_expires_at = excluded.access_token_expires_at,
@@ -538,6 +541,7 @@ export async function saveAccountingConnection(
        updated_at = excluded.updated_at`
   ).bind(
     input.environment,
+    input.companyName,
     input.companySubdomain,
     input.accessTokenCiphertext,
     input.refreshTokenCiphertext,

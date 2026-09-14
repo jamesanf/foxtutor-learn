@@ -53,6 +53,9 @@ export interface AccountingIntegrationStatus {
   configured: boolean;
   connected: boolean;
   environment: FreeAgentEnvironment;
+  companyName: string | null;
+  companySubdomain: string | null;
+  updatedAt: string | null;
   label: string;
   lastSuccessAt: string | null;
   errorCode: string | null;
@@ -259,6 +262,7 @@ async function accessToken(
   }, fetcher);
   await saveAccountingConnection(db, {
     environment: connection.environment,
+    companyName: connection.company_name,
     companySubdomain: connection.company_subdomain,
     accessTokenCiphertext: await encryptCredential(refreshed.accessToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
     refreshTokenCiphertext: await encryptCredential(refreshed.refreshToken, env.FREEAGENT_TOKEN_ENCRYPTION_KEY),
@@ -335,6 +339,9 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
       configured,
       connected: false,
       environment: environment ?? "sandbox",
+      companyName: connection?.company_name ?? null,
+      companySubdomain: connection?.company_subdomain ?? env.FREEAGENT_COMPANY_SUBDOMAIN ?? null,
+      updatedAt: connection?.updated_at ?? null,
       label: !configured ? "Not configured" : configurationMessage ? "Invoice mapping incomplete" : "Connection requires attention",
       lastSuccessAt: connection?.last_success_at ?? null,
       errorCode: connection?.last_error_code ?? (configurationMessage ? "CONFIGURATION" : null),
@@ -347,6 +354,9 @@ export async function accountingIntegrationStatus(db: D1Database, env: Accountin
     configured,
     connected: connection.status === "CONNECTED" && identityMatches,
     environment: connection.environment,
+    companyName: connection.company_name,
+    companySubdomain: connection.company_subdomain,
+    updatedAt: connection.updated_at,
     label: connection.status === "CONNECTED" && identityMatches
       ? configurationMessage ? "Invoice mapping incomplete" : "Connected to FreeAgent"
       : "Connection requires attention",
@@ -434,6 +444,7 @@ export async function connectFreeAgent(
     stage = "saveAccountingConnection";
     await saveAccountingConnection(db, {
       environment: input.environment,
+      companyName: company.name ?? null,
       companySubdomain: company.subdomain ?? null,
       accessTokenCiphertext,
       refreshTokenCiphertext,

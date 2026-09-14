@@ -155,4 +155,9 @@ describe("D1 foundation", () => {
     expect(migration).toContain("currency TEXT NOT NULL CHECK (currency = 'GBP')");
     expect(migration).toContain("updated_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL");
   });
+
+  it("stores the verified FreeAgent company name", () => {
+    const migration = readFileSync("migrations/0020_accounting_company_name.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE accounting_connections ADD COLUMN company_name TEXT");
+  });
 });

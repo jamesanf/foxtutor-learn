@@ -22,7 +22,10 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
     expect(workerSource).toContain("FreeAgent integration active");
     expect(workerSource).toContain("Reauthenticate FreeAgent");
+    expect(workerSource).toContain("Company name");
+    expect(workerSource).toContain("Company subdomain");
     expect(cssSource).toContain(".info-box { display: block; width: 100%;");
+    expect(cssSource).toContain(".accounting-connection-details");
   });
 
   it("logs only staged, safe OAuth diagnostics on callback failure", () => {

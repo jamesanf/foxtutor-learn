@@ -27,6 +27,7 @@ export interface FreeAgentInvoice {
 }
 
 export interface FreeAgentCompany {
+  name?: string;
   url?: string;
   subdomain?: string;
   currency?: string;
