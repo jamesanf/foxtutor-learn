@@ -60,22 +60,22 @@ only current Phase 6 documents; historical release chronology is preserved in
 | Operational/accounting separation | D1 foreign keys and deletion guards | Migration and retention design | COMPLETE |
 | Browser/admin console | `src/worker/index.ts`, `public/learn.css` | Browser shell contract and deployed route | COMPLETE - AUTHENTICATED ACCEPTANCE ONLY REMAINS |
 | Production deployment | `docs/deployment/phase-6.md` | Worker, route and D1 verification | COMPLETE |
-| Sandbox mutation | External FreeAgent sandbox | Secrets are configured; OAuth, mapping approval and mutation evidence remain | BLOCKED - EXTERNAL ACCEPTANCE |
+| Sandbox mutation | External FreeAgent sandbox | OAuth/company connection is complete; approved mappings and mutation evidence remain | BLOCKED - EXTERNAL ACCEPTANCE |
 | Production mutation | External FreeAgent production | No credentials or approval supplied | BLOCKED - EXTERNAL HUMAN GATE |
 
 ## Current deployed distinction
 
 These values must always be reported separately:
 
-- **Repository HEAD at executable deployment:** `9b80225`.
-- **Deployed source commit:** `9b80225`.
-- **Deployed Worker version:** `3f743654-1e32-4900-9cb8-019e7949efe7`.
+- **Repository HEAD at executable deployment:** `3d52084`.
+- **Deployed source commit:** `3d52084`.
+- **Deployed Worker version:** `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`.
 - **D1 state:** production migrations through
   `0019_accounting_billing_settings.sql`, with no pending migration reported
   after deployment of the executable change.
-- **OAuth state:** Sandbox secrets and company pin are configured, but no
-  `accounting_connections` row exists because the OAuth callback has not yet
-  completed successfully.
+- **OAuth state:** Sandbox secrets and company pin are configured; OAuth
+  completed successfully for Fox Learning Ltd and encrypted tokens are
+  persisted in `accounting_connections`. No financial mutation has occurred.
 - **Callback perimeter:** only
   `/learn/admin/accounting/oauth/callback` bypasses Cloudflare Access. The
   Worker requires a one-time OAuth state bound to an active administrator;
@@ -100,10 +100,7 @@ Only the following external actions remain:
    authority, item/category, payment terms and effective-date policy. Review
    the current billing-management values; GBP is always enforced and the
    initial normal lesson amount is 55.00 GBP with an explicit zero tax rate.
-3. Complete Sandbox OAuth and verify the pinned company. If the callback
-   fails, inspect the deployed safe stage diagnostic; it never logs tokens,
-   secrets, authorization codes or provider response bodies.
-4. Supply and verify the approved sandbox contact and provider mappings.
+3. Supply and verify the approved sandbox contact and provider mappings.
 5. Run the approved sandbox event only after the `ADMIN_CANCELLED`
    consequence is decided, then verify the provider object.
 6. Supply production credentials through the approved secret channel.

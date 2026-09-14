@@ -9,12 +9,12 @@
 - D1 migration state: through `0019_accounting_billing_settings.sql`; no pending
   migrations
 - R2: `foxtutor-learn-resources`
-- Repository HEAD at executable deployment: `b4de7a5cd24acd16e4d3e7363e81856e4304c183`
-- Deployed source commit: `b4de7a5cd24acd16e4d3e7363e81856e4304c183`
-- Deployed Worker version: `083d0665-ec06-4873-a93f-4898cad38e04`
+- Repository HEAD at executable deployment: `3d52084`
+- Deployed source commit: `3d52084`
+- Deployed Worker version: `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`
 - FreeAgent Sandbox secret bindings: configured
-- FreeAgent OAuth connection: not completed; `accounting_connections` has no
-  persisted connection
+- FreeAgent OAuth connection: completed for Fox Learning Ltd Sandbox;
+  encrypted tokens are persisted in `accounting_connections`
 
 Wrangler reported the deployment source metadata as `Unknown`; the deployed
 source commit above is the reviewed executable commit from which
@@ -34,9 +34,11 @@ source commit above is the reviewed executable commit from which
    GBP cannot be changed; any other setting change must be explicit and
    approved. The current non-VAT setting is an explicit zero tax rate; never
    rely on FreeAgent defaults.
-7. Complete the sandbox OAuth callback. The exact callback path bypasses
-   Cloudflare Access, but the Worker accepts it only with the one-time
-   admin-bound OAuth state and creates the normal Learn session after success.
+7. Complete or reauthenticate through the sandbox OAuth callback. The exact
+   callback path bypasses Cloudflare Access, but the Worker accepts it only
+   with the one-time admin-bound OAuth state and creates the normal Learn
+   session after success. Production paths pass an explicitly bound
+   `globalThis.fetch` wrapper to the FreeAgent adapter.
 8. Complete the sandbox acceptance runbook.
 9. Configure production only after sandbox evidence and commercial approval.
 10. Run exactly one approved controlled production accounting event.

@@ -55,5 +55,6 @@ reference. They must not include secrets, authorization headers, raw OAuth
 responses or unnecessary personal data.
 
 OAuth callback failure diagnostics are restricted to a fixed stage label,
-safe error code, HTTP status and safe message. Authorization codes, tokens,
-secrets, encryption keys and provider response bodies are excluded.
+safe error code, HTTP status, safe message and a non-sensitive fetcher type
+(`bound-wrapper` or `injected`). Authorization codes, tokens, secrets,
+encryption keys and provider response bodies are excluded.

@@ -1,5 +1,21 @@
 # Changelog
 
+### 2026-09-14 - Complete Sandbox OAuth and billing status UI
+
+- Corrected every production FreeAgent call path to pass the explicitly bound
+  `globalThis.fetch` wrapper, including the OAuth callback, token exchange,
+  scheduled outbox processing, contact verification and reconciliation.
+- Completed the Fox Learning Ltd Sandbox OAuth connection; encrypted provider
+  tokens are persisted in D1. No financial mutation has been performed.
+- Added a complete OAuth service-chain regression test and safe diagnostics
+  that identify the bound-wrapper versus injected fetcher without logging
+  credentials.
+- Added a green active-integration tag and **Reauthenticate FreeAgent** action
+  to Billing settings, and made the setup notice span the full form width.
+- The full suite passes with 27 test files and 135 tests.
+- Deployed executable commit `3d52084` as Worker version
+  `e3c4bffa-9ad7-4c0e-bd5b-8e1720af435a`.
+
 ### 2026-09-14 - Use official cash multiple icon
 
 - Replaced the custom accounting glyph with the official Material Design

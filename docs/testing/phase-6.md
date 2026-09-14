@@ -7,7 +7,8 @@ The automated suite covers:
 - Phase 5 history to accounting-outbox transaction wiring;
 - deterministic idempotency and provider references;
 - explicit accounting status transitions and bounded retry timing;
-- OAuth URL, state-adjacent adapter, token exchange and refresh seams;
+- OAuth URL, state-adjacent adapter, token exchange and refresh seams,
+  including the complete callback service chain with the bound Worker fetcher;
 - encrypted credential helpers without credential output;
 - provider host, scheme, path and response-URL restrictions;
 - invoice payload shape, currency/tax configuration and malformed config;
@@ -23,7 +24,7 @@ The automated suite covers:
 - browser shell accessibility and no-index contracts;
 - production perimeter smoke.
 
-Current result: **27 test files and 132 tests passed**.
+Current result: **27 test files and 135 tests passed**.
 
 Run the current suite with:
 
@@ -43,7 +44,6 @@ be refreshed whenever tests change.
 
 The following cannot be claimed without human-owned provider access:
 
-- sandbox OAuth and company verification;
 - sandbox contact and invoice mapping;
 - provider-side sandbox invoice creation;
 - provider-side duplicate, timeout and reconciliation evidence;
@@ -54,10 +54,10 @@ The following cannot be claimed without human-owned provider access:
 
 No test fixture substitutes for those external actions.
 
-The deployed OAuth callback now emits a stage-labelled diagnostic containing
-only a safe error code, HTTP status and fixed stage message. The next
-authenticated Sandbox callback must be repeated to identify the live failing
-stage.
+The deployed OAuth callback emits a stage-labelled diagnostic containing only
+a safe error code, HTTP status, fixed stage message and the non-sensitive
+fetcher type. Sandbox OAuth completed successfully after the Worker fetcher
+binding was corrected; no financial mutation has been performed.
 
 The callback perimeter was verified separately: an invalid-state request to
 the exact callback path reaches the Worker and returns its application-level

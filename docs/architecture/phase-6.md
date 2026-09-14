@@ -74,7 +74,10 @@ Claims are atomic database updates. A stale `PROCESSING` claim becomes
 The adapter uses one allowlisted FreeAgent origin for each environment,
 rejects external request origins and unsafe provider response URLs, validates
 contact and invoice references, redacts authorization headers and stores
-encrypted OAuth material only in D1.
+encrypted OAuth material only in D1. Every production accounting path passes
+an explicitly bound `globalThis.fetch` wrapper, including the OAuth callback,
+token exchange, scheduled outbox processing, contact verification and
+reconciliation.
 
 Normal lesson invoice configuration starts at `55.00` GBP and is editable by
 an admin through the billing settings page. GBP is always enforced; amount,

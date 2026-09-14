@@ -1,9 +1,10 @@
 # Phase 6 - External acceptance runbook
 
-This runbook contains no secrets. The Sandbox bindings are currently
-configured in the Worker; it starts with the authenticated OAuth callback
-attempt. Production remains gated on commercial approval and separate
-production credentials.
+This runbook contains no secrets. The Sandbox bindings are configured in the
+Worker and the Fox Learning Ltd OAuth connection is active with encrypted
+tokens persisted in D1. The remaining Sandbox steps are approved mappings,
+provider acceptance and mutation evidence. Production remains gated on
+commercial approval and separate production credentials.
 
 ## Sandbox
 
@@ -18,13 +19,15 @@ production credentials.
    not infer invoice creation or no action.
 3. Confirm the configured environment is `sandbox` and the callback exactly
    matches the registered URI.
-4. As an admin, open `/learn/admin/accounting` and start the FreeAgent
-   connection.
-5. Complete OAuth, verify the returned company subdomain and confirm the
-   connection status. The exact callback path bypasses Cloudflare Access, but
-   the Worker accepts it only with the one-time admin-bound OAuth state. If
-   the callback returns 502, inspect the safe stage-labelled Worker diagnostic
-   and repeat only after identifying the failing stage.
+4. As an admin, open `/learn/admin/accounting` and confirm the green
+   **FreeAgent integration active** tag in Billing settings. Use
+   **Reauthenticate FreeAgent** only when a fresh OAuth authorization is
+   required.
+5. For a fresh authorization, verify the returned company subdomain and
+   confirm the connection status. The exact callback path bypasses Cloudflare
+   Access, but the Worker accepts it only with the one-time admin-bound OAuth
+   state. If the callback returns 502, inspect the safe stage-labelled Worker
+   diagnostic and repeat only after identifying the failing stage.
 6. For the approved test payer, enter the numeric FreeAgent contact ID.
    Confirm the server verifies the contact in the pinned company before saving.
 7. After the consequence is approved, create or select the approved
