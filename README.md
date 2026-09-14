@@ -15,7 +15,7 @@ replacement, payment system or accounting ledger.
 **Deployed source:** `4afa705`
 **Worker version:** `71accc39-6c06-4fc7-9390-12afcf48add1`
 **D1 migrations:** `0001_foundation.sql` through `0020_accounting_company_name.sql`
-**Automated validation:** 27 test files, 142 tests passing
+**Automated validation:** 27 test files, 143 tests passing
 
 The Worker has the approved FreeAgent Sandbox secret bindings and company pin
 configured. Sandbox OAuth has completed successfully for Fox Learning Ltd, and

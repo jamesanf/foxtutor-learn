@@ -31,7 +31,7 @@ The automated suite covers:
   contracts;
 - production perimeter smoke.
 
-Current result: **27 test files and 142 tests passed**.
+Current result: **27 test files and 143 tests passed**.
 
 Run the current suite with:
 

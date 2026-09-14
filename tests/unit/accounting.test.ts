@@ -601,6 +601,42 @@ describe("FreeAgent adapter", () => {
     });
   });
 
+  it("refuses to replace a contact mapping while accounting work is active", async () => {
+    const existingLink = {
+      local_entity_id: "student-1",
+      status: "VERIFIED",
+      external_reference: "257175",
+      external_url: "https://api.sandbox.freeagent.com/v2/contacts/257175"
+    };
+    const db = {
+      prepare(sql: string) {
+        const result = sql.includes("FROM accounting_connections")
+          ? { id: "FREEAGENT", environment: "sandbox", company_subdomain: "foxlearningltdgmailcom" }
+          : sql.includes("FROM external_accounting_links")
+            ? existingLink
+            : sql.includes("FROM accounting_outbox")
+              ? { present: 1 }
+              : null;
+        return {
+          first: async () => result,
+          bind() {
+            return { first: async () => result };
+          }
+        };
+      }
+    } as unknown as D1Database;
+
+    await expect(verifyFreeAgentContactMapping(db, {
+      FREEAGENT_ENVIRONMENT: "sandbox"
+    }, {
+      studentId: "student-1",
+      externalReference: "999999",
+      now: "2026-09-14T12:00:00.000Z"
+    }, async () => {
+      throw new Error("Provider lookup must not run while mapping work is active.");
+    })).rejects.toMatchObject({ shape: { code: "CONFLICT" } });
+  });
+
   it("creates one invoice and replays by provider reference without a second POST", async () => {
     const harness = await accountingProcessHarness();
     let createCount = 0;

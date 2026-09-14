@@ -12,8 +12,8 @@
   source commit `4afa705`; repository HEAD remains separately tracked.
 - Added provider-independent regression coverage for create/replay
   idempotency, retryable rate-limit handling, unknown network outcomes and
-  reconciliation. The complete suite now passes with 27 test files and
-  142 tests.
+  reconciliation, plus active contact-mapping protection. The complete suite
+  now passes with 27 test files and 143 tests.
 - Confirmed the only remaining blockers are the approved accounting/category
   mapping, the `ADMIN_CANCELLED` commercial consequence, Sandbox provider
   mutation evidence and production human gates. No financial mutation or
@@ -29,7 +29,7 @@
   state and the distinction between deployed source and later
   documentation-only commits.
 - The prior documentation pass recorded 27 test files and 139 tests passing;
-  the current acceptance pass raises this to 142.
+  the current acceptance pass raises this to 143.
 - Retained implementation chronology below as historical changelog records;
   redundant superseded current-state claims were removed from the active
   records.
