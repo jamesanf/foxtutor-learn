@@ -17,11 +17,12 @@ import {
 import {
   exchangeAuthorizationCode,
   freeAgentAuthorizationUrl,
+  freeAgentFetch,
   FreeAgentApiError,
   FreeAgentClient,
   refreshAccessToken
 } from "../../src/accounting/freeagent/client";
-import { configuredInvoice, invoiceConfigurationIssue, validateBillingSettings } from "../../src/accounting/service";
+import { connectFreeAgent, configuredInvoice, invoiceConfigurationIssue, validateBillingSettings } from "../../src/accounting/service";
 
 function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
   const responseHeaders = new Headers(headers);
@@ -302,6 +303,65 @@ describe("FreeAgent adapter", () => {
     }
   });
 
+  it("uses the bound fetcher through the OAuth callback service chain", async () => {
+    const calls: string[] = [];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      calls.push(String(input));
+      if (String(input).endsWith("/v2/token_endpoint")) {
+        return jsonResponse({
+          access_token: "access-callback",
+          refresh_token: "refresh-callback",
+          expires_in: 3600,
+          refresh_token_expires_in: 86_400
+        });
+      }
+      return jsonResponse({ company: { subdomain: "foxlearningltdgmailcom" } });
+    });
+    const saved: unknown[] = [];
+    const db = {
+      prepare(sql: string) {
+        const first = async () => {
+          if (sql.startsWith("SELECT * FROM accounting_connections")) return null;
+          return null;
+        };
+        return {
+          first,
+          bind(...values: unknown[]) {
+            return {
+              first,
+              async run() {
+                saved.push({ sql, values });
+                return { meta: { changes: 1 } };
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+    try {
+      await expect(connectFreeAgent(db, {
+        FREEAGENT_ENVIRONMENT: "sandbox",
+        FREEAGENT_CLIENT_ID: "client-1",
+        FREEAGENT_CLIENT_SECRET: "secret-1",
+        FREEAGENT_TOKEN_ENCRYPTION_KEY: "encryption-key",
+        FREEAGENT_OAUTH_REDIRECT_URI: "https://learn.example.test/callback",
+        FREEAGENT_COMPANY_SUBDOMAIN: "foxlearningltdgmailcom"
+      }, {
+        code: "code-1",
+        environment: "sandbox",
+        redirectUri: "https://learn.example.test/callback",
+        now: "2026-09-14T12:00:00.000Z"
+      }, freeAgentFetch)).resolves.toBeUndefined();
+      expect(calls).toEqual([
+        "https://api.sandbox.freeagent.com/v2/token_endpoint",
+        "https://api.sandbox.freeagent.com/v2/company"
+      ]);
+      expect(saved).toHaveLength(1);
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
   it("preserves timeout failures as unknown external outcomes", async () => {
     const diagnostic = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const client = new FreeAgentClient({
@@ -314,6 +374,7 @@ describe("FreeAgent adapter", () => {
     await expect(client.company("token")).rejects.toBeInstanceOf(FreeAgentApiError);
     await expect(client.company("token")).rejects.toMatchObject({ shape: { code: "TIMEOUT", retryable: true, unknown: true } });
     expect(diagnostic).toHaveBeenCalledWith("FreeAgent fetch failed", {
+      fetcherType: "injected",
       errorName: "AbortError",
       errorMessage: "aborted",
       constructorName: "DOMException",

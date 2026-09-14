@@ -39,15 +39,16 @@ export interface FreeAgentClientOptions {
   timeoutMs?: number;
 }
 
-const defaultFetcher: typeof fetch = (input, init) => globalThis.fetch(input, init);
+export const freeAgentFetch: typeof fetch = (input, init) => globalThis.fetch(input, init);
 
-function logFetchFailure(error: unknown, target: URL, timedOut: boolean): void {
+function logFetchFailure(error: unknown, target: URL, timedOut: boolean, fetcher: typeof fetch): void {
   const errorName = error instanceof Error ? error.name : "UnknownError";
   const errorMessage = error instanceof Error ? error.message : "Non-Error fetch failure.";
   const constructorName = error && typeof error === "object" && "constructor" in error
     ? ((error as { constructor?: { name?: unknown } }).constructor?.name ?? "Unknown")
     : "Unknown";
   console.log("FreeAgent fetch failed", {
+    fetcherType: fetcher === freeAgentFetch ? "bound-wrapper" : "injected",
     errorName,
     errorMessage,
     constructorName,
@@ -106,7 +107,7 @@ export class FreeAgentClient {
 
   constructor(private readonly options: FreeAgentClientOptions) {
     this.baseUrl = freeAgentBaseUrl(options.environment);
-    this.fetcher = options.fetcher ?? defaultFetcher;
+    this.fetcher = options.fetcher ?? freeAgentFetch;
     this.timeoutMs = options.timeoutMs ?? 15_000;
   }
 
@@ -164,7 +165,7 @@ export class FreeAgentClient {
     } catch (error) {
       if (error instanceof FreeAgentApiError) throw error;
       const timedOut = error instanceof DOMException && error.name === "AbortError";
-      if (target) logFetchFailure(error, target, timedOut);
+      if (target) logFetchFailure(error, target, timedOut, this.fetcher);
       throw new FreeAgentApiError({
         code: timedOut ? "TIMEOUT" : "NETWORK",
         status: null,
@@ -316,7 +317,7 @@ export class FreeAgentClient {
 export async function exchangeAuthorizationCode(
   environment: FreeAgentEnvironment,
   input: { clientId: string; clientSecret: string; code: string; redirectUri: string },
-  fetcher: typeof fetch = defaultFetcher
+  fetcher: typeof fetch = freeAgentFetch
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number; refreshTokenExpiresIn: number | null }> {
   return tokenRequest(environment, input.clientId, input.clientSecret, {
     grant_type: "authorization_code",
@@ -328,7 +329,7 @@ export async function exchangeAuthorizationCode(
 export async function refreshAccessToken(
   environment: FreeAgentEnvironment,
   input: { clientId: string; clientSecret: string; refreshToken: string },
-  fetcher: typeof fetch = defaultFetcher
+  fetcher: typeof fetch = freeAgentFetch
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number; refreshTokenExpiresIn: number | null }> {
   return tokenRequest(environment, input.clientId, input.clientSecret, {
     grant_type: "refresh_token",
@@ -356,7 +357,13 @@ async function tokenRequest(
       },
       body: new URLSearchParams(values)
     });
-  } catch {
+  } catch (error) {
+    logFetchFailure(
+      error,
+      new URL("/v2/token_endpoint", freeAgentBaseUrl(environment)),
+      error instanceof DOMException && error.name === "AbortError",
+      fetcher
+    );
     throw new FreeAgentApiError({
       code: "NETWORK",
       status: null,

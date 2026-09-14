@@ -17,6 +17,7 @@ import {
 import { decryptCredential, encryptCredential } from "./credentials";
 import {
   exchangeAuthorizationCode,
+  freeAgentFetch,
   FreeAgentApiError,
   FreeAgentClient,
   refreshAccessToken,
@@ -359,7 +360,7 @@ export async function connectFreeAgent(
   db: D1Database,
   env: AccountingEnvironment,
   input: { code: string; environment: FreeAgentEnvironment; redirectUri: string; now: string },
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = freeAgentFetch
 ): Promise<void> {
   let stage = "configuration validation";
   const stageError = (error: unknown): FreeAgentApiError => {
@@ -451,7 +452,7 @@ export async function processAccountingOutbox(
   env: AccountingEnvironment,
   id: string,
   now: string,
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = freeAgentFetch
 ): Promise<AccountingOutbox | null> {
   const claimed = await claimAccountingOutbox(db, id, now, new Date(Date.parse(now) - 15 * 60_000).toISOString());
   if (!claimed) return null;
@@ -549,7 +550,7 @@ export async function verifyFreeAgentContactMapping(
   db: D1Database,
   env: AccountingEnvironment,
   input: { studentId: string; externalReference: string; now: string },
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = freeAgentFetch
 ): Promise<void> {
   if (!/^\d+$/.test(input.externalReference)) {
     throw new FreeAgentApiError({
@@ -615,7 +616,7 @@ export async function reconcileAccountingOutbox(
   outbox: AccountingOutbox,
   externalReference: string,
   now: string,
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = freeAgentFetch
 ): Promise<boolean> {
   const result = await providerCall(db, env, now, fetcher, (client, token) => client.getInvoice(token, externalReference));
   if (!result) return false;

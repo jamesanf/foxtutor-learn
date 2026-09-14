@@ -145,7 +145,7 @@ import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
 import { accountingIntegrationStatus, configuredInvoice, connectFreeAgent, processAccountingOutbox, reconcileAccountingOutbox, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
-import { freeAgentAuthorizationUrl, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
+import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, type FreeAgentEnvironment } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
   MAX_RESOURCE_SIZE_BYTES,
@@ -1431,7 +1431,7 @@ async function handleAccountingOAuthCallback(request: Request, env: Env): Promis
       environment: consumed.environment,
       redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI ?? "",
       now: new Date().toISOString()
-    });
+    }, freeAgentFetch);
     const session = await createSession(db, admin, env.ENVIRONMENT === "production");
     return withSessionCookies(redirect("/learn/admin/accounting"), session.setCookies);
   } catch (error) {
@@ -1700,7 +1700,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         environment: consumed.environment,
         redirectUri: env.FREEAGENT_OAUTH_REDIRECT_URI ?? "",
         now: new Date().toISOString()
-      });
+      }, freeAgentFetch);
       return redirect("/learn/admin/accounting");
     } catch (error) {
       return freeAgentOAuthFailure(error);
@@ -1762,7 +1762,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const externalReference = formText(form ?? new FormData(), "externalReference").trim();
     if (!/^\d+$/.test(externalReference)) return messagePage("Invalid contact", "Enter a numeric FreeAgent contact ID.", 400);
     try {
-      await verifyFreeAgentContactMapping(db, env, { studentId, externalReference, now: new Date().toISOString() });
+      await verifyFreeAgentContactMapping(db, env, { studentId, externalReference, now: new Date().toISOString() }, freeAgentFetch);
     } catch (error) {
       if (error instanceof FreeAgentApiError && error.shape.code === "CONFLICT") {
         return messagePage("Contact mapping in use", error.message, 409);
@@ -1819,7 +1819,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const externalReference = formText(form ?? new FormData(), "externalReference").trim();
     if (!/^\d+$/.test(externalReference)) return messagePage("Invalid reference", "Enter a numeric FreeAgent invoice ID.", 400);
     try {
-      const reconciled = await reconcileAccountingOutbox(db, env, outbox, externalReference, new Date().toISOString());
+      const reconciled = await reconcileAccountingOutbox(db, env, outbox, externalReference, new Date().toISOString(), freeAgentFetch);
       return reconciled ? redirect("/learn/admin/accounting") : messagePage("Reconciliation unavailable", "The event could not be reconciled.", 409);
     } catch {
       return messagePage("Reconciliation failed", "FreeAgent could not confirm that invoice.", 502);
@@ -2929,7 +2929,7 @@ export default {
       await Promise.all([
         runReminderScheduler(db, env, now),
         runDstWarningScheduler(db, env, now),
-        ...dueAccounting.map((event) => processAccountingOutbox(db, env, event.id, now))
+        ...dueAccounting.map((event) => processAccountingOutbox(db, env, event.id, now, freeAgentFetch))
       ]);
     })());
   }
