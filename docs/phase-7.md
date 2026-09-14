@@ -24,8 +24,8 @@ complete.
 
 ## Deployed baseline
 
-- Source commit: `042d3e6`
-- Worker version: `7a9b7b0f-40ca-44b3-9698-2a216708f5bb`
+- Source commit: `1be5758`
+- Worker version: `e8dff528-34c6-48d6-90c6-9dedaec2df10`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0024_phase72_global_timezone_operations.sql`
 - Scheduler: `*/5 * * * *`
@@ -54,6 +54,11 @@ Direct Debit authority; FoxTutor does not create a parallel mandate.
   `setup`, `pending`, `active`, `inactive`, `failed` and unknown states.
 - Customer instructions that keep bank details inside the provider mandate
   flow and omit provider/internal references from student billing HTML.
+
+The Phase 7.5 executable deployment was made at
+`2026-09-14T17:10:45Z`. The unauthenticated perimeter probe returned the
+expected Cloudflare Access challenge; authenticated application acceptance
+remains open.
 
 ## Acceptance boundary
 

@@ -13,6 +13,9 @@
 - Added Direct Debit mapping and student privacy regression tests.
 - Recorded Phase 7.5 as **NOT READY** pending comprehensive engineering,
   provider Sandbox, reconciliation and authenticated runtime evidence.
+- Deployed executable commit `1be5758` as Worker version
+  `e8dff528-34c6-48d6-90c6-9dedaec2df10`; remote D1 reported no migrations to
+  apply.
 
 ### 2026-09-14 - Diagnose and deploy the student billing Worker 1101 fix
 

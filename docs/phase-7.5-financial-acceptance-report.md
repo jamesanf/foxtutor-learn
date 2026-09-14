@@ -63,8 +63,9 @@ student data. Cross-student authenticated browser evidence remains open.
 
 ## 10. Student billing deployed acceptance
 
-Not evidenced in this execution environment. A Cloudflare Access challenge is
-not application acceptance.
+Not evidenced in this execution environment. The post-deployment perimeter
+probe returned the expected Access `302` challenge with Ray ID
+`a3b101c73dfe2581-MAN`; an Access challenge is not application acceptance.
 
 ## 11. Admin billing deployed acceptance
 
@@ -130,11 +131,12 @@ engineering evidence is complete.
 
 ## 21. Deployment
 
-The current deployed baseline remains source `042d3e6c482a1bfff0d5f9460b994be0859f5863`,
-Worker version `7a9b7b0f-40ca-44b3-9698-2a216708f5bb`, D1 migrations through
-`0024_phase72_global_timezone_operations.sql`, and scheduler `*/5 * * * *`.
-The Direct Debit UX changes are not yet deployed at the time this report was
-created.
+The tested and deployed source is
+`1be5758248b01e1942e74f05b0ae86f552f40baf`, Worker version
+`e8dff528-34c6-48d6-90c6-9dedaec2df10`, deployed at
+`2026-09-14T17:10:45Z`. D1 migrations remain through
+`0024_phase72_global_timezone_operations.sql`, with no migrations to apply,
+and scheduler `*/5 * * * *`.
 
 ## 22. Documentation
 
@@ -144,5 +146,6 @@ post-deployment evidence before any exit decision.
 
 ## 23. Git
 
-Record final HEAD, branch, and clean/dirty state after implementation and
-deployment. This report does not claim a clean deployed worktree.
+The documentation follow-up is on branch `main`; final HEAD and clean/dirty
+state are recorded after this documentation commit. The deployed executable
+commit remains the source commit above.
