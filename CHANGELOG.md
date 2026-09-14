@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-14 - Equalize billing action typography
+
+- Set the Billing settings authentication and navigation buttons to identical
+  fixed dimensions, padding and smaller typography so their boxes and labels
+  remain visually balanced.
+- Deployed executable commit `e860398` as Worker version
+  `36715ca5-9da1-4e4d-b403-0d2644c31179`.
+
 ### 2026-09-14 - Instrument contact verification failures
 
 - Added safe diagnostics for access-token retrieval/refresh, FreeAgent contact
