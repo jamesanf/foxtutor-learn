@@ -22,7 +22,10 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
     expect(workerSource).toContain("FreeAgent integration active");
     expect(workerSource).toContain("Reauthenticate FreeAgent");
-    expect(workerSource).toContain('class="billing-settings-back"');
+    expect(workerSource).toContain('class="accounting-icon-link accounting-settings-link"');
+    expect(workerSource).toContain('aria-label="Billing settings"');
+    expect(workerSource).toContain("M12 15.5A3.5 3.5 0 1 1 15.5 12");
+    expect(workerSource).toContain('class="accounting-icon-link billing-settings-back"');
     expect(workerSource).toContain('aria-label="Back to accounting"');
     expect(workerSource).toContain("M20 11H7.83l5.59-5.59");
     expect(workerSource).not.toContain('>Back to accounting</a>');
@@ -34,6 +37,8 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).not.toContain("Configure future FreeAgent lesson invoices.");
     expect(cssSource).toContain(".billing-settings-actions .button { width: 220px; min-width: 220px; max-width: 220px; flex: 0 0 220px;");
     expect(cssSource).toContain(".billing-settings-card .page-heading h1 { min-width: 0; white-space: nowrap;");
+    expect(cssSource).toContain(".accounting-icon-link { display: inline-grid; width: 42px; height: 42px;");
+    expect(cssSource).toContain(".accounting-icon-link:hover, .accounting-icon-link:focus-visible");
     expect(cssSource).toContain(".card .info-box { max-width: none; }");
   });
 
