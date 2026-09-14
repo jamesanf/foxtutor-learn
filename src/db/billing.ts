@@ -1014,15 +1014,25 @@ export async function createBillingAlert(
   return Boolean(result.meta.changes);
 }
 
-export async function listOpenBillingAlerts(db: D1Database, limit = 100): Promise<BillingAlert[]> {
+export async function listOpenBillingAlerts(
+  db: D1Database,
+  limit = 100,
+  providerEnvironment?: "sandbox" | "production" | null
+): Promise<BillingAlert[]> {
   const result = await db.prepare(
     `SELECT a.*, s.name AS student_name
      FROM billing_alerts a
      LEFT JOIN students s ON s.id = a.student_id
      WHERE a.status IN ('OPEN', 'ACKNOWLEDGED')
+       ${providerEnvironment
+         ? "AND (a.invoice_id IS NULL OR EXISTS (SELECT 1 FROM billing_invoices i WHERE i.id = a.invoice_id AND i.provider_environment = ?))"
+         : ""}
      ORDER BY CASE a.severity WHEN 'CRITICAL' THEN 0 WHEN 'ERROR' THEN 1 WHEN 'WARNING' THEN 2 ELSE 3 END,
               a.created_at DESC, a.id DESC LIMIT ?`
-  ).bind(Math.max(1, Math.min(limit, 500))).all<BillingAlert>();
+  ).bind(
+    ...(providerEnvironment ? [providerEnvironment] : []),
+    Math.max(1, Math.min(limit, 500))
+  ).all<BillingAlert>();
   return result.results;
 }
 

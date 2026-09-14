@@ -1941,6 +1941,7 @@ async function billingOperationsPage(
   user: AppUser,
   csrfToken: string,
   db: D1Database,
+  env: Env,
   request: Request
 ): Promise<Response> {
   const now = new Date();
@@ -1951,9 +1952,9 @@ async function billingOperationsPage(
     Number(today.slice(8, 10)) + 7
   )).toISOString().slice(0, 10);
   const [upcoming, credits, alerts] = await Promise.all([
-    listUpcomingBillingRows(db, today, nextSeven),
+    listUpcomingBillingRows(db, today, nextSeven, undefined, configuredEnvironment(env)),
     listCustomerCreditBalances(db),
-    listOpenBillingAlerts(db)
+    listOpenBillingAlerts(db, 100, configuredEnvironment(env))
   ]);
   const readiness = upcoming.map((row) => {
     const gross = BigInt(row.amount_minor ?? 0);
@@ -2077,7 +2078,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-billing") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the alert controls provided on the billing dashboard.", 405);
-    return billingOperationsPage(active.user, csrfToken, db, request);
+    return billingOperationsPage(active.user, csrfToken, db, env, request);
   }
   if (route === "admin-billing-audit") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the read-only billing audit page.", 405);

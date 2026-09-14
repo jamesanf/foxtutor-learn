@@ -260,8 +260,21 @@ export async function auditBillingChain(
     : null;
   const alert = await db.prepare(
     `SELECT COUNT(*) AS count FROM billing_alerts
-     WHERE student_id = ? AND status IN ('OPEN', 'ACKNOWLEDGED')`
-  ).bind(studentId).first<{ count: number | string }>();
+     WHERE student_id = ? AND status IN ('OPEN', 'ACKNOWLEDGED')
+       AND (
+         ? IS NULL
+         OR invoice_id IS NULL
+         OR EXISTS (
+           SELECT 1 FROM billing_invoices i
+           WHERE i.id = billing_alerts.invoice_id
+             AND i.provider_environment = ?
+         )
+       )`
+  ).bind(
+    studentId,
+    providerSnapshot.providerEnvironment ?? null,
+    providerSnapshot.providerEnvironment ?? null
+  ).first<{ count: number | string }>();
   return evaluateBillingChain(studentId, {
     student: student ?? null,
     billingAccount: billingAccount ? {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listBillingHistory, type BillingHistoryItem } from "../../src/db/billing";
+import { listBillingHistory, listOpenBillingAlerts, listUpcomingBillingRows, type BillingHistoryItem } from "../../src/db/billing";
 
 function mockBillingDb(
   rowsForQuery: (sql: string) => BillingHistoryItem[]
@@ -88,5 +88,21 @@ describe("student billing history query", () => {
 
     await expect(listBillingHistory(db, "student-1", 100, "production")).resolves.toEqual([]);
     expect(db.queries.filter((sql) => sql.includes("provider_environment")).length).toBe(3);
+  });
+
+  it("applies provider-environment isolation to the admin upcoming billing query", async () => {
+    const db = mockBillingDb(() => []);
+
+    await expect(listUpcomingBillingRows(db, "2026-09-14", "2026-09-21", undefined, "production")).resolves.toEqual([]);
+    expect(db.queries).toHaveLength(1);
+    expect(db.queries[0]).toContain("(i.provider_environment = ? OR i.provider_environment IS NULL)");
+  });
+
+  it("applies provider-environment isolation to open admin billing alerts", async () => {
+    const db = mockBillingDb(() => []);
+
+    await expect(listOpenBillingAlerts(db, 100, "production")).resolves.toEqual([]);
+    expect(db.queries).toHaveLength(1);
+    expect(db.queries[0]).toContain("i.provider_environment = ?");
   });
 });
