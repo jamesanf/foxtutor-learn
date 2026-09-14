@@ -21,5 +21,5 @@ The automated suite is provider-independent or controlled-seam evidence. It is
 not FreeAgent Sandbox or GoCardless Sandbox acceptance. No remote migration,
 Worker deployment or financial provider mutation was performed in this phase.
 
-The remaining provider acceptance matrix is documented in the Phase 7.1
-handover and acceptance report.
+The historical Phase 7.1 provider boundary is superseded by the current Phase
+7.2 handover and acceptance report.
