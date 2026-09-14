@@ -24,13 +24,17 @@ import {
   countActiveStudents,
   countPastLessons,
   countUpcomingLessons,
+  countUpcomingLessonsForUser,
+  countPastLessonsForUser,
   countLessonsForStudentRecord,
   listStartedLessonsNeedingReports,
   listLessons,
   listLessonsForStudentRecord,
   listLessonsForResourceFilter,
   listPastLessons,
+  listPastLessonsForUser,
   listUpcomingLessons,
+  listUpcomingLessonsForUser,
   listLessonsForUserInRange,
   listLessonsInRange,
   listLessonsForUser,
@@ -3557,11 +3561,20 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     return studentSeriesPage(active.user, csrfToken, series, lessonsForSeries, new Date().toISOString(), url.searchParams.get("notice") ?? undefined);
   }
   if (route === "student" || route === "student-lessons") {
-    const lessons = await listLessonsForUser(db, active.user.id);
-    const now = Date.now();
-    const upcoming = lessons.filter((lesson) => lesson.status === "scheduled" && new Date(lesson.start_at).getTime() >= now);
-    const past = lessons.filter((lesson) => lesson.status !== "cancelled" && (lesson.status === "completed" || new Date(lesson.start_at).getTime() < now));
-    return appPage(active.user, csrfToken, "My lessons", `<h1>My lessons</h1><section class="card"><h2>Upcoming</h2>${lessonTable(upcoming, "/learn/student/lessons", false, true)}</section><section class="card"><h2>Past</h2>${lessonTable(past, "/learn/student/lessons", false, true)}</section>`);
+    const now = new Date().toISOString();
+    const upcomingPagination = parseStudentSectionPagination(url, "upcomingPage", "upcomingSize");
+    const pastPagination = parseStudentSectionPagination(url, "pastPage", "pastSize");
+    const [upcomingTotal, pastTotal] = await Promise.all([
+      countUpcomingLessonsForUser(db, active.user.id, now),
+      countPastLessonsForUser(db, active.user.id, now)
+    ]);
+    const upcomingPage = Math.min(upcomingPagination.page, Math.max(1, Math.ceil(upcomingTotal / upcomingPagination.pageSize)));
+    const pastPage = Math.min(pastPagination.page, Math.max(1, Math.ceil(pastTotal / pastPagination.pageSize)));
+    const [upcoming, past] = await Promise.all([
+      listUpcomingLessonsForUser(db, active.user.id, now, upcomingPagination.pageSize, (upcomingPage - 1) * upcomingPagination.pageSize),
+      listPastLessonsForUser(db, active.user.id, now, pastPagination.pageSize, (pastPage - 1) * pastPagination.pageSize)
+    ]);
+    return appPage(active.user, csrfToken, "My lessons", `<h1>My lessons</h1><section class="card"><h2>Upcoming</h2>${lessonTable(upcoming, "/learn/student/lessons", false, true)}${studentSectionPagination(upcomingPage, upcomingPagination.pageSize, upcomingTotal, "/learn/student/lessons", "Upcoming lessons", "upcomingPage", "upcomingSize")}</section><section class="card"><h2>Past</h2>${lessonTable(past, "/learn/student/lessons", false, true)}${studentSectionPagination(pastPage, pastPagination.pageSize, pastTotal, "/learn/student/lessons", "Past lessons", "pastPage", "pastSize")}</section>`);
   }
   if (route === "student-lesson-cancel") {
     const id = lessonIdFromPath(url.pathname);

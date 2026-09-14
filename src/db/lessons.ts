@@ -175,6 +175,84 @@ export async function listLessonsForUser(db: D1Database, userId: string): Promis
   return result.results;
 }
 
+export async function listUpcomingLessonsForUser(
+  db: D1Database,
+  userId: string,
+  now: string,
+  limit: number,
+  offset: number
+): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${studentLessonColumns}, r.id AS report_id, r.status AS report_status
+       FROM lessons l
+       JOIN students s ON s.id = l.student_id
+       JOIN users u ON u.id = s.learn_user_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
+       WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
+         AND l.status = 'scheduled' AND l.start_at >= ?
+       ORDER BY l.start_at ASC, l.id ASC
+       LIMIT ? OFFSET ?`
+    )
+    .bind(userId, now, limit, offset)
+    .all<Lesson>();
+  return result.results;
+}
+
+export async function countUpcomingLessonsForUser(db: D1Database, userId: string, now: string): Promise<number> {
+  const result = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM lessons l
+       JOIN students s ON s.id = l.student_id
+       JOIN users u ON u.id = s.learn_user_id
+       WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
+         AND l.status = 'scheduled' AND l.start_at >= ?`
+    )
+    .bind(userId, now)
+    .first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
+export async function listPastLessonsForUser(
+  db: D1Database,
+  userId: string,
+  now: string,
+  limit: number,
+  offset: number
+): Promise<Lesson[]> {
+  const result = await db
+    .prepare(
+      `SELECT ${studentLessonColumns}, r.id AS report_id, r.status AS report_status
+       FROM lessons l
+       JOIN students s ON s.id = l.student_id
+       JOIN users u ON u.id = s.learn_user_id
+       LEFT JOIN lesson_reports r ON r.lesson_id = l.id
+       WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
+         AND l.status != 'cancelled' AND (l.status != 'scheduled' OR l.start_at < ?)
+       ORDER BY l.start_at DESC, l.id DESC
+       LIMIT ? OFFSET ?`
+    )
+    .bind(userId, now, limit, offset)
+    .all<Lesson>();
+  return result.results;
+}
+
+export async function countPastLessonsForUser(db: D1Database, userId: string, now: string): Promise<number> {
+  const result = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM lessons l
+       JOIN students s ON s.id = l.student_id
+       JOIN users u ON u.id = s.learn_user_id
+       WHERE s.learn_user_id = ? AND s.status = 'ACTIVE' AND u.status = 'ACTIVE' AND u.role = 'STUDENT'
+         AND l.status != 'cancelled' AND (l.status != 'scheduled' OR l.start_at < ?)`
+    )
+    .bind(userId, now)
+    .first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
 export async function listLessonsForUserInRange(
   db: D1Database,
   userId: string,

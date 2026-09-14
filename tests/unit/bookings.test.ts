@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { countPastLessons, countUpcomingLessons, listPastLessons, listUpcomingLessons } from "../../src/db/lessons";
+import {
+  countPastLessons,
+  countPastLessonsForUser,
+  countUpcomingLessons,
+  countUpcomingLessonsForUser,
+  listPastLessons,
+  listPastLessonsForUser,
+  listUpcomingLessons,
+  listUpcomingLessonsForUser
+} from "../../src/db/lessons";
 
 function mockDb(results: unknown[], count = 0): D1Database {
   let query = "";
@@ -63,5 +72,34 @@ describe("upcoming bookings queries", () => {
     const inspected = db as D1Database & { query: string; bindings: unknown[] };
     expect(inspected.query).toContain("status != 'scheduled' OR start_at <= ?");
     expect(inspected.bindings).toEqual(["2026-09-12T21:00:00.000Z"]);
+  });
+
+  it("paginates upcoming lessons for the authenticated student", async () => {
+    const db = mockDb([{ id: "lesson-student-upcoming" }]);
+    await expect(listUpcomingLessonsForUser(db, "user-1", "2026-09-12T21:00:00.000Z", 12, 24)).resolves.toEqual([{ id: "lesson-student-upcoming" }]);
+    const inspected = db as D1Database & { query: string; bindings: unknown[] };
+    expect(inspected.query).toContain("s.learn_user_id = ?");
+    expect(inspected.query).toContain("l.status = 'scheduled'");
+    expect(inspected.query).toContain("l.start_at >= ?");
+    expect(inspected.bindings).toEqual(["user-1", "2026-09-12T21:00:00.000Z", 12, 24]);
+  });
+
+  it("paginates past lessons for the authenticated student without cancelled rows", async () => {
+    const db = mockDb([{ id: "lesson-student-past" }]);
+    await expect(listPastLessonsForUser(db, "user-1", "2026-09-12T21:00:00.000Z", 12, 24)).resolves.toEqual([{ id: "lesson-student-past" }]);
+    const inspected = db as D1Database & { query: string; bindings: unknown[] };
+    expect(inspected.query).toContain("s.learn_user_id = ?");
+    expect(inspected.query).toContain("l.status != 'cancelled'");
+    expect(inspected.query).toContain("l.start_at < ?");
+    expect(inspected.bindings).toEqual(["user-1", "2026-09-12T21:00:00.000Z", 12, 24]);
+  });
+
+  it("counts upcoming and past lessons for the authenticated student", async () => {
+    const db = mockDb([], 7);
+    await expect(countUpcomingLessonsForUser(db, "user-1", "2026-09-12T21:00:00.000Z")).resolves.toBe(7);
+    await expect(countPastLessonsForUser(db, "user-1", "2026-09-12T21:00:00.000Z")).resolves.toBe(7);
+    const inspected = db as D1Database & { query: string; bindings: unknown[] };
+    expect(inspected.query).toContain("s.learn_user_id = ?");
+    expect(inspected.bindings).toEqual(["user-1", "2026-09-12T21:00:00.000Z"]);
   });
 });

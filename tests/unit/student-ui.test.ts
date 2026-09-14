@@ -78,4 +78,13 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain('lessonTable(upcoming, "/learn/student/lessons", false, true)');
     expect(workerSource).toContain('lessonTable(past, "/learn/student/lessons", false, true)');
   });
+
+  it("uses independent standard pagination for upcoming and past lessons", () => {
+    expect(workerSource).toContain('parseStudentSectionPagination(url, "upcomingPage", "upcomingSize")');
+    expect(workerSource).toContain('parseStudentSectionPagination(url, "pastPage", "pastSize")');
+    expect(workerSource).toContain('studentSectionPagination(upcomingPage, upcomingPagination.pageSize, upcomingTotal');
+    expect(workerSource).toContain('studentSectionPagination(pastPage, pastPagination.pageSize, pastTotal');
+    expect(workerSource).toContain('listUpcomingLessonsForUser');
+    expect(workerSource).toContain('listPastLessonsForUser');
+  });
 });
