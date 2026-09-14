@@ -28,7 +28,8 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-connection-details");
     expect(workerSource).toContain('class="card form-card billing-settings-card"');
     expect(workerSource).not.toContain("Configure future FreeAgent lesson invoices.");
-    expect(cssSource).toContain(".billing-settings-actions .button { width: 190px; }");
+    expect(cssSource).toContain(".billing-settings-actions .button { width: 190px; min-width: 190px; max-width: 190px; flex: 0 0 190px;");
+    expect(cssSource).toContain(".card .info-box { max-width: none; }");
   });
 
   it("uses the shared hover context treatment for billing validation warnings", () => {
@@ -66,6 +67,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('class="form-actions accounting-connection-actions"');
     expect(cssSource).toContain(".accounting-connection-actions .button { width: 100%; justify-content: center; }");
     expect(workerSource).toContain('class="summary-grid accounting-summary-grid"');
+    expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }");
     expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }");
     expect(cssSource).toContain(".accounting-summary-grid .summary-card:last-child { grid-column: span 2; }");
   });

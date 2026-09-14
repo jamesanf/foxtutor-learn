@@ -320,7 +320,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-connection-actions .status { justify-self: center; }
 .billing-settings-card { max-width: none; }
 .billing-settings-actions { margin-top: 0; }
-.billing-settings-actions .button { width: 190px; }
+.billing-settings-actions .button { width: 190px; min-width: 190px; max-width: 190px; flex: 0 0 190px; box-sizing: border-box; }
 .billing-settings-actions .status { white-space: nowrap; }
 .accounting-connection-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
 .accounting-connection-details div { min-width: 0; }
@@ -351,6 +351,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .help { margin: -4px 0 22px; font-size: .9rem; font-weight: 400; }
 .field-help { display: block; margin-top: 6px; color: var(--muted); font-size: .78rem; font-weight: 400; }
 .info-box { display: block; width: 100%; box-sizing: border-box; max-width: none; margin-top: 7px; padding: 8px 10px; border: 1px solid #b9dce4; border-radius: 7px; color: #155e75; background: #effafd; font-size: .78rem; font-weight: 450; }
+.card .info-box { max-width: none; }
 .field-info { position: relative; display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; margin-left: 5px; border: 1px solid #75b7c4; border-radius: 50%; color: #0e7490; background: #effafd; cursor: pointer; font-size: .7rem; font-weight: 750; line-height: 1; vertical-align: 1px; }
 .field-info::before, .field-info::after, .form-warning::before, .form-warning::after { position: absolute; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .14s ease, transform .14s ease; }
 .field-info::before, .form-warning::before { bottom: calc(100% + 4px); left: 50%; border: 5px solid transparent; border-top-color: #9ccfd9; content: ""; transform: translate(-50%, 3px); }
@@ -580,7 +581,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .detail-grid { grid-template-columns: 1fr; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .billing-settings-actions { width: 100%; align-items: stretch; flex-direction: column; }
-  .billing-settings-actions .button { width: 100%; }
+  .billing-settings-actions .button { width: 100%; min-width: 0; max-width: none; flex: 1 1 auto; }
   .accounting-connection-details { grid-template-columns: 1fr; }
   .report-meta, .report-feedback, .report-feedback-form { grid-template-columns: 1fr; }
   .report-attachments-grid.has-files { grid-template-columns: 1fr; }
@@ -658,6 +659,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .calendar-host.fc .fc-toolbar-chunk { min-width: 0; }
   .calendar-host.fc .fc-toolbar-title { overflow-wrap: anywhere; text-align: center; }
 }
+.accounting-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 900px) {
   .accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .accounting-summary-grid .summary-card:last-child { grid-column: span 2; }
