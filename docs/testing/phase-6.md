@@ -24,7 +24,7 @@ The automated suite covers:
 - browser shell accessibility and no-index contracts;
 - production perimeter smoke.
 
-Current result: **27 test files and 137 tests passed**.
+Current result: **27 test files and 138 tests passed**.
 
 Run the current suite with:
 

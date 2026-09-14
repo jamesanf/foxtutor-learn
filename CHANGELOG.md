@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-14 - Diagnose contact mapping persistence
+
+- Confirmed the deployed `external_accounting_links` schema contains all
+  Phase 6.2 verification and error columns.
+- Confirmed there is no existing mapping for the Learn student or FreeAgent
+  contact `257175`.
+- Added safe D1 persistence diagnostics with truncated database error details;
+  no contact payload or personal data is logged.
+- The full suite passes with 27 test files and 138 tests.
+- Deployed executable commit `df58a92` as Worker version
+  `08098f85-8fc8-4579-8e4c-19d9e98b52b9`.
+
 ### 2026-09-14 - Equalize billing action typography
 
 - Set the Billing settings authentication and navigation buttons to identical
