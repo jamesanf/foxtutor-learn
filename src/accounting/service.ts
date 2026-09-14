@@ -597,6 +597,26 @@ export async function verifyFreeAgentContactMapping(
   }
   let stage = "access-token retrieval / refresh";
   const logFailure = (error: unknown, failureStage: string): void => {
+    if (failureStage === "D1 mapping persistence") {
+      const errorName = error instanceof Error ? error.name : "UnknownError";
+      const constructorName = error && typeof error === "object" && "constructor" in error
+        ? ((error as { constructor?: { name?: unknown } }).constructor?.name ?? "Unknown")
+        : "Unknown";
+      const safeMessage = error instanceof Error
+        ? error.message.slice(0, 240)
+        : "Unexpected database error.";
+      const sqliteCode = error && typeof error === "object" && "code" in error
+        ? ((error as { code?: unknown }).code ?? null)
+        : null;
+      console.log("FreeAgent contact mapping stage failed", {
+        stage: failureStage,
+        errorName,
+        constructorName,
+        message: safeMessage,
+        sqliteCode
+      });
+      return;
+    }
     const shape = error instanceof FreeAgentApiError ? error.shape : null;
     console.log("FreeAgent contact mapping stage failed", {
       stage: failureStage,
