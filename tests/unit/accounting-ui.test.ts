@@ -22,6 +22,10 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("Category and contact mappings come from FreeAgent.");
     expect(workerSource).toContain("FreeAgent integration active");
     expect(workerSource).toContain("Reauthenticate FreeAgent");
+    expect(workerSource).toContain('class="billing-settings-back"');
+    expect(workerSource).toContain('aria-label="Back to accounting"');
+    expect(workerSource).toContain("M20 11H7.83l5.59-5.59");
+    expect(workerSource).not.toContain('>Back to accounting</a>');
     expect(workerSource).toContain("Company name");
     expect(workerSource).toContain("Company subdomain");
     expect(cssSource).toContain(".info-box { display: block; width: 100%;");
