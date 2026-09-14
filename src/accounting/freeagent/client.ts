@@ -39,6 +39,22 @@ export interface FreeAgentClientOptions {
   timeoutMs?: number;
 }
 
+function logFetchFailure(error: unknown, target: URL, timedOut: boolean): void {
+  const errorName = error instanceof Error ? error.name : "UnknownError";
+  const errorMessage = error instanceof Error ? error.message : "Non-Error fetch failure.";
+  const constructorName = error && typeof error === "object" && "constructor" in error
+    ? ((error as { constructor?: { name?: unknown } }).constructor?.name ?? "Unknown")
+    : "Unknown";
+  console.log("FreeAgent fetch failed", {
+    errorName,
+    errorMessage,
+    constructorName,
+    timeout: timedOut,
+    targetHostname: target.hostname,
+    targetPath: target.pathname
+  });
+}
+
 export function freeAgentBaseUrl(environment: FreeAgentEnvironment): string {
   return environment === "sandbox" ? "https://api.sandbox.freeagent.com" : "https://api.freeagent.com";
 }
@@ -95,6 +111,7 @@ export class FreeAgentClient {
   async requestJson<T>(accessToken: string, path: string, init: RequestInit = {}): Promise<{ data: T; response: Response }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    let target: URL | null = null;
     try {
       if (!path.startsWith("/") || path.startsWith("//")) {
         throw new FreeAgentApiError({
@@ -106,8 +123,8 @@ export class FreeAgentClient {
           retryAfterSeconds: null
         });
       }
-      const requestUrl = new URL(path, this.baseUrl);
-      if (requestUrl.origin !== this.baseUrl) {
+      target = new URL(path, this.baseUrl);
+      if (target.origin !== this.baseUrl) {
         throw new FreeAgentApiError({
           code: "CONFIGURATION",
           status: null,
@@ -123,7 +140,7 @@ export class FreeAgentClient {
       headers.set("User-Agent", "Foxtutor Learn accounting integration");
       if (this.options.apiVersion) headers.set("X-Api-Version", this.options.apiVersion);
       if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-      const response = await this.fetcher(requestUrl, { ...init, headers, signal: controller.signal });
+      const response = await this.fetcher(target, { ...init, headers, signal: controller.signal });
       if (!response.ok) {
         const shape = classifyStatus(response.status, response.headers.get("Retry-After"));
         throw new FreeAgentApiError(shape);
@@ -145,6 +162,7 @@ export class FreeAgentClient {
     } catch (error) {
       if (error instanceof FreeAgentApiError) throw error;
       const timedOut = error instanceof DOMException && error.name === "AbortError";
+      if (target) logFetchFailure(error, target, timedOut);
       throw new FreeAgentApiError({
         code: timedOut ? "TIMEOUT" : "NETWORK",
         status: null,

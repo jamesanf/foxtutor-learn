@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   accountingDecisionForBillingConsequence,
   accountingEventTypeForHistory,
@@ -272,6 +272,7 @@ describe("FreeAgent adapter", () => {
   });
 
   it("preserves timeout failures as unknown external outcomes", async () => {
+    const diagnostic = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const client = new FreeAgentClient({
       environment: "sandbox",
       timeoutMs: 5,
@@ -281,5 +282,15 @@ describe("FreeAgent adapter", () => {
     });
     await expect(client.company("token")).rejects.toBeInstanceOf(FreeAgentApiError);
     await expect(client.company("token")).rejects.toMatchObject({ shape: { code: "TIMEOUT", retryable: true, unknown: true } });
+    expect(diagnostic).toHaveBeenCalledWith("FreeAgent fetch failed", {
+      errorName: "AbortError",
+      errorMessage: "aborted",
+      constructorName: "DOMException",
+      timeout: true,
+      targetHostname: "api.sandbox.freeagent.com",
+      targetPath: "/v2/company"
+    });
+    expect(diagnostic.mock.calls[0]?.[1]).not.toHaveProperty("authorization");
+    diagnostic.mockRestore();
   });
 });
