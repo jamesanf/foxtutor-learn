@@ -2,21 +2,24 @@
 
 ## Status
 
-**PHASE 7.1 STATUS: LOCAL IMPLEMENTATION COMPLETE; PROVIDER ACCEPTANCE OPEN**
+**PHASE 7.1 STATUS: FOUNDATIONAL SCOPE ABSORBED INTO PHASE 7.2**
+
+This document records the original Phase 7.1 boundary. Phase 7.2 supersedes
+its local-only deployment boundary and completes the unfinished technical work.
 
 Phase 6 provides the FreeAgent accounting boundary, encrypted OAuth
 connection, verified contact mapping, durable accounting outbox and the first
 FoxTutor credit-ledger tables. Phase 7.1 extends that boundary without making
 FreeAgent recurring invoice profiles authoritative for lesson recurrence.
 
-No remote D1 migration, Worker deployment or provider financial mutation is
-authorised by this document. Local implementation and controlled seams must
-pass before deployment is considered.
+The current deployment record is maintained in
+[`docs/deployment/phase-7.2.md`](deployment/phase-7.2.md). Real provider
+financial acceptance remains separately gated and is not inferred from the
+deployed schema/runtime.
 
-The local implementation now passes the complete automated suite (31 test
-files, 168 tests), `npm run check`, and D1 migration application through
-`0023_credit_ledger_reversal_view.sql`. Remote schema and runtime remain
-unchanged.
+The foundational implementation now passes the complete automated suite and
+has been extended by Phase 7.2 through migration `0024`; see the Phase 7.2
+testing and acceptance records for current evidence.
 
 ## Intended scope
 
@@ -81,6 +84,6 @@ are documented, and any real Sandbox evidence is clearly separated from
 provider-independent controlled-seam evidence. Production deployment and
 financial mutation remain gated by the Phase 6 commercial/provider approvals.
 
-The implementation and local gates are complete. The phase remains
-operationally open and is not declared accepted because no real FreeAgent or
-GoCardless Sandbox financial evidence has been performed.
+The implementation and local gates are complete. Real FreeAgent and
+GoCardless Sandbox evidence remains a separate provider acceptance activity;
+Phase 7.2 does not fabricate that evidence.
