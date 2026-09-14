@@ -26,6 +26,16 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("Company subdomain");
     expect(cssSource).toContain(".info-box { display: block; width: 100%;");
     expect(cssSource).toContain(".accounting-connection-details");
+    expect(workerSource).toContain('class="card form-card billing-settings-card"');
+    expect(workerSource).not.toContain("Configure future FreeAgent lesson invoices.");
+    expect(cssSource).toContain(".billing-settings-actions .button { width: 190px; }");
+  });
+
+  it("uses the shared hover context treatment for billing validation warnings", () => {
+    expect(workerSource).toContain('class="form-error form-warning"');
+    expect(workerSource).toContain("billingSettingsErrorHint");
+    expect(cssSource).toContain(".form-warning::after");
+    expect(cssSource).toContain(".card .form-error { max-width: none; }");
   });
 
   it("logs only staged, safe OAuth diagnostics on callback failure", () => {
