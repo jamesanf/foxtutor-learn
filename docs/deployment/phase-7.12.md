@@ -1,6 +1,6 @@
 # Phase 7.12 deployment record
 
-> **Historical deployment record.** Phase 7.13 is the current deployed
+> **Historical deployment record.** Phase 7.14 is the current deployed
 > revision. The commit, Worker version and migration facts below describe the
 > earlier Phase 7.12 deployment and are retained as release history.
 

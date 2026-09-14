@@ -243,7 +243,9 @@ export async function ensureRecurringSeriesMaterialised(
           created_at, updated_at, recurring_series_id, recurrence_key, series_revision,
           series_instance, instance_override)
          VALUES (?, ?, ?, ?, ?, 'scheduled', '', NULL, ?, ?, ?, ?, ?, 1, 0)
-         ON CONFLICT(recurring_series_id, recurrence_key) DO NOTHING`
+         ON CONFLICT(recurring_series_id, recurrence_key)
+         WHERE recurring_series_id IS NOT NULL AND recurrence_key IS NOT NULL
+         DO NOTHING`
       ).bind(
         lessonId,
         series.student_id,

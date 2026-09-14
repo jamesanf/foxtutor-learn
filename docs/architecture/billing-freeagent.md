@@ -106,7 +106,7 @@ The following capabilities were confirmed from the official documentation:
 | `/v2/recurring_invoices` | Read recurring invoice profiles, including frequency, next recurrence and status. This is not a safe source of truth for variable lesson entitlement. |
 | `/v2/accounting/transactions` | Read accounting transactions for reconciliation. |
 
-## Phase 7.13 independent FreeAgent connections and callback verification
+## Phase 7.14 independent connections, contact verification and callback verification
 
 > This section supersedes the Phase 7.9, Phase 7.11 and Phase 7.12
 > environment-selection wording for the current implementation. Those records
@@ -157,6 +157,15 @@ The established defaults remain £55.00, `Hours`, 0 payment terms days, GBP
 and 0% sales tax. These defaults describe normal lesson accounting and do not
 authorize a provider invoice. A controlled Sandbox acceptance amount is a
 separate operation.
+
+### Contact verification
+
+Contact verification carries the selected `sandbox` or `production`
+environment through the admin operation. The connection, token, API origin,
+company-bound mapping and failure record all use that same environment.
+Sandbox and Production contact IDs are independent and may differ for the same
+student. The provider contact is read-only; its direct-debit mandate state is
+logged only as safe normalized diagnostic metadata.
 
 The FreeAgent support documentation confirms that GoCardless can be
 configured for invoice date, payment due date or manual triggering. It also

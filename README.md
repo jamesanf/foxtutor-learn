@@ -8,33 +8,29 @@ replacement, payment system or accounting ledger.
 
 ## Current status
 
-**Phase:** Phase 7.13 — Production OAuth callback completion
+**Phase:** Phase 7.14 — Production contact reconciliation and recurring-series repair
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
 **Phase 7.13 source commit:** `6db5a1c581e3c326c7d8927eee8568c66292bebf`
-**Worker version:** `50eda89c-8729-446c-902b-eb9e10ec3015`
+**Latest Phase 7.14 source:** pending commit and deployment
 **D1 migrations:** `0001_foundation.sql` through `0030_freeagent_dual_connections.sql` deployed
 **Automated validation:** 38 test files, 242 tests passing
 
-Phase 7.13 repairs the post-authorization Production OAuth pipeline:
-environment-bound state validation, Production token exchange, read-only
-company verification, isolated connection persistence, explicit callback
-errors and fixed FoxTutor sales-category resolution. The temporary
-`FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP=true` compatibility path remains
-enabled.
+Phase 7.14 repairs environment-bound contact verification and the recurring
+lesson materialisation UPSERT that caused Worker 1101 after a series row was
+saved. The temporary `FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP=true`
+compatibility path remains enabled pending authenticated acceptance.
 
-The supplied authenticated HAR proves Production approval, FreeAgent login,
-app approval, authorization-code return and callback reachability. It does
-not prove the post-callback live connection record or final Accounting page
-state. Authenticated browser acceptance therefore remains open; this
-documentation does not claim that Production is connected without that
-evidence.
+Remote D1 confirms independent Sandbox and Production connection/category
+records and two pre-existing recurring-series rows from the supplied HAR.
+Authenticated provider contact verification and browser acceptance remain
+open; this documentation does not claim a live contact result.
 
 Production remains read-only in this phase. No invoice, payment, Direct Debit,
 credit note or £1 test has been performed. The current implementation and
 evidence boundary are consolidated in
-[`docs/phase-7.13.md`](docs/phase-7.13.md), with architecture, testing,
+[`docs/phase-7.14.md`](docs/phase-7.14.md), with architecture, testing,
 deployment and handover records alongside it.
 
 Earlier Phase 7 records remain available as historical implementation and

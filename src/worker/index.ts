@@ -101,6 +101,8 @@ import {
   addRecurringPause,
   createRecurringSeries,
   ensureAllRecurringSeriesMaterialised,
+  ensureRecurringSeriesMaterialised,
+  findRecurringSeries,
   listRecurringSeries,
   setRecurringSeriesStatus
 } from "../db/recurrence";
@@ -1967,8 +1969,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       return appPage(active.user, csrfToken, "Create recurring series", recurringSeriesForm(csrfToken, students, "Enter a valid student, weekly time, price and date range."));
     }
     const now = new Date().toISOString();
+    const seriesId = crypto.randomUUID();
     await createRecurringSeries(db, {
-      id: crypto.randomUUID(),
+      id: seriesId,
       studentId: student.id,
       payerStudentId: student.id,
       dayOfWeek,
@@ -1979,7 +1982,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       priceMinor,
       now
     });
-    await ensureAllRecurringSeriesMaterialised(db, currentCalendarDate(new Date(now)), now);
+    const createdSeries = await findRecurringSeries(db, seriesId);
+    if (!createdSeries) return messagePage("Series creation failed", "The recurring lesson series could not be read after it was saved.", 500);
+    await ensureRecurringSeriesMaterialised(db, createdSeries, currentCalendarDate(new Date(now)), now);
     return redirect("/learn/admin/series");
   }
   if (route === "admin-series-action") {
@@ -1998,7 +2003,9 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       await setRecurringSeriesStatus(db, { id: seriesId, status: "PAUSED", actorUserId: active.user.id, now, details: `${startsOn} to ${endsOn}: ${reason}` });
     } else if (action === "resume") {
       await setRecurringSeriesStatus(db, { id: seriesId, status: "ACTIVE", actorUserId: active.user.id, now, details: "Recurring series resumed." });
-      await ensureAllRecurringSeriesMaterialised(db, currentCalendarDate(new Date(now)), now);
+      const resumedSeries = await findRecurringSeries(db, seriesId);
+      if (!resumedSeries) return messagePage("Series resume failed", "The recurring lesson series could not be read after it was resumed.", 500);
+      await ensureRecurringSeriesMaterialised(db, resumedSeries, currentCalendarDate(new Date(now)), now);
     } else {
       const endDate = formText(form ?? new FormData(), "endDate") || currentCalendarDate();
       await setRecurringSeriesStatus(db, { id: seriesId, status: "ENDED", endDate, actorUserId: active.user.id, now, details: `Series ended on ${endDate}.` });
@@ -2246,30 +2253,37 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const match = /^\/learn\/admin\/accounting\/contacts\/([^/]+)(\/remove)?$/.exec(url.pathname);
     const studentId = match ? decodePathSegment(match[1] ?? "") : null;
     if (!studentId || !(await findStudent(db, studentId))) return messagePage("Not found", "That Learn payer does not exist.", 404);
+    const form = await parseForm(request);
+    const environment = parseFreeAgentEnvironment(form ? formText(form, "environment") : null) ?? configuredEnvironment(env);
+    if (!environment) return messagePage("FreeAgent environment is not configured", "Select a valid Sandbox or Production accounting environment.", 500);
     if (match?.[2] === "/remove") {
-      const removed = await removeExternalAccountingLink(db, studentId, configuredEnvironment(env) ?? undefined);
+      const removed = await removeExternalAccountingLink(db, studentId, environment);
       return removed ? redirect("/learn/admin/accounting") : messagePage("Mapping still in use", "Resolve the accounting event before removing this contact mapping.", 409);
     }
-    const form = await parseForm(request);
     const externalReference = formText(form ?? new FormData(), "externalReference").trim();
     if (!/^\d+$/.test(externalReference)) return messagePage("Invalid contact", "Enter a numeric FreeAgent contact ID.", 400);
     try {
-      await verifyFreeAgentContactMapping(db, env, { studentId, externalReference, now: new Date().toISOString() }, freeAgentFetch);
+      await verifyFreeAgentContactMapping(db, env, { studentId, externalReference, environment, now: new Date().toISOString() }, freeAgentFetch);
     } catch (error) {
       if (error instanceof FreeAgentApiError && error.shape.code === "CONFLICT") {
         return messagePage("Contact mapping in use", error.message, 409);
       }
-      const link = await findExternalAccountingLink(db, studentId, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
+      const link = await findExternalAccountingLink(db, studentId, environment);
       if (link) {
         await updateExternalAccountingLinkStatus(db, studentId, {
-          environment: configuredEnvironment(env) ?? undefined,
+          environment,
           status: "INVALID",
-          lastErrorCode: "CONTACT_MAPPING_REQUIRED",
-          lastErrorMessage: "FreeAgent could not verify this contact in the connected company.",
+          lastErrorCode: error instanceof FreeAgentApiError ? error.shape.code : "UNKNOWN",
+          lastErrorMessage: error instanceof FreeAgentApiError && error.shape.code === "NOT_FOUND"
+            ? `${freeAgentEnvironmentLabel(environment)} FreeAgent contact ${externalReference} was not found.`
+            : `${freeAgentEnvironmentLabel(environment)} FreeAgent contact verification failed.`,
           now: new Date().toISOString()
         });
       }
-      return messagePage("Contact verification failed", "FreeAgent could not verify that contact in the connected company.", 502);
+      const message = error instanceof FreeAgentApiError && error.shape.code === "NOT_FOUND"
+        ? `${freeAgentEnvironmentLabel(environment)} FreeAgent contact ${externalReference} was not found.`
+        : `${freeAgentEnvironmentLabel(environment)} FreeAgent contact verification failed.`;
+      return messagePage(`${freeAgentEnvironmentLabel(environment)} contact verification failed`, message, error instanceof FreeAgentApiError && error.shape.status && error.shape.status >= 400 && error.shape.status < 500 ? error.shape.status : 502);
     }
     return redirect("/learn/admin/accounting");
   }

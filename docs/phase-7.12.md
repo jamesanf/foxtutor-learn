@@ -1,9 +1,10 @@
 # Phase 7.12 - FreeAgent dual Sandbox/Production connections
 
-> **Historical implementation record.** Phase 7.13 supersedes this record as
+> **Historical implementation record.** Phase 7.14 supersedes this record as
 > the current provider status. The dual-connection schema and isolation remain
 > the active foundation; the Production callback, persistence diagnostics and
-> fixed category policy are documented in `docs/phase-7.13.md`.
+> fixed category policy and current contact/recurring repairs are documented
+> in `docs/phase-7.14.md`.
 
 ## Status
 

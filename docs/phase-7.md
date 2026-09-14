@@ -3,14 +3,14 @@
 ## Current status
 
 Phase 7 has a deployed operational baseline and the current increment is
-Phase 7.13. The release repairs the post-authorization Production FreeAgent
-callback and fixed sales-category mapping while preserving the existing
-FreeAgent-to-GoCardless authority boundary.
+Phase 7.14. The release repairs environment-bound Production contact
+verification and the recurring-series Worker 1101 response path while
+preserving the existing FreeAgent-to-GoCardless authority boundary.
 
 The supplied HAR proves the complete Production authorization journey through
-the FoxTutor callback. Post-callback live connection, company and category
-evidence still requires an authenticated browser acceptance run. No
-Production financial acceptance is claimed.
+the FoxTutor callback. Authenticated Production contact and recurring-series acceptance still
+requires an administrator browser run. No Production financial acceptance is
+claimed.
 
 ## Deployed baseline
 
@@ -82,6 +82,7 @@ remains open.
 | 7.11 | Provider contract and initial environment-aware OAuth routing |
 | 7.12 | Independent Sandbox/Production connections and explicit admin actions |
 | 7.13 | Production OAuth callback completion, verified persistence and fixed sales-category mapping |
+| 7.14 | Production contact reconciliation and recurring-series 1101 repair |
 
 The absence of a separate 7.3 file is intentional historical numbering; no
 unrecorded completion claim is made for that increment.
@@ -96,8 +97,8 @@ FreeAgent API documentation does not provide a safe credit-note matching
 operation.
 
 The historical Phase 7.4 record retains the diagnosis and regression evidence
-for the student billing Worker 1101 D1 query failure. It is not duplicated
-here as a current Phase 7.13 blocker.
+for the student billing Worker 1101 D1 query failure. The current recurring
+series response defect and its fix are recorded in the Phase 7.14 records.
 
 ## Detailed records
 
@@ -131,5 +132,7 @@ The decimal records remain useful evidence and implementation history:
   OAuth routing repair.
 - [`docs/phase-7.12.md`](phase-7.12.md) — historical independent
   Sandbox/Production connection model.
-- [`docs/phase-7.13.md`](phase-7.13.md) — current Production callback,
+- [`docs/phase-7.13.md`](phase-7.13.md) — historical Production callback,
   connection verification and fixed category mapping.
+- [`docs/phase-7.14.md`](phase-7.14.md) — current contact reconciliation,
+  recurring-series response repair and remaining live acceptance.

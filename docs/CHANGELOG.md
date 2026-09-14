@@ -1,5 +1,21 @@
 # Changelog
 
+### 2026-09-14 - Phase 7.14 contact and recurring-series repair
+
+- Bound contact verification to the validated Sandbox or Production
+  environment and preserved separate contact mappings.
+- Added safe mandate-state and provider-origin diagnostics without mutating
+  the FreeAgent contact.
+- Classified contact failures with environment-specific administrator
+  messages, including explicit not-found handling.
+- Diagnosed the recurring Worker 1101: the deployed lesson uniqueness rule is
+  a partial index, while the materialisation UPSERT omitted its predicate.
+- Matched the UPSERT conflict target to the partial index and limited
+  interactive create/resume materialisation to the target series.
+- Inspected remote D1 without creating or modifying financial/provider data.
+- Authenticated Production contact and browser create/pause/resume acceptance
+  remain pending; the temporary FreeAgent compatibility flag remains enabled.
+
 ### 2026-09-14 - Phase 7.13 Production OAuth callback completion
 
 - Repaired the post-authorization Production callback pipeline from hashed

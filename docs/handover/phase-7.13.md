@@ -1,5 +1,8 @@
 # Phase 7.13 handover
 
+> **Historical handover record.** Phase 7.14 is the current operational
+> acceptance boundary.
+
 ## Delivered
 
 - Production OAuth callback diagnostics and explicit environment-specific

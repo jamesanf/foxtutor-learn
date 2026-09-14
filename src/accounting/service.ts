@@ -1085,7 +1085,7 @@ export async function processAccountingOutbox(
 export async function verifyFreeAgentContactMapping(
   db: D1Database,
   env: AccountingEnvironment,
-  input: { studentId: string; externalReference: string; now: string },
+  input: { studentId: string; externalReference: string; now: string; environment?: FreeAgentEnvironment },
   fetcher: typeof fetch = freeAgentFetch
 ): Promise<void> {
   if (!/^\d+$/.test(input.externalReference)) {
@@ -1098,7 +1098,8 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
   }
-  const connection = await findAccountingConnection(db, configuredEnvironment(env) ?? undefined);
+  const environment = input.environment ?? configuredEnvironment(env);
+  const connection = await findAccountingConnection(db, environment ?? undefined);
   if (!connection) {
     throw new FreeAgentApiError({
       code: "CONFIGURATION",
@@ -1109,7 +1110,7 @@ export async function verifyFreeAgentContactMapping(
       retryAfterSeconds: null
     });
   }
-  const existing = await findExternalAccountingLink(db, input.studentId, configuredEnvironment(env) ?? undefined);
+  const existing = await findExternalAccountingLink(db, input.studentId, environment ?? undefined);
   if (existing && await hasActiveAccountingDependency(db, input.studentId)) {
     throw new FreeAgentApiError({
       code: "CONFLICT",
@@ -1154,7 +1155,6 @@ export async function verifyFreeAgentContactMapping(
     });
   };
   try {
-    const environment = configuredEnvironment(env);
     if (!environment) throw new FreeAgentApiError({
       code: "CONFIGURATION",
       status: null,
@@ -1166,7 +1166,7 @@ export async function verifyFreeAgentContactMapping(
     const client = new FreeAgentClient({ environment, apiVersion: env.FREEAGENT_API_VERSION, fetcher });
     const token = await accessToken(db, env, environment, input.now, fetcher);
     stage = "FreeAgent contact GET";
-    let contact: { url: string };
+    let contact: { url: string; directDebitMandateState?: string | null };
     try {
       const found = await client.findContact(token, input.externalReference);
       if (!found) throw new FreeAgentApiError({
@@ -1178,6 +1178,15 @@ export async function verifyFreeAgentContactMapping(
         retryAfterSeconds: null
       });
       contact = found;
+      const mandateState = typeof contact.directDebitMandateState === "string"
+        ? contact.directDebitMandateState.toUpperCase().slice(0, 64)
+        : contact.directDebitMandateState;
+      console.info("freeagent_contact_verification", {
+        environment,
+        companySubdomain: connection.company_subdomain,
+        providerOrigin: new URL(contact.url).origin,
+        mandateState
+      });
     } catch (error) {
       stage = error instanceof FreeAgentApiError && error.shape.code === "MALFORMED_RESPONSE"
         ? "contact response validation"

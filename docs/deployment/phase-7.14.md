@@ -1,0 +1,26 @@
+# Phase 7.14 deployment record
+
+## Source
+
+The deployment must contain only the committed Phase 7.14 source and
+documentation. The temporary Production credential compatibility flag remains
+enabled until authenticated acceptance proves it can be removed safely.
+
+## Required validation
+
+```text
+npm test
+npm run build
+npm run check:legal
+npx wrangler deploy --dry-run --config wrangler.jsonc
+npm run test:production
+```
+
+## Acceptance boundary
+
+Remote D1 inspection is read-only evidence. It does not replace an
+authenticated Production FreeAgent contact call or authenticated browser
+acceptance of recurring-series create, pause and resume.
+
+No Production invoice, payment, Direct Debit, credit note, bank transaction or
+£1 test is permitted in this phase.

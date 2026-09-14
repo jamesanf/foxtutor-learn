@@ -1072,6 +1072,29 @@ tests. The supplied HAR proves the authorization journey through the callback,
 but authenticated post-callback connection and category evidence remains
 pending. No Production financial mutation is allowed.
 
+### Phase 7.14 — Production contact reconciliation and recurring-series repair
+
+#### Objective
+
+Verify the real Production contact without changing provider data, repair the
+recurring-series post-write Worker 1101 path, preserve independent
+Sandbox/Production mappings and defer compatibility-secret cleanup until live
+acceptance proves it safe.
+
+#### Delivered
+
+- Environment-bound contact verification and explicit failure classification.
+- Safe direct-debit mandate-state diagnostics.
+- Partial-index-safe recurring lesson materialisation.
+- Targeted interactive create/resume materialisation.
+
+#### Acceptance boundary
+
+Remote D1 evidence confirms the Production connection/category records and
+identifies the partial-index root cause. Authenticated contact `21801761` and
+browser create/pause/resume acceptance remain required. No invoice, payment,
+Direct Debit, credit note, bank change or £1 test is allowed.
+
 ---
 
 ## Universal definition of done for every phase

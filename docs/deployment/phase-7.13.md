@@ -1,5 +1,8 @@
 # Phase 7.13 deployment record
 
+> **Historical deployment record.** Phase 7.14 is the current deployment
+> and acceptance boundary.
+
 ## Deployed revision
 
 | Item | Value |

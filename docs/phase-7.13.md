@@ -1,8 +1,11 @@
 # Phase 7.13 - Production OAuth callback completion
 
+> **Historical implementation record.** Phase 7.14 is the current
+> contact-reconciliation and recurring-series response record.
+
 ## Status
 
-The post-authorization Production OAuth pipeline is implemented, committed as
+The post-authorization Production OAuth pipeline was implemented, committed as
 `6db5a1c581e3c326c7d8927eee8568c66292bebf` and deployed as Worker version
 `50eda89c-8729-446c-902b-eb9e10ec3015`. Live authenticated browser
 acceptance remains required before declaring Production connected.

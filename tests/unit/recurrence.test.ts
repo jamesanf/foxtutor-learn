@@ -4,6 +4,7 @@ import {
   sixWeekWindow,
   zonedDateTimeToUtc
 } from "../../src/domain/recurrence";
+import { ensureRecurringSeriesMaterialised } from "../../src/db/recurrence";
 
 describe("recurring lesson materialisation", () => {
   it("maintains a six-week inclusive rolling window without generating an infinite series", () => {
@@ -57,5 +58,53 @@ describe("recurring lesson materialisation", () => {
       timezone: "America/New_York",
       startDate: "2026-09-01"
     }, "2026-09-01", "2026-10-01")).toThrow("Europe/London");
+  });
+
+  it("materialises a recurring lesson against the partial unique index", async () => {
+    const preparedSql: string[] = [];
+    const db = {
+      prepare(sql: string) {
+        preparedSql.push(sql);
+        return {
+          bind(..._values: unknown[]) {
+            return {
+              async all() {
+                return { results: [] };
+              },
+              async first() {
+                return null;
+              },
+              async run() {
+                return { meta: { changes: 1 } };
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+
+    const result = await ensureRecurringSeriesMaterialised(db, {
+      id: "series-1",
+      student_id: "student-1",
+      payer_student_id: "student-1",
+      tutor_user_id: null,
+      day_of_week: 5,
+      local_start_time: "10:00",
+      duration_minutes: 55,
+      timezone: "Europe/London",
+      recurrence_rule: "WEEKLY",
+      start_date: "2026-09-14",
+      end_date: null,
+      price_minor: 5500,
+      currency: "GBP",
+      status: "ACTIVE",
+      revision: 1,
+      created_at: "2026-09-14T12:00:00.000Z",
+      updated_at: "2026-09-14T12:00:00.000Z"
+    }, "2026-09-14", "2026-09-14T12:00:00.000Z");
+
+    expect(result.createdLessons).toBe(6);
+    expect(result.createdBillingEvents).toBe(6);
+    expect(preparedSql.some((sql) => sql.includes("ON CONFLICT(recurring_series_id, recurrence_key)") && sql.includes("WHERE recurring_series_id IS NOT NULL"))).toBe(true);
   });
 });

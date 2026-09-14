@@ -1,5 +1,9 @@
 # Phase 7.13 architecture
 
+> **Historical architecture record.** Phase 7.14 extends this architecture
+> with environment-bound contact verification and recurring-series response
+> safety.
+
 Phase 7.13 completes the post-authorization path for the independent
 `FREEAGENT:SANDBOX` and `FREEAGENT:PRODUCTION` connections established in
 Phase 7.12.

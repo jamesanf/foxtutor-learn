@@ -87,7 +87,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("findActiveUserById(db, consumed.admin_user_id)");
     expect(workerSource).toContain('admin.role !== "ADMIN"');
     expect(workerSource).toContain('createSession(db, admin, env.ENVIRONMENT === "production")');
-    expect(workerSource).toContain("verifyFreeAgentContactMapping(db, env, { studentId, externalReference, now: new Date().toISOString() }, freeAgentFetch);");
+    expect(workerSource).toContain("verifyFreeAgentContactMapping(db, env, { studentId, externalReference, environment, now: new Date().toISOString() }, freeAgentFetch);");
   });
 
   it("keeps contact mappings readable on desktop and mobile", () => {
@@ -112,6 +112,12 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain("width: 88px; min-width: 88px; flex: 0 0 88px;");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
     expect(cssSource).toContain(".accounting-icon-button { display: inline-grid; width: 34px;");
+  });
+
+  it("keeps recurring admin mutations on the targeted series response path", () => {
+    expect(workerSource).toContain("await ensureRecurringSeriesMaterialised(db, createdSeries, currentCalendarDate(new Date(now)), now);");
+    expect(workerSource).toContain("await ensureRecurringSeriesMaterialised(db, resumedSeries, currentCalendarDate(new Date(now)), now);");
+    expect(workerSource).not.toContain("await ensureAllRecurringSeriesMaterialised(db, currentCalendarDate(new Date(now)), now);");
   });
 
   it("uses a four-card dashboard grid and side-by-side accounting actions", () => {

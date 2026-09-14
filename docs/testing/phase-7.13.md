@@ -1,5 +1,8 @@
 # Phase 7.13 testing and evidence
 
+> **Historical testing record.** Phase 7.14 is the current testing and
+> evidence boundary.
+
 ## Automated validation
 
 The implementation passes:
