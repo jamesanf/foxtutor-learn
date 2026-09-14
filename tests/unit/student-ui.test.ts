@@ -37,4 +37,18 @@ describe("student profile form UI", () => {
     expect(billingSource).not.toContain("source_event_id");
     expect(billingSource).not.toMatch(/PAYG|pay as you go|choose how to pay|payment method/i);
   });
+
+  it("keeps the student billing summary focused and evenly balanced", () => {
+    const billingSource = workerSource.slice(
+      workerSource.indexOf("async function studentBillingPage"),
+      workerSource.indexOf("async function handleStudent")
+    );
+    expect(billingSource).toContain('class="summary-grid student-billing-summary"');
+    expect(billingSource).not.toContain("<span>Billing rail</span>");
+    expect(billingSource).not.toContain("<small>${escapeHtml(mandateCopy.label)}</small>");
+    expect(cssSource).toContain(".student-billing-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
+    expect(cssSource).toContain(".student-billing-summary .summary-card { min-height: 112px; grid-template-rows: 1fr auto 1fr; align-items: center; }");
+    expect(cssSource).toContain(".student-billing-summary .summary-card span { align-self: end; }");
+    expect(cssSource).toContain(".student-billing-summary .summary-card small { align-self: start; min-height: 1.2em; }");
+  });
 });
