@@ -169,20 +169,20 @@ copied into application state or documentation.
 
 ## Deployment and acceptance
 
-The first committed Phase 7.8 source deployment was:
+The final committed Phase 7.8 functional source deployment was:
 
 | Item | Observed value |
 | --- | --- |
-| Commit | `25e0f384a8ec845134526788f78f445c3bbbc721` |
-| Worker version | `042c1fb4-6f62-441f-a967-9ac1fabe01b8` |
-| Deployment time | `2026-09-14T18:44:21Z` |
+| Commit | `9495ff2e4b5e482f2f6d0b2239b62a813aeedafb` |
+| Worker version | `09963e6c-fd80-4160-8f14-50489fd4b157` |
+| Deployment time | `2026-09-14T18:45:06.559Z` |
 | Remote D1 migrations | No migrations to apply; through `0027_phase77_payment_submitted.sql` |
 | Public smoke | `/` 200, `/learn` 302 Access redirect |
 
 The 302 is only perimeter evidence, not authenticated application acceptance.
-The documentation-only provenance update will be committed and deployed
-separately so the final repository commit and final Worker version are also
-recorded exactly.
+The final repository HEAD may contain documentation-only edits after this
+functional deployment; no functional source changes remain uncommitted or
+undeployed.
 
 Required human action: reload the authenticated
 `/learn/student/billing` page after deployment and report the displayed state;
