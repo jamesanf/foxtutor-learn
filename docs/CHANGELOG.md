@@ -14,8 +14,8 @@
 - Added Phase 7.17 architecture, testing, deployment and handover records.
 - Automated validation: 40 test files and 277 tests passed; TypeScript and
   client build passed.
-- Production deployment provenance is recorded in
-  `docs/deployment/phase-7.17.md` after deployment.
+- Deployed commit `d8c830f724162841413ad9418527f64819c7031c` as Worker version
+  `862fc392-fe23-4e65-b659-6e34b2107b76`.
 
 ### 2026-09-14 - Phase 7.14 contact and recurring-series repair
 

@@ -34,4 +34,8 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-Pending final production deployment.
+- Git commit: `d8c830f724162841413ad9418527f64819c7031c`
+- Worker: `foxtutor-learn`
+- Worker version: `862fc392-fe23-4e65-b659-6e34b2107b76`
+- Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
+- Deployment completed on 2026-09-15.
