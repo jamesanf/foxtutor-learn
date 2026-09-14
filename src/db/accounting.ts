@@ -394,7 +394,7 @@ export async function upsertExternalAccountingLink(
       (id, provider, local_entity_type, local_entity_id, external_resource_type,
        external_reference, external_url, status, verified_at, verified_environment,
        verified_company_subdomain, last_error_code, last_error_message, created_at, updated_at)
-      VALUES (?, 'FREEAGENT', 'STUDENT', ?, 'CONTACT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, 'FREEAGENT', 'STUDENT', ?, 'CONTACT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(provider, local_entity_type, local_entity_id) DO UPDATE SET
         external_reference = excluded.external_reference,
         external_url = excluded.external_url,

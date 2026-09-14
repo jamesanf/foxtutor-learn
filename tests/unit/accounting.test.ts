@@ -22,7 +22,14 @@ import {
   FreeAgentClient,
   refreshAccessToken
 } from "../../src/accounting/freeagent/client";
-import { connectFreeAgent, configuredInvoice, invoiceConfigurationIssue, validateBillingSettings } from "../../src/accounting/service";
+import { encryptCredential } from "../../src/accounting/credentials";
+import {
+  connectFreeAgent,
+  configuredInvoice,
+  invoiceConfigurationIssue,
+  validateBillingSettings,
+  verifyFreeAgentContactMapping
+} from "../../src/accounting/service";
 
 function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
   const responseHeaders = new Headers(headers);
@@ -360,6 +367,94 @@ describe("FreeAgent adapter", () => {
     } finally {
       fetchMock.mockRestore();
     }
+  });
+
+  it("persists a verified contact through the D1 mapping path", async () => {
+    const studentId = "student-1";
+    const now = "2026-09-14T12:00:00.000Z";
+    const encryptionKey = "test-encryption-key";
+    const storedLinks: Array<Record<string, unknown>> = [];
+    const connection = {
+      id: "FREEAGENT",
+      environment: "sandbox",
+      company_subdomain: "foxlearningltdgmailcom",
+      access_token_ciphertext: await encryptCredential("access-token", encryptionKey),
+      refresh_token_ciphertext: "unused-refresh-token",
+      access_token_expires_at: "2026-09-14T14:00:00.000Z",
+      refresh_token_expires_at: null,
+      company_name: "Fox Learning Ltd",
+      status: "CONNECTED"
+    };
+    const db = {
+      prepare(sql: string) {
+        const execute = async (values: unknown[] = []) => {
+          if (sql.includes("FROM accounting_connections")) return connection;
+          if (sql.includes("FROM external_accounting_links")) {
+            return storedLinks.find((link) => link.local_entity_id === values[0]) ?? null;
+          }
+          if (sql.includes("FROM accounting_outbox")) return null;
+          return null;
+        };
+        return {
+          async first() {
+            return execute();
+          },
+          bind(...values: unknown[]) {
+            return {
+              first: async () => execute(values),
+              async run() {
+                if (sql.includes("INSERT INTO external_accounting_links")) {
+                  expect((sql.match(/\?/g) ?? []).length).toBe(12);
+                  expect(values).toHaveLength(12);
+                  storedLinks.push({
+                    id: values[0],
+                    provider: "FREEAGENT",
+                    local_entity_type: "STUDENT",
+                    local_entity_id: values[1],
+                    external_resource_type: "CONTACT",
+                    external_reference: values[2],
+                    external_url: values[3],
+                    status: values[4],
+                    verified_at: values[5],
+                    verified_environment: values[6],
+                    verified_company_subdomain: values[7],
+                    last_error_code: values[8],
+                    last_error_message: values[9],
+                    created_at: values[10],
+                    updated_at: values[11]
+                  });
+                }
+                return { meta: { changes: 1 } };
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+    const fetcher: typeof fetch = async () => jsonResponse({
+      contact: { url: "https://api.sandbox.freeagent.com/v2/contacts/257175" }
+    });
+
+    await expect(verifyFreeAgentContactMapping(db, {
+      FREEAGENT_ENVIRONMENT: "sandbox",
+      FREEAGENT_API_VERSION: "v2",
+      FREEAGENT_CLIENT_ID: "client-1",
+      FREEAGENT_CLIENT_SECRET: "secret-1",
+      FREEAGENT_TOKEN_ENCRYPTION_KEY: encryptionKey
+    }, {
+      studentId,
+      externalReference: "257175",
+      now
+    }, fetcher)).resolves.toBeUndefined();
+
+    expect(storedLinks).toHaveLength(1);
+    expect(storedLinks[0]).toMatchObject({
+      local_entity_id: studentId,
+      external_reference: "257175",
+      status: "VERIFIED",
+      verified_environment: "sandbox",
+      verified_company_subdomain: "foxlearningltdgmailcom"
+    });
   });
 
   it("preserves timeout failures as unknown external outcomes", async () => {
