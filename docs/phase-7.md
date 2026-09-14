@@ -15,7 +15,7 @@ claimed.
 ## Deployed baseline
 
 - Source commit: `b7cb157edb71e8722a41d2ba302b8f4848ad1142`
-- Worker version: `607499e6-ddde-4a10-af50-a534c1d16fc8`
+- Worker version: `08ae3704-1724-4075-8e85-fd5a14a1560e`
 - Environment: FreeAgent Sandbox / production Cloudflare Worker boundary
 - D1 migrations: `0001` through `0030_freeagent_dual_connections.sql`
 - Scheduler: `*/5 * * * *`
