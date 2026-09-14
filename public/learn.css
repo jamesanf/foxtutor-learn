@@ -333,8 +333,10 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-connection-actions { display: flex; width: auto; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: nowrap; }
 .accounting-connection-actions .button { width: auto; justify-content: center; white-space: nowrap; }
 .accounting-connection-actions .accounting-settings-link { order: 3; }
-.accounting-connection-actions .status { order: 1; white-space: nowrap; }
 .accounting-connection-actions .button { order: 2; }
+.accounting-connection-title { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.accounting-connection-title h2 { margin: 0; }
+.accounting-connection-title .status { white-space: nowrap; }
 .billing-settings-card { max-width: none; }
 .accounting-fixed-category { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #b9dce4; border-radius: 7px; background: #f7fcfd; }
 .billing-settings-card .page-heading > div:first-child { min-width: 0; }
