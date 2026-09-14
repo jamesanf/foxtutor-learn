@@ -12,7 +12,7 @@ replacement, payment system or accounting ledger.
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source commit:** Phase 7.6 release commit (current `main` after release)
+**Deployed source commit:** `42b021b`
 **Worker version:** `a57d4b20-93de-4c72-8af6-3b1f8eed54ea`
 **D1 migrations:** `0001_foundation.sql` through `0026_phase76_billing_notifications.sql` locally and remotely
 **Automated validation:** 35 test files, 185 tests passing
