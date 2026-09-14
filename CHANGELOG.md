@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-14 - Compact contact mapping actions
+
+- Replaced the contact mapping text actions with accessible MDI save and
+  trash controls.
+- Removed the forced table minimum width and horizontal overflow so contact
+  mappings remain usable without a scrollable table.
+- Deployed executable commit `4afa705` as Worker version
+  `71accc39-6c06-4fc7-9390-12afcf48add1`.
+
 ### 2026-09-14 - Match accounting icon navigation
 
 - Replaced the Billing settings text action on the accounting page with a
