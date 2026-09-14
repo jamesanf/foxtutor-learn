@@ -7,7 +7,8 @@ const cssSource = readFileSync("public/learn.css", "utf8");
 describe("accounting admin presentation contract", () => {
   it("uses a dedicated money icon and keeps FreeAgent setup messaging single-sourced", () => {
     expect(workerSource).toContain('Accounting: "accounting"');
-    expect(workerSource).toContain("accounting:");
+    expect(workerSource).toContain("accounting: \"M12 2a10 10");
+    expect(workerSource).not.toContain("accounting: \"M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 16h-2v-2h2v2");
     expect(workerSource).toContain("!status.errorMessage");
     expect(workerSource).toContain('status.errorMessage ? `<p class="form-error">');
   });
@@ -40,5 +41,12 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-contact-table .status { white-space: nowrap; }");
     expect(cssSource).toContain(".accounting-contact-table .inline-form");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
+  });
+
+  it("uses a four-card dashboard grid and stacked accounting actions", () => {
+    expect(cssSource).toContain(".summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
+    expect(cssSource).toContain("@media (max-width: 900px) {\n  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
+    expect(workerSource).toContain('class="form-actions accounting-connection-actions"');
+    expect(cssSource).toContain(".accounting-connection-actions .button { width: 100%; justify-content: center; }");
   });
 });
