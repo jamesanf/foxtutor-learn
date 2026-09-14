@@ -1,5 +1,22 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 student dashboard and home-learning submission
+
+- Added student dashboard summaries for the next scheduled lesson and the
+  latest past lesson.
+- Added a right-hand home-learning panel sourced from the latest sent lesson
+  report, with an explicit `None available` state.
+- Added a secured lesson-scoped `Submit here` flow for uploading completed
+  home learning through the existing private resource/R2 pipeline.
+- Preserved student ownership, CSRF, file-signature, size, per-lesson storage
+  and upload-idempotency protections; student submissions do not send the
+  tutor-created-resource notification back to the submitting student.
+- Added Phase 7.17 architecture, testing, deployment and handover records.
+- Automated validation: 40 test files and 277 tests passed; TypeScript and
+  client build passed.
+- Production deployment provenance is recorded in
+  `docs/deployment/phase-7.17.md` after deployment.
+
 ### 2026-09-14 - Phase 7.14 contact and recurring-series repair
 
 - Bound contact verification to the validated Sandbox or Production

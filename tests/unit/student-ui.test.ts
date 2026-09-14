@@ -93,4 +93,22 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain('class="student-lesson-title"');
     expect(cssSource).toContain(".student-lesson-title { font-size: clamp(1.2rem, 2.2vw, 1.6rem);");
   });
+
+  it("shows student dashboard lesson summaries and the latest home learning task", () => {
+    expect(workerSource).toContain("Next lesson scheduled");
+    expect(workerSource).toContain("Last lesson");
+    expect(workerSource).toContain("Home learning");
+    expect(workerSource).toContain("None available");
+    expect(workerSource).toContain('href="${lastLessonPath}/submit"');
+    expect(workerSource).toContain("listUpcomingLessonsForUser(db, user.id, now, 1, 0)");
+    expect(workerSource).toContain("findSentLessonReportForStudent(db, lastLesson.id, user.id)");
+    expect(cssSource).toContain(".student-dashboard-panels { display: grid;");
+  });
+
+  it("provides a secured student home-learning submission route", () => {
+    expect(workerSource).toContain('"student-lesson-submit"');
+    expect(workerSource).toContain('const action = `/learn/student/lessons/${lessonRouteId(lesson.id)}/submit`;');
+    expect(workerSource).toContain("studentAssignmentUploadForm");
+    expect(workerSource).toContain("notifyStudent: false");
+  });
 });

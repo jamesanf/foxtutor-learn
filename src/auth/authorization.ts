@@ -60,6 +60,7 @@ export type LearnRoute =
   | "student-series"
   | "student-series-cancel"
   | "student-lesson"
+  | "student-lesson-submit"
   | "student-lesson-cancel"
   | "student-lesson-undo-cancellation"
   | "student-lesson-reschedule"
@@ -128,6 +129,7 @@ export function classifyLearnRoute(pathname: string): LearnRoute {
   if (/^\/learn\/student\/series\/[^/]+$/.test(path)) return "student-series";
   if (/^\/learn\/student\/lessons\/[^/]+\/report\.pdf$/.test(path)) return "student-lesson-report-pdf";
   if (/^\/learn\/student\/lessons\/[^/]+\/report$/.test(path)) return "student-lesson-report";
+  if (/^\/learn\/student\/lessons\/[^/]+\/submit$/.test(path)) return "student-lesson-submit";
   if (/^\/learn\/student\/lessons\/[^/]+\/cancel$/.test(path)) return "student-lesson-cancel";
   if (/^\/learn\/student\/lessons\/[^/]+\/undo-cancellation$/.test(path)) return "student-lesson-undo-cancellation";
   if (/^\/learn\/student\/lessons\/[^/]+\/reschedule$/.test(path)) return "student-lesson-reschedule";

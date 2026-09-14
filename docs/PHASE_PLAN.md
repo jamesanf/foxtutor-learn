@@ -6,6 +6,26 @@ Build a small, private, lesson-centric pupil portal for a sole tutoring practice
 
 The application must remain deliberately small, auditable, maintainable, and Cloudflare-native.
 
+## Phase 7.17 — Student dashboard and home-learning submission
+
+The student portal now provides dashboard-level lesson context without
+duplicating the lesson model:
+
+- next scheduled and latest past lesson summaries link to the existing
+  student lesson routes;
+- the latest sent report's home-learning task is shown in a dedicated panel;
+- missing tasks render as `None available`;
+- available tasks link to a lesson-scoped student submission page;
+- student submissions reuse private lesson resources rather than creating a
+  second assignment-storage subsystem.
+
+The submission boundary remains server-authorized by active student session,
+lesson ownership, sent-report availability, CSRF, file policy, per-lesson
+storage limits and upload idempotency. See
+`docs/architecture/student-dashboard.md`,
+`docs/testing/phase-7.17.md` and
+`docs/handover/phase-7.17.md`.
+
 ## Core design principles
 
 1. Private, invite-only access.
