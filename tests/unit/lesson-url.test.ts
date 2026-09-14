@@ -14,4 +14,9 @@ describe("lesson route keys", () => {
     const id = "9c4a0309-86a4-4823-9b34-73dfd58bf947";
     expect(lessonIdFromUrlKey(id)).toBe(id);
   });
+
+  it("accepts materialised recurring lesson identifiers", () => {
+    const id = "lesson:9c4a0309-86a4-4823-9b34-73dfd58bf947:2026-09-17";
+    expect(lessonIdFromUrlKey(lessonUrlKey(id))).toBe(id);
+  });
 });

@@ -106,7 +106,8 @@ import {
   ensureRecurringSeriesMaterialised,
   findRecurringSeries,
   listRecurringSeries,
-  setRecurringSeriesStatus
+  setRecurringSeriesStatus,
+  cancelRecurringLesson
 } from "../db/recurrence";
 import { processBillingInvoiceOperation, processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
 import { auditBillingChain } from "../billing/audit";
@@ -1309,6 +1310,46 @@ function studentLessonActions(lesson: Lesson, csrfToken: string, pending: Resche
   return `<div class="form-actions lesson-actions">${actions.join("")}</div>`;
 }
 
+function studentSeriesPage(
+  user: AppUser,
+  csrfToken: string,
+  series: {
+    id: string;
+    day_of_week: number;
+    local_start_time: string;
+    duration_minutes: number;
+    start_date: string;
+    end_date: string | null;
+    price_minor: number | string;
+    status: string;
+  },
+  lessons: Lesson[]
+): Response {
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const rows = lessons.length
+    ? lessons.map((lesson) => `<tr><td><a href="/learn/student/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(formatLessonTime(lesson))}</a></td><td><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td>${lesson.status === "scheduled" ? buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/cancel`, "Cancel lesson") : "—"}</td></tr>`).join("")
+    : `<tr><td colspan="3">No materialised lessons are currently in this series.</td></tr>`;
+  const scheduled = lessons.filter((lesson) => lesson.status === "scheduled");
+  const cancelAction = series.status !== "ENDED" && series.status !== "CANCELLED" && scheduled.length
+    ? `<section class="card form-card"><h2>Cancel future lessons</h2><p>This ends the series from the next scheduled lesson onward. Individual lessons can be cancelled separately above.</p><form method="post" action="/learn/student/series/${encodeURIComponent(series.id)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<button class="button danger" type="submit">Cancel this and future lessons</button></form></section>`
+    : "";
+  return appPage(
+    user,
+    csrfToken,
+    "Recurring lesson series",
+    `<div class="page-heading"><div><h1>Recurring lesson series</h1><p class="lede">${escapeHtml(dayNames[series.day_of_week] ?? "Weekly")} at ${escapeHtml(series.local_start_time)} · ${series.duration_minutes} minutes</p></div><a class="button secondary" href="/learn/student/lessons">Back to lessons</a></div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${escapeHtml(series.status.toLowerCase())}">${escapeHtml(series.status)}</span></p><p><strong>Price</strong><br>${billingMoney(series.price_minor)} per lesson</p><p><strong>Starts</strong><br>${escapeHtml(series.start_date)}</p><p><strong>Ends</strong><br>${escapeHtml(series.end_date ?? "Ongoing")}</p></section><section class="card"><h2>Scheduled lessons</h2><p class="muted">FoxTutor shows the currently materialised lessons in the bounded scheduling window.</p><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>${cancelAction}`
+  );
+}
+
+function studentSeriesCancellationConfirmation(user: AppUser, csrfToken: string, seriesId: string, lessons: Lesson[]): Response {
+  return appPage(
+    user,
+    csrfToken,
+    "Cancel recurring lesson series",
+    `<section class="card form-card"><h1>Cancel this and future lessons?</h1><p class="lede">${lessons.length} scheduled lessons will be cancelled from the next occurrence onward.</p><p>This action ends the recurring series. It cannot be undone from the student portal.</p><form method="post" action="/learn/student/series/${encodeURIComponent(seriesId)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/series/${encodeURIComponent(seriesId)}">Keep series</a><button class="button danger" type="submit">Cancel series</button></form></section>`
+  );
+}
+
 function cancellationConfirmation(csrfToken: string, lesson: Lesson): string {
   return `<section class="card form-card"><h1>Cancel this lesson?</h1><p class="lede">${escapeHtml(formatLessonTime(lesson))}</p><p>The lesson will be cancelled immediately.</p><form method="post" action="/learn/student/lessons/${lessonRouteId(lesson.id)}/cancel" class="form-actions">${hiddenCsrf(csrfToken)}<a class="button secondary" href="/learn/student/lessons/${lessonRouteId(lesson.id)}">Keep lesson</a><button class="button danger" type="submit">Cancel lesson</button></form></section>`;
 }
@@ -1517,6 +1558,11 @@ function lessonIdFromPath(pathname: string): string | null {
   const match = /^\/learn\/(?:admin\/lessons|student\/lessons)\/([^/]+)(?:\/(?:edit|status|cancel|undo-cancellation|reschedule|report(?:\.pdf)?))?$/.exec(pathname.replace(/\/+$/, ""));
   const segment = match ? decodePathSegment(match[1]) : null;
   return segment ? lessonIdFromUrlKey(segment) : null;
+}
+
+function studentSeriesIdFromPath(pathname: string): string | null {
+  const match = /^\/learn\/student\/series\/([^/]+)(?:\/cancel)?$/.exec(pathname.replace(/\/+$/, ""));
+  return match ? decodePathSegment(match[1]) : null;
 }
 
 function rescheduleRequestIdFromPath(pathname: string): string | null {
@@ -3376,7 +3422,7 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
     ? upcoming.map((row) => `<tr><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(row.credit_available_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(row.kind, row.status))}</td><td>${escapeHtml(row.collection_date ? billingDateLabel(row.collection_date) : "Not scheduled")}</td></tr>`).join("")
     : `<tr><td colspan="5">No lessons in the next seven days.</td></tr>`;
   const historyRows = history.length
-    ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(item.kind, item.status))}</td></tr>`).join("")
+    ? history.map((item) => `<tr><td>${escapeHtml(billingDateLabel(item.occurred_at))}</td><td>${escapeHtml(item.description)}${item.kind === "INVOICE" && item.provider_url ? ` · <a href="${escapeHtml(item.provider_url)}" target="_blank" rel="noopener noreferrer">View/download invoice</a>` : ""}</td><td>${billingMoney(item.amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(item.kind, item.status))}</td></tr>`).join("")
     : `<tr><td colspan="4">No billing history yet.</td></tr>`;
   const mandateAction = mandateStatus === "ACTIVE"
     ? ""
@@ -3442,6 +3488,35 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     const subscription = calendarSubscriptionCard(csrfToken, "/learn/student/calendar/feed", feed, calendarFeedUrl(request, env, token), true);
     if (request.headers.get("X-Calendar-Fragment") === "1") return calendarFragmentResponse(subscription, hadFeed ? "Calendar link regenerated" : "Calendar link generated");
     return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/student/calendar/feed", lessons, "STUDENT", feed, calendarFeedUrl(request, env, token), true));
+  }
+  if (route === "student-series" || route === "student-series-cancel") {
+    const seriesId = studentSeriesIdFromPath(url.pathname);
+    const student = await findActiveStudentForUser(db, active.user.id);
+    const series = seriesId ? await findRecurringSeries(db, seriesId) : null;
+    if (!student || !series || series.student_id !== student.id) return messagePage("Not found", "That recurring lesson series does not exist.", 404);
+    const lessonsForSeries = (await listLessonsForUser(db, active.user.id))
+      .filter((lesson) => lesson.recurring_series_id === series.id)
+      .sort((left, right) => left.start_at.localeCompare(right.start_at));
+    if (route === "student-series-cancel") {
+      const scheduled = lessonsForSeries.filter((lesson) => lesson.status === "scheduled");
+      if (!scheduled.length) return messagePage("Cancellation unavailable", "There are no scheduled lessons remaining in this series.", 409);
+      const now = new Date().toISOString();
+      if (scheduled.some((lesson) => !canStudentCancel(lesson, now))) {
+        return messagePage("Cancellation unavailable", "A recurring series can only be cancelled when every scheduled lesson is more than 24 hours away. Cancel individual eligible lessons instead.", 409);
+      }
+      if (request.method === "GET") return studentSeriesCancellationConfirmation(active.user, csrfToken, series.id, scheduled);
+      if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+      const changed = await cancelRecurringLesson(db, {
+        lessonId: scheduled[0]!.id,
+        actorUserId: active.user.id,
+        actorRole: "STUDENT",
+        mode: "THIS_AND_FUTURE",
+        reason: "Student cancelled recurring series",
+        now
+      });
+      return changed ? redirect(`/learn/student/series/${encodeURIComponent(series.id)}`) : messagePage("Cancellation unavailable", "The recurring series could not be cancelled. Refresh and try again.", 409);
+    }
+    return studentSeriesPage(active.user, csrfToken, series, lessonsForSeries);
   }
   if (route === "student" || route === "student-lessons") {
     const lessons = await listLessonsForUser(db, active.user.id);
@@ -3628,10 +3703,11 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     }
     const resources = await listResourcesForLessonForStudent(db, lesson.id, active.user.id);
     const report = await findSentLessonReportForStudent(db, lesson.id, active.user.id);
+    const recurringSeries = lesson.recurring_series_id ? await findRecurringSeries(db, lesson.recurring_series_id) : null;
     const join = lesson.status === "scheduled" && lesson.external_url
       ? `<a class="button" href="${escapeHtml(lesson.external_url)}" rel="noreferrer">Join lesson</a>`
       : "";
-    return appPage(active.user, csrfToken, "Lesson", `<div class="page-heading"><div><h1>${escapeHtml(formatLessonTime(lesson))}</h1></div>${studentLessonActions(lesson, csrfToken, pending, false, now)}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${join || (lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not provided")}</p></section>${report ? `<section class="card"><div class="section-heading"><div><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
+    return appPage(active.user, csrfToken, "Lesson", `<div class="page-heading"><div><h1>${escapeHtml(formatLessonTime(lesson))}</h1></div>${studentLessonActions(lesson, csrfToken, pending, false, now)}</div><section class="card detail-grid"><p><strong>Status</strong><br><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></p><p><strong>Lesson destination</strong><br>${join || (lesson.external_url ? "Unavailable for cancelled/completed lesson" : "Not provided")}</p></section>${recurringSeries ? `<section class="card"><h2>Recurring lesson series</h2><p>This lesson is part of a recurring series.</p><a class="button secondary" href="/learn/student/series/${encodeURIComponent(recurringSeries.id)}">View series and scheduled lessons</a></section>` : ""}${report ? `<section class="card"><div class="section-heading"><div><h2>Report available</h2></div>${buttonLink(`/learn/student/lessons/${lessonRouteId(lesson.id)}/report`, "View report")}</div></section>` : ""}<section class="card resource-section"><div class="section-heading"><div><h2>Resources</h2></div></div>${resources.length ? `<div class="resource-student-list">${resources.map((resource) => `<article class="resource-student-item"><div><strong>${escapeHtml(resource.original_filename)}</strong><p>${escapeHtml(fileTypeLabel(resource.content_type))} · ${escapeHtml(resourceSize(resource.size_bytes))}</p></div>${resourceActionButtons(resource, false)}</article>`).join("")}</div>` : `<p class="muted">No resources have been shared for this lesson.</p>`}</section>`);
   }
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }

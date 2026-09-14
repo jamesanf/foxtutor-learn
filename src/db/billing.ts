@@ -158,6 +158,7 @@ export interface BillingHistoryItem {
   invoice_id: string | null;
   credit_id: string | null;
   amount_minor: number | string | null;
+  provider_url?: string | null;
   status: string;
   description: string;
   provider_reference: string | null;
@@ -1085,7 +1086,8 @@ export async function listBillingHistory(
       `SELECT e.id, 'LESSON_CHARGE' AS kind, COALESCE(e.lesson_date, e.created_at) AS occurred_at,
               e.student_id, s.name AS student_name, e.lesson_id, e.id AS billing_event_id,
               i.id AS invoice_id, NULL AS credit_id, e.gross_amount_minor AS amount_minor,
-              e.status, 'Lesson charge' AS description, e.external_reference AS provider_reference
+              e.status, 'Lesson charge' AS description, e.external_reference AS provider_reference,
+              i.freeagent_url AS provider_url
        FROM billing_events e
        JOIN students s ON s.id = e.student_id
        LEFT JOIN billing_invoices i ON i.billing_event_id = e.id${invoiceEnvironmentFilter}
@@ -1097,7 +1099,7 @@ export async function listBillingHistory(
       `SELECT h.id, 'CANCELLATION' AS kind, h.created_at AS occurred_at,
               h.student_id, s.name AS student_name, h.lesson_id, NULL AS billing_event_id,
               NULL AS invoice_id, NULL AS credit_id, NULL AS amount_minor,
-              h.event_type AS status, 'Lesson cancellation' AS description, NULL AS provider_reference
+              h.event_type AS status, 'Lesson cancellation' AS description, NULL AS provider_reference, NULL AS provider_url
        FROM lesson_history h
        JOIN students s ON s.id = h.student_id
        WHERE h.student_id = ?
@@ -1110,7 +1112,7 @@ export async function listBillingHistory(
               c.student_id, s.name AS student_name, c.source_lesson_id AS lesson_id,
               c.source_event_id AS billing_event_id, NULL AS invoice_id, c.id AS credit_id,
               c.original_amount_minor AS amount_minor, c.status,
-              'Customer credit granted' AS description, c.freeagent_credit_note_reference AS provider_reference
+              'Customer credit granted' AS description, c.freeagent_credit_note_reference AS provider_reference, c.freeagent_credit_note_url AS provider_url
        FROM customer_credits c
        JOIN students s ON s.id = c.student_id
        WHERE c.student_id = ?
@@ -1123,7 +1125,7 @@ export async function listBillingHistory(
               t.created_at AS occurred_at, c.student_id, s.name AS student_name,
               t.source_lesson_id AS lesson_id, t.source_event_id AS billing_event_id,
               t.invoice_id, c.id AS credit_id, t.amount_minor, t.transaction_type AS status,
-              'Credit ledger transaction' AS description, t.provider_reference
+              'Credit ledger transaction' AS description, t.provider_reference, NULL AS provider_url
        FROM credit_ledger_transactions t
        JOIN customer_credits c ON c.id = t.credit_id
        JOIN students s ON s.id = c.student_id
@@ -1136,7 +1138,7 @@ export async function listBillingHistory(
               i.student_id, s.name AS student_name, e.lesson_id,
               e.id AS billing_event_id, i.id AS invoice_id, NULL AS credit_id,
               i.net_amount_minor AS amount_minor, i.status, 'Invoice' AS description,
-              i.freeagent_reference AS provider_reference
+              i.freeagent_reference AS provider_reference, i.freeagent_url AS provider_url
        FROM billing_invoices i
        JOIN billing_events e ON e.id = i.billing_event_id
        JOIN students s ON s.id = i.student_id
@@ -1150,7 +1152,7 @@ export async function listBillingHistory(
               i.student_id, s.name AS student_name, e.lesson_id,
               e.id AS billing_event_id, i.id AS invoice_id, NULL AS credit_id,
               i.net_amount_minor AS amount_minor, p.status,
-              'Direct Debit collection' AS description, p.provider_reference
+              'Direct Debit collection' AS description, p.provider_reference, i.freeagent_url AS provider_url
        FROM billing_payments p
        JOIN billing_invoices i ON i.id = p.invoice_id
        JOIN billing_events e ON e.id = i.billing_event_id

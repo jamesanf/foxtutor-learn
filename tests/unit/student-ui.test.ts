@@ -58,4 +58,11 @@ describe("student profile form UI", () => {
     expect(cssSource).toContain(".student-billing-summary .summary-card span { align-self: end; }");
     expect(cssSource).toContain(".student-billing-summary .summary-card small { align-self: start; min-height: 1.2em; }");
   });
+
+  it("provides recurring lesson management and invoice links", () => {
+    expect(workerSource).toContain("View series and scheduled lessons");
+    expect(workerSource).toContain("Cancel this and future lessons");
+    expect(workerSource).toContain("View/download invoice");
+    expect(workerSource).toContain("student-series-cancel");
+  });
 });

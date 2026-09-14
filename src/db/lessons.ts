@@ -12,12 +12,13 @@ export interface Lesson {
   external_url: string | null;
   created_at: string;
   updated_at: string;
+  recurring_series_id?: string | null;
   report_id?: string | null;
   report_status?: "DRAFT" | "SENT" | null;
 }
 
 const lessonColumns = "l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.status, l.notes, l.external_url, l.created_at, l.updated_at";
-const studentLessonColumns = "l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.status, l.external_url, l.created_at, l.updated_at";
+const studentLessonColumns = "l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.status, l.external_url, l.created_at, l.updated_at, l.recurring_series_id";
 
 export async function listLessons(db: D1Database): Promise<Lesson[]> {
   const result = await db

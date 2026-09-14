@@ -18,6 +18,7 @@ export function lessonUrlKey(id: string): string {
 
 export function lessonIdFromUrlKey(value: string): string | null {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
+  if (/^lesson:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{4}-\d{2}-\d{2}$/i.test(value)) return value;
   if (!/^[A-Za-z0-9_-]{22}$/.test(value)) return null;
   try {
     const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "==";

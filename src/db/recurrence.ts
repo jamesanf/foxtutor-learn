@@ -317,11 +317,15 @@ export async function cancelRecurringLesson(
   input: {
     lessonId: string;
     actorUserId: string;
+    actorRole?: "ADMIN" | "STUDENT";
     mode: "INSTANCE_ONLY" | "THIS_AND_FUTURE";
     reason: string;
     now: string;
   }
 ): Promise<boolean> {
+  const actorRole = input.actorRole ?? "ADMIN";
+  const eventType = actorRole === "STUDENT" ? "STUDENT_CANCELLED" : "ADMIN_CANCELLED";
+  const billingConsequence = actorRole === "STUDENT" ? "NO_CHARGE" : "ADMIN_CANCELLED";
   const target = await db.prepare(
     `SELECT l.id, l.student_id, l.recurring_series_id, l.recurrence_key,
             l.start_at, l.end_at, l.timezone, s.payer_student_id,
@@ -384,15 +388,15 @@ export async function cancelRecurringLesson(
          (id, lesson_id, student_id, initiated_by_user_id, actor_role, event_type,
           reason, billing_consequence, previous_start_at, previous_end_at,
           previous_timezone, resulting_lesson_status, created_at)
-         SELECT ?, ?, ?, ?, 'ADMIN', 'ADMIN_CANCELLED', ?, 'ADMIN_CANCELLED',
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, 'cancelled', ?
          WHERE changes() > 0
          ON CONFLICT(id) DO NOTHING`
-      ).bind(historyId, item.id, item.student_id, input.actorUserId, input.reason, item.start_at, item.end_at, item.timezone, input.now),
+      ).bind(historyId, item.id, item.student_id, input.actorUserId, actorRole, eventType, input.reason, billingConsequence, item.start_at, item.end_at, item.timezone, input.now),
       db.prepare("UPDATE billing_events SET status = 'CANCELLED', updated_at = ? WHERE lesson_id = ? AND status != 'SETTLED'")
         .bind(input.now, item.id)
     );
-    if (item.billing_event_id && item.gross_amount_minor) {
+    if (actorRole === "ADMIN" && item.billing_event_id && item.gross_amount_minor) {
       statements.push(...cancellationCreditStatements(db, {
         creditId: `credit:${historyId}`,
         accountId: `credit-account:${item.payer_student_id}`,
