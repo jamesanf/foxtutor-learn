@@ -12,9 +12,10 @@ replacement, payment system or accounting ledger.
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7 recurring lessons, billing operations and payment readiness
 **Repository branch:** `main`
-**Deployed source baseline:** Phase 7.9 environment-isolation source commit `7862e3bee6abc6458293d959990f6d8b6e48fab0`; later contact-table alignment Worker `d106164d-adbf-411f-b3bb-9e48413d1410` was deployed from a subsequent uncommitted-source state and is not attributed to `7862...`
-**D1 migrations:** `0001_foundation.sql` through `0028_phase79_environment_isolation.sql` deployed; Phase 7.10 category-binding migration is pending
-**Automated validation:** 38 test files, 220 tests passing locally before the next release commit
+**Deployed source commit:** `495cd8226ff26de2404474dc08abb5f83aa90ef7`
+**Worker version:** `84b85a53-93fc-4a73-a14f-8bc67acc7ab7` (created `2026-09-14T19:41:37.379Z`)
+**D1 migrations:** `0001_foundation.sql` through `0029_accounting_category_environment.sql` deployed
+**Automated validation:** 38 test files, 222 tests passing
 
 The Phase 7 implementation has a deployed operational baseline but is not
 production-ready. Phase 7.4 diagnosed the reported authenticated

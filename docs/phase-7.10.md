@@ -112,11 +112,20 @@ credit note is performed.
 
 ## Deployment provenance
 
-This report must be updated after release with the exact final source commit,
-Worker version, migration result, deployment time and smoke-test evidence.
+The Phase 7.10 release was committed before deployment:
+
+- source commit: `495cd8226ff26de2404474dc08abb5f83aa90ef7`;
+- Worker version: `84b85a53-93fc-4a73-a14f-8bc67acc7ab7`;
+- Worker version creation time: `2026-09-14T19:41:37.379Z`;
+- remote migration: `0029_accounting_category_environment.sql` applied;
+- post-deploy migration check: no migrations to apply;
+- smoke test: `/learn` returned the expected Cloudflare Access `302`;
+- repository: clean after deployment.
+
 The prior Phase 7.9 commit `7862e3bee6abc6458293d959990f6d8b6e48fab0` was
-created after an earlier Worker deployment and must not be described as that
-Worker's deployed source.
+created after an earlier Worker deployment and is not attributed to Worker
+`b523fd96-9f3b-4599-ae0d-8687550121c0`. The later contact-table Worker
+`d106164d-adbf-411f-b3bb-9e48413d1410` also predates this release.
 
 ## Readiness
 
