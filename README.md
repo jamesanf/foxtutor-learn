@@ -11,7 +11,7 @@ replacement, payment system or accounting ledger.
 **Phase:** Phase 7.2 deployed; real provider acceptance recorded separately
 **Production URL:** <https://foxtutor.org/learn>
 **Application/runtime release:** Phase 7.2 recurring lessons, billing operations and payment readiness
-**Repository HEAD:** `9da2c03` (runtime release; documentation follow-up may advance HEAD)
+**Repository HEAD:** `bce3952`
 **Executable deployment commit:** `9da2c03`
 **Deployed source:** `9da2c03`
 **Worker version:** `bba7fcaf-dfa6-42dd-aa77-11ac66e04125`

@@ -5,6 +5,7 @@
 - Worker: `foxtutor-learn`
 - Executable source commit: `9da2c03`
 - Worker version: `bba7fcaf-dfa6-42dd-aa77-11ac66e04125`
+- Repository HEAD after deployment documentation: `bce3952`
 - Routes: `foxtutor.org/learn`, `foxtutor.org/learn/*`
 - Scheduler: `*/5 * * * *`
 - Access perimeter: verified by protected-route smoke test returning the
