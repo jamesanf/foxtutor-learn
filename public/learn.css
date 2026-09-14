@@ -319,9 +319,9 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-contact-table table { min-width: 0; table-layout: fixed; }
 .accounting-contact-table th, .accounting-contact-table td { width: 25%; }
 .accounting-contact-table th:nth-child(3) { text-align: center; }
-.accounting-contact-table th:last-child, .accounting-contact-table td:last-child { text-align: right; }
+.accounting-contact-table th:last-child, .accounting-contact-table td:last-child { text-align: left; }
 .accounting-contact-table .status { display: flex; width: 112px; min-width: 112px; min-height: 30px; box-sizing: border-box; align-items: center; justify-content: center; margin: 0 auto; text-align: center; white-space: nowrap; }
-.accounting-contact-table .inline-form { align-items: center; justify-content: flex-end; flex-wrap: nowrap; margin-top: 0; }
+.accounting-contact-table .inline-form { align-items: center; justify-content: flex-start; flex-wrap: nowrap; margin-top: 0; }
 .accounting-contact-table .inline-form input { width: 88px; min-width: 88px; flex: 0 0 88px; margin-top: 0; }
 .accounting-icon-button { display: inline-grid; width: 34px; height: 34px; min-width: 34px; min-height: 34px; flex: 0 0 34px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--action); background: transparent; cursor: pointer; }
 .accounting-icon-button:hover, .accounting-icon-button:focus-visible { color: var(--action-hover); background: color-mix(in srgb, var(--action) 12%, transparent); }
