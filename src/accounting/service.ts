@@ -1055,7 +1055,8 @@ export async function processAccountingOutbox(
       price: formatMinorUnits(invoiceConfig.amountMinorUnits),
       categoryUrl: invoiceConfig.categoryUrl,
       currency: invoiceConfig.currency,
-      salesTaxRate: invoiceConfig.salesTaxRate
+      salesTaxRate: invoiceConfig.salesTaxRate,
+      enableGoCardless: invoiceConfig.currency === "GBP"
     }));
     await markAccountingSucceeded(db, id, {
       externalReference: providerReference(invoice.url),

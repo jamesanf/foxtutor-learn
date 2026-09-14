@@ -96,7 +96,7 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain('class="accounting-icon-button accounting-remove-button"');
     expect(workerSource).toContain('title="Verify and save"');
     expect(workerSource).toContain('title="Remove"');
-    expect(workerSource).toContain("<th>Student</th><th>Email</th><th>Status</th><th>Production contact ID</th>");
+    expect(workerSource).toContain("<th>Student</th><th>Email</th><th>Status</th><th>Contact ID</th>");
     expect(workerSource).toContain('data-label="Student"');
     expect(workerSource).toContain('data-label="Email"');
     expect(workerSource).toContain('data-label="Contact ID"');
@@ -115,7 +115,7 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-contact-table .inline-form { align-items: center; justify-content: flex-start;");
     expect(cssSource).toContain(".accounting-contact-table .status { display: flex; width: 112px; min-width: 112px;");
     expect(cssSource).toContain("justify-content: flex-end;");
-    expect(cssSource).toContain("width: 88px; min-width: 88px; flex: 0 0 88px;");
+    expect(cssSource).toContain("width: 104px; min-width: 104px; flex: 0 0 104px;");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
     expect(cssSource).toContain(".accounting-icon-button { display: inline-grid; width: 34px;");
   });

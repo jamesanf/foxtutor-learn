@@ -31,6 +31,8 @@ export interface FreeAgentInvoice {
   status?: string;
   paymentMethods?: Record<string, boolean>;
   paymentStatus?: string | null;
+  paidValue?: string | null;
+  dueValue?: string | null;
   paymentUrl?: string | null;
 }
 
@@ -544,6 +546,8 @@ export class FreeAgentClient {
         payment_methods?: Record<string, boolean>;
         payment_status?: string;
         gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
         payment_url?: string;
       }>
     }>(accessToken, `/v2/invoices${query}`);
@@ -564,6 +568,8 @@ export class FreeAgentClient {
       status: invoice.status,
       paymentMethods: invoice.payment_methods,
       paymentStatus: invoice.payment_status ?? invoice.gocardless_payment_status ?? null,
+      paidValue: invoice.paid_value ?? null,
+      dueValue: invoice.due_value ?? null,
       paymentUrl: invoice.payment_url ?? null
     };
   }
@@ -586,6 +592,8 @@ export class FreeAgentClient {
         payment_methods?: Record<string, boolean>;
         payment_status?: string;
         gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
         payment_url?: string;
       }
     }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}`);
@@ -604,6 +612,8 @@ export class FreeAgentClient {
       status: result.data.invoice?.status,
       paymentMethods: result.data.invoice?.payment_methods,
       paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paidValue: result.data.invoice?.paid_value ?? null,
+      dueValue: result.data.invoice?.due_value ?? null,
       paymentUrl: result.data.invoice?.payment_url ?? null
     };
   }
@@ -643,7 +653,19 @@ export class FreeAgentClient {
         category: input.categoryUrl
       }]
     };
-    const result = await this.requestJson<{ invoice?: { url?: string; reference?: string } }>(accessToken, "/v2/invoices", {
+    const result = await this.requestJson<{
+      invoice?: {
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
+        payment_url?: string;
+      }
+    }>(accessToken, "/v2/invoices", {
       method: "POST",
       body: JSON.stringify({ invoice })
     });
@@ -656,7 +678,16 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
-    return { url, reference: result.data.invoice?.reference ?? input.reference };
+    return {
+      url,
+      reference: result.data.invoice?.reference ?? input.reference,
+      status: result.data.invoice?.status,
+      paymentMethods: result.data.invoice?.payment_methods,
+      paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paidValue: result.data.invoice?.paid_value ?? null,
+      dueValue: result.data.invoice?.due_value ?? null,
+      paymentUrl: result.data.invoice?.payment_url ?? null
+    };
   }
 
   async markInvoiceSent(accessToken: string, externalReference: string): Promise<FreeAgentInvoice> {
@@ -677,6 +708,8 @@ export class FreeAgentClient {
         payment_methods?: Record<string, boolean>;
         payment_status?: string;
         gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
         payment_url?: string;
       }
     }>(
@@ -699,6 +732,8 @@ export class FreeAgentClient {
       status: result.data.invoice?.status,
       paymentMethods: result.data.invoice?.payment_methods,
       paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paidValue: result.data.invoice?.paid_value ?? null,
+      dueValue: result.data.invoice?.due_value ?? null,
       paymentUrl: result.data.invoice?.payment_url ?? null
     };
   }
@@ -833,7 +868,7 @@ export class FreeAgentClient {
     return { url, reference: result.data.credit_note?.reference, status: result.data.credit_note?.status };
   }
 
-  async initiateDirectDebit(accessToken: string, externalReference: string): Promise<{ url: string; status?: string }> {
+  async initiateDirectDebit(accessToken: string, externalReference: string): Promise<FreeAgentInvoice> {
     const id = externalReference.split("/").pop();
     if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
       code: "VALIDATION",
@@ -843,7 +878,19 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{ invoice?: { url?: string; status?: string } }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}/direct_debit`, {
+    const result = await this.requestJson<{
+      invoice?: {
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
+        payment_url?: string;
+      }
+    }>(accessToken, `/v2/invoices/${encodeURIComponent(id)}/direct_debit`, {
       method: "POST",
       body: JSON.stringify({})
     });
@@ -856,7 +903,16 @@ export class FreeAgentClient {
       unknown: true,
       retryAfterSeconds: null
     });
-    return { url, status: result.data.invoice?.status };
+    return {
+      url,
+      reference: result.data.invoice?.reference,
+      status: result.data.invoice?.status,
+      paymentMethods: result.data.invoice?.payment_methods,
+      paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paidValue: result.data.invoice?.paid_value ?? null,
+      dueValue: result.data.invoice?.due_value ?? null,
+      paymentUrl: result.data.invoice?.payment_url ?? null
+    };
   }
 }
 

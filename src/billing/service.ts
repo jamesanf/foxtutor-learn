@@ -33,6 +33,16 @@ function providerFailure(error: unknown): FreeAgentApiError | null {
   return error instanceof FreeAgentApiError ? error : null;
 }
 
+function providerAmountIsPositive(value: string | null | undefined): boolean {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0;
+}
+
+function providerAmountIsNotOutstanding(value: string | null | undefined): boolean {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount <= 0;
+}
+
 async function markOperationFailure(
   db: D1Database,
   operation: BillingInvoiceOperation,
@@ -210,28 +220,33 @@ async function processCreateInvoice(
         price: formatMinorUnits(allocated.netAmountMinor),
         categoryUrl: config.categoryUrl,
         currency: config.currency,
-        salesTaxRate: config.salesTaxRate
+        salesTaxRate: config.salesTaxRate,
+        enableGoCardless: config.currency === "GBP"
       })
     );
-    const sent = draft.status === "Draft"
+    const sent = !draft.status || draft.status === "Draft"
       ? await providerCall(db, env, now, fetcher, (client, token) => client.markInvoiceSent(token, draft.url))
       : draft;
-    const referenceId = providerReference(sent.url);
+    const readBack = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.getInvoice(token, sent.url)
+    );
+    if (!readBack) throw new Error("FreeAgent invoice was not found after it was sent.");
+    const referenceId = providerReference(readBack.url);
     await updateBillingInvoice(db, invoice.id, {
       status: "SENT",
       creditAppliedMinor: allocated.creditAppliedMinor,
       netAmountMinor: allocated.netAmountMinor,
       freeagentReference: referenceId,
-      freeagentUrl: sent.url,
-      providerStatus: sent.status ?? "SENT",
+      freeagentUrl: readBack.url,
+      providerStatus: readBack.status ?? "SENT",
       now
     });
-    await updateBillingEventStatus(db, event.id, "INVOICE_CREATED", now, referenceId, sent.url, sent.status ?? "SENT");
+    await updateBillingEventStatus(db, event.id, "INVOICE_CREATED", now, referenceId, readBack.url, readBack.status ?? "SENT");
     await markBillingInvoiceOperation(db, operation.id, {
       status: "SUCCEEDED",
       providerReference: referenceId,
-      providerUrl: sent.url,
-      providerStatus: sent.status ?? "SENT"
+      providerUrl: readBack.url,
+      providerStatus: readBack.status ?? "SENT"
     }, now);
   } catch (error) {
     await markOperationFailure(db, operation, now, error, {
@@ -282,6 +297,15 @@ async function processDirectDebit(
     }, now);
     return;
   }
+  if (environment === "production" && invoice.net_amount_minor.toString() === "100" && !operation.human_authorized_at) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "HUMAN_AUTHORIZATION_REQUIRED",
+      safeErrorCode: "HUMAN_AUTHORIZATION_REQUIRED",
+      safeErrorMessage: "The controlled £1 Production Direct Debit requires explicit administrator authorization."
+    }, now);
+    return;
+  }
   if (!invoice.collection_date || invoice.collection_date > now.slice(0, 10)) {
     await markBillingInvoiceOperation(db, operation.id, {
       status: "RETRYABLE",
@@ -301,6 +325,46 @@ async function processDirectDebit(
     return;
   }
   try {
+    const providerInvoice = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.getInvoice(token, invoice.freeagent_reference!)
+    );
+    if (!providerInvoice) {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: "INVOICE_NOT_FOUND",
+        safeErrorCode: "INVOICE_NOT_FOUND",
+        safeErrorMessage: "The FreeAgent invoice could not be read before collection."
+      }, now);
+      return;
+    }
+    const invoiceStatus = (providerInvoice.status ?? "").toLowerCase();
+    if (invoiceStatus === "paid" || providerAmountIsPositive(providerInvoice.paidValue) || providerAmountIsNotOutstanding(providerInvoice.dueValue)) {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: "INVOICE_ALREADY_PAID",
+        safeErrorCode: "INVOICE_ALREADY_PAID",
+        safeErrorMessage: "A Direct Debit collection cannot be initiated for an already-paid invoice."
+      }, now);
+      return;
+    }
+    if (!["sent", "open"].includes(invoiceStatus)) {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: "INVOICE_NOT_READY",
+        safeErrorCode: "INVOICE_NOT_SENT",
+        safeErrorMessage: "Direct Debit requires a FreeAgent invoice in Sent or Open status."
+      }, now);
+      return;
+    }
+    if (providerInvoice.paymentMethods?.gocardless_preauth !== true) {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: "DIRECT_DEBIT_NOT_READY",
+        safeErrorCode: "GOCARDLESS_PREAUTH_UNAVAILABLE",
+        safeErrorMessage: "The FreeAgent invoice is not Direct-Debit-ready."
+      }, now);
+      return;
+    }
     const mandate = await providerCall(db, env, now, fetcher, (client, token) => client.getContact(token, link.external_url));
     const mandateState = classifyDirectDebitState(mandate?.directDebitMandateState ?? null, Boolean(mandate));
     if (mandateState.status !== "ACTIVE") {
@@ -459,7 +523,7 @@ export async function reconcileBillingInvoices(
       );
       if (!provider) throw new Error("FreeAgent invoice was not found.");
       const providerStatus = provider.status ?? "Unknown";
-      const paid = providerStatus === "Paid";
+      const paid = providerStatus.toLowerCase() === "paid" || providerAmountIsPositive(provider.paidValue);
       const cancelled = providerStatus === "Cancelled";
       await updateBillingInvoice(db, invoice.id, {
         status: paid ? "PAID" : cancelled ? "CANCELLED" : "SENT",

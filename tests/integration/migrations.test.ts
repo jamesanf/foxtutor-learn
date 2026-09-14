@@ -242,4 +242,10 @@ describe("D1 foundation", () => {
     expect(migration).toContain("PRIMARY KEY (provider, environment)");
     expect(migration).toContain("CHECK (environment IN ('sandbox', 'production'))");
   });
+
+  it("requires explicit authorization before Production Direct Debit collection", () => {
+    const migration = readFileSync("migrations/0031_production_direct_debit_authorization.sql", "utf8");
+    expect(migration).toContain("ALTER TABLE billing_invoice_operations ADD COLUMN human_authorized_at");
+    expect(migration).toContain("ALTER TABLE billing_invoice_operations ADD COLUMN human_authorized_by_user_id");
+  });
 });

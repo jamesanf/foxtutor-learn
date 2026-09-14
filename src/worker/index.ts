@@ -85,6 +85,8 @@ import {
 } from "../db/accounting";
 import {
   ensureBillingInvoiceForEvent,
+  ensureDirectDebitOperationForInvoice,
+  authorizeBillingInvoiceDirectDebit,
   findCreditById,
   findBillingInvoice,
   ensureDueDirectDebitOperations,
@@ -106,7 +108,7 @@ import {
   listRecurringSeries,
   setRecurringSeriesStatus
 } from "../db/recurrence";
-import { processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
+import { processBillingInvoiceOperation, processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
 import { auditBillingChain } from "../billing/audit";
 import { provisionBillingAccount, reconcileBillingAccountMandate, runBillingProvisioningScheduler } from "../accounting/provisioning";
 import { createEmergencyPaygOverride, findBillingAccount } from "../db/billing-accounts";
@@ -146,7 +148,7 @@ import {
   currentCalendarDate
 } from "../domain/calendar";
 import { calculatePaymentReadiness } from "../domain/payment-readiness";
-import { directDebitStatusCopy, mapDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
+import { classifyDirectDebitState, directDebitStatusCopy, mapDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
 import { runBillingSentinel } from "../billing/sentinel";
 import {
   academicYearOptions,
@@ -178,7 +180,7 @@ import { reportViewModel } from "../reports/view";
 import { generateLessonReportPdf } from "../reports/pdf";
 import { renderRichTextHtml } from "../reports/rich-text";
 import { accountingIntegrationStatuses, accountingIntegrationStatus, configuredEnvironment, configuredInvoice, configuredInvoiceFromDatabase, connectFreeAgent, freeAgentEnvironmentConfig, freeAgentEnvironmentConfigIssue, processAccountingOutbox, processCreditNoteProviderOperation, providerCall, reconcileAccountingOutbox, resolveFoxTutorCategoryMapping, temporaryProductionCompatibilityEnabled, validateBillingSettings, verifyFreeAgentContactMapping } from "../accounting/service";
-import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, parseFreeAgentEnvironment, type FreeAgentCategory, type FreeAgentEnvironment } from "../accounting/freeagent/client";
+import { freeAgentAuthorizationUrl, freeAgentFetch, FreeAgentApiError, parseFreeAgentEnvironment, type FreeAgentCategory, type FreeAgentEnvironment, type FreeAgentInvoice } from "../accounting/freeagent/client";
 import { hashOAuthState, randomOAuthState } from "../accounting/credentials";
 import {
   MAX_RESOURCE_SIZE_BYTES,
@@ -294,6 +296,63 @@ function messagePage(title: string, message: string, status: number): Response {
     ).body,
     { status, headers: htmlDocument(title, "").headers }
   );
+}
+
+type DirectDebitGate = {
+  providerInvoice: FreeAgentInvoice | null;
+  mandateState: string | null;
+  preauth: boolean;
+  company: string | null;
+  contactReference: string | null;
+  error: string | null;
+};
+
+function providerAmountIsPositive(value: string | null | undefined): boolean {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0;
+}
+
+async function readDirectDebitGate(
+  db: D1Database,
+  env: Env,
+  invoice: { provider_environment: "sandbox" | "production" | null; freeagent_reference: string | null; student_id: string },
+  now: string
+): Promise<DirectDebitGate> {
+  if (invoice.provider_environment !== "production" || configuredEnvironment(env) !== "production") {
+    return { providerInvoice: null, mandateState: null, preauth: false, company: null, contactReference: null, error: "Production provider configuration is not selected." };
+  }
+  if (!invoice.freeagent_reference) {
+    return { providerInvoice: null, mandateState: null, preauth: false, company: null, contactReference: null, error: "The FoxTutor invoice has no Production FreeAgent reference." };
+  }
+  try {
+    const company = await providerCall(db, env, now, freeAgentFetch, (client, token) => client.company(token));
+    const configuredCompany = freeAgentEnvironmentConfig(env, "production")?.companySubdomain ?? null;
+    if (configuredCompany && company.subdomain && company.subdomain !== configuredCompany) {
+      return { providerInvoice: null, mandateState: null, preauth: false, company: company.subdomain, contactReference: null, error: "The connected Production FreeAgent company does not match the pinned company." };
+    }
+    const providerInvoice = await providerCall(db, env, now, freeAgentFetch, (client, token) =>
+      client.getInvoice(token, invoice.freeagent_reference!)
+    );
+    const link = await findExternalAccountingLink(db, invoice.student_id, "production");
+    const contact = link?.status === "VERIFIED"
+      ? await providerCall(db, env, now, freeAgentFetch, (client, token) => client.getContact(token, link.external_url))
+      : null;
+    const mandate = classifyDirectDebitState(contact?.directDebitMandateState ?? null, Boolean(contact));
+    return {
+      providerInvoice,
+      mandateState: mandate.status,
+      preauth: providerInvoice?.paymentMethods?.gocardless_preauth === true,
+      company: company.subdomain ?? configuredCompany,
+      contactReference: link?.external_url.split("/").pop() ?? null,
+      error: providerInvoice ? null : "The Production FreeAgent invoice could not be read."
+    };
+  } catch (error) {
+    console.error("Production Direct Debit gate read failed", {
+      code: error instanceof FreeAgentApiError ? error.shape.code : "UNKNOWN",
+      message: error instanceof FreeAgentApiError ? error.shape.message : "Provider read failed"
+    });
+    return { providerInvoice: null, mandateState: null, preauth: false, company: null, contactReference: null, error: "Production readiness could not be verified from FreeAgent." };
+  }
 }
 
 function redirect(location: string, setCookies: string[] = []): Response {
@@ -519,7 +578,7 @@ function accountingContactList(
     const status = link?.status ?? "UNVERIFIED";
     return `<tr><td data-label="Student">${escapeHtml(student.name)}</td><td data-label="Email">${escapeHtml(student.parent_email || student.email)}</td><td data-label="Status"><span class="status status-${status.toLowerCase()}">${escapeHtml(accountingLabel(status))}</span>${link?.last_error_message ? `<small>${escapeHtml(link.last_error_message)}</small>` : ""}</td><td data-label="Contact ID"><form method="post" action="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}"><div class="inline-form">${hiddenCsrf(csrfToken)}<label class="sr-only" for="contact-${escapeHtml(student.id)}">FreeAgent contact ID for ${escapeHtml(student.name)}</label><input id="contact-${escapeHtml(student.id)}" name="externalReference" inputmode="numeric" pattern="[0-9]+" value="${escapeHtml(link?.external_reference ?? "")}" placeholder="Contact ID" required><button class="accounting-icon-button accounting-save-button" type="submit" aria-label="Verify and save contact for ${escapeHtml(student.name)}" title="Verify and save"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c0 1.1.9 2 2-2V7l-4-4m-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6m3-10H5v4h10V5h5v4Z"></path></svg></button>${link ? `<button class="accounting-icon-button accounting-remove-button" formaction="/learn/admin/accounting/contacts/${encodeURIComponent(student.id)}/remove" type="submit" aria-label="Remove contact mapping for ${escapeHtml(student.name)}" title="Remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7Z"></path>    </svg></button>` : `<button class="accounting-icon-button accounting-remove-button" type="button" disabled aria-disabled="true" aria-label="No contact mapping to remove for ${escapeHtml(student.name)}" title="No contact mapping to remove"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 4h-4.5l-1-1h-3L9.5 4H5v2h14V4m-1 3H6v12c0 1.1 0 2 2 2h8c1.1 0 2-2 2-2V7Z"></path></svg></button>`}</div></form></td></tr>`;
   }).join("");
-  return `<section class="card"><div class="section-heading"><div><h2>Production FreeAgent contact mappings</h2><p class="muted">Production contact IDs are verified and saved explicitly. Sandbox contact configuration is restricted to the Production billing settings test area.</p></div></div>${students.length ? `<div class="table-wrap accounting-contact-table"><table><thead><tr><th>Student</th><th>Email</th><th>Status</th><th>Production contact ID</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty-state compact-empty"><p>No Learn students exist.</p></div>`}</section>`;
+  return `<section class="card"><div class="section-heading"><div><h2>Production FreeAgent contact mappings</h2><p class="muted">Production contact IDs are verified and saved explicitly. Sandbox contact configuration is restricted to the Production billing settings test area.</p></div></div>${students.length ? `<div class="table-wrap accounting-contact-table"><table><thead><tr><th>Student</th><th>Email</th><th>Status</th><th>Contact ID</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty-state compact-empty"><p>No Learn students exist.</p></div>`}</section>`;
 }
 
 function accountingList(
@@ -2073,18 +2132,62 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       });
       return created ? redirect("/learn/admin/billing") : messagePage("Exception already recorded", "That billing event already has an emergency exception.", 409);
     }
+    const authorizeDirectDebitMatch = /^\/learn\/admin\/billing\/invoices\/([^/]+)\/authorize-direct-debit$/.exec(url.pathname);
+    if (authorizeDirectDebitMatch) {
+      if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
+      const invoiceId = decodePathSegment(authorizeDirectDebitMatch[1] ?? "");
+      const invoice = invoiceId ? await findBillingInvoice(db, invoiceId) : null;
+      if (!invoice) return messagePage("Invoice not found", "That billing invoice does not exist.", 404);
+      const form = await parseForm(request);
+      if (formText(form ?? new FormData(), "confirmation") !== "AUTHORIZE_PRODUCTION_DIRECT_DEBIT") {
+        return messagePage("Authorization not confirmed", "The Production Direct Debit test requires an explicit confirmation.", 400);
+      }
+      const student = await findStudent(db, invoice.student_id);
+      if (
+        invoice.provider_environment !== "production" ||
+        invoice.net_amount_minor.toString() !== "100" ||
+        student?.email.toLowerCase() !== "jamesanf@gmail.com"
+      ) {
+        return messagePage("Production test unavailable", "Only the controlled £1 Production test for James can be authorized here.", 409);
+      }
+      const gate = await readDirectDebitGate(db, env, invoice, new Date().toISOString());
+      const providerStatus = (gate.providerInvoice?.status ?? "").toLowerCase();
+      if (
+        gate.error ||
+        !["sent", "open"].includes(providerStatus) ||
+        !gate.preauth ||
+        gate.mandateState !== "ACTIVE" ||
+        providerAmountIsPositive(gate.providerInvoice?.paidValue) ||
+        (gate.providerInvoice?.dueValue !== null && gate.providerInvoice?.dueValue !== undefined && Number(gate.providerInvoice.dueValue) <= 0)
+      ) {
+        return messagePage("Production payment not ready", gate.error ?? "The invoice, mandate and Direct Debit readiness gates are not all green.", 409);
+      }
+      const now = new Date().toISOString();
+      await ensureDirectDebitOperationForInvoice(db, invoice.id, now);
+      const authorized = await authorizeBillingInvoiceDirectDebit(db, invoice.id, active.user.id, now);
+      if (!authorized) return messagePage("Authorization unavailable", "This invoice has already been authorized or its collection operation is no longer pending.", 409);
+      await processBillingInvoiceOperation(db, env, `direct-debit-operation:${invoice.id}`, now, freeAgentFetch);
+      return redirect(`/learn/admin/billing/invoices/${encodeURIComponent(invoice.id)}`);
+    }
     const invoiceMatch = /^\/learn\/admin\/billing\/invoices\/([^/]+)$/.exec(url.pathname);
     if (invoiceMatch && request.method === "GET") {
       const invoiceId = decodePathSegment(invoiceMatch[1] ?? "");
       const invoice = invoiceId ? await findBillingInvoice(db, invoiceId) : null;
       if (!invoice) return messagePage("Invoice not found", "That billing invoice does not exist.", 404);
       const event = await db.prepare("SELECT * FROM billing_events WHERE id = ?").bind(invoice.billing_event_id).first<{ lesson_id: string | null; lesson_date: string | null; payer_student_id: string; }>();
+      const student = await findStudent(db, invoice.student_id);
+      const gate = invoice.provider_environment === "production"
+        ? await readDirectDebitGate(db, env, invoice, new Date().toISOString())
+        : null;
       const payment = await db.prepare("SELECT * FROM billing_payments WHERE invoice_id = ?").bind(invoice.id).first<{ status: string; provider_reference: string | null; provider_status: string | null; collection_date: string; }>();
-      const operations = await db.prepare("SELECT * FROM billing_invoice_operations WHERE invoice_id = ? ORDER BY created_at DESC").bind(invoice.id).all<{ operation_type: string; status: string; provider_status: string | null; safe_error_message: string | null; }>();
+      const operations = await db.prepare("SELECT * FROM billing_invoice_operations WHERE invoice_id = ? ORDER BY created_at DESC").bind(invoice.id).all<{ operation_type: string; status: string; provider_status: string | null; safe_error_message: string | null; human_authorized_at: string | null; }>();
       const operationRows = operations.results.length
-        ? operations.results.map((operation) => `<tr><td>${escapeHtml(operation.operation_type)}</td><td>${escapeHtml(operation.status)}</td><td>${escapeHtml(operation.provider_status ?? "—")}</td><td>${escapeHtml(operation.safe_error_message ?? "—")}</td></tr>`).join("")
-        : `<tr><td colspan="4">No provider operations.</td></tr>`;
-      return appPage(active.user, csrfToken, "Invoice detail", `<div class="page-heading"><div><h1>Invoice detail</h1><p class="lede">FoxTutor invoice ${escapeHtml(invoice.id)}</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Amount</dt><dd>${billingMoney(invoice.net_amount_minor)}</dd></div><div><dt>Credit applied</dt><dd>${billingMoney(invoice.credit_applied_minor)}</dd></div><div><dt>Status</dt><dd>${escapeHtml(invoice.status)}</dd></div><div><dt>Provider status</dt><dd>${escapeHtml(invoice.provider_status ?? "—")}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(invoice.freeagent_reference ?? "—")}</dd></div><div><dt>Lesson date</dt><dd>${escapeHtml(billingDateLabel(event?.lesson_date ?? invoice.lesson_date))}</dd></div><div><dt>Collection date</dt><dd>${escapeHtml(billingDateLabel(payment?.collection_date ?? invoice.collection_date))}</dd></div><div><dt>Payment state</dt><dd>${escapeHtml(payment?.status ?? "Not scheduled")}</dd></div></dl>${invoice.freeagent_url ? `<p><a class="text-link" href="${escapeHtml(invoice.freeagent_url)}" target="_blank" rel="noopener">Open provider invoice</a></p>` : ""}</section><section class="card"><h2>Provider operations</h2><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Status</th><th>Provider</th><th>Message</th></tr></thead><tbody>${operationRows}</tbody></table></div></section>`);
+        ? operations.results.map((operation) => `<tr><td>${escapeHtml(operation.operation_type)}</td><td>${escapeHtml(operation.status)}</td><td>${escapeHtml(operation.provider_status ?? "—")}</td><td>${escapeHtml(operation.human_authorized_at ?? "Not authorized")}</td><td>${escapeHtml(operation.safe_error_message ?? "—")}</td></tr>`).join("")
+        : `<tr><td colspan="5">No provider operations.</td></tr>`;
+      const gateStatus = gate
+        ? `<section class="card"><h2>Production Direct Debit gate</h2><p class="muted">This read-back is performed against Production FreeAgent. A payment is never initiated from the scheduler without explicit administrator authorization.</p><dl class="detail-grid"><div><dt>Customer</dt><dd>${escapeHtml(student?.name ?? invoice.student_id)}${student?.email ? ` (${escapeHtml(student.email)})` : ""}</dd></div><div><dt>FreeAgent company</dt><dd>${escapeHtml(gate.company ?? "UNKNOWN")}</dd></div><div><dt>Contact</dt><dd>${escapeHtml(gate.contactReference ?? "UNKNOWN")}</dd></div><div><dt>Mandate</dt><dd>${escapeHtml(gate.mandateState ?? "UNKNOWN")}</dd></div><div><dt>Invoice status</dt><dd>${escapeHtml(gate.providerInvoice?.status ?? "UNAVAILABLE")}</dd></div><div><dt>gocardless_preauth</dt><dd>${gate.preauth ? "TRUE" : "FALSE"}</dd></div><div><dt>Paid value</dt><dd>${escapeHtml(gate.providerInvoice?.paidValue ?? "—")}</dd></div><div><dt>Due value</dt><dd>${escapeHtml(gate.providerInvoice?.dueValue ?? "—")}</dd></div></dl>${gate.error ? `<p class="form-error">${escapeHtml(gate.error)}</p>` : ""}${invoice.net_amount_minor.toString() === "100" && student?.email.toLowerCase() === "jamesanf@gmail.com" && gate.mandateState === "ACTIVE" && gate.preauth && ["sent", "open"].includes((gate.providerInvoice?.status ?? "").toLowerCase()) && !providerAmountIsPositive(gate.providerInvoice?.paidValue) ? `<form method="post" action="/learn/admin/billing/invoices/${encodeURIComponent(invoice.id)}/authorize-direct-debit">${hiddenCsrf(csrfToken)}<input type="hidden" name="confirmation" value="AUTHORIZE_PRODUCTION_DIRECT_DEBIT"><p><strong>Ready for real £1 Direct Debit: YES</strong></p><p class="muted">This is the explicit financial authorization boundary. It will initiate one Production Direct Debit collection after the final provider read-back.</p><button class="button danger" type="submit">Authorize £1 Direct Debit test</button></form>` : ""}</section>`
+        : "";
+      return appPage(active.user, csrfToken, "Invoice detail", `<div class="page-heading"><div><h1>Invoice detail</h1><p class="lede">FoxTutor invoice ${escapeHtml(invoice.id)}</p></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Amount</dt><dd>${billingMoney(invoice.net_amount_minor)}</dd></div><div><dt>Credit applied</dt><dd>${billingMoney(invoice.credit_applied_minor)}</dd></div><div><dt>Status</dt><dd>${escapeHtml(invoice.status)}</dd></div><div><dt>Provider status</dt><dd>${escapeHtml(invoice.provider_status ?? "—")}</dd></div><div><dt>Provider reference</dt><dd>${escapeHtml(invoice.freeagent_reference ?? "—")}</dd></div><div><dt>Lesson date</dt><dd>${escapeHtml(billingDateLabel(event?.lesson_date ?? invoice.lesson_date))}</dd></div><div><dt>Collection date</dt><dd>${escapeHtml(billingDateLabel(payment?.collection_date ?? invoice.collection_date))}</dd></div><div><dt>Payment state</dt><dd>${escapeHtml(payment?.status ?? "Not scheduled")}</dd></div></dl>${invoice.freeagent_url ? `<p><a class="text-link" href="${escapeHtml(invoice.freeagent_url)}" target="_blank" rel="noopener">Open provider invoice</a></p>` : ""}</section>${gateStatus}<section class="card"><h2>Provider operations</h2><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Status</th><th>Provider</th><th>Authorization</th><th>Message</th></tr></thead><tbody>${operationRows}</tbody></table></div></section>`);
     }
     const creditMatch = /^\/learn\/admin\/billing\/credits\/([^/]+)$/.exec(url.pathname);
     if (creditMatch && request.method === "GET") {

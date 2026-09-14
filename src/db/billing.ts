@@ -116,6 +116,8 @@ export interface BillingInvoiceOperation {
   safe_error_message: string | null;
   attempt_count: number;
   next_attempt_at: string | null;
+  human_authorized_at: string | null;
+  human_authorized_by_user_id: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -831,12 +833,52 @@ export async function listPendingBillingEvents(db: D1Database, now: string, limi
 
 export async function listDueBillingInvoiceOperations(db: D1Database, now: string, limit: number): Promise<BillingInvoiceOperation[]> {
   const result = await db.prepare(
-    `SELECT * FROM billing_invoice_operations
-     WHERE status IN ('PENDING', 'RETRYABLE')
-       AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
-     ORDER BY created_at ASC, id ASC LIMIT ?`
+    `SELECT op.* FROM billing_invoice_operations op
+     JOIN billing_invoices i ON i.id = op.invoice_id
+     WHERE op.status IN ('PENDING', 'RETRYABLE')
+       AND (op.next_attempt_at IS NULL OR op.next_attempt_at <= ?)
+       AND (
+         op.operation_type != 'INITIATE_DIRECT_DEBIT'
+         OR COALESCE(i.provider_environment, '') != 'production'
+         OR i.net_amount_minor != 100
+         OR op.human_authorized_at IS NOT NULL
+       )
+     ORDER BY op.created_at ASC, op.id ASC LIMIT ?`
   ).bind(now, limit).all<BillingInvoiceOperation>();
   return result.results;
+}
+
+export async function authorizeBillingInvoiceDirectDebit(
+  db: D1Database,
+  invoiceId: string,
+  userId: string,
+  now: string
+): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE billing_invoice_operations
+     SET human_authorized_at = ?, human_authorized_by_user_id = ?, updated_at = ?
+     WHERE invoice_id = ? AND operation_type = 'INITIATE_DIRECT_DEBIT'
+       AND status IN ('PENDING', 'RETRYABLE')
+       AND human_authorized_at IS NULL`
+  ).bind(now, userId, now, invoiceId).run();
+  return result.meta.changes > 0;
+}
+
+export async function ensureDirectDebitOperationForInvoice(
+  db: D1Database,
+  invoiceId: string,
+  now: string
+): Promise<boolean> {
+  const result = await db.prepare(
+    `INSERT INTO billing_invoice_operations
+     (id, invoice_id, operation_type, idempotency_key, status, created_at, updated_at)
+     SELECT 'direct-debit-operation:' || id, id, 'INITIATE_DIRECT_DEBIT',
+            'direct-debit:' || id, 'PENDING', ?, ?
+     FROM billing_invoices
+     WHERE id = ? AND status = 'SENT' AND net_amount_minor > 0
+     ON CONFLICT(invoice_id, operation_type) DO NOTHING`
+  ).bind(now, now, invoiceId).run();
+  return result.meta.changes > 0;
 }
 
 export async function ensureDueDirectDebitOperations(db: D1Database, today: string, now: string): Promise<number> {

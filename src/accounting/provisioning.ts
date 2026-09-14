@@ -87,7 +87,9 @@ async function findOrCreateContact(
   for (let page = 1; page <= 5; page++) {
     const pageContacts = await providerCall(db, env, now, fetcher, (client, token) => client.listContacts(token, page));
     contacts.push(...pageContacts.filter((candidate) =>
-      (candidate.email ?? candidate.billingEmail ?? "").toLowerCase() === student.email.toLowerCase()
+      [candidate.email, candidate.billingEmail]
+        .filter((email): email is string => Boolean(email))
+        .some((email) => email.toLowerCase() === student.email.toLowerCase())
     ));
     if (pageContacts.length < 100) break;
   }
