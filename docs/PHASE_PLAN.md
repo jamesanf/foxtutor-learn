@@ -905,13 +905,11 @@ is not a second FoxTutor credit ledger or a parallel mandate authority.
 
 #### Phase 7.1 current state
 
-The local implementation and controlled evidence are complete. Migrations
-`0021` through `0023` apply locally; `npm test` passes with 31 test files and
-168 tests; `npm run check` passes; and the expected D1 tables and views are
-present locally. Remote D1, the deployed Worker and provider financial state
-remain at the Phase 6 boundary. Phase 7.1 is **NO-GO** for remote deployment
-until the documented FreeAgent/GoCardless Sandbox evidence and Phase 6
-commercial/provider approvals are available.
+The foundational implementation and controlled evidence are complete. This
+was the original local-only boundary; Phase 7.2 absorbed its unfinished
+technical work, applied migrations through `0024`, and deployed the runtime.
+Real provider financial acceptance remains a separate human approval gate and
+is recorded in the Phase 7.2 acceptance report.
 
 ### Phase 7.2 — Completion and operationalisation
 
