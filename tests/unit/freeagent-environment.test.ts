@@ -7,6 +7,7 @@ import {
 import {
   freeAgentEnvironmentConfig,
   freeAgentEnvironmentConfigIssue,
+  temporaryProductionCompatibilityEnabled,
   type AccountingEnvironment
 } from "../../src/accounting/service";
 
@@ -69,6 +70,31 @@ describe("FreeAgent environment isolation", () => {
     const env = environment({ FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY: undefined });
     expect(freeAgentEnvironmentConfigIssue(env, "production")).toBe("token_encryption_key");
     expect(freeAgentEnvironmentConfig(env, "production")).toBeNull();
+  });
+
+  it("temporarily reuses legacy app credentials only when explicitly enabled", () => {
+    const env = environment({
+      FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP: "true",
+      FREEAGENT_PRODUCTION_CLIENT_ID: undefined,
+      FREEAGENT_PRODUCTION_CLIENT_SECRET: undefined,
+      FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY: undefined,
+      FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI: undefined,
+      FREEAGENT_PRODUCTION_COMPANY_SUBDOMAIN: undefined,
+      FREEAGENT_CLIENT_ID: "legacy-client",
+      FREEAGENT_CLIENT_SECRET: "legacy-secret",
+      FREEAGENT_TOKEN_ENCRYPTION_KEY: "legacy-key",
+      FREEAGENT_OAUTH_REDIRECT_URI: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      FREEAGENT_COMPANY_SUBDOMAIN: "sandbox-company"
+    });
+    expect(temporaryProductionCompatibilityEnabled(env)).toBe(true);
+    expect(freeAgentEnvironmentConfig(env, "production")).toMatchObject({
+      clientId: "legacy-client",
+      clientSecret: "legacy-secret",
+      tokenEncryptionKey: "legacy-key",
+      oauthRedirectUri: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      companySubdomain: null
+    });
+    expect(freeAgentEnvironmentConfigIssue(env, "production")).toBeNull();
   });
 
   it("accepts complete Production configuration for OAuth URL generation", () => {

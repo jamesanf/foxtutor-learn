@@ -68,6 +68,7 @@ export interface AccountingEnvironment {
   FREEAGENT_INVOICE_CURRENCY?: string;
   FREEAGENT_INVOICE_SALES_TAX_RATE?: string;
   FREEAGENT_COMPANY_SUBDOMAIN?: string;
+  FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP?: string;
 }
 
 export interface AccountingIntegrationStatus {
@@ -143,6 +144,8 @@ function freeAgentEnvironmentConfigValues(
   environment: FreeAgentEnvironment | null
 ): FreeAgentEnvironmentConfigValues | null {
   if (!environment) return null;
+  const reuseLegacyProductionApp = environment === "production" &&
+    env.FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP === "true";
   const selected = environment === "sandbox"
     ? {
       clientId: env.FREEAGENT_SANDBOX_CLIENT_ID,
@@ -152,11 +155,11 @@ function freeAgentEnvironmentConfigValues(
       oauthRedirectUri: env.FREEAGENT_SANDBOX_OAUTH_REDIRECT_URI
     }
     : {
-      clientId: env.FREEAGENT_PRODUCTION_CLIENT_ID,
-      clientSecret: env.FREEAGENT_PRODUCTION_CLIENT_SECRET,
+      clientId: env.FREEAGENT_PRODUCTION_CLIENT_ID ?? (reuseLegacyProductionApp ? env.FREEAGENT_CLIENT_ID : undefined),
+      clientSecret: env.FREEAGENT_PRODUCTION_CLIENT_SECRET ?? (reuseLegacyProductionApp ? env.FREEAGENT_CLIENT_SECRET : undefined),
       companySubdomain: env.FREEAGENT_PRODUCTION_COMPANY_SUBDOMAIN,
-      tokenEncryptionKey: env.FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY,
-      oauthRedirectUri: env.FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI
+      tokenEncryptionKey: env.FREEAGENT_PRODUCTION_TOKEN_ENCRYPTION_KEY ?? (reuseLegacyProductionApp ? env.FREEAGENT_TOKEN_ENCRYPTION_KEY : undefined),
+      oauthRedirectUri: env.FREEAGENT_PRODUCTION_OAUTH_REDIRECT_URI ?? (reuseLegacyProductionApp ? env.FREEAGENT_OAUTH_REDIRECT_URI : undefined)
     };
   const legacySandbox = environment === "sandbox" ? {
     clientId: env.FREEAGENT_CLIENT_ID,
@@ -172,6 +175,10 @@ function freeAgentEnvironmentConfigValues(
     tokenEncryptionKey: selected.tokenEncryptionKey ?? legacySandbox?.tokenEncryptionKey,
     oauthRedirectUri: selected.oauthRedirectUri ?? legacySandbox?.oauthRedirectUri
   };
+}
+
+export function temporaryProductionCompatibilityEnabled(env: AccountingEnvironment): boolean {
+  return env.FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP === "true";
 }
 
 export function freeAgentEnvironmentConfigIssue(
@@ -770,7 +777,6 @@ export async function connectFreeAgent(
     const credentials = freeAgentEnvironmentConfig(env, input.environment);
     if (
       !credentials ||
-      !credentials.companySubdomain ||
       !credentials.oauthRedirectUri ||
       input.redirectUri !== credentials.oauthRedirectUri
     ) {
@@ -805,11 +811,12 @@ export async function connectFreeAgent(
         return false;
       }
     })();
-    if (
-      company.subdomain !== credentials.companySubdomain ||
-      company.currency !== expectedCurrency ||
-      !companyOriginMatches
-    ) {
+    const companyIdentityMatches = credentials.companySubdomain
+      ? company.subdomain === credentials.companySubdomain
+      : input.environment === "production" &&
+        temporaryProductionCompatibilityEnabled(env) &&
+        Boolean(company.subdomain);
+    if (!companyIdentityMatches || company.currency !== expectedCurrency || !companyOriginMatches) {
       throw new FreeAgentApiError({
         code: "CONFIGURATION",
         status: null,

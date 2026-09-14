@@ -25,6 +25,7 @@
 	},
 	"vars": {
 		"ENVIRONMENT": "production",
+		"FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP": "true",
 		"PUBLIC_ORIGIN": "https://foxtutor.org/learn",
 		"MAIL_API_URL": "https://mail.foxtutor.org",
 		"MAIL_API_FROM": "hello@foxtutor.org",

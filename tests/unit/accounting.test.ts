@@ -566,6 +566,68 @@ describe("FreeAgent adapter", () => {
     }
   });
 
+  it("allows temporary Production OAuth reuse without a pre-pinned company", async () => {
+    const calls: string[] = [];
+    const saved: unknown[] = [];
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.endsWith("/v2/token_endpoint")) {
+        expect(new Headers(init?.headers).get("Authorization")).toMatch(/^Basic /);
+        return jsonResponse({
+          access_token: "production-access",
+          refresh_token: "production-refresh",
+          expires_in: 3600,
+          refresh_token_expires_in: 86_400
+        });
+      }
+      return jsonResponse({
+        company: {
+          name: "Production Company",
+          subdomain: "production-company",
+          currency: "GBP",
+          url: "https://api.freeagent.com/v2/company"
+        }
+      });
+    };
+    const db = {
+      prepare(sql: string) {
+        const first = async () => null;
+        return {
+          first,
+          bind(...values: unknown[]) {
+            return {
+              first,
+              async run() {
+                saved.push({ sql, values });
+                return { meta: { changes: 1 } };
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+    await expect(connectFreeAgent(db, {
+      FREEAGENT_ENVIRONMENT: "production",
+      FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP: "true",
+      FREEAGENT_CLIENT_ID: "legacy-client",
+      FREEAGENT_CLIENT_SECRET: "legacy-secret",
+      FREEAGENT_TOKEN_ENCRYPTION_KEY: "legacy-key",
+      FREEAGENT_OAUTH_REDIRECT_URI: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      FREEAGENT_INVOICE_CURRENCY: "GBP"
+    }, {
+      code: "production-code",
+      environment: "production",
+      redirectUri: "https://foxtutor.org/learn/admin/accounting/oauth/callback",
+      now: "2026-09-14T12:00:00.000Z"
+    }, fetcher)).resolves.toBeUndefined();
+    expect(calls).toEqual([
+      "https://api.freeagent.com/v2/token_endpoint",
+      "https://api.freeagent.com/v2/company"
+    ]);
+    expect(saved[0]).toMatchObject({ values: expect.arrayContaining(["production", "production-company"]) });
+  });
+
   it("keeps Sandbox and Production OAuth connections in separate records", async () => {
     const connections: Record<string, Record<string, unknown>> = {};
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {

@@ -8,14 +8,14 @@ Production credentials and human authorization are available.
 
 ## Temporary OAuth compatibility test
 
-For the read-only Production OAuth compatibility experiment, the existing
-FreeAgent Developer Dashboard app credentials used by Sandbox may be entered
-temporarily into `FREEAGENT_PRODUCTION_CLIENT_ID` and
-`FREEAGENT_PRODUCTION_CLIENT_SECRET` through the secure deployment secret
-mechanism. This does not change the Sandbox secrets or the dual-connection
-architecture. The temporary configuration must be removed or replaced after
-the experiment is classified, and it must not be treated as the final
-Production credential policy.
+For the read-only Production OAuth compatibility experiment, the explicit
+`FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP=true` deployment flag temporarily
+uses the existing legacy app credentials, token-encryption key and redirect URI
+for Production OAuth. The Production company subdomain is intentionally not
+borrowed from Sandbox; it is discovered and verified from the read-only
+Production `/v2/company` response after authorization. This does not change
+the Sandbox connection or the dual-connection persistence. The flag must be
+removed or disabled after the experiment is classified.
 
 ## Delivered
 

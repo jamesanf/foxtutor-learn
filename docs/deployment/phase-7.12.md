@@ -32,11 +32,12 @@ https://api.sandbox.freeagent.com/v2/approve_app
 https://api.freeagent.com/v2/approve_app
 ```
 
-The temporary compatibility test may provision the existing Sandbox app's
-Client ID and Secret under the two Production credential secret names only.
-Secret values must never be copied into source, logs or documentation. After
-the test, retain the result and remove or replace the temporary Production
-credential configuration as appropriate.
+The temporary compatibility test uses the explicit
+`FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP=true` deployment flag to resolve
+the existing legacy app Client ID, Client Secret, token-encryption key and
+redirect URI for Production OAuth. Production company identity is discovered
+from the read-only `/v2/company` response and is never copied from Sandbox.
+Disable the flag after the experiment; it is not the final credential policy.
 
 ## Safety boundary
 
