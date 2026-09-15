@@ -38,6 +38,9 @@ Automated UI contracts cover:
 - the Upcoming Bookings `New booking` trigger opening the house-style modal,
   preserving the lesson end-time preview and closing through Cancel, the close
   control or the backdrop.
+- the admin Dashboard `New Booking` trigger opening the same booking chooser
+  and standalone/recurring modal paths as the Bookings page, including the
+  empty-upcoming-bookings state.
 - the modal booking chooser exposing separate `Standalone lesson` and
   `Recurring lesson` paths, with Back returning to the chooser and the
   recurring path rendering the complete series form.

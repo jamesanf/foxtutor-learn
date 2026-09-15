@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 Dashboard New Booking modal
+
+- Changed the admin Dashboard `Add lesson` action to `New Booking`.
+- Connected the dashboard trigger and empty-state CTA to the same standalone
+  and recurring booking chooser used by Bookings.
+- Deployed commit `4d24bad` as Worker version
+  `ec178afa-96d3-4550-bd5c-8a50578d2b44`.
+
 ### 2026-09-15 - Phase 7.17 booking type chooser
 
 - Extended the New booking modal with `Standalone lesson` and
