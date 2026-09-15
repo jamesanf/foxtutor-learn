@@ -296,10 +296,10 @@ navigation state use the new label.
 
 ## Latest deployment: guided external refund workflow
 
-- Git commit: pending
-- Worker version: pending
+- Git commits: `f80b4f1`, `d24c1ae`
+- Worker version: `1c1705b3-72b2-477f-9e7c-caf0b91e4efb`
 - Production migrations: `0041_guided_credit_refund_method.sql`
-- Deployment date: pending
+- Deployment date: 2026-09-15
 
 This deployment adds a step-by-step external refund workflow. Administrators
 must select the route used, follow the method-specific settlement guidance,
@@ -310,5 +310,8 @@ provenance-aware confirmation email with method-specific settlement timing.
 FoxTutor does not store bank details and does not initiate GoCardless, Mettle
 or FreeAgent money movement.
 
-Migration application and authenticated Chromium acceptance are recorded below
-after deployment. No real-money payment or refund is initiated by this flow.
+Migration `0041_guided_credit_refund_method.sql` was applied to Production D1
+before deployment. Authenticated Chromium rendered the new workflow with all
+three method choices, the pre-flight checklist and explicit external-refund
+confirmation. The remote schema read-back confirmed the new persisted
+`refund_method` column. No real-money payment or refund was initiated.
