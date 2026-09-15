@@ -41,11 +41,13 @@ The `View calendar` and `View resources` actions in the My learning panel use
 a full-width two-column action row aligned to the paragraph above. On narrow
 screens the buttons stack and remain full width.
 
-The student dashboard keeps a viewport-height minimum so the footer hugs the
-bottom of the browser when the content is short. If the dashboard content
-exceeds the viewport, the layout grows naturally and browser scrolling is used
-instead. Its dashboard heading, summary and panel spacing are reduced
-independently from other authenticated pages.
+The Learn shell uses a flex column layout so the navigation/content row grows
+to fill the viewport above the footer when the dashboard is short. The footer
+therefore hugs the browser bottom without adding a second viewport-sized
+content row. If dashboard content exceeds the viewport, that row grows with
+the content and normal browser scrolling is used instead. Its dashboard
+heading, summary and panel spacing are reduced independently from other
+authenticated pages.
 
 All authenticated page content starts 28px below the top of the content area,
 matching the first sidebar button's 28px top offset. This keeps the dashboard

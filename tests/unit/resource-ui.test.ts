@@ -168,7 +168,8 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".identity-role { display: inline-flex; min-height: 38px; align-items: center");
     expect(cssSource).toContain(".link-button { display: inline-flex; min-height: 38px; align-items: center; border: 0; padding: 0 0 2px");
     expect(cssSource).toContain(".topbar { min-height: 64px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)");
-    expect(cssSource).toContain(".layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 64px)");
+    expect(cssSource).toContain(".app-shell { display: flex; min-height: 100vh; flex-direction: column; }");
+    expect(cssSource).toContain(".layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 0; flex: 1 0 auto; }");
     expect(cssSource).toContain(".topbar-center-logo { display: inline-flex; align-items: center; justify-content: center; justify-self: center; width: 105px; height: 48px; padding: 3px 6px; border: 1px solid #9bd6e2; border-radius: 10px; background: #e8f7fa");
     expect(cssSource).toContain(".topbar { min-height: 54px; gap: 8px; padding: 8px 12px");
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);

@@ -13,6 +13,8 @@ Automated UI contracts cover:
 - compact exclamatory greeting without the former supporting caption;
 - red under-30-minute launch notice, with and without an external lesson URL.
 - shared page-title alignment with the first sidebar navigation button.
+- footer placement at the browser bottom for short dashboards, without excess
+  whitespace, and normal document scrolling for longer dashboards.
 
 The dashboard reads only the authenticated student's own upcoming and past
 lessons. The home-learning task is taken from the latest sent report, not a
