@@ -464,6 +464,7 @@ describe("FreeAgent adapter", () => {
         return jsonResponse({ invoice: { url: "https://api.sandbox.freeagent.com/v2/invoices/43", status: "Draft" } }, 201, { Location: "https://api.sandbox.freeagent.com/v2/invoices/43" });
       }
     });
+
     await client.createDraftInvoice("access-token", {
       contactUrl: "https://api.sandbox.freeagent.com/v2/contacts/7",
       reference: "FT-INV-26091502",
@@ -487,6 +488,60 @@ describe("FreeAgent adapter", () => {
       }
     });
     expect(requestBody).not.toContain("gocardless_preauth");
+  });
+
+  it("uses FreeAgent's no-unit API value for FoxTutor Units", async () => {
+    let requestBody = "";
+    const client = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async (_input, init) => {
+        requestBody = String(init?.body ?? "");
+        return jsonResponse({ invoice: { url: "https://api.sandbox.freeagent.com/v2/invoices/44" } }, 201, { Location: "https://api.sandbox.freeagent.com/v2/invoices/44" });
+      }
+    });
+    await client.createDraftInvoice("token", {
+      contactUrl: "https://api.sandbox.freeagent.com/v2/contacts/7",
+      reference: "FT-INV-unit-api",
+      datedOn: "2026-09-22",
+      paymentTermsInDays: 0,
+      itemType: "Units",
+      description: "FoxTutor lesson 2026-09-22 (1 Unit; 55 minutes)",
+      price: "55.00",
+      salesTaxRate: "0",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/1",
+      currency: "GBP"
+    });
+    expect(JSON.parse(requestBody)).toMatchObject({
+      invoice: {
+        invoice_items: [{ description: "FoxTutor lesson 2026-09-22 (1 Unit; 55 minutes)" }]
+      }
+    });
+    expect(JSON.parse(requestBody).invoice.invoice_items[0]).not.toHaveProperty("item_type");
+  });
+
+  it("falls back to the documented draft-then-delete API path when cancellation transition is denied", async () => {
+    const calls: Array<{ method: string; path: string }> = [];
+    const client = new FreeAgentClient({
+      environment: "production",
+      fetcher: async (input, init) => {
+        const url = new URL(String(input));
+        calls.push({ method: init?.method ?? "GET", path: url.pathname });
+        if (url.pathname.endsWith("/transitions/mark_as_cancelled")) return jsonResponse({}, 403);
+        if (url.pathname.endsWith("/transitions/mark_as_draft")) {
+          return jsonResponse({ invoice: { url: "https://api.freeagent.com/v2/invoices/77", status: "Draft" } });
+        }
+        if (url.pathname.endsWith("/invoices/77")) return new Response("", { status: 200 });
+        throw new Error(`Unexpected request: ${url.pathname}`);
+      }
+    });
+
+    await expect(client.markInvoiceCancelled("token", "https://api.freeagent.com/v2/invoices/77"))
+      .resolves.toMatchObject({ status: "Cancelled" });
+    expect(calls).toEqual([
+      { method: "PUT", path: "/v2/invoices/77/transitions/mark_as_cancelled" },
+      { method: "PUT", path: "/v2/invoices/77/transitions/mark_as_draft" },
+      { method: "DELETE", path: "/v2/invoices/77" }
+    ]);
   });
 
   it("normalizes rate limits and rejects provider URLs outside the configured origin", async () => {
@@ -1032,9 +1087,11 @@ describe("FreeAgent adapter", () => {
   it("creates one invoice and replays by provider reference without a second POST", async () => {
     const harness = await accountingProcessHarness();
     let createCount = 0;
+    let createBody = "";
     const fetcher: typeof fetch = async (input, init) => {
       if (init?.method === "POST") {
         createCount += 1;
+        createBody = String(init.body ?? "");
         harness.state.invoicePresent = true;
         return jsonResponse({
           invoice: {
@@ -1042,6 +1099,14 @@ describe("FreeAgent adapter", () => {
             reference: "FT-ACC-history1"
           }
         }, 201);
+      }
+      if (String(input).includes("/v2/contacts/")) {
+        return jsonResponse({
+          contact: {
+            url: "https://api.sandbox.freeagent.com/v2/contacts/257175",
+            direct_debit_mandate_state: "setup"
+          }
+        });
       }
       return jsonResponse({
         invoices: harness.state.invoicePresent
@@ -1053,6 +1118,7 @@ describe("FreeAgent adapter", () => {
     const first = await processAccountingOutbox(harness.db, harness.env, "outbox-1", "2026-09-14T12:00:00.000Z", fetcher);
     expect(first).toMatchObject({ status: "SUCCEEDED", external_reference: "42", provider_status: "CREATED" });
     expect(createCount).toBe(1);
+    expect(createBody).not.toContain("gocardless_preauth");
 
     harness.state.outbox.status = "RETRYABLE";
     harness.state.outbox.external_reference = null;

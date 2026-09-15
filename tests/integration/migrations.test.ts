@@ -255,4 +255,10 @@ describe("D1 foundation", () => {
     expect(migration).toContain("WHERE item_type = 'Hours'");
     expect(migration).toContain("accounting_billing_settings_by_environment");
   });
+
+  it("normalizes FreeAgent API item types to Units", () => {
+    const migration = readFileSync("migrations/0036_freeagent_invoice_item_type_units.sql", "utf8");
+    expect(migration).toContain("SET item_type = 'Units'");
+    expect(migration).toContain("WHERE item_type IN ('Hours', 'Unit')");
+  });
 });

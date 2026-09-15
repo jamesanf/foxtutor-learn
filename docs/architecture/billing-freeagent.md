@@ -44,6 +44,14 @@ The data model stores these independently:
 The seven-day rule is a collection policy only. It does not select an
 accounting date or credit-note date.
 
+FreeAgent does not support a custom `Unit` item type in its API. FoxTutor
+stores the friendly `Units` mapping, omits the unsupported custom `item_type`,
+and puts `1 Unit; 55 minutes` in the line description.
+This avoids the misleading `1:00 Hour` rendering without sending an invalid
+provider value. Legacy `Hours` and the earlier display-label value `Unit` are
+normalized to `Units` by the forward migration
+`0036_freeagent_invoice_item_type_units.sql`.
+
 ## Customer credit ledger
 
 `customer_credit_accounts` is a guarded account cache. The source of truth is
@@ -168,15 +176,16 @@ mapping is also bound to the connected company subdomain. A Sandbox category
 can therefore never be reused for Production, even if the URL shape is
 otherwise valid.
 
-The established defaults remain £55.00, `Unit`, 0 payment terms days, GBP
+The established defaults remain £55.00, `Units`, 0 payment terms days, GBP
 and 0% sales tax. These defaults describe normal lesson accounting and do not
 authorize a provider invoice. A controlled Sandbox acceptance amount is a
 separate operation.
 
-`Unit` is intentional: one unit represents one 55-minute FoxTutor lesson.
-Legacy persisted `Hours` settings are normalized to `Unit` by migration
-`0035_invoice_item_type_unit.sql`, so FreeAgent does not describe a lesson as
-an hour.
+`Units` is intentional: one unit represents one 55-minute FoxTutor lesson.
+Legacy persisted `Hours` settings are normalized to `Units` by migrations
+`0035_invoice_item_type_unit.sql` and
+`0036_freeagent_invoice_item_type_units.sql`, so FreeAgent does not describe
+a lesson as an hour.
 
 ### Contact verification
 
@@ -223,6 +232,21 @@ The seven-day date is computed from the lesson date, not from a generic
 recurring profile. A provider payment can remain pending, fail, or become
 unknown; those states are retained for reconciliation and are not treated as
 successful payment.
+
+Invoice creation reads the mapped FreeAgent contact before posting the
+invoice. `gocardless_preauth` is sent only when the provider reports an
+`active` mandate. Absent, setup, pending, failed, inactive, or unknown mandate
+states create a normal manually payable invoice instead; GBP currency alone
+never authorizes Direct Debit. This prevents FreeAgent's
+`payment_methods.gocardless_preauth requires contact approval on the mandate`
+rejection and preserves the later `NO_MANDATE_MANUAL_PAYMENT` readiness state.
+
+For a sent/open invoice that has not entered collection, cancellation first
+attempts FreeAgent's cancellation transition. If that provider transition is
+denied, the adapter uses the provider-supported API sequence
+`mark_as_draft` followed by `DELETE /v2/invoices/:id`, and treats a successful
+bodyless delete response as success. Collection-started invoices never enter
+this fallback.
 
 ## Customer-level Direct Debit provisioning
 

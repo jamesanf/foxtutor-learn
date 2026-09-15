@@ -263,7 +263,12 @@ export class FreeAgentClient {
     this.timeoutMs = options.timeoutMs ?? 15_000;
   }
 
-  async requestJson<T>(accessToken: string, path: string, init: RequestInit = {}): Promise<{ data: T; response: Response }> {
+  async requestJson<T>(
+    accessToken: string,
+    path: string,
+    init: RequestInit = {},
+    parseResponse = true
+  ): Promise<{ data: T; response: Response }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let target: URL | null = null;
@@ -302,7 +307,7 @@ export class FreeAgentClient {
       }
       let data: T;
       try {
-        data = await response.json() as T;
+        data = !parseResponse || response.status === 204 ? {} as T : await response.json() as T;
       } catch {
         throw new FreeAgentApiError({
           code: "MALFORMED_RESPONSE",
@@ -663,7 +668,7 @@ export class FreeAgentClient {
       ...(input.enableGoCardless ? { payment_methods: { gocardless_preauth: true } } : {}),
       ...(input.bankAccountUrl !== undefined ? { bank_account: input.bankAccountUrl } : {}),
       invoice_items: [{
-        item_type: input.itemType,
+        ...(input.itemType === "Unit" || input.itemType === "Units" ? {} : { item_type: input.itemType }),
         description: input.description,
         quantity: "1.0",
         price: input.price,
@@ -766,7 +771,7 @@ export class FreeAgentClient {
       unknown: false,
       retryAfterSeconds: null
     });
-    const result = await this.requestJson<{
+    let result: { data: {
       invoice?: {
         url?: string;
         reference?: string;
@@ -778,11 +783,28 @@ export class FreeAgentClient {
         due_value?: string;
         payment_url?: string;
       }
-    }>(
-      accessToken,
-      `/v2/invoices/${encodeURIComponent(id)}/transitions/mark_as_cancelled`,
-      { method: "PUT", body: JSON.stringify({}) }
-    );
+    }; response: Response };
+    try {
+      result = await this.requestJson(
+        accessToken,
+        `/v2/invoices/${encodeURIComponent(id)}/transitions/mark_as_cancelled`,
+        { method: "PUT", body: JSON.stringify({}) }
+      );
+    } catch (error) {
+      if (!(error instanceof FreeAgentApiError) || error.shape.code !== "AUTHORIZATION") throw error;
+      await this.markInvoiceDraft(accessToken, externalReference);
+      await this.deleteInvoice(accessToken, externalReference);
+      return {
+        url: canonicalProviderUrl(externalReference, this.options.environment) ?? externalReference,
+        reference: undefined,
+        status: "Cancelled",
+        paymentMethods: undefined,
+        paymentStatus: null,
+        paidValue: null,
+        dueValue: null,
+        paymentUrl: null
+      };
+    }
     const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
     if (!url) throw new FreeAgentApiError({
       code: "MALFORMED_RESPONSE",
@@ -802,6 +824,72 @@ export class FreeAgentClient {
       dueValue: result.data.invoice?.due_value ?? null,
       paymentUrl: result.data.invoice?.payment_url ?? null
     };
+  }
+
+  async markInvoiceDraft(accessToken: string, externalReference: string): Promise<FreeAgentInvoice> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent invoice reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{
+      invoice?: {
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
+        payment_url?: string;
+      }
+    }>(
+      accessToken,
+      `/v2/invoices/${encodeURIComponent(id)}/transitions/mark_as_draft`,
+      { method: "PUT", body: JSON.stringify({}) }
+    );
+    const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent invoice draft transition did not return a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      reference: result.data.invoice?.reference,
+      status: result.data.invoice?.status,
+      paymentMethods: result.data.invoice?.payment_methods,
+      paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paidValue: result.data.invoice?.paid_value ?? null,
+      dueValue: result.data.invoice?.due_value ?? null,
+      paymentUrl: result.data.invoice?.payment_url ?? null
+    };
+  }
+
+  async deleteInvoice(accessToken: string, externalReference: string): Promise<void> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent invoice reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    await this.requestJson(
+      accessToken,
+      `/v2/invoices/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+      false
+    );
   }
 
   async findCreditNoteByReference(accessToken: string, contactUrl: string, reference: string): Promise<FreeAgentCreditNote | null> {

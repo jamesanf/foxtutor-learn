@@ -30,6 +30,13 @@ widths, while retaining the stacked mobile form.
 The first Production FreeAgent connection card no longer applies the generic
 card top margin in addition to the page-heading bottom margin, so its spacing
 matches the other Accounting page content blocks.
+
+The FreeAgent invoice item-type fix keeps the friendly `Units` setting but
+sends FreeAgent no custom `item_type`, with `1 Unit; 55 minutes` in the line
+description. This avoids the unsupported
+custom item type and the misleading `1:00 Hour` rendering. Migration
+`0036_freeagent_invoice_item_type_units.sql` normalizes persisted `Hours` and
+`Unit` settings before the next invoice attempt.
 Main page titles are now 25% smaller across the shared, calendar,
 resource-upload and billing-settings heading variants.
 Recurring-series table action cells now center Pause/Resume controls and remove
@@ -120,6 +127,24 @@ provider-aware cancellation outcomes, creates auditable FoxMail billing
 statements for fully credit-covered lessons, and labels no-mandate lessons as
 manual payment rather than treating them as Direct Debit-pending.
 
+Production diagnosis also found that invoice creation was unconditionally
+requesting FreeAgent GoCardless pre-authorisation for every GBP invoice.
+FreeAgent rejects that request when the contact mandate is not approved. The
+invoice and legacy accounting-outbox paths now read the contact mandate first,
+enable GoCardless only for an active mandate, and otherwise create a manually
+payable invoice. This keeps new customers usable before mandate setup without
+starting a Direct Debit operation.
+
+Authenticated Production acceptance then exercised the full no-mandate path:
+FreeAgent created invoice `FT-INV-26091515` with the rendered line
+`1 FoxTutor lesson 2026-09-21 (1 Unit; 55 minutes)`, while Learn blocked
+collection as `DIRECT_DEBIT_NOT_READY`. A pre-invoice cancellation created no
+provider invoice. A second controlled open invoice was cancelled through Learn
+after collection had not started; the deployed adapter used the
+`mark_as_draft` plus API delete fallback and completed the local
+`CANCEL_INVOICE` operation as `SUCCEEDED` with provider status `Cancelled`.
+Controlled test artifacts were then closed with explicit reconciliation notes.
+
 ## Required validation
 
 ```text
@@ -169,7 +194,7 @@ for its normal collection date.
 
 - Git commit: `2770dfc`
 - Worker: `foxtutor-learn`
-- Worker version: `6826eb38-5bb9-4028-bfb7-a043996900c4`
+- Worker version: `fbb25783-b416-4290-a98d-7735e4a9e57a`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
@@ -230,9 +255,10 @@ it has been seen and leaves it open for reconciliation; resolving it is a
 separate action after the provider state is confirmed. This fixes the prior
 `Invalid alert action` response for reconciliation alert IDs.
 
-FreeAgent invoice settings now use item type `Unit`, not `Hours`. A unit
-represents one 55-minute FoxTutor lesson. Migration
-`0035_invoice_item_type_unit.sql` normalizes existing persisted settings in
+FreeAgent invoice settings now use API item type `Units`, not `Hours`. A
+quantity of one renders as `Unit` and represents one 55-minute FoxTutor
+lesson. Migrations `0035_invoice_item_type_unit.sql` and
+`0036_freeagent_invoice_item_type_units.sql` normalize existing persisted settings in
 both the legacy and environment-specific billing settings tables.
 
 Recurring cancellation stress acceptance has also been completed for a

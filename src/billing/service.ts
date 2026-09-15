@@ -427,6 +427,13 @@ async function processCreateInvoice(
         client.findInvoiceByReference(token, link.external_url, providerReferenceValue)
       );
     }
+    const contact = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.getContact(token, link.external_url)
+    );
+    const mandateState = classifyDirectDebitState(
+      contact?.directDebitMandateState ?? null,
+      Boolean(contact)
+    );
     const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
       client.createDraftInvoice(token, {
         contactUrl: link.external_url,
@@ -434,13 +441,13 @@ async function processCreateInvoice(
         datedOn: lessonDate,
         paymentTermsInDays: config.paymentTermsInDays,
         itemType: config.itemType,
-        description: `FoxTutor lesson ${lessonDate}`,
+        description: `FoxTutor lesson ${lessonDate} (1 Unit; 55 minutes)`,
         comments,
         price: formatMinorUnits(allocated.netAmountMinor),
         categoryUrl: config.categoryUrl,
         currency: config.currency,
         salesTaxRate: config.salesTaxRate,
-        enableGoCardless: config.currency === "GBP"
+        enableGoCardless: config.currency === "GBP" && mandateState.status === "ACTIVE"
       })
     );
     const sent = !draft.status || draft.status === "Draft"

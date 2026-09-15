@@ -25,13 +25,22 @@
 - Fixed billing alert acknowledgement for structured `billing-alert:...`
   identifiers and clarified the difference between acknowledging and
   resolving an alert.
-- Changed the FreeAgent invoice item type from `Hours` to `Unit`; one Unit
+- Changed the FreeAgent invoice item type from `Hours` to provider value
+  `Units`; one Unit
   represents one 55-minute FoxTutor lesson, with a migration for existing
   billing settings.
+- Invoice creation now reads the FreeAgent mandate state and enables
+  GoCardless only for an active mandate; new or pending-mandate customers
+  receive a normal manually payable GBP invoice instead of a rejected
+  `gocardless_preauth` request.
+- Open invoices cancelled before collection now use the FreeAgent API
+  cancellation transition, with a safe `mark_as_draft` plus API-delete
+  fallback when the transition is denied; successful bodyless provider
+  responses are handled as confirmed deletion.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
-- Automated acceptance: 43 test files, 310 tests passed.
+- Automated acceptance: 44 test files, 320 tests passed.
 - Deployed commit `2f2f64f` as Worker version
   `bdf8637c-f67a-4161-9fac-675412a146cf`.
 

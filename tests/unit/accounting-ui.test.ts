@@ -19,7 +19,8 @@ describe("billing admin presentation contract", () => {
 
   it("shows safe editable billing defaults and explains the secret boundary", () => {
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_AMOUNT ?? "55.00"');
-    expect(workerSource).toContain('env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Unit"');
+    expect(workerSource).toContain('env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Units"');
+    expect(workerSource).toContain("FreeAgent uses Units; one Unit represents one 55-minute lesson.");
     expect(workerSource).toContain("one Unit represents one 55-minute lesson");
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"');
     expect(workerSource).toContain('env.FREEAGENT_INVOICE_SALES_TAX_RATE ?? "0"');

@@ -34,6 +34,7 @@ import {
   parseMinorUnits,
   type AccountingErrorCode
 } from "../domain/accounting";
+import { classifyDirectDebitState } from "../domain/direct-debit";
 import {
   claimBillingProviderOperation,
   creditNoteReference,
@@ -331,7 +332,7 @@ function billingSettingsValues(
 ): BillingSettingsInput {
   return {
     amount: settings?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
-    itemType: settings?.item_type ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Unit",
+    itemType: settings?.item_type ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Units",
     categoryUrl: settings?.category_url ?? env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
     paymentTermsDays: String(settings?.payment_terms_days ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"),
     currency: settings?.currency ?? env.FREEAGENT_INVOICE_CURRENCY ?? "GBP",
@@ -1052,6 +1053,13 @@ export async function processAccountingOutbox(
       return findAccountingOutbox(db, id);
     }
 
+    const contact = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.getContact(token, link.external_url)
+    );
+    const mandateState = classifyDirectDebitState(
+      contact?.directDebitMandateState ?? null,
+      Boolean(contact)
+    );
     const invoice = await providerCall(db, env, now, fetcher, (client, token) => client.createDraftInvoice(token, {
       contactUrl: link.external_url,
       reference: claimed.accounting_reference,
@@ -1063,7 +1071,7 @@ export async function processAccountingOutbox(
       categoryUrl: invoiceConfig.categoryUrl,
       currency: invoiceConfig.currency,
       salesTaxRate: invoiceConfig.salesTaxRate,
-      enableGoCardless: invoiceConfig.currency === "GBP"
+      enableGoCardless: invoiceConfig.currency === "GBP" && mandateState.status === "ACTIVE"
     }));
     await markAccountingSucceeded(db, id, {
       externalReference: providerReference(invoice.url),
