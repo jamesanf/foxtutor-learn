@@ -29,8 +29,7 @@ buttons retain their 34px hit areas. This prevents either icon from leaving
 the table at reduced desktop widths; the existing stacked form is retained
 on narrow mobile layouts.
 
-Table action cells use a centered, vertically middle-aligned treatment with no
-default button top offset. This keeps controls such as recurring-series Pause
-on the same horizontal line as the other row values. Recurring-series
-Pause/Resume controls use a compact 24px table-action variant so their visual
-height matches the adjacent status pill.
+Table action cells use a vertically middle-aligned treatment with no default
+button top offset. Recurring-series actions begin at the same padded edge as
+the Action header and use a compact 24px variant so their visual height matches
+the adjacent status pill.

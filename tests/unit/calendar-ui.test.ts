@@ -102,10 +102,10 @@ describe("calendar presentation contract", () => {
     expect(workerSource).not.toContain(">Rows<");
   });
 
-  it("centers recurring-series table actions without the default button offset", () => {
+  it("aligns recurring-series table actions with the Action header", () => {
     expect(workerSource).toContain('<td class="table-action-cell">${item.status === "ACTIVE"');
-    expect(cssSource).toContain(".table-action-cell { vertical-align: middle; text-align: center; }");
-    expect(cssSource).toContain(".table-action-cell form { display: flex; height: 100%; align-items: center; justify-content: center; margin: 0; }");
+    expect(cssSource).toContain(".table-action-cell { vertical-align: middle; text-align: left; }");
+    expect(cssSource).toContain(".table-action-cell form { display: flex; height: 100%; align-items: center; justify-content: flex-start; margin: 0; }");
     expect(cssSource).toContain(".table-action-cell .button { margin-top: 0; }");
     expect(cssSource).toContain(".recurring-series-action { min-height: 24px; height: 24px;");
     expect(cssSource.indexOf(".button {")).toBeLessThan(cssSource.indexOf(".recurring-series-action {"));
