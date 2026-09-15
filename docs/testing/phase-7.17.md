@@ -17,6 +17,14 @@ Automated UI contracts cover:
   whitespace, and normal document scrolling for longer dashboards.
 - outline navigation icons for Resources and Notifications, with filled shapes
   when selected.
+- shared compact table columns and responsive headers that wrap at word
+  boundaries without splitting words.
+
+Table-page coverage includes the Accounting outbox and contact mappings,
+notification log, lesson/student/resource lists, recurring series,
+reschedules, billing health, invoice/credit detail and student billing
+tables. The shared CSS contract is exercised once because every listed page
+uses the same `.table-wrap`, `table`, `th` and `td` rules.
 
 The dashboard reads only the authenticated student's own upcoming and past
 lessons. The home-learning task is taken from the latest sent report, not a

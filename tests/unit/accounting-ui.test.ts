@@ -143,4 +143,11 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }");
     expect(cssSource).toContain(".accounting-summary-grid .summary-card:last-child { grid-column: span 2; }");
   });
+
+  it("uses compact shared table spacing and responsive header sizing", () => {
+    expect(cssSource).toContain("th, td { padding: 13px 8px;");
+    expect(cssSource).toContain("font-size: clamp(.6rem, .7vw, .75rem);");
+    expect(cssSource).toContain("overflow-wrap: normal; word-break: normal; hyphens: none;");
+    expect(cssSource).toContain(".table-wrap td { display: grid; grid-template-columns: minmax(5.5rem, 34%) minmax(0, 1fr); gap: 6px; padding: 11px 7px; }");
+  });
 });
