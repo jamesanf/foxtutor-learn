@@ -1,5 +1,18 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 compact table columns
+
+- Halved shared table cell horizontal padding to reduce unnecessary space
+  between columns, including the Accounting outbox.
+- Added responsive header sizing and natural word-boundary wrapping so column
+  titles shrink before becoming awkwardly split.
+- Applied the same compact spacing to the narrow responsive labelled-card
+  table layout.
+- Added table presentation documentation and coverage for all table-bearing
+  Learn surfaces.
+- Deployed commit `d2cc9ef` as Worker version
+  `fd575dbe-50fa-4fa5-9cd3-37e66af019c9`.
+
 ### 2026-09-15 - Phase 7.17 navigation icon rollback
 
 - Restored the filled Calendar, Bookings and Past Lessons navigation icons

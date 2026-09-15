@@ -22,6 +22,8 @@ The Calendar, Bookings and Past Lessons navigation icons retain their filled
 appearance. The earlier experimental outline treatment was rolled back after
 visual review; Resources and Notifications remain outline by default and
 filled when selected.
+All Learn tables now use compact horizontal cell spacing and responsive
+headers that shrink dynamically and wrap only at natural word boundaries.
 
 ## Required validation
 
@@ -56,9 +58,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `a5e22b5`
+- Git commit: `d2cc9ef`
 - Worker: `foxtutor-learn`
-- Worker version: `cace7a56-a2e6-4fca-b91a-a658e4dac5eb`
+- Worker version: `fd575dbe-50fa-4fa5-9cd3-37e66af019c9`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
