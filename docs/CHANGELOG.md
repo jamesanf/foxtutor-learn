@@ -8,6 +8,8 @@
   links on one right-hand line beneath the contact address.
 - Reduced footer typography, padding and dashboard-to-footer whitespace.
 - Updated footer UI contracts and branding documentation.
+- Deployed commit `aa3dadb` as Worker version
+  `fc736302-ed42-4f53-9387-0d6138e8f792`.
 
 ### 2026-09-15 - Phase 7.17 navigation icon refinement
 
