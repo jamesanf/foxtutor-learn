@@ -99,10 +99,17 @@ reference so existing provider invoices cannot be duplicated.
 The FreeAgent invoice date is the lesson date, and the visible invoice
 description states that Direct Debit collection is scheduled seven days
 earlier.
-Pending lesson events are not sent to FreeAgent before their collection date;
-the scheduler therefore gives the admin the seven-day cancellation window.
-The Direct Debit operation is created on the next scheduler cycle after the
-invoice is successfully sent.
+Pending lesson events are not sent to FreeAgent before 22:00
+Europe/London on their collection date; the scheduler therefore gives the
+admin the seven-day cancellation window. Invoice creation is processed before
+Direct Debit operation creation, and the newly created Direct Debit operation
+is processed again in the same scheduled invocation.
+
+Migration `0033_cancel_invoice_operation.sql` adds the idempotent
+`CANCEL_INVOICE` operation. A sent invoice is cancelled through FreeAgent's
+API transition only when no collection operation or payment has started.
+Collection-started invoices are never deleted or cancelled; ambiguous provider
+results remain `UNKNOWN`/`RECONCILIATION_REQUIRED`.
 
 ## Required validation
 
@@ -160,4 +167,6 @@ for its normal collection date.
   Chromium logout acceptance remains a human-session check.
 - Live cancellation acceptance confirmed that provider deletion is quarantined
   as `NOT_FOUND`/`RECONCILIATION_REQUIRED`, while a FoxTutor lesson cancelled
-  before issuance leaves no invoice or collection operation.
+  before issuance leaves no invoice or collection operation. The deployed
+  application now uses the FreeAgent cancellation API for future sent-invoice
+  cancellations rather than relying on browser deletion.

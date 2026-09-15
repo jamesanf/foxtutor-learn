@@ -54,6 +54,27 @@ export function isCollectionDateReached(collectionDate: string, today: string): 
   return collectionDate <= today;
 }
 
+export function isInvoiceIssuanceReached(collectionDate: string, now: string): boolean {
+  parseDate(collectionDate);
+  const instant = new Date(now);
+  if (!Number.isFinite(instant.getTime())) throw new Error("Billing issuance time must be a valid instant.");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    calendar: "iso8601",
+    numberingSystem: "latn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(instant);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  const londonDate = `${value("year")}-${value("month")}-${value("day")}`;
+  const londonTime = `${value("hour")}:${value("minute")}`;
+  return collectionDate < londonDate || (collectionDate === londonDate && londonTime >= "22:00");
+}
+
 export function applyAvailableCredits(
   grossAmountMinor: bigint,
   credits: readonly AvailableCredit[]

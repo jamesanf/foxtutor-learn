@@ -10,6 +10,7 @@ import {
   creditStatus,
   datedInvoiceReference,
   isCollectionDateReached,
+  isInvoiceIssuanceReached,
   refundIdempotencyKey
 } from "../../src/domain/billing";
 
@@ -96,6 +97,12 @@ describe("customer credit ledger rules", () => {
       cancellationDate: null,
       creditNoteDate: null
     });
+  });
+
+  it("holds invoice issuance until 22:00 Europe/London on the collection date", () => {
+    expect(isInvoiceIssuanceReached("2026-09-15", "2026-09-15T20:59:59.000Z")).toBe(false);
+    expect(isInvoiceIssuanceReached("2026-09-15", "2026-09-15T21:00:00.000Z")).toBe(true);
+    expect(isInvoiceIssuanceReached("2026-09-15", "2026-09-16T00:00:00.000Z")).toBe(true);
   });
 
   it("normalises provider references without exposing internal billing prefixes", () => {

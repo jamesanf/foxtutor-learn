@@ -106,7 +106,7 @@ export interface BillingRefund {
 export interface BillingInvoiceOperation {
   id: string;
   invoice_id: string;
-  operation_type: "CREATE_INVOICE" | "INITIATE_DIRECT_DEBIT" | "RECONCILE";
+  operation_type: "CREATE_INVOICE" | "INITIATE_DIRECT_DEBIT" | "CANCEL_INVOICE" | "RECONCILE";
   idempotency_key: string;
   status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "RETRYABLE" | "FAILED" | "UNKNOWN" | "BLOCKED";
   provider_reference: string | null;
@@ -824,12 +824,32 @@ export async function updateBillingEventStatus(
 }
 
 export async function listPendingBillingEvents(db: D1Database, now: string, limit: number): Promise<BillingEvent[]> {
+  const instant = new Date(now);
+  if (!Number.isFinite(instant.getTime())) throw new Error("Billing scheduler time must be a valid instant.");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    calendar: "iso8601",
+    numberingSystem: "latn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(instant);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  const londonDate = `${value("year")}-${value("month")}-${value("day")}`;
+  const londonTime = `${value("hour")}:${value("minute")}`;
   const result = await db.prepare(
     `SELECT * FROM billing_events
      WHERE status = 'PENDING'
-       AND (collection_date IS NULL OR collection_date <= ?)
+       AND (
+         collection_date IS NULL
+         OR collection_date < ?
+         OR (collection_date = ? AND ? >= '22:00')
+       )
      ORDER BY lesson_date ASC, id ASC LIMIT ?`
-  ).bind(now.slice(0, 10), limit).all<BillingEvent>();
+  ).bind(londonDate, londonDate, londonTime, limit).all<BillingEvent>();
   return result.results;
 }
 
@@ -904,6 +924,29 @@ export async function ensureDueDirectDebitOperations(db: D1Database, today: stri
      ON CONFLICT(invoice_id, operation_type) DO NOTHING`
   ).bind(now, now, today).run();
   return result.meta.changes;
+}
+
+export function invoiceCancellationStatement(db: D1Database, invoiceId: string, now: string): D1PreparedStatement {
+  return db.prepare(
+    `INSERT INTO billing_invoice_operations
+     (id, invoice_id, operation_type, idempotency_key, status, created_at, updated_at)
+     SELECT 'cancel-invoice-operation:' || i.id, i.id, 'CANCEL_INVOICE',
+            'cancel-invoice:' || i.id, 'PENDING', ?, ?
+     FROM billing_invoices i
+     WHERE i.id = ? AND i.freeagent_url IS NOT NULL
+       AND i.status IN ('SENT', 'PAYMENT_PENDING')
+       AND NOT EXISTS (
+         SELECT 1 FROM billing_invoice_operations op
+         WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+           AND op.status IN ('PROCESSING', 'SUCCEEDED', 'UNKNOWN')
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM billing_payments p
+         WHERE p.invoice_id = i.id
+           AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'FAILED', 'UNKNOWN')
+       )
+     ON CONFLICT(invoice_id, operation_type) DO NOTHING`
+  ).bind(now, now, invoiceId);
 }
 
 export async function claimBillingInvoiceOperation(

@@ -109,21 +109,21 @@ async function markOperationFailure(
     safeErrorMessage: message,
     nextAttemptAt: retryAt
   }, now);
-  if (context.invoiceId && status === "FAILED") {
+  if (context.invoiceId && operation.operation_type !== "CANCEL_INVOICE" && status === "FAILED") {
     await reverseInvoiceCreditApplications(db, context.invoiceId, now);
     await updateBillingInvoice(db, context.invoiceId, {
       status: "FAILED",
       providerStatus: "PROVIDER_FAILED",
       now
     });
-  } else if (context.invoiceId && status === "UNKNOWN") {
+  } else if (context.invoiceId && operation.operation_type !== "CANCEL_INVOICE" && status === "UNKNOWN") {
     await updateBillingInvoice(db, context.invoiceId, {
       status: "UNKNOWN",
       providerStatus: "RECONCILIATION_REQUIRED",
       now
     });
   }
-  if (context.billingEventId && (status === "FAILED" || status === "UNKNOWN")) {
+  if (context.billingEventId && operation.operation_type !== "CANCEL_INVOICE" && (status === "FAILED" || status === "UNKNOWN")) {
     await updateBillingEventStatus(
       db,
       context.billingEventId,
@@ -265,7 +265,8 @@ async function processCreateInvoice(
         datedOn: lessonDate,
         paymentTermsInDays: config.paymentTermsInDays,
         itemType: config.itemType,
-        description: `FoxTutor lesson ${lessonDate}. Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`,
+        description: `FoxTutor lesson ${lessonDate}`,
+        comments: `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`,
         price: formatMinorUnits(allocated.netAmountMinor),
         categoryUrl: config.categoryUrl,
         currency: config.currency,
@@ -510,6 +511,140 @@ async function processDirectDebit(
   }
 }
 
+async function processCancelInvoice(
+  db: D1Database,
+  env: AccountingEnvironment,
+  operation: BillingInvoiceOperation,
+  now: string,
+  fetcher: typeof fetch
+): Promise<void> {
+  const invoice = await findBillingInvoice(db, operation.invoice_id);
+  if (!invoice || !invoice.freeagent_url || !invoice.freeagent_reference) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "INVOICE_NOT_FOUND",
+      safeErrorCode: "INVOICE_NOT_FOUND",
+      safeErrorMessage: "The local provider invoice reference is missing; cancellation cannot be confirmed."
+    }, now);
+    return;
+  }
+  const collectionStarted = await db.prepare(
+    `SELECT (
+       EXISTS (
+         SELECT 1 FROM billing_invoice_operations
+         WHERE invoice_id = ? AND operation_type = 'INITIATE_DIRECT_DEBIT'
+           AND status IN ('PROCESSING', 'SUCCEEDED', 'UNKNOWN')
+       )
+       OR EXISTS (
+         SELECT 1 FROM billing_payments
+         WHERE invoice_id = ?
+           AND status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'FAILED', 'UNKNOWN')
+       )
+     ) AS started`
+  ).bind(invoice.id, invoice.id).first<{ started: number }>();
+  if (collectionStarted?.started) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "COLLECTION_STARTED",
+      safeErrorCode: "COLLECTION_STARTED",
+      safeErrorMessage: "The invoice cannot be cancelled after Direct Debit collection has started."
+    }, now);
+    return;
+  }
+  try {
+    const providerInvoice = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.getInvoice(token, invoice.freeagent_url!)
+    );
+    if (!providerInvoice) {
+      await updateBillingInvoice(db, invoice.id, {
+        status: "UNKNOWN",
+        providerStatus: "RECONCILIATION_REQUIRED",
+        now
+      });
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "UNKNOWN",
+        providerStatus: "INVOICE_NOT_FOUND",
+        safeErrorCode: "INVOICE_NOT_FOUND",
+        safeErrorMessage: "The provider invoice was not found; cancellation requires reconciliation."
+      }, now);
+      await createBillingAlert(db, {
+        id: `billing-alert:${operation.id}:not-found`,
+        deduplicationKey: `billing-operation:${operation.id}:not-found`,
+        alertType: "RECONCILIATION_REQUIRED",
+        severity: "ERROR",
+        invoiceId: invoice.id,
+        currentState: "CANCELLATION_PROVIDER_NOT_FOUND",
+        recommendedAction: "Reconcile the provider invoice before retrying cancellation.",
+        now
+      });
+      return;
+    }
+    const providerStatus = providerInvoice.status ?? "";
+    if (providerStatus.toLowerCase() === "cancelled") {
+      await updateBillingInvoice(db, invoice.id, {
+        status: "CANCELLED",
+        providerStatus,
+        now
+      });
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "SUCCEEDED",
+        providerReference: invoice.freeagent_reference,
+        providerUrl: invoice.freeagent_url,
+        providerStatus
+      }, now);
+      return;
+    }
+    if (
+      providerStatus.toLowerCase() === "paid"
+      || providerAmountIsPositive(providerInvoice.paidValue)
+      || providerAmountIsNotOutstanding(providerInvoice.dueValue)
+    ) {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: "COLLECTION_STARTED",
+        safeErrorCode: "COLLECTION_STARTED",
+        safeErrorMessage: "The provider invoice is already paid or has no outstanding balance."
+      }, now);
+      return;
+    }
+    const cancelled = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.markInvoiceCancelled(token, invoice.freeagent_url!)
+    );
+    if ((cancelled.status ?? "").toLowerCase() !== "cancelled") {
+      await updateBillingInvoice(db, invoice.id, {
+        status: "UNKNOWN",
+        providerStatus: "RECONCILIATION_REQUIRED",
+        now
+      });
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "UNKNOWN",
+        providerStatus: cancelled.status ?? "UNKNOWN",
+        safeErrorCode: "RECONCILIATION_REQUIRED",
+        safeErrorMessage: "The provider did not confirm invoice cancellation."
+      }, now);
+      return;
+    }
+    await updateBillingInvoice(db, invoice.id, {
+      status: "CANCELLED",
+      providerStatus: cancelled.status,
+      now
+    });
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "SUCCEEDED",
+      providerReference: invoice.freeagent_reference,
+      providerUrl: invoice.freeagent_url,
+      providerStatus: cancelled.status
+    }, now);
+  } catch (error) {
+    await markOperationFailure(db, operation, now, error, {
+      studentId: null,
+      lessonId: null,
+      billingEventId: null,
+      invoiceId: invoice.id
+    });
+  }
+}
+
 export async function processBillingInvoiceOperation(
   db: D1Database,
   env: AccountingEnvironment,
@@ -526,6 +661,7 @@ export async function processBillingInvoiceOperation(
   if (!operation) return null;
   if (operation.operation_type === "CREATE_INVOICE") await processCreateInvoice(db, env, operation, now, fetcher);
   else if (operation.operation_type === "INITIATE_DIRECT_DEBIT") await processDirectDebit(db, env, operation, now, fetcher);
+  else if (operation.operation_type === "CANCEL_INVOICE") await processCancelInvoice(db, env, operation, now, fetcher);
   else await markBillingInvoiceOperation(db, operation.id, { status: "BLOCKED", providerStatus: "NOT_SUPPORTED" }, now);
   return db.prepare("SELECT * FROM billing_invoice_operations WHERE id = ?").bind(id).first<BillingInvoiceOperation>();
 }

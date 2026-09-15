@@ -641,6 +641,7 @@ export class FreeAgentClient {
       paymentTermsInDays: number;
       itemType: string;
       description: string;
+      comments?: string;
       price: string;
       salesTaxRate: string;
       categoryUrl: string;
@@ -657,6 +658,7 @@ export class FreeAgentClient {
       send_reminder_emails: false,
       send_thank_you_emails: false,
       currency: input.currency,
+      ...(input.comments ? { comments: input.comments } : {}),
       ...(input.enableGoCardless ? { payment_methods: { gocardless_preauth: true } } : {}),
       invoice_items: [{
         item_type: input.itemType,
@@ -736,6 +738,54 @@ export class FreeAgentClient {
       code: "MALFORMED_RESPONSE",
       status: result.response.status,
       message: "FreeAgent invoice transition response did not contain a safe URL.",
+      retryable: false,
+      unknown: true,
+      retryAfterSeconds: null
+    });
+    return {
+      url,
+      reference: result.data.invoice?.reference,
+      status: result.data.invoice?.status,
+      paymentMethods: result.data.invoice?.payment_methods,
+      paymentStatus: result.data.invoice?.payment_status ?? result.data.invoice?.gocardless_payment_status ?? null,
+      paidValue: result.data.invoice?.paid_value ?? null,
+      dueValue: result.data.invoice?.due_value ?? null,
+      paymentUrl: result.data.invoice?.payment_url ?? null
+    };
+  }
+
+  async markInvoiceCancelled(accessToken: string, externalReference: string): Promise<FreeAgentInvoice> {
+    const id = externalReference.split("/").pop();
+    if (!id || !/^\d+$/.test(id)) throw new FreeAgentApiError({
+      code: "VALIDATION",
+      status: null,
+      message: "The stored FreeAgent invoice reference is invalid.",
+      retryable: false,
+      unknown: false,
+      retryAfterSeconds: null
+    });
+    const result = await this.requestJson<{
+      invoice?: {
+        url?: string;
+        reference?: string;
+        status?: string;
+        payment_methods?: Record<string, boolean>;
+        payment_status?: string;
+        gocardless_payment_status?: string;
+        paid_value?: string;
+        due_value?: string;
+        payment_url?: string;
+      }
+    }>(
+      accessToken,
+      `/v2/invoices/${encodeURIComponent(id)}/transitions/mark_as_cancelled`,
+      { method: "PUT", body: JSON.stringify({}) }
+    );
+    const url = canonicalProviderUrl(result.data.invoice?.url ?? externalReference, this.options.environment);
+    if (!url) throw new FreeAgentApiError({
+      code: "MALFORMED_RESPONSE",
+      status: result.response.status,
+      message: "FreeAgent invoice cancellation did not return a safe URL.",
       retryable: false,
       unknown: true,
       retryAfterSeconds: null

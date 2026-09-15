@@ -140,12 +140,21 @@ collection date seven days before the lesson.
 New provider invoices use the lesson date as their invoice date and include a
 visible line-item note stating the scheduled Direct Debit collection date.
 
-The issuance scheduler now waits until the collection date before selecting a
-pending lesson event for provider invoice creation. For the normal seven-day
-policy, a lesson invoice is therefore created on the calendar date seven days
-before the lesson, and the Direct Debit operation becomes eligible in the next
-five-minute scheduler cycle after the invoice is sent. A lesson cancelled
-before that date remains provider-uninvoiced and cannot enter collection.
+The issuance scheduler now waits until 22:00 Europe/London on the calendar
+date seven days before the lesson. At 21:59 local time no invoice is selected;
+at 22:00 it becomes eligible. The scheduler processes invoice creation before
+creating and processing the Direct Debit operation, so a successfully sent
+invoice can enter collection in the same scheduled invocation. A lesson
+cancelled before the cutoff remains provider-uninvoiced and cannot enter
+collection.
+
+Provider cancellation is now an explicit `CANCEL_INVOICE` operation. When a
+sent invoice has no collection operation or payment in progress, cancellation
+calls FreeAgent's `mark_as_cancelled` API transition and requires a confirmed
+provider response. If collection has started, FoxTutor blocks invoice
+cancellation and preserves the payment/credit lifecycle. Provider-not-found
+or ambiguous responses remain reconciliation-required rather than being
+treated as successful cancellation.
 
 Live acceptance on 15 September 2026 created a James Fox lesson for 7 October
 2026 through the authenticated admin booking flow. Its billing event remained

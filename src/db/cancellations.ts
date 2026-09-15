@@ -1,6 +1,6 @@
 import type { BillingConsequence } from "../domain/cancellations";
 import { accountingOutboxStatement } from "./accounting";
-import { cancellationCreditStatements } from "./billing";
+import { cancellationCreditStatements, invoiceCancellationStatement } from "./billing";
 import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
 
@@ -167,15 +167,33 @@ export async function cancelLesson(
   }
   const billedInvoice = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor
     ? await db.prepare(
-      `SELECT i.id, i.status
-       FROM billing_invoices i
+      `SELECT i.id, i.status, i.freeagent_url,
+         EXISTS (
+           SELECT 1 FROM billing_invoice_operations op
+           WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+             AND op.status IN ('PROCESSING', 'SUCCEEDED', 'UNKNOWN')
+         ) OR EXISTS (
+           SELECT 1 FROM billing_payments p
+           WHERE p.invoice_id = i.id
+             AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'FAILED', 'UNKNOWN')
+         ) AS collection_started
+      FROM billing_invoices i
        JOIN billing_events e ON e.id = i.billing_event_id
        WHERE e.lesson_id = ?
        LIMIT 1`
-    ).bind(input.lessonId).first<{ id: string; status: string }>()
+    ).bind(input.lessonId).first<{
+      id: string;
+      status: string;
+      freeagent_url: string | null;
+      collection_started: number;
+    }>()
     : null;
   const providerCorrectionRequired = Boolean(
-    billedInvoice && ["SENT", "PAYMENT_PENDING", "PAID", "FAILED", "UNKNOWN"].includes(billedInvoice.status)
+    billedInvoice && billedInvoice.collection_started && ["SENT", "PAYMENT_PENDING", "PAID", "FAILED", "UNKNOWN"].includes(billedInvoice.status)
+  );
+  const providerInvoiceCancellationRequired = Boolean(
+    billedInvoice && !billedInvoice.collection_started && billedInvoice.freeagent_url
+     && ["SENT", "PAYMENT_PENDING"].includes(billedInvoice.status)
   );
   const historyId = crypto.randomUUID();
   const accountingStatement = accountingOutboxStatement(db, {
@@ -241,6 +259,8 @@ export async function cancelLesson(
          SET status = 'CANCELLED', provider_status = 'CANCELLATION_RECONCILIATION_REQUIRED', updated_at = ?
          WHERE id = ?`
       ).bind(input.now, billedInvoice?.id ?? "")] : [])
+      ,
+      ...(providerInvoiceCancellationRequired ? [invoiceCancellationStatement(db, billedInvoice!.id, input.now)] : [])
     ] : []),
     ...creditStatements,
     ...(accountingStatement ? [accountingStatement] : [])

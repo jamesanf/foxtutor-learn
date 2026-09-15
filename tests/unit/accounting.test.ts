@@ -434,6 +434,7 @@ describe("FreeAgent adapter", () => {
       paymentTermsInDays: 14,
       itemType: "https://api.sandbox.freeagent.com/v2/item_types/1",
       description: "Late cancellation",
+      comments: "Direct Debit collection scheduled for 2026-09-06 (7 days before the lesson).",
       price: "55.00",
       salesTaxRate: "0",
       categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/1",
@@ -446,6 +447,7 @@ describe("FreeAgent adapter", () => {
       invoice: {
         reference: "FT-ACC-history1",
         contact: "https://api.sandbox.freeagent.com/v2/contacts/7",
+        comments: "Direct Debit collection scheduled for 2026-09-06 (7 days before the lesson).",
         invoice_items: [{ price: "55.00", quantity: "1.0", sales_tax_rate: "0", category: "https://api.sandbox.freeagent.com/v2/categories/1" }],
         currency: "GBP"
       }

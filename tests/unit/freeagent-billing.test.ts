@@ -207,4 +207,26 @@ describe("FreeAgent billing capabilities", () => {
     expect(requestUrl).toBe("https://api.sandbox.freeagent.com/v2/invoices/42/direct_debit");
     expect(requestMethod).toBe("POST");
   });
+
+  it("cancels an invoice through the provider API transition", async () => {
+    let requestUrl = "";
+    let requestMethod = "";
+    const client = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async (input, init) => {
+        requestUrl = String(input);
+        requestMethod = init?.method ?? "GET";
+        return jsonResponse({
+          invoice: {
+            url: "https://api.sandbox.freeagent.com/v2/invoices/42",
+            status: "Cancelled"
+          }
+        });
+      }
+    });
+    await expect(client.markInvoiceCancelled("token", "https://api.sandbox.freeagent.com/v2/invoices/42"))
+      .resolves.toMatchObject({ status: "Cancelled" });
+    expect(requestUrl).toBe("https://api.sandbox.freeagent.com/v2/invoices/42/transitions/mark_as_cancelled");
+    expect(requestMethod).toBe("PUT");
+  });
 });

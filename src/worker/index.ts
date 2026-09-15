@@ -4134,6 +4134,7 @@ export default {
         now,
         providerEnvironment: configuredEnvironment(env)
       })));
+      await processDueBillingInvoiceOperations(db, env, now, freeAgentFetch, 20);
       await ensureDueDirectDebitOperations(db, now.slice(0, 10), now);
       const dueAccounting = await listDueAccountingOutbox(db, now, 10);
       const dueBillingProviderOperations = env.FREEAGENT_BILLING_PROVIDER_ENABLED === "true"

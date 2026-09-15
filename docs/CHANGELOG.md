@@ -1,5 +1,22 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 API-safe cancellation and exact billing cutoff
+
+- Added `CANCEL_INVOICE` to the billing operation state machine and migration
+  `0033_cancel_invoice_operation.sql`.
+- Sent, uncollected invoices are now cancelled through FreeAgent's API
+  transition and require a confirmed `Cancelled` provider response.
+- Direct Debit collection-started, paid, failed or unknown invoices are not
+  deleted or cancelled; they remain in the payment/credit lifecycle.
+- Invoice issuance is gated at exactly 22:00 Europe/London on the calendar
+  date seven days before the lesson, including the DST-safe local-time
+  boundary.
+- The scheduler now processes invoice creation before Direct Debit creation and
+  processes the resulting Direct Debit operation in the same invocation.
+- FreeAgent collection timing is stored in the official invoice `comments`
+  field as well as the lesson-date invoice line.
+- Automated acceptance: 42 test files, 301 tests passed.
+
 ### 2026-09-15 - Phase 7.17 date-sequential invoice references
 
 - Changed new FreeAgent invoice references to `FT-INV-YYMMDDNN`, using a
