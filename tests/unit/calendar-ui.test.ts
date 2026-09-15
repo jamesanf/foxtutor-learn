@@ -108,6 +108,7 @@ describe("calendar presentation contract", () => {
     expect(cssSource).toContain(".table-action-cell form { display: flex; height: 100%; align-items: center; justify-content: center; margin: 0; }");
     expect(cssSource).toContain(".table-action-cell .button { margin-top: 0; }");
     expect(cssSource).toContain(".recurring-series-action { min-height: 30px; height: 30px;");
+    expect(cssSource.indexOf(".button {")).toBeLessThan(cssSource.indexOf(".recurring-series-action {"));
     expect(workerSource).toContain('class="button secondary recurring-series-action"');
   });
 

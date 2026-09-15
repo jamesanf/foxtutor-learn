@@ -396,7 +396,6 @@ th { color: #334e68; background: #e8f0f5; font-size: clamp(.6rem, .7vw, .75rem);
 .table-action-cell { vertical-align: middle; text-align: center; }
 .table-action-cell form { display: flex; height: 100%; align-items: center; justify-content: center; margin: 0; }
 .table-action-cell .button { margin-top: 0; }
-.recurring-series-action { min-height: 30px; height: 30px; margin: 0; padding: 5px 10px; font-size: .78rem; line-height: 1; white-space: nowrap; }
 td a { color: var(--action); text-underline-offset: 3px; }
 td a:hover { color: var(--action-hover); }
 tbody tr:hover { background: #f8fbfd; }
@@ -608,6 +607,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .centered { display: grid; min-height: 100vh; place-items: center; padding: 24px; }
 .centered .card { width: min(100%, 520px); margin: 0; }
 .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; margin-top: 10px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--radius-sm); color: white; background: var(--action); text-decoration: none; font-weight: 650; }
+.recurring-series-action { min-height: 30px; height: 30px; margin: 0; padding: 0 10px; font-size: .78rem; line-height: 1.1; white-space: nowrap; }
 .button:hover { background: var(--action-hover); }
 .button.danger { background: var(--danger); }
 .button.danger:hover { background: #991b1b; }
