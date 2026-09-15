@@ -67,6 +67,8 @@ Automated UI contracts cover:
 - both New Booking student fields using the internal searchable combobox,
   including live filtering, keyboard selection, hidden ID submission and
   invalid free-text rejection.
+- the embedded recurring-series section omitting its redundant `Create series`
+  action because creation is owned by the shared New Booking modal.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

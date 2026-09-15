@@ -84,6 +84,9 @@ the existing chooser navigation.
 Both booking forms now label the payer selector simply as `Student` and use a
 shared site-internal searchable combobox with live suggestions. The selected
 student ID continues to be submitted through the existing protected routes.
+The embedded recurring-series section no longer shows a separate `Create
+series` link; the shared New Booking modal is now its only creation entry
+point.
 
 ## Required validation
 

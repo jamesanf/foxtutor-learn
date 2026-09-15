@@ -109,6 +109,7 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('parseStudentSectionPagination(url, "seriesPage", "seriesSize")');
     expect(workerSource).toContain('listRecurringSeriesPage(db, seriesPagination.pageSize, (safeSeriesPage - 1) * seriesPagination.pageSize)');
     expect(workerSource).toContain('studentSectionPagination(page, pageSize, total, "/learn/admin/bookings", "Recurring lesson series", "seriesPage", "seriesSize")');
+    expect(workerSource).not.toContain('buttonLink("/learn/admin/series/new", "Create series")');
     expect(workerSource).toContain('<section class="recurring-series-section">');
     expect(workerSource).not.toContain('<section class="card recurring-series-section">');
     expect(cssSource).toContain(".recurring-series-section { margin-top: 28px; }");

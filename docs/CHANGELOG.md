@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series creation entry point
+
+- Removed the redundant `Create series` link from the embedded recurring
+  series section in Bookings.
+- Kept the shared New Booking modal as the single standalone and recurring
+  booking creation path.
+
 ### 2026-09-15 - Phase 7.17 searchable booking student selector
 
 - Replaced the standalone and recurring booking browser student dropdowns with
