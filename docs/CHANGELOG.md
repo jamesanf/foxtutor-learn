@@ -10,6 +10,8 @@
   six-week Europe/London materialisation window.
 - Protected recurring resume and scheduled materialisation from creating
   overlapping lessons; rejected creation does not persist a new series.
+- Deployed commit `abf330e` as Worker version
+  `1adc0dca-3c3b-4d23-8991-b4c2592b0922`.
 
 ### 2026-09-15 - Phase 7.17 Dashboard New Booking modal
 
