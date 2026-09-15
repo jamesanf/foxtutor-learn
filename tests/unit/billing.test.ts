@@ -113,8 +113,8 @@ describe("customer credit ledger rules", () => {
   });
 
   it("creates short date-sequenced provider invoice references", () => {
-    expect(datedInvoiceReference("2026-09-15", 1)).toBe("FT-INV-26091501");
-    expect(datedInvoiceReference("2026-09-15", 99)).toBe("FT-INV-26091599");
+    expect(datedInvoiceReference("2026-09-15", 1)).toBe("FT26091501");
+    expect(datedInvoiceReference("2026-09-15", 99)).toBe("FT26091599");
   });
 
   it("keeps a twelve-lesson future fixture invoice-only until each collection date", () => {

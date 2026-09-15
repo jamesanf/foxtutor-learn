@@ -81,8 +81,9 @@ Automated UI contracts cover:
 - invoice detail using the human/provider reference as its primary identifier,
   with the internal invoice ID retained only as a secondary operational field;
 - short date-sequential provider invoice references using
-  `FT-INV-YYMMDDNN`, with a collision-safe daily sequence from `01` through
-  `99`; legacy UUID references remain a read-only lookup fallback.
+  `FTYYMMDDNN`, with a collision-safe daily sequence from `01` through
+  `99`; legacy UUID and `FT-INV-YYMMDDNN` references remain read-only lookup
+  fallbacks.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,
@@ -139,9 +140,11 @@ date-sequential reference and the prior UUID reference.
 
 Live Chromium and Production FreeAgent acceptance created a James Fox lesson
 for 30 September 2026. FreeAgent displayed invoice `94628424` with reference
-`FT-INV-26091501`, total £55.00 and status Open. FoxTutor recorded the
-Production invoice as SENT with a successful provider operation and a
-collection date seven days before the lesson.
+`FT-INV-26091501`, total £55.00 and status Open; that fixture predates the
+short-reference change. Newly created invoices now use `FTYYMMDDNN`, for
+example `FT26091503`. FoxTutor recorded the Production invoice as SENT with a
+successful provider operation and a collection date seven days before the
+lesson.
 
 New provider invoices use the lesson date as their invoice date and include a
 visible line-item note stating the scheduled Direct Debit collection date.
@@ -174,7 +177,7 @@ Settlement-safe credit and cancellation acceptance now also covers:
   pending, payment in transit, confirmed credit and reconciliation-required
   outcomes;
 - credit-covered lessons create an idempotent FoxMail billing statement from
-  `billing@foxtutor.org` with a normalized `FT-INV-YYMMDDNN` reference,
+  `billing@foxtutor.org` with a normalized `FTYYMMDDNN` reference,
   lesson date, source-invoice reference and £0.00 amount due. They are marked
   locally secured only after mail acceptance and never receive a FreeAgent
   invoice or Direct Debit operation;
@@ -183,7 +186,7 @@ Settlement-safe credit and cancellation acceptance now also covers:
   tutor that manual payment is required;
 - active credit is separated from consumed history in the student and admin
   billing views.
-- zero-value credit-covered statements use only normalized `FT-INV-YYMMDDNN`
+- zero-value credit-covered statements use only normalized `FTYYMMDDNN`
   source references, never internal credit IDs, and contain no bank details or
   payment instructions;
 - cancelling a credit-covered FoxMail statement reverses the original credit

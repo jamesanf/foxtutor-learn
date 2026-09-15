@@ -468,12 +468,12 @@ describe("FreeAgent adapter", () => {
 
     await client.createDraftInvoice("access-token", {
       contactUrl: "https://api.sandbox.freeagent.com/v2/contacts/7",
-      reference: "FT-INV-26091502",
+      reference: "FT26091502",
       datedOn: "2026-09-21",
       paymentTermsInDays: 0,
       itemType: "https://api.sandbox.freeagent.com/v2/item_types/1",
       description: "FoxTutor lesson 2026-09-21",
-      comments: "Credit from invoice FT-INV-26091501 applied to this lesson; amount due £0.00.",
+      comments: "Credit from invoice FT26091501 applied to this lesson; amount due £0.00.",
       price: "0.00",
       salesTaxRate: "0",
       categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/1",
@@ -484,7 +484,7 @@ describe("FreeAgent adapter", () => {
     expect(JSON.parse(requestBody)).toMatchObject({
       invoice: {
         invoice_items: [{ price: "0.00" }],
-        comments: "Credit from invoice FT-INV-26091501 applied to this lesson; amount due £0.00.",
+        comments: "Credit from invoice FT26091501 applied to this lesson; amount due £0.00.",
         bank_account: null
       }
     });

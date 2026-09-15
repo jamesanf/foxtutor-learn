@@ -5,10 +5,10 @@ describe("credit-covered invoice comments", () => {
   it("uses only normalized invoice references and never exposes internal credit identifiers", () => {
     const comment = renderCreditCoveredInvoiceComment([
       "credit:phase717-live-zero",
-      "FT-INV-26091501"
+      "FT26091501"
     ]);
 
-    expect(comment).toContain("invoice FT-INV-26091501");
+    expect(comment).toContain("invoice FT26091501");
     expect(comment).not.toContain("credit:phase717-live-zero");
     expect(comment).toContain("amount due £0.00");
     expect(comment).toContain("Please ignore the payment details above");
@@ -24,17 +24,17 @@ describe("credit-covered invoice comments", () => {
   it("renders a bank-free customer statement without exposing internal identifiers", () => {
     const statement = renderCreditCoveredStatement(
       "KJHGBH Live Customer",
-      "FT-INV-26091504",
+      "FT26091504",
       "2026-09-20",
       5500,
       [
-        { invoiceReference: "FT-INV-26091501", lessonDate: "2026-09-16", amountMinor: 5500 },
+        { invoiceReference: "FT26091501", lessonDate: "2026-09-16", amountMinor: 5500 },
         { invoiceReference: null, lessonDate: "2026-09-17", amountMinor: 0 }
       ]
     );
 
     expect(statement.subject).toBe("Your FoxTutor lesson is paid - 20 September 2026");
-    expect(statement.text).toContain("Invoice FT-INV-26091501");
+    expect(statement.text).toContain("Invoice FT26091501");
     expect(statement.text).toContain("lesson on 16 September 2026");
     expect(statement.text).toContain("lesson on 17 September 2026");
     expect(statement.text).not.toContain("credit:phase717-live-zero");
@@ -55,14 +55,14 @@ describe("credit-covered invoice comments", () => {
       5500,
       "METTLE_BANK_TRANSFER",
       "METTLE-123",
-      "FT-INV-26091501",
+      "FT26091501",
       "2026-09-16"
     );
 
     expect(refund.subject).toBe("Your FoxTutor refund has been processed");
     expect(refund.text).toContain("Refund amount: £55.00");
     expect(refund.text).toContain("Mettle bank transfer");
-    expect(refund.text).toContain("FT-INV-26091501 for the lesson on 16 September 2026");
+    expect(refund.text).toContain("FT26091501 for the lesson on 16 September 2026");
     expect(refund.text).toContain("3–5 working days");
     expect(refund.text).not.toMatch(/sort code|account number|bank details/i);
     expect(refund.html).toContain("Refund processed");

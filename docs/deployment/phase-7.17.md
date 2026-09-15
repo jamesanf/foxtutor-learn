@@ -100,7 +100,7 @@ calendar link has been removed.
 Invoice detail now leads with the human/provider reference instead of the
 internal UUID-style invoice ID, while retaining that internal ID as a
 secondary operational field. New provider references use the short
-date-sequential `FT-INV-YYMMDDNN` format. A D1-backed unique sequence table
+date-sequential `FTYYMMDDNN` format. A D1-backed unique sequence table
 allocates each daily number once, and retries also search the prior UUID
 reference so existing provider invoices cannot be duplicated.
 The FreeAgent invoice date is the lesson date, and the visible invoice

@@ -2557,7 +2557,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const source = await db.prepare(
         `SELECT COALESCE(source_reference.business_date, source_event.lesson_date) AS source_date,
                 CASE WHEN source_reference.business_date IS NOT NULL AND source_reference.sequence IS NOT NULL
-                  THEN 'FT-INV-' || substr(replace(source_reference.business_date, '-', ''), 3) || printf('%02d', source_reference.sequence)
+                  THEN 'FT' || substr(replace(source_reference.business_date, '-', ''), 3) || printf('%02d', source_reference.sequence)
                   ELSE source_invoice.freeagent_reference END AS source_reference
          FROM customer_credits c
          LEFT JOIN billing_events source_event
@@ -2607,7 +2607,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const source = await db.prepare(
         `SELECT COALESCE(source_reference.business_date, source_event.lesson_date) AS source_date,
                 CASE WHEN source_reference.business_date IS NOT NULL AND source_reference.sequence IS NOT NULL
-                  THEN 'FT-INV-' || substr(replace(source_reference.business_date, '-', ''), 3) || printf('%02d', source_reference.sequence)
+                  THEN 'FT' || substr(replace(source_reference.business_date, '-', ''), 3) || printf('%02d', source_reference.sequence)
                   ELSE source_invoice.freeagent_reference END AS source_reference
          FROM customer_credits c
          LEFT JOIN billing_events source_event

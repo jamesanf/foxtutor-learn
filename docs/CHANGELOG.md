@@ -1,5 +1,15 @@
 # Changelog
 
+### 2026-09-15 - Shorter payment references
+
+- New lesson invoice and payment references now use `FTYYMMDDNN`, for example
+  `FT26091503`, with the lesson date in `YYMMDD` form and a collision-safe
+  `01`–`99` daily sequence.
+- Existing `FT-INV-YYMMDDNN` and legacy UUID references remain supported for
+  read-only provider lookup and historical provenance.
+- Updated billing, cancellation, credit-provenance and notification paths to
+  emit the shorter reference for newly created invoices.
+
 ### 2026-09-15 - Guided external credit refunds
 
 - Added a step-by-step admin refund workflow with explicit GoCardless,

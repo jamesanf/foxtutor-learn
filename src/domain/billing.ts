@@ -142,7 +142,11 @@ export function datedInvoiceReference(date: string, sequence: number): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(sequence) || sequence < 1 || sequence > 99) {
     throw new Error("Dated invoice references require a valid date and a sequence from 1 to 99.");
   }
-  return `FT-INV-${date.slice(2).replaceAll("-", "")}${String(sequence).padStart(2, "0")}`;
+  return `FT${date.slice(2).replaceAll("-", "")}${String(sequence).padStart(2, "0")}`;
+}
+
+export function isInvoiceReference(value: string): boolean {
+  return /^(?:FT\d{8,10}|FT-INV-\d{8,10})$/.test(value);
 }
 
 export function creditGrantIdempotencyKey(sourceEventId: string): string {

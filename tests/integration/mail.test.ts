@@ -77,7 +77,7 @@ describe("mail boundary", () => {
           to: "student@example.com",
           fromAddress: "billing@foxtutor.org",
           fromName: "FoxTutor Billing",
-          subject: "Credit-covered billing statement FT-INV-26091504",
+          subject: "Credit-covered billing statement FT26091504",
           text: "Amount due: £0.00",
           idempotencyKey: "billing-credit-statement-test-1"
         },

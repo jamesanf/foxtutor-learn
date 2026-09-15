@@ -173,7 +173,7 @@ describe("notification domain", () => {
       lessonPath: "/learn/student/lessons/lesson-1",
       externalUrl: null,
       billingOutcome: "PAYMENT_IN_TRANSIT",
-      billingInvoiceReference: "FT-INV-26091501",
+      billingInvoiceReference: "FT26091501",
       billingAmountMinor: "5500"
     }, "https://foxtutor.org/learn");
     expect(pending.text).toContain("payment is still in transit");

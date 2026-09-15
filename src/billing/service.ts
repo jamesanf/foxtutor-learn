@@ -24,7 +24,7 @@ import {
 } from "../accounting/service";
 import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
 import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
-import { creditRefundMethodLabel, datedInvoiceReference, isCollectionDateReached, type CreditRefundMethod } from "../domain/billing";
+import { creditRefundMethodLabel, datedInvoiceReference, isCollectionDateReached, isInvoiceReference, type CreditRefundMethod } from "../domain/billing";
 import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
 import { sendMailDetailed, type MailDeliveryResult, type MailEnvironment } from "../mail/client";
@@ -171,7 +171,7 @@ async function creditSourceProvenance(db: D1Database, invoiceId: string): Promis
     .map((row) => ({
       invoiceReference: row.business_date && row.sequence !== null
         ? datedInvoiceReference(row.business_date, Number(row.sequence))
-        : row.freeagent_reference?.startsWith("FT-INV-") ? row.freeagent_reference : null,
+        : row.freeagent_reference && isInvoiceReference(row.freeagent_reference) ? row.freeagent_reference : null,
       lessonDate: row.source_lesson_date,
       amountMinor: row.amount_minor
     }));
@@ -213,7 +213,7 @@ async function invoiceReferenceFor(
 }
 
 export function renderCreditCoveredInvoiceComment(sourceReferences: string[]): string {
-  const safeReferences = sourceReferences.filter((reference) => /^FT-INV-\d{8,10}$/.test(reference));
+  const safeReferences = sourceReferences.filter(isInvoiceReference);
   return `Credit from ${safeReferences.length ? `invoice ${safeReferences.join(", ")}` : "a previous FoxTutor invoice"} applied to this lesson; amount due £0.00. Direct Debit is not required. Please ignore the payment details above.`;
 }
 
