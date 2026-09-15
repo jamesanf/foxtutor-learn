@@ -112,9 +112,13 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('<section class="recurring-series-section">');
     expect(workerSource).not.toContain('<section class="card recurring-series-section">');
     expect(cssSource).toContain(".recurring-series-section { margin-top: 28px; }");
-    expect(workerSource).toContain('lessonCreateDialog(csrfToken, students)');
+    expect(workerSource).toContain('lessonCreateDialog(csrfToken, students, initialBookingView)');
     expect(workerSource).toContain('data-lesson-create-trigger');
     expect(workerSource).toContain('New booking');
+    expect(workerSource).toContain('data-booking-option="standalone"');
+    expect(workerSource).toContain('data-booking-option="recurring"');
+    expect(workerSource).toContain('recurringSeriesFormMarkup(csrfToken, students, undefined, true)');
+    expect(workerSource).toContain('if (request.method === "GET") return redirect("/learn/admin/bookings?open=recurring");');
     expect(workerSource).not.toContain('["/learn/admin/series", "Recurring series"]');
     expect(workerSource).toContain('if (route === "admin-series")');
     expect(workerSource).toContain('return redirect("/learn/admin/bookings");');

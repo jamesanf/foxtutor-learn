@@ -110,6 +110,9 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .lesson-create-dialog { width: min(calc(100% - 32px), 760px); max-width: 760px; padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; box-shadow: 0 18px 60px rgb(16 42 67 / 28%); }
 .lesson-create-dialog::backdrop { background: rgb(16 42 67 / 48%); }
 .lesson-create-dialog .card { position: relative; max-height: calc(100vh - 32px); margin: 0; overflow: auto; }
+.booking-choice-actions { display: grid; gap: 10px; margin-top: 24px; }
+.booking-choice-actions .button { width: 100%; margin-top: 0; }
+.booking-dialog-back { margin: 0 0 18px; }
 .empty-state p, .card p { max-width: 62ch; color: var(--muted); }
 .direct-debit-card .lede, .direct-debit-card > p, .direct-debit-card > ol { max-width: none; }
 .direct-debit-card > ol { margin-top: 0; padding-left: 24px; color: var(--muted); }

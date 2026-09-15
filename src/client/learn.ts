@@ -302,22 +302,47 @@ import timeGridPlugin from "@fullcalendar/timegrid";
   const lessonCreateDialog = document.querySelector<HTMLDialogElement>("[data-lesson-create-dialog]");
   if (lessonCreateDialog) {
     let lastTrigger: HTMLButtonElement | null = null;
+    const choiceView = lessonCreateDialog.querySelector<HTMLElement>("[data-booking-choice-view]");
+    const standaloneView = lessonCreateDialog.querySelector<HTMLElement>("[data-booking-form-view='standalone']");
+    const recurringView = lessonCreateDialog.querySelector<HTMLElement>("[data-booking-form-view='recurring']");
+    const showView = (view: "choice" | "standalone" | "recurring") => {
+      if (choiceView) choiceView.hidden = view !== "choice";
+      if (standaloneView) standaloneView.hidden = view !== "standalone";
+      if (recurringView) recurringView.hidden = view !== "recurring";
+      const container = view === "choice" ? choiceView : view === "standalone" ? standaloneView : recurringView;
+      container?.querySelector<HTMLElement>("select, input, textarea, button")?.focus();
+    };
     const close = () => lessonCreateDialog.close();
     document.querySelectorAll<HTMLButtonElement>("[data-lesson-create-trigger]").forEach((trigger) => {
       trigger.addEventListener("click", () => {
         lastTrigger = trigger;
+        showView("choice");
         if (!lessonCreateDialog.open) lessonCreateDialog.showModal();
-        lessonCreateDialog.querySelector<HTMLElement>("select, input, textarea")?.focus();
       });
     });
+    lessonCreateDialog.querySelectorAll<HTMLButtonElement>("[data-booking-option]").forEach((option) => {
+      option.addEventListener("click", () => {
+        const view = option.dataset.bookingOption;
+        if (view === "standalone" || view === "recurring") showView(view);
+      });
+    });
+    lessonCreateDialog.querySelectorAll<HTMLButtonElement>("[data-booking-choice-back]").forEach((button) => button.addEventListener("click", () => showView("choice")));
     lessonCreateDialog.querySelectorAll<HTMLButtonElement>("[data-lesson-create-close]").forEach((button) => button.addEventListener("click", close));
     lessonCreateDialog.addEventListener("click", (event) => {
       if (event.target === lessonCreateDialog) close();
     });
     lessonCreateDialog.addEventListener("close", () => {
+      showView("choice");
       lastTrigger?.focus();
       lastTrigger = null;
     });
+    const initialView = lessonCreateDialog.dataset.initialView;
+    if (initialView === "standalone" || initialView === "recurring") {
+      showView(initialView);
+      lessonCreateDialog.showModal();
+    } else {
+      showView("choice");
+    }
   }
 
   document.querySelectorAll<HTMLElement>(".calendar-host").forEach((element) => {
