@@ -6,6 +6,8 @@
   fill the action row and align with the paragraph above.
 - Added a responsive single-column version for narrow screens.
 - Updated the dashboard architecture documentation and UI contract.
+- Deployed commit `a28e9ba` as Worker version
+  `21a7ee14-916e-4a9f-9928-4190d6db5e74`.
 
 ### 2026-09-15 - Phase 7.17 compact Learn footer
 

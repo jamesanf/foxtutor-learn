@@ -7,7 +7,8 @@ greeting, near-term lesson launch notice, home-learning panel, secured
 lesson-scoped student submission route, logout-session repair and compact
 Learn header branding. It also uses outlined Resources and Notifications
 navigation icons when unselected, with filled selected states, and the compact
-two-row footer layout.
+two-row footer layout. Student dashboard calendar and resource actions are
+full-width and aligned to the panel copy.
 The submission flow reuses the existing private resource/R2 pipeline and
 the logout repair does not change billing or provider behavior.
 
@@ -44,9 +45,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `aa3dadb`
+- Git commit: `a28e9ba`
 - Worker: `foxtutor-learn`
-- Worker version: `fc736302-ed42-4f53-9387-0d6138e8f792`
+- Worker version: `21a7ee14-916e-4a9f-9928-4190d6db5e74`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
