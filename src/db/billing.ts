@@ -827,8 +827,9 @@ export async function listPendingBillingEvents(db: D1Database, now: string, limi
   const result = await db.prepare(
     `SELECT * FROM billing_events
      WHERE status = 'PENDING'
+       AND (collection_date IS NULL OR collection_date <= ?)
      ORDER BY lesson_date ASC, id ASC LIMIT ?`
-  ).bind(limit).all<BillingEvent>();
+  ).bind(now.slice(0, 10), limit).all<BillingEvent>();
   return result.results;
 }
 

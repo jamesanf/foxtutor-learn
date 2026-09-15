@@ -99,6 +99,10 @@ reference so existing provider invoices cannot be duplicated.
 The FreeAgent invoice date is the lesson date, and the visible invoice
 description states that Direct Debit collection is scheduled seven days
 earlier.
+Pending lesson events are not sent to FreeAgent before their collection date;
+the scheduler therefore gives the admin the seven-day cancellation window.
+The Direct Debit operation is created on the next scheduler cycle after the
+invoice is successfully sent.
 
 ## Required validation
 

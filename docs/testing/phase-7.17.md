@@ -140,6 +140,13 @@ collection date seven days before the lesson.
 New provider invoices use the lesson date as their invoice date and include a
 visible line-item note stating the scheduled Direct Debit collection date.
 
+The issuance scheduler now waits until the collection date before selecting a
+pending lesson event for provider invoice creation. For the normal seven-day
+policy, a lesson invoice is therefore created on the calendar date seven days
+before the lesson, and the Direct Debit operation becomes eligible in the next
+five-minute scheduler cycle after the invoice is sent. A lesson cancelled
+before that date remains provider-uninvoiced and cannot enter collection.
+
 The TypeScript check and client build also pass. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and
 explicit resume path in addition to the dashboard and student submission
