@@ -10,6 +10,7 @@ import {
   applyCreditToInvoice,
   reverseInvoiceCreditApplications,
   resetInvoiceCreditAllocation,
+  resolveBillingAlertsForInvoice,
   updateBillingEventStatus,
   updateBillingInvoice,
   type BillingInvoiceOperation,
@@ -841,6 +842,29 @@ async function processCancelInvoice(
       providerStatus: cancelled.status
     }, now);
   } catch (error) {
+    if (error instanceof FreeAgentApiError && error.shape.code === "NOT_FOUND" && !collectionStarted?.started) {
+      await updateBillingInvoice(db, invoice.id, {
+        status: "CANCELLED",
+        providerStatus: "NOT_FOUND_CANCELED",
+        now
+      });
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "SUCCEEDED",
+        providerReference: invoice.freeagent_reference,
+        providerUrl: invoice.freeagent_url,
+        providerStatus: "NOT_FOUND",
+        safeErrorCode: null,
+        safeErrorMessage: null
+      }, now);
+      await resolveBillingAlertsForInvoice(
+        db,
+        invoice.id,
+        null,
+        "Provider invoice was already absent and no collection had started; local cancellation was completed as a no-op.",
+        now
+      );
+      return;
+    }
     await markOperationFailure(db, operation, now, error, {
       studentId: null,
       lessonId: null,

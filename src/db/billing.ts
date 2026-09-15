@@ -1105,7 +1105,7 @@ export async function listOpenBillingAlerts(
 export async function updateBillingAlertStatus(
   db: D1Database,
   id: string,
-  input: { status: "ACKNOWLEDGED" | "RESOLVED" | "OPEN"; userId: string; note?: string },
+  input: { status: "ACKNOWLEDGED" | "RESOLVED" | "OPEN"; userId: string | null; note?: string },
   now: string
 ): Promise<boolean> {
   const updated = await db.prepare(
@@ -1138,7 +1138,7 @@ export async function updateBillingAlertStatus(
 export async function resolveBillingAlertsForInvoice(
   db: D1Database,
   invoiceId: string,
-  userId: string,
+  userId: string | null,
   note: string,
   now: string
 ): Promise<void> {
