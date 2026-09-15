@@ -14,8 +14,9 @@ The automated suite covers:
 - invoice payload shape, currency/tax configuration and malformed config;
 - exact 55.00 GBP bootstrap value, editable fixed-decimal amounts, immutable GBP
   validation and explicit tax payloads;
-- unresolved `ADMIN_CANCELLED` classification with no invoice/no-action
-  default;
+- the historical unresolved `ADMIN_CANCELLED` classification and its
+  no-action safety; Phase 7.17 now makes the approved no-action outcome
+  explicit as `NOT_REQUIRED`;
 - authentication, authorization, rate-limit, validation, timeout and unknown
   provider outcomes;
 - admin-only route classification, billing-settings persistence and

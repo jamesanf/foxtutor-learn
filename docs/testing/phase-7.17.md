@@ -201,6 +201,13 @@ Settlement-safe credit and cancellation acceptance now also covers:
   available balance;
 - failed collection outcomes are reported as billing review required, with no
   credit grant and no false claim that the lesson was unpaid or unbilled.
+- administrative cancellations do not create a provider-facing accounting
+  action in the legacy accounting outbox; invoice cancellation, collection
+  protection, credit reversal and reconciliation remain owned by billing.
+  Migration `0037_admin_cancellation_accounting_no_action.sql` repaired the
+  20 historical `FAILED / BUSINESS_MAPPING_REQUIRED` rows in Production;
+  all 22 current accounting-outbox rows are now explicit `NOT_REQUIRED`
+  outcomes with no retry action.
 
 Production D1 migration `0034_settlement_safe_credit_repair.sql` repaired the
 historical test grants that had no provider invoice/payment evidence. It uses
@@ -231,8 +238,8 @@ mandate-aware FreeAgent fixes is:
 
 ```text
 44 test files
-320 tests
-320 passed
+321 tests
+321 passed
 0 failed
 ```
 
@@ -247,7 +254,7 @@ cancellation, credit, FreeAgent, notification, and environment suites:
 ```
 
 The complete repository regression suite was rerun immediately afterward with
-the same 44-file, 320-test result. The three documented amber items remain
+the same 44-file, 321-test result. The three documented amber items remain
 live-acceptance fixtures rather than automated test failures: a live partial
 refund, a new-customer mailbox/provider onboarding cycle, and a full recurring
 credit-provenance mail cycle.
@@ -270,6 +277,7 @@ initiated.
 | Cancellation before invoice issuance | GREEN | Live admin cancellation left no invoice, collection operation or credit. |
 | Sent but uncollected provider invoice | GREEN | `CANCEL_INVOICE` is idempotent and fail-closed until FreeAgent confirms cancellation. |
 | Collection started, failed or unknown | GREEN | Cancellation does not delete the provider document; reconciliation is required. |
+| Administrative cancellation accounting outbox | GREEN | No provider accounting action is required; 20 legacy failure rows were repaired and future rows are `NOT_REQUIRED`. |
 | Credit-covered FoxMail statement | GREEN | Live statement/cancellation tests preserve the original invoice and lesson provenance. |
 | Repeated credit reversal | GREEN | Idempotent reversal prevents a second credit grant. |
 | Manual refund acknowledgement | GREEN | Live Chromium/D1 test records one `PAID` refund and zero available balance. |

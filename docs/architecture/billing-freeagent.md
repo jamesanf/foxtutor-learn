@@ -248,6 +248,14 @@ denied, the adapter uses the provider-supported API sequence
 bodyless delete response as success. Collection-started invoices never enter
 this fallback.
 
+Administrative cancellation does not create a second provider-facing action in
+the legacy accounting outbox. The billing workflow is authoritative for
+invoice cancellation, collection-started protection, credit reversal and
+reconciliation; the accounting outbox records the cancellation consequence as
+`NO_ACTION`/`NOT_REQUIRED`. This prevents a historical
+`BUSINESS_MAPPING_REQUIRED` placeholder from appearing as a failed retry or
+from creating a duplicate accounting document.
+
 ## Customer-level Direct Debit provisioning
 
 Each student has one `billing_accounts` row with immutable

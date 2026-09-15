@@ -19,9 +19,12 @@ responses and error normalization.
 
 `NO_CHARGE`, `EXCEPTION_WAIVED` and `RESCHEDULED` are durable
 `NOT_REQUIRED` accounting outcomes. `CANCELLATION_PENDING_DECISION` does not
-create a final accounting event. `ADMIN_CANCELLED` creates an explicit
-`UNRESOLVED` outbox record in a fail-closed state; it does not choose invoice
-creation or no action.
+create a final accounting event. The original Phase 6 contract classified
+`ADMIN_CANCELLED` as an explicit unresolved outbox record. Phase 7.17
+superseded that placeholder: billing now owns invoice cancellation,
+collection protection, credit reversal and reconciliation, so
+`ADMIN_CANCELLED` is recorded as `NO_ACTION`/`NOT_REQUIRED` and never creates
+a duplicate provider accounting action.
 
 The event stores the immutable Phase 5 history identity and effective date.
 The event never silently changes classification after creation. Any future

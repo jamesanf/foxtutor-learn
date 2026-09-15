@@ -823,9 +823,11 @@ Admins can change the amount, item type, category, payment terms and explicit
 sales-tax rate in `/learn/admin/accounting/settings`; GBP remains enforced and
 saved settings are used for future invoices. The current non-VAT setting is
 represented in FreeAgent invoice items by an explicit `sales_tax_rate` of `0`.
-The
-`ADMIN_CANCELLED` accounting consequence remains explicitly unresolved and
-must not be inferred from the normal lesson value. The current evidence
+The historical
+`ADMIN_CANCELLED` accounting placeholder was superseded in Phase 7.17:
+billing now owns invoice cancellation, collection protection, credit reversal
+and reconciliation, while the legacy accounting outbox records an explicit
+`NO_ACTION`/`NOT_REQUIRED` outcome. The current evidence
 matrix, architecture, security controls, test boundary, deployment
 distinction, human checklist and acceptance runbook are maintained in
 [`docs/phase-6.md`](docs/phase-6.md).

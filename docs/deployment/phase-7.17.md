@@ -127,6 +127,15 @@ provider-aware cancellation outcomes, creates auditable FoxMail billing
 statements for fully credit-covered lessons, and labels no-mandate lessons as
 manual payment rather than treating them as Direct Debit-pending.
 
+Migration `0037_admin_cancellation_accounting_no_action.sql` is applied in
+Production. It repaired 20 historical `ADMIN_CANCELLED` accounting-outbox
+rows that were incorrectly displayed as `FAILED /
+BUSINESS_MAPPING_REQUIRED`. Administrative cancellation consequences now remain
+explicit `NOT_REQUIRED` accounting outcomes because the billing workflow owns
+invoice cancellation, collection protection, credit reversal and
+reconciliation. Production verification shows all 22 accounting-outbox rows
+as `NOT_REQUIRED`, with no retryable or failed rows.
+
 Production diagnosis also found that invoice creation was unconditionally
 requesting FreeAgent GoCardless pre-authorisation for every GBP invoice.
 FreeAgent rejects that request when the contact mandate is not approved. The

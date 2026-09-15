@@ -6,11 +6,14 @@ tokens persisted in D1. Contact `257175` is currently verified for the Learn
 student with no conflicting mapping. The live billing-settings row, outbox and
 retry audit are empty, and no financial mutation has been performed.
 
-The latest acceptance handoff supplied literal placeholders rather than
-executable approvals for the `ADMIN_CANCELLED` consequence, effective-date
-policy and FreeAgent billing/category configuration. Do not persist or use
-those strings. Production remains gated on the same commercial decision,
-separate production credentials and controlled provider verification.
+The original Phase 6 handoff supplied literal placeholders rather than
+executable approvals for the `ADMIN_CANCELLED` consequence. Phase 7.17
+superseded that particular decision by making administrative cancellation an
+explicit `NO_ACTION`/`NOT_REQUIRED` accounting outcome; migration `0037`
+also repaired the historical failed outbox rows. Do not persist or use the
+old placeholder strings. Any separate Sandbox/provider acceptance gates in
+this historical runbook remain provider-acceptance work, not a reason to
+create a duplicate cancellation accounting action.
 
 ## Sandbox
 
@@ -23,9 +26,10 @@ separate production credentials and controlled provider verification.
    GBP is immutable, and the item type, category, payment terms and explicit
    sales-tax rate must match the approved values. The normal 55.00 GBP and
    zero-tax values are defaults only.
-2. Decide the `ADMIN_CANCELLED` accounting consequence before creating or
-   processing an administrative-cancellation invoice event. The system will
-   not infer invoice creation or no action.
+2. Verify that `ADMIN_CANCELLED` is handled as an explicit
+   `NO_ACTION`/`NOT_REQUIRED` outcome. Invoice cancellation, collection
+   protection, credit reversal and reconciliation are owned by the billing
+   workflow, not this legacy accounting outbox.
 3. Confirm the configured environment is `sandbox` and the callback exactly
    matches the registered URI.
 4. As an admin, open `/learn/admin/accounting` and confirm the green

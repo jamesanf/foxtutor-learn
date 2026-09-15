@@ -31,9 +31,11 @@ only current Phase 6 documents; historical release chronology is preserved in
   Admins can edit the amount, item type, category, payment terms and explicit
   sales-tax rate in billing management; GBP remains immutable. The current
   non-VAT setting sends FreeAgent `sales_tax_rate: "0"` explicitly.
-- `ADMIN_CANCELLED` is stored as an unresolved accounting action until the
-  owner approves its consequence; it cannot default to invoice creation or
-  no action.
+- Historical note: the original Phase 6 implementation stored
+  `ADMIN_CANCELLED` as unresolved. Phase 7.17 superseded that policy because
+  billing now owns invoice cancellation, collection protection, credit
+  reversal and reconciliation. Current administrative cancellations are
+  explicit `NO_ACTION`/`NOT_REQUIRED` accounting outcomes.
 - Timeouts, network failures and uncertain mutation outcomes become
   `UNKNOWN`; they require reconciliation rather than blind recreation.
 - Admin retries are CSRF-protected, state-checked and audit-recorded.

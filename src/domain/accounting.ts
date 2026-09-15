@@ -94,11 +94,11 @@ export function accountingDecisionForBillingConsequence(consequence: BillingCons
       };
     case "ADMIN_CANCELLED":
       return {
-        actionType: "UNRESOLVED",
-        status: "FAILED",
-        providerStatus: "NOT_ATTEMPTED",
-        safeErrorCode: "BUSINESS_MAPPING_REQUIRED",
-        safeErrorMessage: "Administrative cancellation accounting consequence is unresolved."
+        actionType: "NO_ACTION",
+        status: "NOT_REQUIRED",
+        providerStatus: "NOT_REQUIRED",
+        safeErrorCode: null,
+        safeErrorMessage: null
       };
     case "CANCELLATION_PENDING_DECISION":
       return {

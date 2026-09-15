@@ -261,4 +261,12 @@ describe("D1 foundation", () => {
     expect(migration).toContain("SET item_type = 'Units'");
     expect(migration).toContain("WHERE item_type IN ('Hours', 'Unit')");
   });
+
+  it("repairs legacy administrative-cancellation accounting failures as no-action outcomes", () => {
+    const migration = readFileSync("migrations/0037_admin_cancellation_accounting_no_action.sql", "utf8");
+    expect(migration).toContain("billing_consequence = 'ADMIN_CANCELLED'");
+    expect(migration).toContain("safe_error_code = 'BUSINESS_MAPPING_REQUIRED'");
+    expect(migration).toContain("status = 'NOT_REQUIRED'");
+    expect(migration).toContain("action_type = 'NO_ACTION'");
+  });
 });

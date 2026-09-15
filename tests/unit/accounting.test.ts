@@ -203,17 +203,18 @@ async function accountingProcessHarness() {
 }
 
 describe("accounting domain", () => {
-  it("maps Phase 5 classifications without inventing no-charge provider actions", () => {
+  it("maps cancellation classifications without inventing provider actions", () => {
     expect(accountingEventTypeForHistory("STUDENT_CANCELLED")).toBe("CANCELLATION_ACCOUNTING");
     expect(accountingEventTypeForHistory("RESCHEDULED")).toBe("RESCHEDULE_ACCOUNTING");
     expect(accountingEventTypeForHistory("CANCELLATION_REQUESTED")).toBeNull();
     expect(accountingDecisionForBillingConsequence("NO_CHARGE")).toMatchObject({ actionType: "NO_ACTION", status: "NOT_REQUIRED" });
     expect(accountingDecisionForBillingConsequence("EXCEPTION_WAIVED")).toMatchObject({ actionType: "NO_ACTION", status: "NOT_REQUIRED" });
     expect(accountingDecisionForBillingConsequence("ADMIN_CANCELLED")).toMatchObject({
-      actionType: "UNRESOLVED",
-      status: "FAILED",
-      safeErrorCode: "BUSINESS_MAPPING_REQUIRED",
-      safeErrorMessage: "Administrative cancellation accounting consequence is unresolved."
+      actionType: "NO_ACTION",
+      status: "NOT_REQUIRED",
+      providerStatus: "NOT_REQUIRED",
+      safeErrorCode: null,
+      safeErrorMessage: null
     });
   });
 

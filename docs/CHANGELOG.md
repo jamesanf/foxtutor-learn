@@ -2,10 +2,18 @@
 
 ### 2026-09-15 - Phase 7.17 billing regression rerun
 
+- Repaired the accounting outbox defect that marked every administrative
+  cancellation as `FAILED / BUSINESS_MAPPING_REQUIRED`. Administrative
+  cancellations now produce an explicit `NOT_REQUIRED` no-action outcome,
+  while billing remains responsible for invoice cancellation, payment
+  protection, credits and reconciliation.
+- Applied migration `0037_admin_cancellation_accounting_no_action.sql` to
+  Production, repairing 20 historical rows; the Production outbox now has 22
+  `NOT_REQUIRED` rows and no failed or retryable cancellation-accounting rows.
 - Reran all billing-focused accounting, billing, payment, cancellation, credit,
   FreeAgent, notification and environment suites: 18 test files and 138 tests
   passed with no failures.
-- Reran the complete repository regression suite: 44 test files and 320 tests
+- Reran the complete repository regression suite: 44 test files and 321 tests
   passed with no failures.
 - Deployed revision `781a8ab` as Worker version
   `77243e44-812a-4398-b3d4-fb64c6e97eb0` with the Learn routes and five-minute
@@ -54,7 +62,7 @@
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
-- Automated acceptance: 44 test files, 320 tests passed.
+- Automated acceptance: 44 test files, 321 tests passed.
 - Deployed commit `2f2f64f` as Worker version
   `bdf8637c-f67a-4161-9fac-675412a146cf`.
 

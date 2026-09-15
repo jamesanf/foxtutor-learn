@@ -51,10 +51,13 @@ source commit above is the reviewed executable commit from which
 
 ## Current closure state
 
-The application-side release is technically complete. The current phase is
-not operationally closed because the `ADMIN_CANCELLED` consequence remains
-undecided and sandbox/production provider acceptance have not occurred. Do
-not create `phase-6-complete` before those steps pass.
+The application-side release is technically complete. The original phase was
+not operationally closed because the `ADMIN_CANCELLED` consequence remained
+undecided and sandbox/production provider acceptance had not occurred. Phase
+7.17 superseded that accounting decision with an explicit
+`NO_ACTION`/`NOT_REQUIRED` outcome and repaired the legacy failed outbox rows;
+remaining provider-acceptance gates are independent of cancellation
+accounting.
 
 The latest executable release also includes the corrected
 `external_accounting_links` insert (15 values for 15 columns), successful D1
