@@ -1099,7 +1099,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
       }
     };
     wrapper.addEventListener("click", (event) => {
-      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.notification-page-link[href]");
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.notification-page-link[href], a.notification-sort-link[href]");
       if (!anchor || anchor.getAttribute("aria-disabled") === "true") return;
       event.preventDefault();
       void loadPage(new URL(anchor.href, window.location.href));

@@ -78,14 +78,22 @@ The database unique constraint on `idempotency_key` is the final duplicate
 protection. Provider delivery uses `notification:<notification-id>` and never
 generates a new key for an attempt.
 
-## Shared pagination
+## Delivery-log sorting, pagination and retention
 
 Learn list views use the same server-rendered `paginationControls` helper and
 compact pager styling. It presents only previous/next arrow controls and a
 `Page X of Y` label, with the notification delivery log using the same markup
-and adding its existing no-reload fragment behavior. This keeps pagination
-consistent across bookings, past lessons, resources, student records and
-notifications.
+and adding its existing no-reload fragment behavior. Notification delivery-log
+headers sort the server-side result set by event, recipient, pupil, lesson,
+status, scheduled time, sent time or created time. The default is sent time,
+most recent first, with unsent records after sent records. The log exposes at
+most ten pages for the selected page size.
+
+Completed notification history is retained to the latest 480 records, which is
+ten pages at the largest available page size. The scheduled Worker cleanup
+prunes older `SENT`, `FAILED` and `SUPPRESSED` rows daily at 03:00
+Europe/London. Active or unresolved `PENDING`, `SENDING` and `UNKNOWN` rows are
+not deleted.
 
 ## Reminders
 

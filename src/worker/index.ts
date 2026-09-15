@@ -69,7 +69,19 @@ import {
   type CalendarFeed
 } from "../db/calendar-feeds";
 import { findLessonReport, findSentLessonReportForStudent, upsertLessonReport, type LessonReport } from "../db/reports";
-import { countNotifications, findNotificationById, listNotifications, notificationCounts, updateNotificationSchedule } from "../db/notifications";
+import {
+  countNotifications,
+  findNotificationById,
+  listNotifications,
+  NOTIFICATION_HISTORY_PAGE_LIMIT,
+  NOTIFICATION_HISTORY_RETENTION_LIMIT,
+  NOTIFICATION_PAGE_SIZES,
+  notificationCounts,
+  pruneNotificationHistory,
+  type NotificationSort,
+  type NotificationSortDirection,
+  updateNotificationSchedule
+} from "../db/notifications";
 import {
   accountingOutboxCounts,
   consumeAccountingOAuthState,
@@ -548,6 +560,25 @@ function notificationControls(settings: NotificationSetting[], csrfToken: string
   return `<section class="card notification-controls"><div class="section-heading"><div><h2>Notification controls</h2></div></div><div class="notification-settings-list">${groupMarkup}</div></section>`;
 }
 
+function notificationSortHeader(
+  label: string,
+  sort: NotificationSort,
+  currentSort: NotificationSort,
+  currentDirection: NotificationSortDirection,
+  selectedStatus: string | undefined,
+  pageSize: number
+): string {
+  const active = sort === currentSort;
+  const nextDirection = active
+    ? currentDirection === "asc" ? "desc" : "asc"
+    : sort === "sent" ? "desc" : "asc";
+  const query = new URLSearchParams({ page: "1", size: String(pageSize), sort, direction: nextDirection });
+  if (selectedStatus) query.set("status", selectedStatus);
+  const ariaSort = active ? currentDirection === "asc" ? "ascending" : "descending" : "none";
+  const indicator = active ? ` <span aria-hidden="true">${currentDirection === "asc" ? "↑" : "↓"}</span>` : "";
+  return `<th aria-sort="${ariaSort}"><a class="notification-sort-link" href="/learn/admin/notifications?${query.toString()}">${label}${indicator}</a></th>`;
+}
+
 function notificationList(
   rows: Awaited<ReturnType<typeof listNotifications>>,
   counts: Awaited<ReturnType<typeof notificationCounts>>,
@@ -556,7 +587,9 @@ function notificationList(
   selectedStatus?: string,
   page = 1,
   pageSize = 12,
-  total = 0
+  total = 0,
+  sort: NotificationSort = "sent",
+  direction: NotificationSortDirection = "desc"
 ): string {
   const filters = ["", "PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT", "SUPPRESSED"].map((status) => {
     const label = status ? notificationStatusLabel(status) : "All";
@@ -565,14 +598,15 @@ function notificationList(
   }).join(" ");
   const summary = `<div class="summary-grid"><section class="summary-card"><span>Sent</span><strong>${counts.SENT}</strong></section><section class="summary-card"><span>Pending</span><strong>${counts.PENDING}</strong></section><section class="summary-card"><span>Failed</span><strong>${counts.FAILED}</strong></section><section class="summary-card"><span>Unknown</span><strong>${counts.UNKNOWN}</strong></section><section class="summary-card"><span>Suppressed</span><strong>${counts.SUPPRESSED}</strong></section></div>`;
   const body = rows.length
-    ? `<div class="table-wrap notification-log-table"><table><thead><tr><th>Event</th><th>Recipient</th><th>Pupil</th><th>Lesson date</th><th>Status</th><th>Scheduled</th><th>Created</th></tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${entityRouteId(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Pupil">${row.student_id ? `<a href="/learn/admin/students/${entityRouteId(row.student_id)}">${escapeHtml(row.student_name ?? "Pupil")}</a>` : "—"}</td><td data-label="Lesson date">${row.lesson_id && row.lesson_start_at ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(notificationTimestamp(row.lesson_start_at))}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(notificationTimestamp(row.scheduled_at))}</td><td data-label="Created">${escapeHtml(notificationTimestamp(row.created_at))}</td></tr>`).join("")}</tbody></table></div>`
+    ? `<div class="table-wrap notification-log-table"><table><thead><tr>${notificationSortHeader("Event", "event", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Recipient", "recipient", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Pupil", "student", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Lesson date", "lesson", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Status", "status", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Scheduled", "scheduled", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Sent", "sent", sort, direction, selectedStatus, pageSize)}${notificationSortHeader("Created", "created", sort, direction, selectedStatus, pageSize)}</tr></thead><tbody>${rows.map((row) => `<tr data-notification-row data-notification-status="${escapeHtml(row.status)}"><td data-label="Event"><a href="/learn/admin/notifications/${entityRouteId(row.id)}">${escapeHtml(notificationEventLabel(row.event_type))}</a></td><td data-label="Recipient">${escapeHtml(row.recipient_email ?? "Unknown")}</td><td data-label="Pupil">${row.student_id ? `<a href="/learn/admin/students/${entityRouteId(row.student_id)}">${escapeHtml(row.student_name ?? "Pupil")}</a>` : "—"}</td><td data-label="Lesson date">${row.lesson_id && row.lesson_start_at ? `<a href="/learn/admin/lessons/${lessonRouteId(row.lesson_id)}">${escapeHtml(notificationTimestamp(row.lesson_start_at))}</a>` : "—"}</td><td data-label="Status"><span class="status status-${row.status.toLowerCase()}">${escapeHtml(notificationStatusLabel(row.status))}</span></td><td data-label="Scheduled">${escapeHtml(notificationTimestamp(row.scheduled_at))}</td><td data-label="Sent">${escapeHtml(notificationTimestamp(row.sent_at))}</td><td data-label="Created">${escapeHtml(notificationTimestamp(row.created_at))}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty-state compact-empty"><h2>No notifications</h2><p>Outbound lesson communication will appear here.</p></div>`;
   const statusQuery = selectedStatus ? `&status=${encodeURIComponent(selectedStatus)}` : "";
-  const sizeOptions = [12, 24, 48].map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("");
+  const sizeOptions = NOTIFICATION_PAGE_SIZES.map((size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`).join("");
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, pageCount);
-  const hrefForPage = (nextPage: number): string => `/learn/admin/notifications?page=${nextPage}&size=${pageSize}${statusQuery}`;
-  const pagination = `<footer class="list-footer notification-pagination"><span class="notification-pagination-spacer"></span>${paginationControls(safePage, pageCount, "Notification delivery", hrefForPage, "notification-page-link")}<form class="page-size-form" method="get" action="/learn/admin/notifications"><label for="notification-page-size">Show per page</label><select id="notification-page-size" class="page-size-select notification-page-size" name="size">${sizeOptions}</select><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}<noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
+  const sortQuery = `&sort=${encodeURIComponent(sort)}&direction=${direction}`;
+  const hrefForPage = (nextPage: number): string => `/learn/admin/notifications?page=${nextPage}&size=${pageSize}${statusQuery}${sortQuery}`;
+  const pagination = `<footer class="list-footer notification-pagination"><span class="notification-pagination-spacer"></span>${paginationControls(safePage, pageCount, "Notification delivery", hrefForPage, "notification-page-link")}<form class="page-size-form" method="get" action="/learn/admin/notifications"><label for="notification-page-size">Show per page</label><select id="notification-page-size" class="page-size-select notification-page-size" name="size">${sizeOptions}</select><input type="hidden" name="page" value="1">${selectedStatus ? `<input type="hidden" name="status" value="${escapeHtml(selectedStatus)}">` : ""}<input type="hidden" name="sort" value="${escapeHtml(sort)}"><input type="hidden" name="direction" value="${direction}"><noscript><button class="button secondary" type="submit">Apply</button></noscript></form></footer>`;
   return `${summary}${notificationControls(settings, csrfToken)}<section class="card"><div class="section-heading notification-log-heading"><div><h2>Delivery log</h2><p class="muted">Select a message to inspect its full content and provider result.</p></div><div class="notification-filter"><button type="button" class="button secondary notification-filter-toggle" data-notification-filter-toggle aria-expanded="false" aria-label="Filter delivery log" title="Filter delivery log"><svg class="notification-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1V18l-3.6 1.8v-7.7L4 5Z"></path></svg></button></div></div><div class="notification-filter-panel notification-filter-bar" data-notification-filter-panel hidden><div class="notification-filter-grid" role="group" aria-label="Filter delivery log">${filters}</div></div>${body}${pagination}</section>`;
 }
 
@@ -2617,14 +2651,21 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const status = ["PENDING", "SENDING", "UNKNOWN", "FAILED", "SENT", "SUPPRESSED"].includes(requested) ? requested as "PENDING" | "SENDING" | "UNKNOWN" | "FAILED" | "SENT" | "SUPPRESSED" : undefined;
     const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
     const requestedSize = Number.parseInt(url.searchParams.get("size") ?? "12", 10);
-    const pageSize = [12, 24, 48].includes(requestedSize) ? requestedSize : 12;
-    const [listedRows, counts, settings, total] = await Promise.all([
-      listNotifications(db, status, pageSize, (page - 1) * pageSize),
+    const pageSize = NOTIFICATION_PAGE_SIZES.includes(requestedSize as typeof NOTIFICATION_PAGE_SIZES[number]) ? requestedSize : NOTIFICATION_PAGE_SIZES[0];
+    const sortOptions: NotificationSort[] = ["event", "recipient", "student", "lesson", "status", "scheduled", "sent", "created"];
+    const requestedSort = url.searchParams.get("sort");
+    const sort = requestedSort && sortOptions.includes(requestedSort as NotificationSort) ? requestedSort as NotificationSort : "sent";
+    const direction: NotificationSortDirection = url.searchParams.get("direction") === "asc" ? "asc" : "desc";
+    const [counts, settings, count] = await Promise.all([
       notificationCounts(db),
       listNotificationSettings(db),
       countNotifications(db, status)
     ]);
-    const notificationHtml = `<div data-notification-console>${notificationList(listedRows, counts, settings, csrfToken, status, page, pageSize, total)}</div>`;
+    const total = Math.min(count, pageSize * NOTIFICATION_HISTORY_PAGE_LIMIT);
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, pageCount);
+    const listedRows = await listNotifications(db, status, pageSize, (safePage - 1) * pageSize, sort, direction);
+    const notificationHtml = `<div data-notification-console>${notificationList(listedRows, counts, settings, csrfToken, status, safePage, pageSize, total, sort, direction)}</div>`;
     if (request.method === "GET" && request.headers.get("X-Notification-Fragment") === "1") {
       const headers = privateHeaders("application/json; charset=utf-8");
       headers.set("Cache-Control", "no-store");
@@ -3982,6 +4023,7 @@ export default {
       const londonHour = london.find((part) => part.type === "hour")?.value;
       const londonMinute = london.find((part) => part.type === "minute")?.value;
       if (londonHour === "03" && londonMinute === "00") {
+        await pruneNotificationHistory(db, NOTIFICATION_HISTORY_RETENTION_LIMIT);
         await runBillingSentinel(db, now);
       }
     })());

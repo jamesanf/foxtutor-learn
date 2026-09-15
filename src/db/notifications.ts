@@ -48,6 +48,12 @@ export interface NotificationInsert {
   nextAttemptAt?: string | null;
 }
 
+export const NOTIFICATION_HISTORY_PAGE_LIMIT = 10;
+export const NOTIFICATION_HISTORY_RETENTION_LIMIT = 480;
+export const NOTIFICATION_PAGE_SIZES = [12, 24, 48] as const;
+export type NotificationSort = "event" | "recipient" | "student" | "lesson" | "status" | "scheduled" | "sent" | "created";
+export type NotificationSortDirection = "asc" | "desc";
+
 export async function findNotificationById(db: D1Database, id: string): Promise<Notification | null> {
   return db.prepare(
     "SELECT n.*, u.email AS recipient_email FROM notifications n JOIN users u ON u.id = n.recipient_user_id WHERE n.id = ?"
@@ -168,9 +174,27 @@ export async function suppressPendingNotification(db: D1Database, id: string, no
   ).bind(now, id).run();
 }
 
-export async function listNotifications(db: D1Database, status?: NotificationStatus, limit = 50, offset = 0): Promise<Notification[]> {
+export async function listNotifications(
+  db: D1Database,
+  status?: NotificationStatus,
+  limit = 50,
+  offset = 0,
+  sort: NotificationSort = "sent",
+  direction: NotificationSortDirection = "desc"
+): Promise<Notification[]> {
   const clause = status ? "WHERE n.status = ?" : "";
   const bindings: (string | number)[] = status ? [status, limit, offset] : [limit, offset];
+  const directionSql = direction === "asc" ? "ASC" : "DESC";
+  const orderBy: Record<NotificationSort, string> = {
+    event: `n.event_type COLLATE NOCASE ${directionSql}, n.created_at DESC, n.id DESC`,
+    recipient: `u.email COLLATE NOCASE ${directionSql}, n.created_at DESC, n.id DESC`,
+    student: `CASE WHEN s.name IS NULL THEN 1 ELSE 0 END ASC, s.name COLLATE NOCASE ${directionSql}, n.created_at DESC, n.id DESC`,
+    lesson: `CASE WHEN l.start_at IS NULL THEN 1 ELSE 0 END ASC, l.start_at ${directionSql}, n.created_at DESC, n.id DESC`,
+    status: `n.status ${directionSql}, n.created_at DESC, n.id DESC`,
+    scheduled: `CASE WHEN n.scheduled_at IS NULL THEN 1 ELSE 0 END ASC, n.scheduled_at ${directionSql}, n.created_at DESC, n.id DESC`,
+    sent: `CASE WHEN n.sent_at IS NULL THEN 1 ELSE 0 END ASC, n.sent_at ${directionSql}, n.created_at DESC, n.id DESC`,
+    created: `n.created_at ${directionSql}, n.id ${directionSql}`
+  };
   const result = await db.prepare(
     `SELECT n.*, u.email AS recipient_email, s.name AS student_name, l.start_at AS lesson_start_at
      FROM notifications n
@@ -178,7 +202,7 @@ export async function listNotifications(db: D1Database, status?: NotificationSta
      LEFT JOIN students s ON s.id = n.student_id
      LEFT JOIN lessons l ON l.id = n.lesson_id
      ${clause}
-     ORDER BY n.created_at DESC, n.id DESC LIMIT ? OFFSET ?`
+     ORDER BY ${orderBy[sort] ?? orderBy.sent} LIMIT ? OFFSET ?`
   ).bind(...bindings).all<Notification>();
   return result.results;
 }
@@ -195,6 +219,24 @@ export async function notificationCounts(db: D1Database): Promise<Record<Notific
   const counts: Record<NotificationStatus, number> = { PENDING: 0, SENDING: 0, SENT: 0, UNKNOWN: 0, FAILED: 0, SUPPRESSED: 0 };
   for (const row of result.results) counts[row.status] = Number(row.count);
   return counts;
+}
+
+export async function pruneNotificationHistory(
+  db: D1Database,
+  keep = NOTIFICATION_HISTORY_RETENTION_LIMIT
+): Promise<number> {
+  const result = await db.prepare(
+    `DELETE FROM notifications
+     WHERE status IN ('SENT', 'FAILED', 'SUPPRESSED')
+       AND id NOT IN (
+         SELECT id
+         FROM notifications
+         WHERE status IN ('SENT', 'FAILED', 'SUPPRESSED')
+         ORDER BY COALESCE(sent_at, created_at) DESC, created_at DESC, id DESC
+         LIMIT ?
+       )`
+  ).bind(keep).run();
+  return Number(result.meta.changes ?? 0);
 }
 
 export async function listDueReminderLessons(db: D1Database, now: string, limit: number, lookaheadMinutes = 15): Promise<Array<{

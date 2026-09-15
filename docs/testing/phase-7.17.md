@@ -29,6 +29,10 @@ Automated UI contracts cover:
   row with no default button top offset.
 - mobile table pages retaining real columns in a horizontal scrolling
   container instead of converting rows into unusable stacked cards.
+- notification delivery-log headers sorting the server-side result set, with
+  sent time descending as the default and a ten-page cap for each page size.
+- scheduled notification cleanup retaining the latest 480 completed records
+  while preserving active and unresolved delivery states.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,
