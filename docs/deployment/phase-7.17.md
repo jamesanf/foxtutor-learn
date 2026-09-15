@@ -62,6 +62,10 @@ the standard result-range, navigation and page-size controls. Its
 Bookings pagination.
 Upcoming Bookings and the embedded recurring-series section now use the same
 unboxed surface, with matching section spacing.
+The Upcoming Bookings action is now labelled `New booking` and opens the
+existing house-style modal dialog. The dialog reuses the server-side lesson
+creation route, retains the end-time preview, and supports keyboard focus
+return plus Cancel, close-control and backdrop dismissal.
 
 ## Required validation
 
@@ -96,9 +100,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `249dedf`
+- Git commit: `700da36`
 - Worker: `foxtutor-learn`
-- Worker version: `8aab1044-732f-4d50-857d-f096f06b07a0`
+- Worker version: `35166480-0c50-4e2b-b88c-e3fbaf7311a0`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

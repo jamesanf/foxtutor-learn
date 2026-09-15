@@ -35,6 +35,9 @@ Automated UI contracts cover:
   parameters, while Upcoming Bookings retains its own pagination.
 - the Upcoming Bookings and embedded recurring-series sections using the same
   unboxed page surface and consistent vertical spacing.
+- the Upcoming Bookings `New booking` trigger opening the house-style modal,
+  preserving the lesson end-time preview and closing through Cancel, the close
+  control or the backdrop.
 - mobile table pages retaining real columns in a horizontal scrolling
   container instead of converting rows into unusable stacked cards.
 - notification delivery-log headers sorting the server-side result set, with

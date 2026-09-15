@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 New booking modal
+
+- Replaced the Admin Bookings `Add lesson` navigation with a `New booking`
+  trigger that opens a house-style modal dialog.
+- Reused the existing lesson creation route and end-time preview inside the
+  dialog, with accessible close, Cancel and backdrop controls.
+- Deployed commit `700da36` as Worker version
+  `35166480-0c50-4e2b-b88c-e3fbaf7311a0`.
+
 ### 2026-09-15 - Phase 7.17 Bookings section surface alignment
 
 - Removed the recurring-series card surface so it matches the unboxed Upcoming
