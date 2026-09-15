@@ -112,9 +112,12 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .lesson-create-dialog .card { position: relative; max-height: calc(100vh - 32px); margin: 0; overflow: auto; }
 .booking-choice-actions { display: grid; gap: 10px; margin-top: 24px; }
 .booking-choice-actions .button { width: 100%; margin-top: 0; }
-.booking-dialog-back { display: inline-grid; width: 34px; height: 34px; margin: 0 0 18px; padding: 0; place-items: center; border: 0; border-radius: 50%; color: var(--action); background: transparent; cursor: pointer; }
-.booking-dialog-back:hover, .booking-dialog-back:focus-visible { color: var(--action-hover); background: color-mix(in srgb, var(--action) 12%, transparent); }
-.booking-dialog-back svg { width: 25px; height: 25px; fill: currentColor; }
+.booking-dialog-control { position: absolute; top: 12px; display: inline-grid; width: 32px; height: 32px; padding: 0; place-items: center; border: 1px solid transparent; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; }
+.booking-dialog-close { right: 14px; font-size: 1.45rem; line-height: 1; }
+.booking-dialog-back { left: 14px; }
+.booking-dialog-control:hover, .booking-dialog-control:focus-visible { color: var(--foreground); background: var(--soft); }
+.booking-dialog-back svg { width: 22px; height: 22px; fill: currentColor; }
+.lesson-create-dialog [data-booking-form-view] { padding-top: 50px; }
 .empty-state p, .card p { max-width: 62ch; color: var(--muted); }
 .direct-debit-card .lede, .direct-debit-card > p, .direct-debit-card > ol { max-width: none; }
 .direct-debit-card > ol { margin-top: 0; padding-left: 24px; color: var(--muted); }

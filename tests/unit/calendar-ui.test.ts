@@ -130,11 +130,15 @@ describe("calendar presentation contract", () => {
     expect(clientSource).toContain('Choose a student from the suggestions.');
     expect(cssSource).toContain(".student-combobox-options { position: absolute;");
     expect(workerSource).toContain('class="booking-dialog-back"');
+    expect(workerSource).toContain('class="booking-dialog-control booking-dialog-back"');
+    expect(workerSource).toContain('class="cancel-dialog-close booking-dialog-control booking-dialog-close"');
     expect(workerSource).toContain('aria-label="Back to booking type"');
     expect(workerSource).toContain('M20 11H7.83l5.59-5.59');
     expect(workerSource).not.toContain('class="button secondary booking-dialog-back"');
-    expect(cssSource).toContain(".booking-dialog-back { display: inline-grid;");
-    expect(cssSource).toContain("border: 0;");
+    expect(cssSource).toContain(".booking-dialog-control { position: absolute; top: 12px;");
+    expect(cssSource).toContain(".booking-dialog-close { right: 14px;");
+    expect(cssSource).toContain(".booking-dialog-back { left: 14px;");
+    expect(cssSource).toContain(".lesson-create-dialog [data-booking-form-view] { padding-top: 50px; }");
     expect(workerSource).toContain('recurringSeriesFormMarkup(csrfToken, students, undefined, true)');
     expect(workerSource).toContain("createLessonBillingEvent(db, {");
     expect(workerSource).toContain("collectionDateSevenDaysBeforeLesson(validation.value.startAt.slice(0, 10))");

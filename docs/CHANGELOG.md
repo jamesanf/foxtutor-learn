@@ -18,6 +18,8 @@
 - Credit detail now shows source invoice/date provenance and provides a
   guarded manual-refund acknowledgement that records an immutable `REFUND`
   transaction without initiating an external payment.
+- Aligned the New Booking modal Back arrow and close control to the same
+  size, colour, hover treatment and top-row alignment.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
