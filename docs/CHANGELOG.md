@@ -1,5 +1,21 @@
 # Changelog
 
+### 2026-09-15 - Guided external credit refunds
+
+- Added a step-by-step admin refund workflow with explicit GoCardless,
+  Mettle bank transfer, and FreeAgent credit note plus Mettle options.
+- Persisted the selected external refund method in migration
+  `0041_guided_credit_refund_method.sql`; Learn still does not store bank
+  details or initiate external money movement.
+- Added provenance-aware, method-specific customer refund confirmations sent
+  only after the local immutable refund ledger reaches `PAID`.
+- Added review-safe handling when local completion or customer mail delivery
+  fails, including a clear instruction not to repeat an external payment.
+- Deployed commits `f80b4f1`, `d24c1ae` and `603e97f` as Worker version
+  `1c1705b3-72b2-477f-9e7c-caf0b91e4efb`.
+- Reran the complete repository regression suite: 44 test files and 325 tests
+  passed with no failures.
+
 ### 2026-09-15 - Phase 7.17 billing regression rerun
 
 - Repaired the accounting outbox defect that marked every administrative
