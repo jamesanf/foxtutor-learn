@@ -224,6 +224,12 @@ the administrator enters the amount already refunded externally and its
 external reference, and FoxTutor records an auditable `REFUND` transaction
 without initiating money movement.
 
+Billing alert actions now decode and validate their structured
+`billing-alert:...` identifiers directly. Acknowledging an alert records that
+it has been seen and leaves it open for reconciliation; resolving it is a
+separate action after the provider state is confirmed. This fixes the prior
+`Invalid alert action` response for reconciliation alert IDs.
+
 Recurring cancellation stress acceptance has also been completed for a
 controlled five-occurrence series. A midpoint single-occurrence cancellation
 and cancellation of the remaining occurrences through the authenticated

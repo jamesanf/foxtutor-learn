@@ -67,6 +67,9 @@ Automated UI contracts cover:
 - the New Booking modal Back arrow and close control sharing the same 32px
   control box, muted colour, hover state and 12px top alignment on both sides
   of the modal.
+- billing alert acknowledgement URLs containing structured
+  `billing-alert:...` identifiers, with acknowledgement keeping the alert open
+  for follow-up resolution rather than returning `Invalid alert action`.
 - both New Booking student fields using the internal searchable combobox,
   including live filtering, keyboard selection, hidden ID submission and
   invalid free-text rejection.

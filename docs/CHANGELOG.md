@@ -22,6 +22,9 @@
   size, colour, hover treatment and top-row alignment.
 - Renamed the admin `Accounting` navigation tab to `Billing` while retaining
   the existing accounting routes and provider integration internals.
+- Fixed billing alert acknowledgement for structured `billing-alert:...`
+  identifiers and clarified the difference between acknowledging and
+  resolving an alert.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
