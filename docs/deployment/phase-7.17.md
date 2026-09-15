@@ -232,3 +232,11 @@ FreeAgent document or provider operation, and delivered five accepted
 cancellation notifications. The recurring `THIS_AND_FUTURE` path is covered
 by automated tests, including the fail-closed rule that collection-started
 invoices are not marked `CANCELLATION_PENDING`.
+
+The New Booking modal alignment fix was deployed in commit `51493e4`
+(Worker version `720a88e3-1e23-47d3-a789-4d552e40c666`). Authenticated
+Chromium acceptance on `/learn/admin/bookings` verified both standalone and
+recurring form views: the Back arrow and close control each render at
+32px × 32px, use the same muted colour, share the same 12px top offset, and
+remain separated by matching 14px inset values. The form heading remains
+below the controls, and closing the modal removes its open state.
