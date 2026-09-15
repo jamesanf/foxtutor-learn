@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 navigation icon rollback
+
+- Restored the filled Calendar, Bookings and Past Lessons navigation icons
+  after visual review.
+- Kept the outline-by-default and filled-selected treatment for Resources and
+  Notifications.
+- Deployed commit `a5e22b5` as Worker version
+  `cace7a56-a2e6-4fca-b91a-a658e4dac5eb`.
+
 ### 2026-09-15 - Phase 7.17 navigation icon consistency
 
 - Made Calendar, Bookings and Past Lessons icons outlined by default, with
