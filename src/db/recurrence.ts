@@ -58,6 +58,18 @@ export async function listRecurringSeries(db: D1Database): Promise<RecurringLess
   return result.results;
 }
 
+export async function listRecurringSeriesPage(db: D1Database, limit: number, offset: number): Promise<RecurringLessonSeries[]> {
+  const result = await db.prepare(
+    "SELECT * FROM recurring_lesson_series ORDER BY CASE status WHEN 'ACTIVE' THEN 0 WHEN 'PAUSED' THEN 1 ELSE 2 END, start_date ASC, id ASC LIMIT ? OFFSET ?"
+  ).bind(limit, offset).all<RecurringLessonSeries>();
+  return result.results;
+}
+
+export async function countRecurringSeries(db: D1Database): Promise<number> {
+  const result = await db.prepare("SELECT COUNT(*) AS count FROM recurring_lesson_series").first<{ count: number | string }>();
+  return Number(result?.count ?? 0);
+}
+
 export async function listRecurringPauses(db: D1Database, seriesId: string): Promise<RecurringLessonPause[]> {
   const result = await db.prepare(
     "SELECT * FROM recurring_lesson_pauses WHERE series_id = ? ORDER BY starts_on ASC, id ASC"

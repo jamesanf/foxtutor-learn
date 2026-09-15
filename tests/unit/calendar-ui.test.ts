@@ -105,7 +105,10 @@ describe("calendar presentation contract", () => {
   it("places recurring-series administration below bookings without a separate tab", () => {
     expect(workerSource).toContain("function recurringSeriesSection(");
     expect(workerSource).toContain('`${lessonList(bookings, total, safePage, pageSize');
-    expect(workerSource).toContain("${recurringSeriesSection(series, students, csrfToken)}");
+    expect(workerSource).toContain("${recurringSeriesSection(series, students, csrfToken, safeSeriesPage, seriesPagination.pageSize, seriesTotal)}");
+    expect(workerSource).toContain('parseStudentSectionPagination(url, "seriesPage", "seriesSize")');
+    expect(workerSource).toContain('listRecurringSeriesPage(db, seriesPagination.pageSize, (safeSeriesPage - 1) * seriesPagination.pageSize)');
+    expect(workerSource).toContain('studentSectionPagination(page, pageSize, total, "/learn/admin/bookings", "Recurring lesson series", "seriesPage", "seriesSize")');
     expect(workerSource).not.toContain('["/learn/admin/series", "Recurring series"]');
     expect(workerSource).toContain('if (route === "admin-series")');
     expect(workerSource).toContain('return redirect("/learn/admin/bookings");');

@@ -122,7 +122,8 @@ import {
   ensureAllRecurringSeriesMaterialised,
   ensureRecurringSeriesMaterialised,
   findRecurringSeries,
-  listRecurringSeries,
+  listRecurringSeriesPage,
+  countRecurringSeries,
   setRecurringSeriesStatus,
   cancelRecurringLesson
 } from "../db/recurrence";
@@ -2142,16 +2143,19 @@ async function billingOperationsPage(
 }
 
 function recurringSeriesSection(
-  series: Awaited<ReturnType<typeof listRecurringSeries>>,
+  series: Awaited<ReturnType<typeof listRecurringSeriesPage>>,
   students: Student[],
-  csrfToken: string
+  csrfToken: string,
+  page: number,
+  pageSize: number,
+  total: number
 ): string {
   const studentNames = new Map(students.map((student) => [student.id, student.name]));
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const rows = series.length
     ? series.map((item) => `<tr><td>${escapeHtml(studentNames.get(item.student_id) ?? item.student_id)}</td><td>${escapeHtml(dayNames[item.day_of_week] ?? "Day")} ${escapeHtml(item.local_start_time)}</td><td>${item.duration_minutes} minutes</td><td>${billingMoney(item.price_minor)}</td><td>${escapeHtml(item.start_date)}${item.end_date ? ` to ${escapeHtml(item.end_date)}` : ""}</td><td><span class="status status-${item.status.toLowerCase()}">${escapeHtml(item.status)}</span></td><td class="table-action-cell">${item.status === "ACTIVE" ? `<form method="post" action="/learn/admin/series/${entityRouteId(item.id)}/pause">${hiddenCsrf(csrfToken)}<input type="hidden" name="startsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="endsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="reason" value="Administrator pause"><button class="button secondary recurring-series-action" type="submit">Pause</button></form>` : item.status === "PAUSED" ? `<form method="post" action="/learn/admin/series/${entityRouteId(item.id)}/resume">${hiddenCsrf(csrfToken)}<button class="button secondary recurring-series-action" type="submit">Resume</button></form>` : "—"}</td></tr>`).join("")
     : `<tr><td colspan="7">No recurring lesson series.</td></tr>`;
-  return `<section class="card recurring-series-section"><div class="section-heading"><div><h2>Recurring lesson series</h2><p class="muted">Future lessons are materialised through the bounded six-week Europe/London horizon.</p></div>${buttonLink("/learn/admin/series/new", "Create series")}</div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Weekly time</th><th>Duration</th><th>Price</th><th>Dates</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  return `<section class="card recurring-series-section"><div class="section-heading"><div><h2>Recurring lesson series</h2><p class="muted">Future lessons are materialised through the bounded six-week Europe/London horizon.</p></div>${buttonLink("/learn/admin/series/new", "Create series")}</div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Weekly time</th><th>Duration</th><th>Price</th><th>Dates</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>${studentSectionPagination(page, pageSize, total, "/learn/admin/bookings", "Recurring lesson series", "seriesPage", "seriesSize")}</section>`;
 }
 
 function recurringSeriesForm(csrfToken: string, students: Student[], error?: string): string {
@@ -2931,16 +2935,20 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   }
   if (route === "admin-bookings") {
     const { page, pageSize } = parseLessonPagination(url);
+    const seriesPagination = parseStudentSectionPagination(url, "seriesPage", "seriesSize");
     const now = new Date().toISOString();
     const total = await countUpcomingLessons(db, now);
+    const seriesTotal = await countRecurringSeries(db);
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
+    const seriesPageCount = Math.max(1, Math.ceil(seriesTotal / seriesPagination.pageSize));
+    const safeSeriesPage = Math.min(seriesPagination.page, seriesPageCount);
     const [bookings, series, students] = await Promise.all([
       listUpcomingLessons(db, now, pageSize, (safePage - 1) * pageSize),
-      listRecurringSeries(db),
+      listRecurringSeriesPage(db, seriesPagination.pageSize, (safeSeriesPage - 1) * seriesPagination.pageSize),
       listStudents(db)
     ]);
-    return appPage(active.user, csrfToken, "Bookings", `${lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" })}${recurringSeriesSection(series, students, csrfToken)}`);
+    return appPage(active.user, csrfToken, "Bookings", `${lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" })}${recurringSeriesSection(series, students, csrfToken, safeSeriesPage, seriesPagination.pageSize, seriesTotal)}`);
   }
   if (route === "admin-lessons") {
     const { page, pageSize } = parseLessonPagination(url);
