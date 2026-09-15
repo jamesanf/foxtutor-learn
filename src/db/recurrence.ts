@@ -557,6 +557,7 @@ export async function cancelRecurringLesson(
       }
       if (
         item.invoice_id
+        && !item.collection_started
         && item.freeagent_url
         && (
           ["SENT", "PAYMENT_PENDING"].includes(item.invoice_status ?? "")

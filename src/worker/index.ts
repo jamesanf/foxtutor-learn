@@ -3931,6 +3931,9 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
       if (!canStudentCancel(targetLesson, now)) {
         return redirect(`/learn/student/series/${encodeURIComponent(compactUuidKey(series.id))}?notice=${encodeURIComponent("This lesson cannot be cancelled within 24 hours of its start.")}`);
       }
+      const cancellationTargets = lessonsForSeries.filter((lesson) =>
+        lesson.status === "scheduled" && lesson.start_at >= targetLesson.start_at
+      );
       const changed = await cancelRecurringLesson(db, {
         lessonId: targetLesson.id,
         actorUserId: active.user.id,
@@ -3939,6 +3942,31 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
         reason: "Student cancelled this and future recurring lessons",
         now
       });
+      if (changed) {
+        const recipient = await findActiveStudentRecipient(db, targetLesson.student_id);
+        if (recipient?.learn_user_id && recipient.learn_user_email) {
+          for (const cancelledLesson of cancellationTargets) {
+            const content = renderEmail(
+              "CANCELLATION_PROCESSED",
+              await cancellationMailData(
+                db,
+                cancelledLesson,
+                false,
+                `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(cancelledLesson.id))}/undo-cancellation`
+              ),
+              canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin)
+            );
+            await emitNotification(env, {
+              type: "CANCELLATION_PROCESSED",
+              eventId: cancelledLesson.id,
+              recipientUserId: recipient.learn_user_id,
+              studentId: recipient.id,
+              lessonId: cancelledLesson.id,
+              content
+            }, now);
+          }
+        }
+      }
       return changed ? redirect(`/learn/student/series/${encodeURIComponent(compactUuidKey(series.id))}`) : messagePage("Cancellation unavailable", "The recurring series could not be cancelled. Refresh and try again.", 409);
     }
     return studentSeriesPage(active.user, csrfToken, series, lessonsForSeries, new Date().toISOString(), url.searchParams.get("notice") ?? undefined);

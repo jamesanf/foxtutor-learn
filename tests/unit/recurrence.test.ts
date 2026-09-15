@@ -4,7 +4,7 @@ import {
   sixWeekWindow,
   zonedDateTimeToUtc
 } from "../../src/domain/recurrence";
-import { ensureRecurringSeriesMaterialised, findRecurringSeriesConflict } from "../../src/db/recurrence";
+import { cancelRecurringLesson, ensureRecurringSeriesMaterialised, findRecurringSeriesConflict } from "../../src/db/recurrence";
 
 describe("recurring lesson materialisation", () => {
   it("maintains a six-week inclusive rolling window without generating an infinite series", () => {
@@ -140,5 +140,131 @@ describe("recurring lesson materialisation", () => {
     expect(result.createdLessons).toBe(6);
     expect(result.createdBillingEvents).toBe(6);
     expect(preparedSql.some((sql) => sql.includes("ON CONFLICT(recurring_series_id, recurrence_key)") && sql.includes("WHERE recurring_series_id IS NOT NULL"))).toBe(true);
+  });
+
+  it("cancels the selected occurrence and every later materialised occurrence from a midpoint", async () => {
+    const target = {
+      id: "lesson-series-2026-09-29",
+      student_id: "student-1",
+      recurring_series_id: "series-1",
+      recurrence_key: "2026-09-29",
+      start_at: "2026-09-29T08:00:00.000Z",
+      end_at: "2026-09-29T08:55:00.000Z",
+      timezone: "Europe/London",
+      payer_student_id: "student-1",
+      billing_event_id: "billing-1",
+      gross_amount_minor: 5500,
+      billing_event_status: "PENDING",
+      invoice_id: null,
+      invoice_status: null,
+      provider_status: null,
+      net_amount_minor: 5500,
+      credit_applied_minor: 0,
+      freeagent_url: null,
+      collection_started: 0,
+      credit_eligible: 0
+    };
+    const future = {
+      ...target,
+      id: "lesson-series-2026-10-06",
+      recurrence_key: "2026-10-06",
+      start_at: "2026-10-06T08:00:00.000Z",
+      end_at: "2026-10-06T08:55:00.000Z",
+      billing_event_id: "billing-2"
+    };
+    const batches: { sql: string; values: unknown[] }[][] = [];
+    const db = {
+      prepare(sql: string) {
+        return {
+          bind(...values: unknown[]) {
+            const statement = {
+              sql,
+              values,
+              async first<T>() {
+                return sql.includes("WHERE l.id = ? AND l.status = 'scheduled'") ? target as T : null;
+              },
+              async all<T>() {
+                return sql.includes("WHERE l.recurring_series_id = ?") ? { results: [target, future] as T[] } : { results: [] as T[] };
+              }
+            };
+            return statement;
+          }
+        };
+      },
+      async batch(statements: { sql: string; values: unknown[] }[]) {
+        batches.push(statements);
+        return statements.map(() => ({ meta: { changes: 1 } }));
+      }
+    } as unknown as D1Database;
+
+    await expect(cancelRecurringLesson(db, {
+      lessonId: target.id,
+      actorUserId: "admin-1",
+      actorRole: "ADMIN",
+      mode: "THIS_AND_FUTURE",
+      reason: "Mid-series cancellation",
+      now: "2026-09-15T20:00:00.000Z"
+    })).resolves.toBe(true);
+
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(8);
+    expect(batches[0]?.filter((statement) => statement.sql.includes("UPDATE lessons SET status = 'cancelled'"))).toHaveLength(2);
+    expect(batches[0]?.some((statement) => statement.sql.includes("SET end_date = ?") && statement.values.includes("2026-09-29"))).toBe(true);
+  });
+
+  it("does not queue FreeAgent cancellation once recurring collection has started", async () => {
+    const target = {
+      id: "lesson-paid",
+      student_id: "student-1",
+      recurring_series_id: "series-1",
+      recurrence_key: "2026-09-29",
+      start_at: "2026-09-29T08:00:00.000Z",
+      end_at: "2026-09-29T08:55:00.000Z",
+      timezone: "Europe/London",
+      payer_student_id: "student-1",
+      billing_event_id: "billing-paid",
+      gross_amount_minor: 5500,
+      billing_event_status: "PENDING",
+      invoice_id: "invoice-paid",
+      invoice_status: "SENT",
+      provider_status: "SENT",
+      net_amount_minor: 5500,
+      credit_applied_minor: 0,
+      freeagent_url: "https://freeagent.example/invoices/1",
+      collection_started: 1,
+      credit_eligible: 1
+    };
+    const batches: { sql: string; values: unknown[] }[][] = [];
+    const db = {
+      prepare(sql: string) {
+        return {
+          bind(..._values: unknown[]) {
+            return {
+              sql,
+              values: _values,
+              async first<T>() {
+                return target as T;
+              }
+            };
+          }
+        };
+      },
+      async batch(statements: { sql: string; values: unknown[] }[]) {
+        batches.push(statements);
+        return statements.map(() => ({ meta: { changes: 1 } }));
+      }
+    } as unknown as D1Database;
+
+    await cancelRecurringLesson(db, {
+      lessonId: target.id,
+      actorUserId: "admin-1",
+      actorRole: "ADMIN",
+      mode: "INSTANCE_ONLY",
+      reason: "Payment already in progress",
+      now: "2026-09-15T20:00:00.000Z"
+    });
+
+    expect(batches[0]?.some((statement) => statement.sql.includes("'CANCEL_INVOICE'"))).toBe(false);
+    expect(batches[0]?.some((statement) => statement.sql.includes("provider_status = 'CANCELLATION_PENDING'"))).toBe(false);
   });
 });
