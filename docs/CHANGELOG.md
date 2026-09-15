@@ -20,6 +20,8 @@
   transaction without initiating an external payment.
 - Aligned the New Booking modal Back arrow and close control to the same
   size, colour, hover treatment and top-row alignment.
+- Renamed the admin `Accounting` navigation tab to `Billing` while retaining
+  the existing accounting routes and provider integration internals.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.

@@ -5,9 +5,12 @@ const workerSource = readFileSync("src/worker/index.ts", "utf8");
 const cssSource = readFileSync("public/learn.css", "utf8");
 const billingServiceSource = readFileSync("src/billing/service.ts", "utf8");
 
-describe("accounting admin presentation contract", () => {
+describe("billing admin presentation contract", () => {
   it("uses a dedicated money icon and keeps FreeAgent setup messaging single-sourced", () => {
-    expect(workerSource).toContain('Accounting: "accounting"');
+    expect(workerSource).toContain('Billing: "accounting"');
+    expect(workerSource).toContain('["/learn/admin/accounting", "Billing"]');
+    expect(workerSource).toContain('appPage(active.user, csrfToken, "Billing", `<div class="page-heading"><div><h1>Billing</h1>');
+    expect(workerSource).not.toContain('["/learn/admin/accounting", "Accounting"]');
     expect(workerSource).toContain("accounting: \"M5 6H23V18H5V6M14 9A3,3");
     expect(workerSource).not.toContain("accounting: \"M12 2C7.58 2 4 3.79 4 6");
     expect(workerSource).toContain("!status.errorMessage");

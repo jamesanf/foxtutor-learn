@@ -428,10 +428,10 @@ function navigation(role: Role, title: string): string {
     students: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3ZM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm8 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5ZM8 13c-2.33 0-7 1.17-7 3.5V19h5v-2.5c0-1.03.42-1.91 1.09-2.63C6.98 13.32 7.5 13.12 8 13Z"
   } as const;
   const icon = (name: keyof typeof icons): string => `<svg class="nav-icon nav-icon-${name}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
-  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "accounting", Students: "students", "My lessons": "lessons", Billing: "accounting" };
-  const activeLabel = title === "Add resource" ? "Resources" : title === "Notification" ? "Notifications" : ["Billing health", "Billing settings"].includes(title) ? "Accounting" : title;
+  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Students: "students", "My lessons": "lessons", Billing: "accounting" };
+  const activeLabel = title === "Add resource" ? "Resources" : title === "Notification" ? "Notifications" : ["Billing health", "Billing settings", "Accounting"].includes(title) ? "Billing" : title;
   const links: Array<[string, string]> = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Billing"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/billing", "Billing"], ["/learn/student/resources", "Resources"]];
   return links.map(([href, label]) => `<a href="${href}"${label === activeLabel ? ' aria-current="page"' : ""}>${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
@@ -2662,7 +2662,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       listStudents(db),
       listExternalAccountingLinks(db, "production")
     ]);
-    return appPage(active.user, csrfToken, "Accounting", `<div class="page-heading"><div><h1>Accounting</h1></div></div>${accountingList(rows, counts, status, students, links, csrfToken)}`);
+    return appPage(active.user, csrfToken, "Billing", `<div class="page-heading"><div><h1>Billing</h1></div></div>${accountingList(rows, counts, status, students, links, csrfToken)}`);
   }
   if (route === "admin-accounting-settings") {
     const environment = parseFreeAgentEnvironment(url.searchParams.get("environment")) ?? "production";

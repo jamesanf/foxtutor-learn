@@ -240,3 +240,8 @@ recurring form views: the Back arrow and close control each render at
 32px × 32px, use the same muted colour, share the same 12px top offset, and
 remain separated by matching 14px inset values. The form heading remains
 below the controls, and closing the modal removes its open state.
+
+The admin navigation label for the accounting area is now `Billing`. Existing
+`/learn/admin/accounting` routes, FreeAgent OAuth callbacks and accounting
+provider internals remain unchanged. The Billing page heading and active
+navigation state use the new label.
