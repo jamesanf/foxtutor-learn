@@ -333,6 +333,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .delete-confirmation p { color: var(--foreground) !important; }
 .delete-confirmation .button { margin-top: 0; }
 .lesson-list-table { margin-top: var(--space-4); }
+.recurring-series-section { margin-top: 28px; }
 .lesson-table { table-layout: fixed; }
 .lesson-table th:nth-child(1), .lesson-table td:nth-child(1) { width: 24%; }
 .lesson-table th:nth-child(2), .lesson-table td:nth-child(2) { width: 46%; }
