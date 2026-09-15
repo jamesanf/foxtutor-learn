@@ -17,6 +17,8 @@
 - Pending lesson billing events now wait until their seven-day collection date
   before invoice creation, preserving a cancellation window before provider
   invoicing and collection.
+- Deployed commit `a43b637` as Worker version
+  `75518bd1-79b1-486a-997f-74fd27bfdaf9`.
 - Deployed commit `8703633` as Worker version
   `5e5e76a0-d1ef-4b03-a3ed-85a76041a890`.
 
