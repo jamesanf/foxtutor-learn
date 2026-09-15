@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series action sizing
+
+- Reduced the recurring-series Pause/Resume controls to a compact 30px height.
+- Centered their forms so the action text aligns with the surrounding table
+  row values.
+- Deployed commit `ebb832c` as Worker version
+  `c431d24a-2cec-40d5-b417-74f90b96a4be`.
+
 ### 2026-09-15 - Phase 7.17 notification log sorting and retention
 
 - Added server-side sorting to every notification delivery-log column.

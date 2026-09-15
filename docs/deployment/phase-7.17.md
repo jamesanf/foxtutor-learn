@@ -44,6 +44,9 @@ status, scheduled time, sent time or created time, defaulting to sent time
 descending. The visible log is capped at ten pages for the selected page size,
 and the scheduled Worker retains the latest 480 completed records while
 preserving active or unresolved deliveries.
+Recurring-series Pause/Resume controls now use a compact 30px action style,
+with flex-centered forms so the button text aligns vertically with the rest of
+the table row.
 
 ## Required validation
 
@@ -78,9 +81,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `c38ef12`
+- Git commit: `ebb832c`
 - Worker: `foxtutor-learn`
-- Worker version: `84bfaf0b-cf56-4f40-9826-1076e13905e4`
+- Worker version: `c431d24a-2cec-40d5-b417-74f90b96a4be`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
