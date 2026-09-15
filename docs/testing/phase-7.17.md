@@ -15,8 +15,8 @@ Automated UI contracts cover:
 - shared page-title alignment with the first sidebar navigation button.
 - footer placement at the browser bottom for short dashboards, without excess
   whitespace, and normal document scrolling for longer dashboards.
-- outline navigation icons for Calendar, Bookings, Past Lessons, Resources and
-  Notifications, with filled shapes when selected.
+- outline navigation icons for Resources and Notifications, with filled shapes
+  when selected.
 
 The dashboard reads only the authenticated student's own upcoming and past
 lessons. The home-learning task is taken from the latest sent report, not a

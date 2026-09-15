@@ -14,11 +14,11 @@ contact address above a same-line `Terms & Conditions` and `Privacy Policy`
 pair. This preserves the public site's contact and legal-link structure
 without changing the public site repository.
 
-The Calendar, Bookings, Past Lessons, Resources and Notifications navigation
-icons use outline strokes by default and switch to their existing filled MDI
-shape when the navigation item is selected. The selected item is marked with
-`aria-current="page"` for both visual state and accessibility. Other
-navigation icons retain their existing filled treatment.
+The Resources and Notifications navigation icons use outline strokes by
+default, matching the other navigation icon treatment, and switch to a filled
+shape when their navigation item is selected. The selected item is marked with
+`aria-current="page"` for both visual state and accessibility. Calendar,
+Bookings and Past Lessons retain their existing filled treatment.
 
 `/learn/terms` and `/learn/privacy` are authenticated routes available to both
 administrators and students. Their visible legal content is an exact HTML
