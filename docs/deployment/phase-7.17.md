@@ -293,3 +293,24 @@ The admin navigation label for the accounting area is now `Billing`. Existing
 `/learn/admin/accounting` routes, FreeAgent OAuth callbacks and accounting
 provider internals remain unchanged. The Billing page heading and active
 navigation state use the new label.
+
+## Latest deployment: failed billing-artifact closure
+
+- Git commit: `0eeb787`
+- Worker version: `d4b4aad6-0217-41db-82dd-5fa48d8f7be1`
+- Production migration: `0038_cancelled_failed_invoice_repair.sql`
+- Deployment date: 2026-09-15
+
+This deployment adds bounded, redacted FreeAgent validation diagnostics and
+closes the cancellation state gap for failed invoices that never received a
+provider document. It also treats an already-confirmed provider `NOT_FOUND`
+invoice as a distinct local cancellation outcome, preserving the
+reconciliation history without leaving an actionable alert after the lesson
+has been cancelled.
+
+The migration was applied to the Production D1 database before live
+acceptance. Authenticated Chromium cancellation of the controlled KJHGBH,
+zero-value-mail and James Fox reconciliation fixtures was followed by
+read-only D1 verification. Production Learn showed no open billing alerts;
+the remaining historical Sandbox rows were cancelled and queued for the
+scheduled worker. No real-money payment or refund was initiated.

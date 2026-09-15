@@ -307,3 +307,66 @@ FreeAgent scheduler but FreeAgent rejected its invoice creation with HTTP
 422. No provider invoice or collection operation was created; the fixture is
 therefore classified as provider-validation `AMBER`, not as cancellation
 success.
+
+## Traffic-light closure: 15 September 2026
+
+The failed-invoice cancellation regression is covered by the integration
+suite. When an administrative cancellation reaches a failed local invoice
+with no provider URL, FoxTutor now marks the invoice
+`CANCELLED / CANCELLED_BEFORE_PROVIDER`, blocks the failed `CREATE_INVOICE`
+operation and resolves its alert. A provider invoice already known to be
+missing is handled separately as
+`CANCELLED / NOT_FOUND_CANCELED`; this does not claim that a provider
+document was cancelled.
+
+Migration `0038_cancelled_failed_invoice_repair.sql` repaired the already
+cancelled no-provider Production fixture without deleting its audit history.
+Authenticated Chromium then cancelled the remaining controlled KJHGBH failed
+invoice fixtures and the failed zero-value billing-mail fixture through the
+real Learn status form. Production D1 confirmed the controlled rows as
+`CANCELLED / CANCELLED_BEFORE_PROVIDER`, with blocked creation operations and
+resolved alerts. The two deliberately deleted James Fox provider invoices
+were also cancelled after the provider returned `NOT_FOUND`, producing
+`NOT_FOUND_CANCELED` and resolving their reconciliation alerts.
+
+The bounded FreeAgent diagnostic added in the same deployment records provider
+HTTP status, classification and a redacted response summary for future
+validation failures while retaining generic customer-safe error text. It does
+not log emails, URLs or long numeric identifiers.
+
+The authenticated Production Billing dashboard rendered no open billing
+alerts. Remaining historical Sandbox rows were cancelled through Chromium
+and their Sandbox `CANCEL_INVOICE` operations were queued for the scheduled
+worker. No real-money collection was initiated.
+
+### Remaining amber gates
+
+- **External refund execution:** the manual refund action records an
+  externally completed refund and immutable ledger entry; it does not move
+  money. No live refund was executed because the external refund provider and
+  operating policy still require James's decision.
+- **New-customer and mailbox acceptance:** authenticated onboarding and
+  mailbox checks remain human-session gates. The no-mandate Production path
+  is implemented and was previously verified as manually payable.
+- **Recurring credit-provenance mail cycle:** the ledger and
+  source-invoice/source-lesson links are covered by automated and controlled
+  acceptance, but a fresh live multi-cancellation mail cycle remains a
+  deliberate fixture choice rather than a customer-money test.
+- **£1 authorization:** no live authorization was attempted; this remains
+  behind the explicit real-money approval boundary.
+
+### Green/minor observations
+
+- Existing Chromium console output contains CSP blocks for Cloudflare Access,
+  font and manifest resources; no Learn application JavaScript error was
+  observed.
+- Historical controlled rows make the audit history noisy by design. Keep
+  them immutable and provide a labelled fixture/archive filter rather than
+  deleting financial evidence.
+- Customer-facing provider failures remain intentionally generic. An
+  admin-only bounded diagnostic panel would improve troubleshooting without
+  exposing provider payloads to students.
+- Refund UX should eventually separate “start provider refund” from
+  “record external refund” after the external refund policy is selected.
+- A documented controlled-fixture reconciliation action would make future
+  Sandbox cleanup more ergonomic.

@@ -220,6 +220,32 @@ describe("Phase 5 accounting boundary", () => {
     expect(statements.some((statement) => statement.sql.includes("SET status = 'BLOCKED'"))).toBe(true);
   });
 
+  it("closes a provider-missing invoice after an admin cancellation without claiming provider cancellation", async () => {
+    const { db, statements } = mockBatchDb({
+      id: "invoice-missing-1",
+      status: "UNKNOWN",
+      freeagent_url: "https://api.freeagent.com/v2/invoices/123",
+      provider_status: "NOT_FOUND",
+      collection_started: 0,
+      credit_eligible: 0,
+      collection_unknown: 0
+    });
+    await cancelLesson(db, {
+      lessonId: "lesson-missing-1",
+      studentId: "student-1",
+      actorUserId: "admin-1",
+      actorRole: "ADMIN",
+      eventType: "ADMIN_CANCELLED",
+      billingConsequence: "ADMIN_CANCELLED",
+      now: "2026-09-13T12:00:00.000Z",
+      previousStartAt: "2026-09-15T12:00:00.000Z",
+      previousEndAt: "2026-09-15T12:55:00.000Z",
+      previousTimezone: "Europe/London"
+    });
+    expect(statements.some((statement) => statement.sql.includes("'NOT_FOUND_CANCELED'"))).toBe(true);
+    expect(statements.some((statement) => statement.sql.includes("'CANCEL_INVOICE'"))).toBe(false);
+  });
+
   it("creates cancellation credit only after collection has started", async () => {
     const { db, statements } = mockBatchDb({
       id: "invoice-1",
