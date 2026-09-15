@@ -7,6 +7,8 @@
 - Reduced dashboard heading, summary, panel and footer spacing, including the
   footer logo footprint.
 - Updated student dashboard documentation and UI contracts.
+- Deployed commit `b95c305` as Worker version
+  `32997c33-2dc8-4a27-acab-e7c0eb31799a`.
 
 ### 2026-09-15 - Phase 7.17 full-width student dashboard actions
 
