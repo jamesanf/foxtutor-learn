@@ -225,8 +225,8 @@ after the FoxMail cancellation/provenance fix is:
 
 ```text
 43 test files
-311 tests
-311 passed
+312 tests
+312 passed
 0 failed
 ```
 

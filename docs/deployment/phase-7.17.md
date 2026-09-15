@@ -167,7 +167,7 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `71be5fe`
+- Git commit: `b90b0f2`
 - Worker: `foxtutor-learn`
 - Worker version: `6826eb38-5bb9-4028-bfb7-a043996900c4`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
@@ -188,8 +188,8 @@ for its normal collection date.
   invoice/payment evidence; all now have zero remaining balance and an
   `INTERNAL_REPAIR_VOID` ledger marker.
 - The earlier deployment provenance entries above are historical; the current
-  deployed revision is `71be5fe` / Worker version
-  `6826eb38-5bb9-4028-bfb7-a043996900c4`.
+  deployed revision is `b90b0f2` / Worker version
+  `8a06df17-807a-4c44-9314-e5200f928e08`.
 - Live authenticated Chromium reload of `/learn/admin/billing` confirmed the
   deployed settlement-safe UI: no active customer credits, nine consumed
   historical credits, `Billing audit` links, `Record manual-payment exception`
