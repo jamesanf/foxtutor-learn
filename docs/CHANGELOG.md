@@ -7,6 +7,8 @@
 - Added live suggestions, keyboard selection and server-compatible hidden
   student ID submission.
 - Renamed the recurring field from `Student and payer` to `Student`.
+- Deployed commit `29dd126` as Worker version
+  `81ba91f5-f594-45d3-8144-32c1a365e40f`.
 
 ### 2026-09-15 - Phase 7.17 New Booking Back control
 
