@@ -3,10 +3,10 @@
 ## Scope
 
 This deployment contains the balanced student dashboard cards, time-of-day
-greeting, near-term lesson launch notice, home-learning panel and secured
-lesson-scoped student submission route.
+greeting, near-term lesson launch notice, home-learning panel, secured
+lesson-scoped student submission route and logout-session repair.
 The submission flow reuses the existing private resource/R2 pipeline and
-does not change billing or provider behavior.
+the logout repair does not change billing or provider behavior.
 
 ## Required validation
 
@@ -32,14 +32,15 @@ Authenticated Chromium should verify:
 - the `Submit here` navigation;
 - a successful student upload;
 - student ownership isolation for another student's lesson submission URL.
+- the logout POST, signed-out landing page and explicit resume link.
 
 No Production invoice, payment, Direct Debit, credit note, bank transaction or
 £1 test is part of this feature.
 
 ## Deployment provenance
 
-- Git commit: `d7dd28a2efe6810227856a240462799169d12334`
+- Git commit: recorded below after the logout deployment completes.
 - Worker: `foxtutor-learn`
-- Worker version: `56230c69-b7b5-4b1f-a12d-ea7ed976dd87`
+- Worker version: recorded below after the logout deployment completes.
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
-- Deployment completed on 2026-09-15.
+- Deployment completed after the logout repair was validated.

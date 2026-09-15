@@ -180,7 +180,7 @@ import {
 } from "../domain/validation";
 import { formatMinorUnits } from "../domain/accounting";
 import { privateHeaders } from "../security/headers";
-import { clearSessionCookies, createSession, csrfTokenMatches, csrfValid, readSession, type ActiveSession } from "../security/session";
+import { clearSessionCookies, clearSignedOutMarker, createSession, csrfTokenMatches, csrfValid, hasSignedOutMarker, markSignedOut, readSession, type ActiveSession } from "../security/session";
 import { decryptFeedToken, encryptFeedToken, feedTokenLast4, generateFeedToken, hashFeedToken, isFeedToken } from "../security/feed-token";
 import { learnPrivacyContent, learnTermsContent } from "../legal";
 import { feedRange, generateIcs } from "../domain/icalendar";
@@ -304,6 +304,14 @@ function messagePage(title: string, message: string, status: number): Response {
     ).body,
     { status, headers: htmlDocument(title, "").headers }
   );
+}
+
+function signedOutPage(): Response {
+  const document = htmlDocument(
+    "Signed out",
+    `<main class="centered"><div class="card"><p class="eyebrow">FOXTUTOR LEARN</p><h1>Signed out</h1><p>You have been signed out of FoxTutor Learn.</p><a class="button" href="/learn?resume=1">Sign in again</a></div></main>`
+  );
+  return new Response(document.body, { status: 200, headers: document.headers });
 }
 
 type DirectDebitGate = {
@@ -3896,6 +3904,7 @@ async function handleCalendarFeed(request: Request, env: Env, token: string): Pr
 async function learn(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const route = classifyLearnRoute(url.pathname);
+  const resume = url.searchParams.get("resume") === "1";
   if (route === "asset") {
     const assetPath = url.pathname.slice("/learn/assets".length) || "/";
     const asset = await env.ASSETS.fetch(new Request(new URL(assetPath, url)));
@@ -3903,6 +3912,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
     return new Response(asset.body, { status: asset.status, headers });
   }
   if (route === "admin-accounting-callback") return handleAccountingOAuthCallback(request, env);
+  if (hasSignedOutMarker(request) && !resume) return signedOutPage();
   const sessionResult = await requireApplicationSession(request, env);
   if (sessionResult.response) return sessionResult.response;
   const active = sessionResult.active;
@@ -3910,11 +3920,12 @@ async function learn(request: Request, env: Env): Promise<Response> {
   if (route === "logout") {
     if (!(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
     if (env.DB) await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(active.user.id).run();
-    return redirect("/learn", clearSessionCookies(env.ENVIRONMENT === "production"));
+    return redirect("/learn", [...clearSessionCookies(env.ENVIRONMENT === "production"), ...markSignedOut(env.ENVIRONMENT === "production")]);
   }
-  if (route === "entry") return redirect(active.user.role === "ADMIN" ? "/learn/admin" : "/learn/student", sessionResult.setCookies);
-  if (route === "legal-terms") return withSessionCookies(appPage(active.user, active.csrfToken, "Terms & Conditions", legalPage("Terms & Conditions", learnTermsContent)), sessionResult.setCookies);
-  if (route === "legal-privacy") return withSessionCookies(appPage(active.user, active.csrfToken, "Privacy Policy", legalPage("Privacy Policy", learnPrivacyContent)), sessionResult.setCookies);
+  const sessionCookies = [...(sessionResult.setCookies ?? []), ...(resume ? clearSignedOutMarker(env.ENVIRONMENT === "production") : [])];
+  if (route === "entry") return redirect(active.user.role === "ADMIN" ? "/learn/admin" : "/learn/student", sessionCookies);
+  if (route === "legal-terms") return withSessionCookies(appPage(active.user, active.csrfToken, "Terms & Conditions", legalPage("Terms & Conditions", learnTermsContent)), sessionCookies);
+  if (route === "legal-privacy") return withSessionCookies(appPage(active.user, active.csrfToken, "Privacy Policy", legalPage("Privacy Policy", learnPrivacyContent)), sessionCookies);
   if (route === "not-found") return messagePage("Not found", "That Learn route does not exist.", 404);
   if (!canAccess(active.user, route)) {
     const expected = requiredRole(route);
@@ -3923,7 +3934,7 @@ async function learn(request: Request, env: Env): Promise<Response> {
   const response = active.user.role === "ADMIN"
     ? await handleAdmin(request, env, active, route)
     : await handleStudent(request, env, active, route);
-  return withSessionCookies(response, sessionResult.setCookies);
+  return withSessionCookies(response, sessionCookies);
 }
 
 export default {

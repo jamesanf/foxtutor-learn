@@ -1,5 +1,17 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 logout session repair
+
+- Diagnosed the non-functional logout control: deleting the Learn session was
+  followed by automatic session recreation because the upstream identity
+  provider remained authenticated.
+- Added a short-lived signed-out marker so the logout redirect remains signed
+  out instead of immediately provisioning a new application session.
+- Added an explicit `Sign in again` resume path that creates a fresh session
+  and clears the marker.
+- Preserved CSRF validation, D1 session deletion and session-cookie clearing.
+- Added automated logout/session-marker regression coverage.
+
 ### 2026-09-15 - Phase 7.17 student dashboard and home-learning submission
 
 - Balanced the four student dashboard cards into equal two-column rows.

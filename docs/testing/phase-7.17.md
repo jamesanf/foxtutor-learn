@@ -34,18 +34,27 @@ active STUDENT session
 → validated private resource upload
 ```
 
+## Logout acceptance
+
+Logout is a CSRF-protected `POST /learn/logout`. It deletes the user's D1
+application sessions and clears the Learn session cookies. Because the
+upstream identity provider can remain authenticated, the response also sets a
+short-lived signed-out marker. The redirect must show a signed-out page rather
+than immediately creating a new Learn session. The explicit `Sign in again`
+link must provision a fresh session and clear the marker.
+
 ## Automated result
 
 The complete suite passes:
 
 ```text
 40 test files
-277 tests
-277 passed
+281 tests
+281 passed
 0 failed
 ```
 
 The TypeScript check and client build also pass. Authenticated Chromium
-acceptance of the new dashboard and a real student submission remains a
-post-deployment browser check; no real financial operation is part of this
-feature.
+acceptance must verify the logout POST, redirect, signed-out state and
+explicit resume path in addition to the dashboard and student submission
+journeys. No real financial operation is part of this feature.

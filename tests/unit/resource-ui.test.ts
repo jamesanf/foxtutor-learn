@@ -170,6 +170,13 @@ describe("resource UX contract", () => {
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
   });
 
+  it("prevents upstream authentication from immediately recreating a logged-out Learn session", () => {
+    expect(workerSource).toContain("hasSignedOutMarker(request) && !resume");
+    expect(workerSource).toContain('href="/learn?resume=1"');
+    expect(workerSource).toContain("markSignedOut(env.ENVIRONMENT === \"production\")");
+    expect(workerSource).toContain("clearSignedOutMarker(env.ENVIRONMENT === \"production\")");
+  });
+
   it("keeps the header hit area limited to the dashboard logo and controls", () => {
     expect(workerSource).toContain('<div class="brand"><img class="brand-logo"');
     expect(workerSource).toContain('<div class="topbar-center-logo"><a class="topbar-center-logo-link" href="/learn"');

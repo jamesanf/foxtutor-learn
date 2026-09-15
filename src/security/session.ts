@@ -64,6 +64,20 @@ export function clearSessionCookies(secure = true): string[] {
   return [cookie("learn_session", "", 0, true, secure), cookie("learn_csrf", "", 0, false, secure)];
 }
 
+const SIGNED_OUT_COOKIE = "learn_signed_out";
+
+export function hasSignedOutMarker(request: Request): boolean {
+  return parseCookies(request)[SIGNED_OUT_COOKIE] === "1";
+}
+
+export function markSignedOut(secure = true): string[] {
+  return [cookie(SIGNED_OUT_COOKIE, "1", 60 * 60, true, secure)];
+}
+
+export function clearSignedOutMarker(secure = true): string[] {
+  return [cookie(SIGNED_OUT_COOKIE, "", 0, true, secure)];
+}
+
 export async function csrfValid(request: Request, active: ActiveSession): Promise<boolean> {
   if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") return true;
   const contentType = request.headers.get("content-type") ?? "";
