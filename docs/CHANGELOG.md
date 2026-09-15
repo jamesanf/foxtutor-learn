@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series pill alignment
+
+- Matched the recurring-series Pause/Resume control height to the adjacent
+  status pill at 24px.
+- Kept the action text centered within the control and aligned within the row.
+- Deployed commit `22fadb0` as Worker version
+  `5dfc94cf-6380-46bf-b16b-386ffca3ef4d`.
+
 ### 2026-09-15 - Phase 7.17 recurring-series action cascade correction
 
 - Corrected the CSS cascade so the recurring-series Pause/Resume controls
