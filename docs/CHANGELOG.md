@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 page-title alignment
+
+- Reduced the shared content top spacing so all Learn page titles align with
+  the top of the first sidebar navigation button.
+- This removes the excess whitespace above the student dashboard greeting
+  without changing horizontal or responsive spacing.
+- Deployed commit `fc3e43a` as Worker version
+  `447efda8-cf98-42f4-b76b-f6e8b66ee87f`.
+
 ### 2026-09-15 - Phase 7.17 restore dashboard viewport minimum
 
 - Restored the student dashboard's viewport-height minimum so the compact

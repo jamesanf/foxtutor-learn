@@ -13,6 +13,8 @@ keeps a viewport-height minimum so the footer sits at the browser bottom when
 the content is short and normal scrolling takes over when it is long.
 The submission flow reuses the existing private resource/R2 pipeline and
 the logout repair does not change billing or provider behavior.
+Shared content spacing now aligns every page title with the top of the first
+sidebar navigation button, including the student dashboard greeting.
 
 ## Required validation
 
@@ -47,9 +49,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `541fc35`
+- Git commit: `fc3e43a`
 - Worker: `foxtutor-learn`
-- Worker version: `a8932e5b-efb7-4735-bb33-fe453281b8a6`
+- Worker version: `447efda8-cf98-42f4-b76b-f6e8b66ee87f`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
