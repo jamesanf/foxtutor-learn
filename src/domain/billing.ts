@@ -2,6 +2,23 @@ import { formatMinorUnits } from "./accounting";
 
 export type BillingEventType = "WEEKLY_LESSON" | "ADMIN_CANCELLATION";
 export type CreditLedgerTransactionType = "GRANT" | "CONSUMPTION" | "REFUND" | "REVERSAL";
+export const CREDIT_REFUND_METHODS = [
+  "GOCARDLESS",
+  "METTLE_BANK_TRANSFER",
+  "FREEAGENT_CREDIT_NOTE_AND_METTLE"
+] as const;
+export type CreditRefundMethod = typeof CREDIT_REFUND_METHODS[number];
+
+export function creditRefundMethodLabel(method: CreditRefundMethod): string {
+  switch (method) {
+    case "GOCARDLESS":
+      return "GoCardless refund";
+    case "METTLE_BANK_TRANSFER":
+      return "Mettle bank transfer";
+    case "FREEAGENT_CREDIT_NOTE_AND_METTLE":
+      return "FreeAgent credit note + Mettle bank transfer";
+  }
+}
 
 export interface AvailableCredit {
   creditId: string;

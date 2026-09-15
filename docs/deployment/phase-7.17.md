@@ -294,25 +294,21 @@ The admin navigation label for the accounting area is now `Billing`. Existing
 provider internals remain unchanged. The Billing page heading and active
 navigation state use the new label.
 
-## Latest deployment: billing traffic-light closure
+## Latest deployment: guided external refund workflow
 
-- Git commit: `d0a9a96`
-- Worker version: `3e6b2d9a-e69b-48fa-957e-36785fed4764`
-- Production migrations: `0038_cancelled_failed_invoice_repair.sql`,
-  `0039_close_absent_sandbox_cancellations.sql`,
-  `0040_reconcile_restored_credit_fixtures.sql`
-- Deployment date: 2026-09-15
+- Git commit: pending
+- Worker version: pending
+- Production migrations: `0041_guided_credit_refund_method.sql`
+- Deployment date: pending
 
-This deployment adds bounded, redacted FreeAgent validation diagnostics and
-closes the cancellation state gap for failed invoices that never received a
-provider document. It also treats an already-confirmed provider `NOT_FOUND`
-invoice as a distinct local cancellation outcome, preserving the
-reconciliation history without leaving an actionable alert after the lesson
-has been cancelled.
+This deployment adds a step-by-step external refund workflow. Administrators
+must select the route used, follow the method-specific settlement guidance,
+enter the external reference and explicitly confirm that money has already
+been sent externally. The selected method is persisted with the immutable
+refund record. After local ledger completion, FoxTutor sends a
+provenance-aware confirmation email with method-specific settlement timing.
+FoxTutor does not store bank details and does not initiate GoCardless, Mettle
+or FreeAgent money movement.
 
-The migrations were applied to the Production D1 database before live
-acceptance. Authenticated Chromium cancellation of the controlled KJHGBH,
-zero-value-mail, Sandbox and James Fox reconciliation fixtures was followed by
-read-only D1 verification. Production Learn showed zero billing-attention
-lessons and no open billing alerts. Production D1 showed zero actionable
-billing operations. No real-money payment or refund was initiated.
+Migration application and authenticated Chromium acceptance are recorded below
+after deployment. No real-money payment or refund is initiated by this flow.

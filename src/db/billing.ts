@@ -1,7 +1,8 @@
 import {
   applyAvailableCredits,
   billingReference,
-  type AvailableCredit
+  type AvailableCredit,
+  type CreditRefundMethod
 } from "../domain/billing";
 
 export interface CustomerCreditBalance extends AvailableCredit {
@@ -96,6 +97,7 @@ export interface BillingRefund {
   amount_minor: number | string;
   currency: "GBP";
   status: "REQUESTED" | "AUTHORISED" | "PROCESSING" | "PAID" | "FAILED" | "UNKNOWN";
+  refund_method: CreditRefundMethod;
   provider_reference: string | null;
   idempotency_key: string;
   authorised_by_user_id: string | null;
@@ -501,6 +503,7 @@ export async function createAuthorisedCreditRefund(
     creditId: string;
     studentId: string;
     amountMinor: bigint;
+    refundMethod?: CreditRefundMethod;
     authorisedByUserId: string;
     now: string;
   }
@@ -508,9 +511,9 @@ export async function createAuthorisedCreditRefund(
   if (input.amountMinor <= 0n) throw new Error("Refund amount must be positive.");
   await db.prepare(
     `INSERT INTO billing_refunds
-     (id, credit_id, student_id, amount_minor, currency, status, idempotency_key,
+     (id, credit_id, student_id, amount_minor, currency, status, refund_method, idempotency_key,
       authorised_by_user_id, requested_at)
-     SELECT ?, credit_id, student_id, ?, 'GBP', 'AUTHORISED', ?, ?, ?
+     SELECT ?, credit_id, student_id, ?, 'GBP', 'AUTHORISED', ?, ?, ?, ?
      FROM customer_credit_balances
       WHERE credit_id = ? AND student_id = ?
         AND remaining_amount_minor - COALESCE((
@@ -523,6 +526,7 @@ export async function createAuthorisedCreditRefund(
   ).bind(
     input.refundId,
     Number(input.amountMinor),
+    input.refundMethod ?? "METTLE_BANK_TRANSFER",
     `credit-refund:${input.refundId}`,
     input.authorisedByUserId,
     input.now,

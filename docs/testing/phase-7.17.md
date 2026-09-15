@@ -270,6 +270,16 @@ the browser redirected successfully, and Production D1 showed a `PAID` refund,
 `REFUND` ledger entry, and zero remaining balance. No real-money refund was
 initiated.
 
+The guided refund workflow now requires the administrator to choose the
+external settlement route: GoCardless, Mettle bank transfer, or FreeAgent
+credit note plus Mettle bank transfer. The form gives method-specific
+instructions, explicitly prohibits entering bank details, persists the chosen
+method with the refund, and sends a method-specific customer confirmation only
+after the local `PAID` refund ledger entry succeeds. A failed email is
+surfaced as a review state and never invites the administrator to repeat the
+external payment. Migration `0041_guided_credit_refund_method.sql` adds the
+persisted refund-method field.
+
 ## Traffic-light closure matrix
 
 | Area | Status | Evidence or remaining decision |
@@ -281,6 +291,7 @@ initiated.
 | Credit-covered FoxMail statement | GREEN | Live statement/cancellation tests preserve the original invoice and lesson provenance. |
 | Repeated credit reversal | GREEN | Idempotent reversal prevents a second credit grant. |
 | Manual refund acknowledgement | GREEN | Live Chromium/D1 test records one `PAID` refund and zero available balance. |
+| Guided refund method and customer notice | GREEN | Method-specific instructions, method persistence, provenance-aware confirmation copy and post-ledger delivery are covered by build, integration and unit tests. No provider money movement is automatic. |
 | Partial manual refund | AMBER | Database helpers support bounded partial refunds, but a separate live partial-refund fixture has not been run. |
 | New-customer no-mandate payment | AMBER | Manual-payment readiness is classified safely; live mailbox/provider onboarding remains a separate acceptance gate. |
 | Full live recurring provenance cycle | AMBER | Single-lesson provenance is proven; a fresh recurring-series mail cycle still requires an isolated provider fixture. |

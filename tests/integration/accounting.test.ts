@@ -116,11 +116,14 @@ describe("Phase 5 accounting boundary", () => {
       creditId: "credit-1",
       studentId: "student-1",
       amountMinor: 5500n,
+      refundMethod: "GOCARDLESS",
       authorisedByUserId: "admin-1",
       now: "2026-09-15T20:00:00.000Z"
     });
 
     expect(statements[0]?.sql).toContain("pending.status IN ('AUTHORISED', 'PROCESSING')");
+    expect(statements[0]?.sql).toContain("refund_method");
+    expect(statements[0]?.values).toContain("GOCARDLESS");
   });
 
   it("writes cancellation history and its accounting outbox in one D1 batch", async () => {

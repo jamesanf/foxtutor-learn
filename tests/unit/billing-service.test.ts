@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderCreditCoveredInvoiceComment, renderCreditCoveredStatement } from "../../src/billing/service";
+import { renderCreditCoveredInvoiceComment, renderCreditCoveredStatement, renderCreditRefundConfirmation } from "../../src/billing/service";
 
 describe("credit-covered invoice comments", () => {
   it("uses only normalized invoice references and never exposes internal credit identifiers", () => {
@@ -47,5 +47,24 @@ describe("credit-covered invoice comments", () => {
     expect(statement.text).toContain("You do not need to make a payment or set up Direct Debit");
     expect(statement.html).toContain("Payment received");
     expect(statement.html).toContain(">Billing</div>");
+  });
+
+  it("renders method-specific refund guidance without bank details", () => {
+    const refund = renderCreditRefundConfirmation(
+      "KJHGBH Live Customer",
+      5500,
+      "METTLE_BANK_TRANSFER",
+      "METTLE-123",
+      "FT-INV-26091501",
+      "2026-09-16"
+    );
+
+    expect(refund.subject).toBe("Your FoxTutor refund has been processed");
+    expect(refund.text).toContain("Refund amount: £55.00");
+    expect(refund.text).toContain("Mettle bank transfer");
+    expect(refund.text).toContain("FT-INV-26091501 for the lesson on 16 September 2026");
+    expect(refund.text).toContain("3–5 working days");
+    expect(refund.text).not.toMatch(/sort code|account number|bank details/i);
+    expect(refund.html).toContain("Refund processed");
   });
 });

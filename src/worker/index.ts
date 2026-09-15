@@ -134,7 +134,7 @@ import {
   setRecurringSeriesStatus,
   cancelRecurringLesson
 } from "../db/recurrence";
-import { processBillingInvoiceOperation, processDueBillingInvoiceOperations, reconcileBillingInvoices } from "../billing/service";
+import { processBillingInvoiceOperation, processDueBillingInvoiceOperations, reconcileBillingInvoices, renderCreditRefundConfirmation } from "../billing/service";
 import { auditBillingChain } from "../billing/audit";
 import { provisionBillingAccount, reconcileBillingAccountMandate, reconcileVerifiedContact, runBillingProvisioningScheduler } from "../accounting/provisioning";
 import { freeAgentContactMandateRequestUrl } from "../accounting/freeagent/client";
@@ -177,7 +177,8 @@ import {
   currentCalendarDate
 } from "../domain/calendar";
 import { calculatePaymentReadiness } from "../domain/payment-readiness";
-import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
+import { collectionDateSevenDaysBeforeLesson, CREDIT_REFUND_METHODS, creditRefundMethodLabel, type CreditRefundMethod } from "../domain/billing";
+import { sendMailDetailed } from "../mail/client";
 import { classifyDirectDebitState, directDebitStatusCopy, mapDirectDebitStatus, shouldReconcileDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
 import { runBillingSentinel } from "../billing/sentinel";
 import {
@@ -2504,19 +2505,20 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         return appPage(
           active.user,
           csrfToken,
-          "Record manual credit refund",
-          `<div class="page-heading"><div><h1>Record manual credit refund</h1><p class="lede">Use this only after you have manually refunded the customer outside FoxTutor.</p></div></div><section class="card form-card"><p>Available credit: <strong>${billingMoney(remaining)}</strong></p><p class="muted">This records the refund in the immutable credit ledger and removes the refunded amount from the customer's available balance. It does not send money or call FreeAgent.</p><form method="post" action="/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}/refund">${hiddenCsrf(csrfToken)}<label>Refund amount<input name="amount" inputmode="decimal" value="${escapeHtml(formatMinorUnits(remaining))}" required><span class="field-help">The amount must not exceed the available credit.</span></label><label>Manual refund reference<input name="providerReference" maxlength="200" required><span class="field-help">Enter the bank transfer or other external refund reference.</span></label><input type="hidden" name="confirmation" value="MANUAL_REFUND_PROCESSED"><div class="form-actions"><a class="button secondary" href="/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}">Cancel</a><button class="button danger" type="submit">Record refund as processed</button></div></form></section>`
+          "Record external credit refund",
+          `<div class="page-heading"><div><h1>Record external credit refund</h1><p class="lede">Complete the external refund first, then use this guided record to update FoxTutor.</p></div></div><section class="card"><h2>Before you continue</h2><ol><li>Confirm the customer, source lesson and source invoice shown on the credit record.</li><li>Refund the customer outside FoxTutor using one of the methods below. Learn does not store bank details and does not move money.</li><li>Keep the provider or bank reference from the completed refund.</li><li>Only then submit this form. The customer email is sent after the immutable ledger entry is recorded.</li></ol><p class="form-warning"><strong>Do not use this form for an unpaid invoice or an unconfirmed Direct Debit.</strong> If an external refund has already been sent but this page fails, do not send it again; review the refund record.</p></section><section class="card"><h2>Available credit</h2><p><strong>${billingMoney(remaining)}</strong> is available to refund.</p><p class="muted">The selected route is recorded with the refund and determines the customer-facing settlement guidance.</p></section><section class="card form-card"><form method="post" action="/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}/refund">${hiddenCsrf(csrfToken)}<label>Refund amount<input name="amount" inputmode="decimal" value="${escapeHtml(formatMinorUnits(remaining))}" required><span class="field-help">The amount must be positive and must not exceed the available credit.</span></label><fieldset><legend>Which refund method did you use?</legend><label><input type="radio" name="refundMethod" value="GOCARDLESS" required> <strong>GoCardless refund</strong><span class="field-help">Use only when the original payment is confirmed in GoCardless. Refund the original payment there and record its refund reference.</span></label><label><input type="radio" name="refundMethod" value="METTLE_BANK_TRANSFER"> <strong>Mettle bank transfer</strong><span class="field-help">Send the transfer in Mettle using your normal secure process. Do not enter customer bank details here; record only the Mettle transaction reference.</span></label><label><input type="radio" name="refundMethod" value="FREEAGENT_CREDIT_NOTE_AND_METTLE"> <strong>FreeAgent credit note + Mettle bank transfer</strong><span class="field-help">Create or associate the accounting credit note in FreeAgent, send the money from Mettle, then record the bank or transfer reference. The credit note itself does not send money.</span></label></fieldset><label>Provider or bank reference<input name="providerReference" maxlength="200" required><span class="field-help">Use the external refund, transfer, or bank reference. Never enter bank-account details.</span></label><label class="checkbox-field"><input type="checkbox" name="confirmation" value="MANUAL_REFUND_PROCESSED" required> I confirm that the external refund has already been submitted or completed, and I understand that this button records it but does not send money.</label><div class="form-actions"><a class="button secondary" href="/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}">Cancel</a><button class="button danger" type="submit">Record refund and notify customer</button></div></form></section>`
         );
       }
       if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
       const form = await parseForm(request);
+      const refundMethod = formText(form ?? new FormData(), "refundMethod");
       if (formText(form ?? new FormData(), "confirmation") !== "MANUAL_REFUND_PROCESSED") {
         return messagePage("Refund not confirmed", "Confirm that the manual refund has already been processed before recording it.", 400);
       }
       const amountMinor = parseMinorUnits(formText(form ?? new FormData(), "amount"));
       const providerReference = formText(form ?? new FormData(), "providerReference").trim();
-      if (!amountMinor || amountMinor <= 0n || amountMinor > remaining || providerReference.length < 3 || providerReference.length > 200 || /[\u0000-\u001f\u007f]/.test(providerReference)) {
-        return messagePage("Invalid refund", "Enter a positive refund amount within the available credit and a valid external refund reference.", 400);
+      if (!CREDIT_REFUND_METHODS.includes(refundMethod as CreditRefundMethod) || !amountMinor || amountMinor <= 0n || amountMinor > remaining || providerReference.length < 3 || providerReference.length > 200 || /[\u0000-\u001f\u007f]/.test(providerReference)) {
+        return messagePage("Invalid refund", "Choose a refund method, enter a positive amount within the available credit, and provide a valid external refund reference.", 400);
       }
       const refundId = crypto.randomUUID();
       const authorised = await createAuthorisedCreditRefund(db, {
@@ -2524,6 +2526,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         creditId: credit.credit_id,
         studentId: credit.student_id,
         amountMinor,
+        refundMethod: refundMethod as CreditRefundMethod,
         authorisedByUserId: active.user.id,
         now: new Date().toISOString()
       });
@@ -2546,9 +2549,55 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         });
         return messagePage("Refund requires review", "The refund was authorised but could not be marked complete. Do not repeat the external payment; review the credit record.", 500);
       }
-      return completed
-        ? redirect(`/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}`)
-        : messagePage("Refund requires review", "The refund was authorised but could not be marked complete. Do not repeat the external payment; review the credit record.", 500);
+      if (!completed) return messagePage("Refund requires review", "The refund was authorised but could not be marked complete. Do not repeat the external payment; review the credit record.", 500);
+      const student = await findStudent(db, credit.student_id);
+      if (!student?.email) {
+        return messagePage("Refund recorded; notification requires review", "The refund was recorded successfully, but this student has no billing email address. Do not repeat the external payment; update the student record and send the confirmation separately.", 502);
+      }
+      const source = await db.prepare(
+        `SELECT COALESCE(source_reference.business_date, source_event.lesson_date) AS source_date,
+                CASE WHEN source_reference.business_date IS NOT NULL AND source_reference.sequence IS NOT NULL
+                  THEN 'FT-INV-' || substr(replace(source_reference.business_date, '-', ''), 3) || printf('%02d', source_reference.sequence)
+                  ELSE source_invoice.freeagent_reference END AS source_reference
+         FROM customer_credits c
+         LEFT JOIN billing_events source_event
+           ON source_event.id = c.source_event_id
+           OR (c.source_lesson_id IS NOT NULL AND source_event.lesson_id = c.source_lesson_id)
+         LEFT JOIN billing_invoices source_invoice ON source_invoice.billing_event_id = source_event.id
+         LEFT JOIN billing_invoice_references source_reference ON source_reference.invoice_id = source_invoice.id
+         WHERE c.id = ?
+         ORDER BY source_event.created_at ASC
+         LIMIT 1`
+      ).bind(credit.credit_id).first<{ source_date: string | null; source_reference: string | null }>();
+      const email = renderCreditRefundConfirmation(
+        student.name,
+        amountMinor,
+        refundMethod as CreditRefundMethod,
+        providerReference,
+        source?.source_reference ?? null,
+        source?.source_date ?? null
+      );
+      const delivery = await sendMailDetailed(env, {
+        to: student.email,
+        fromAddress: env.MAIL_API_BILLING_FROM ?? "billing@foxtutor.org",
+        fromName: "FoxTutor Billing",
+        replyTo: env.MAIL_API_REPLY_TO,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+        idempotencyKey: `billing-credit-refund-${refundId}`
+      });
+      if (delivery.kind === "failed") {
+        console.error("credit_refund_notification_failed", {
+          creditId: credit.credit_id,
+          refundId,
+          retryable: delivery.retryable,
+          unknown: delivery.unknown,
+          message: delivery.safeMessage
+        });
+        return messagePage("Refund recorded; notification requires review", "The refund was recorded successfully, but the customer confirmation could not be delivered. Do not repeat the external payment; review the refund record and mail delivery.", 502);
+      }
+      return redirect(`/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}`);
     }
     const creditMatch = /^\/learn\/admin\/billing\/credits\/([^/]+)$/.exec(url.pathname);
     if (creditMatch && request.method === "GET") {
@@ -2571,10 +2620,14 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
          LIMIT 1`
       ).bind(credit.credit_id).first<{ source_date: string | null; source_reference: string | null }>();
       const transactions = await db.prepare("SELECT * FROM credit_ledger_transactions WHERE credit_id = ? ORDER BY created_at ASC, id ASC").bind(credit.credit_id).all<{ created_at: string; transaction_type: string; amount_minor: number | string; invoice_id: string | null; provider_reference: string | null; }>();
+      const refunds = await db.prepare("SELECT amount_minor, status, refund_method, provider_reference, requested_at FROM billing_refunds WHERE credit_id = ? ORDER BY requested_at ASC").bind(credit.credit_id).all<{ amount_minor: number | string; status: string; refund_method: CreditRefundMethod; provider_reference: string | null; requested_at: string }>();
       const transactionRows = transactions.results.length
         ? transactions.results.map((transaction) => `<tr><td>${escapeHtml(billingDateLabel(transaction.created_at))}</td><td>${escapeHtml(transaction.transaction_type)}</td><td>${billingMoney(transaction.amount_minor)}</td><td>${escapeHtml(transaction.invoice_id ?? "—")}</td><td>${escapeHtml(transaction.provider_reference ?? "—")}</td></tr>`).join("")
         : `<tr><td colspan="5">No ledger transactions.</td></tr>`;
-      return appPage(active.user, csrfToken, "Credit detail", `<div class="page-heading"><div><h1>Credit detail</h1></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Student</dt><dd>${escapeHtml(credit.student_name ?? credit.student_id)}</dd></div><div><dt>Original value</dt><dd>${billingMoney(credit.original_amount_minor)}</dd></div><div><dt>Consumed/refunded</dt><dd>${billingMoney(credit.amount_consumed_minor)}</dd></div><div><dt>Remaining</dt><dd>${billingMoney(credit.remaining_amount_minor)}</dd></div><div><dt>Status</dt><dd>${escapeHtml(credit.status)}</dd></div><div><dt>Source lesson</dt><dd>${escapeHtml(source?.source_date ? billingDateLabel(source.source_date) : "Not recorded")}</dd></div><div><dt>Source invoice</dt><dd>${escapeHtml(source?.source_reference ?? "Not recorded")}</dd></div><div><dt>Provider credit note</dt><dd>${escapeHtml(credit.freeagent_credit_note_reference ?? "Not created")}</dd></div></dl>${BigInt(credit.remaining_amount_minor) > 0n ? `<p><a class="button danger" href="/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}/refund">Record manual refund</a></p>` : ""}</section><section class="card"><h2>Immutable ledger</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Invoice</th><th>Provider reference</th></tr></thead><tbody>${transactionRows}</tbody></table></div></section>`);
+      const refundRows = refunds.results.length
+        ? refunds.results.map((refund) => `<tr><td>${escapeHtml(billingDateLabel(refund.requested_at))}</td><td>${escapeHtml(creditRefundMethodLabel(refund.refund_method))}</td><td>${billingMoney(refund.amount_minor)}</td><td>${escapeHtml(refund.status)}</td><td>${escapeHtml(refund.provider_reference ?? "—")}</td></tr>`).join("")
+        : `<tr><td colspan="5">No external refunds recorded.</td></tr>`;
+      return appPage(active.user, csrfToken, "Credit detail", `<div class="page-heading"><div><h1>Credit detail</h1></div><a class="button secondary" href="/learn/admin/billing">Back to billing</a></div><section class="card"><dl class="detail-grid"><div><dt>Student</dt><dd>${escapeHtml(credit.student_name ?? credit.student_id)}</dd></div><div><dt>Original value</dt><dd>${billingMoney(credit.original_amount_minor)}</dd></div><div><dt>Consumed/refunded</dt><dd>${billingMoney(credit.amount_consumed_minor)}</dd></div><div><dt>Remaining</dt><dd>${billingMoney(credit.remaining_amount_minor)}</dd></div><div><dt>Status</dt><dd>${escapeHtml(credit.status)}</dd></div><div><dt>Source lesson</dt><dd>${escapeHtml(source?.source_date ? billingDateLabel(source.source_date) : "Not recorded")}</dd></div><div><dt>Source invoice</dt><dd>${escapeHtml(source?.source_reference ?? "Not recorded")}</dd></div><div><dt>Provider credit note</dt><dd>${escapeHtml(credit.freeagent_credit_note_reference ?? "Not created")}</dd></div></dl>${BigInt(credit.remaining_amount_minor) > 0n ? `<p><a class="button danger" href="/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}/refund">Record external refund</a></p>` : ""}</section><section class="card"><h2>External refunds</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead><tbody>${refundRows}</tbody></table></div></section><section class="card"><h2>Immutable ledger</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Invoice</th><th>Provider reference</th></tr></thead><tbody>${transactionRows}</tbody></table></div></section>`);
     }
     const alertMatch = /^\/learn\/admin\/billing\/alerts\/([^/]+)$/.exec(url.pathname);
     if (!alertMatch || request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);

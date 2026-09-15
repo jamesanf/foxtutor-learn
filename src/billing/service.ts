@@ -24,7 +24,7 @@ import {
 } from "../accounting/service";
 import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
 import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
-import { datedInvoiceReference, isCollectionDateReached } from "../domain/billing";
+import { creditRefundMethodLabel, datedInvoiceReference, isCollectionDateReached, type CreditRefundMethod } from "../domain/billing";
 import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
 import { sendMailDetailed, type MailDeliveryResult, type MailEnvironment } from "../mail/client";
@@ -69,6 +69,33 @@ export interface CreditSourceProvenance {
   invoiceReference: string | null;
   lessonDate: string | null;
   amountMinor: number | string;
+}
+
+export function renderCreditRefundConfirmation(
+  studentName: string,
+  amountMinor: bigint | number | string,
+  refundMethod: CreditRefundMethod,
+  providerReference: string,
+  sourceReference: string | null,
+  sourceDate: string | null
+): { subject: string; text: string; html: string } {
+  const amount = formatMinorUnits(BigInt(amountMinor));
+  const source = sourceReference
+    ? `${sourceReference}${sourceDate ? ` for the lesson on ${statementDate(sourceDate)}` : ""}`
+    : sourceDate
+      ? `the lesson on ${statementDate(sourceDate)}`
+      : "a FoxTutor credit on your account";
+  const timing = refundMethod === "GOCARDLESS"
+    ? "It usually takes around 1–2 working days to reach the bank account used for the original payment."
+    : "It may take around 3–5 working days to appear, depending on the receiving bank.";
+  const method = creditRefundMethodLabel(refundMethod);
+  const text = `Hello ${studentName},\n\nYour FoxTutor refund has been processed.\n\nRefund amount: £${amount}\nRefund for: credit from ${source}\nRefund method: ${method}\nRefund reference: ${providerReference}\n\n${timing}\n\nIf the refund does not appear within that timeframe, please contact billing@foxtutor.org and quote the refund reference above.`;
+  const htmlBody = `<p>Hello ${escapeMailHtml(studentName)},</p><p>Your FoxTutor refund has been processed.</p><dl><dt>Refund amount</dt><dd>£${escapeMailHtml(amount)}</dd><dt>Refund for</dt><dd>Credit from ${escapeMailHtml(source)}</dd><dt>Refund method</dt><dd>${escapeMailHtml(method)}</dd><dt>Refund reference</dt><dd>${escapeMailHtml(providerReference)}</dd></dl><p>${escapeMailHtml(timing)}</p><p>If the refund does not appear within that timeframe, please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a> and quote the refund reference above.</p>`;
+  return {
+    subject: "Your FoxTutor refund has been processed",
+    text,
+    html: frame("Refund processed", "FoxTutor Learn", htmlBody, "Billing")
+  };
 }
 
 function statementDate(value: string | null): string {
