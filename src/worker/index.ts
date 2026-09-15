@@ -1765,6 +1765,12 @@ function entityIdFromPathSegment(value: string): string | null {
   return decoded ? entityIdFromUrlKey(decoded) : null;
 }
 
+function creditIdFromPathSegment(value: string): string | null {
+  const decoded = decodePathSegment(value);
+  if (!decoded) return null;
+  return entityIdFromUrlKey(decoded) ?? (/^credit[-:][A-Za-z0-9._:-]+$/.test(decoded) ? decoded : null);
+}
+
 async function requireApplicationSession(request: Request, env: Env): Promise<{ active: ActiveSession | null; response?: Response; setCookies?: string[] }> {
   if (!env.DB) return { active: null, response: messagePage("Service unavailable", "The Learn database is not configured for this environment.", 503) };
   const email = identityEmail(request, env.ENVIRONMENT);
@@ -2484,7 +2490,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     }
     const creditRefundMatch = /^\/learn\/admin\/billing\/credits\/([^/]+)\/refund$/.exec(url.pathname);
     if (creditRefundMatch) {
-      const creditId = entityIdFromPathSegment(creditRefundMatch[1] ?? "");
+      const creditId = creditIdFromPathSegment(creditRefundMatch[1] ?? "");
       const credit = creditId ? await findCreditById(db, creditId) : null;
       if (!credit) return messagePage("Credit not found", "That customer credit does not exist.", 404);
       const remaining = BigInt(credit.remaining_amount_minor);
@@ -2531,7 +2537,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     }
     const creditMatch = /^\/learn\/admin\/billing\/credits\/([^/]+)$/.exec(url.pathname);
     if (creditMatch && request.method === "GET") {
-      const creditId = entityIdFromPathSegment(creditMatch[1] ?? "");
+      const creditId = creditIdFromPathSegment(creditMatch[1] ?? "");
       const credit = creditId ? await findCreditById(db, creditId) : null;
       if (!credit) return messagePage("Credit not found", "That customer credit does not exist.", 404);
       const source = await db.prepare(
