@@ -817,7 +817,8 @@ export async function updateBillingEventStatus(
   providerStatus?: string | null
 ): Promise<void> {
   await db.prepare(
-    `UPDATE billing_events SET status = ?, external_reference = COALESCE(?, external_reference),
+    `UPDATE billing_events SET status = CASE WHEN status = 'CANCELLED' THEN status ELSE ? END,
+       external_reference = COALESCE(?, external_reference),
        external_url = COALESCE(?, external_url), provider_status = ?, updated_at = ?
      WHERE id = ?`
   ).bind(status, providerReference ?? null, providerUrl ?? null, providerStatus ?? null, now, id).run();

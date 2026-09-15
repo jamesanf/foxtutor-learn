@@ -4,6 +4,7 @@ import {
   ensureBillingInvoiceForEvent,
   findBillingEvent,
   findBillingInvoice,
+  invoiceCancellationStatement,
   listDueBillingInvoiceOperations,
   markBillingInvoiceOperation,
   applyCreditToInvoice,
@@ -298,6 +299,10 @@ async function processCreateInvoice(
       providerUrl: readBack.url,
       providerStatus: readBack.status ?? "SENT"
     }, now);
+    const currentEvent = await findBillingEvent(db, event.id);
+    if (currentEvent?.status === "CANCELLED") {
+      await db.batch([invoiceCancellationStatement(db, invoice.id, now)]);
+    }
   } catch (error) {
     await markOperationFailure(db, operation, now, error, {
       studentId: event.student_id,
@@ -344,6 +349,21 @@ async function processDirectDebit(
       providerStatus: "LESSON_CANCELLED",
       safeErrorCode: "CANCELLED",
       safeErrorMessage: "Cancelled lessons are never collected."
+    }, now);
+    return;
+  }
+  const cancellationPending = await db.prepare(
+    `SELECT 1 FROM billing_invoice_operations
+     WHERE invoice_id = ? AND operation_type = 'CANCEL_INVOICE'
+       AND status IN ('PENDING', 'PROCESSING')
+     LIMIT 1`
+  ).bind(invoice.id).first<{ 1: number }>();
+  if (cancellationPending) {
+    await markBillingInvoiceOperation(db, operation.id, {
+      status: "BLOCKED",
+      providerStatus: "CANCELLATION_PENDING",
+      safeErrorCode: "CANCELLATION_PENDING",
+      safeErrorMessage: "Direct Debit is blocked while provider invoice cancellation is pending."
     }, now);
     return;
   }
