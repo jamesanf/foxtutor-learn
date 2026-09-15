@@ -69,6 +69,9 @@ Automated UI contracts cover:
   invalid free-text rejection.
 - the embedded recurring-series section omitting its redundant `Create series`
   action because creation is owned by the shared New Booking modal.
+- every admin booking entry point, including Calendar, using the `Create
+  Booking` trigger and shared standalone/recurring modal tree, with no
+  remaining `Add lesson` action.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

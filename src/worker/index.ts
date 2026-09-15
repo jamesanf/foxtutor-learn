@@ -798,11 +798,13 @@ function calendarPage(
   role: Role,
   feed: CalendarFeed | null,
   feedUrl?: string,
-  open = false
+  open = false,
+  students: Student[] = []
 ): string {
   const title = role === "ADMIN" ? "Calendar" : "Calendar";
-  const addLesson = role === "ADMIN" ? buttonLink("/learn/admin/lessons/new", "Add lesson") : "";
-  return `<div class="calendar-page"><div class="page-heading"><div><h1>${title}</h1></div>${addLesson}</div>${calendarView(lessons, role)}${calendarSubscriptionCard(csrfToken, action, feed, feedUrl, open)}</div>`;
+  const createBooking = role === "ADMIN" ? buttonTrigger("Create Booking") : "";
+  const bookingDialog = role === "ADMIN" ? lessonCreateDialog(csrfToken, students) : "";
+  return `<div class="calendar-page"><div class="page-heading"><div><h1>${title}</h1></div>${createBooking}</div>${calendarView(lessons, role)}${calendarSubscriptionCard(csrfToken, action, feed, feedUrl, open)}${bookingDialog}</div>`;
 }
 
 function statusLabel(status: LessonStatus): string {
@@ -927,7 +929,7 @@ function parseStudentSectionPagination(url: URL, pageParam: string, sizeParam: s
 }
 
 function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, emptyAction?: string): string {
-  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? buttonTrigger("New Booking") : ""}</div>`;
+  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? buttonTrigger("Create Booking") : ""}</div>`;
   return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -955,7 +957,7 @@ function lessonPagination(page: number, pageSize: number, total: number, path: s
 }
 
 function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; title: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
-  return `<div class="page-heading"><h1>${escapeHtml(options.title)}</h1>${options.emptyAction ? buttonTrigger("New Booking") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
+  return `<div class="page-heading"><h1>${escapeHtml(options.title)}</h1>${options.emptyAction ? buttonTrigger("Create Booking") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
 }
 
 function studentSectionPagination(page: number, pageSize: number, total: number, path: string, label: string, pageParam: string, sizeParam: string): string {
@@ -1651,7 +1653,7 @@ function lessonCreateFormMarkup(
 
 function lessonCreateDialog(csrfToken: string, students: Student[], initialView: "choice" | "standalone" | "recurring" = "choice"): string {
   const view = initialView === "standalone" || initialView === "recurring" ? initialView : "choice";
-  return `<dialog class="lesson-create-dialog" data-lesson-create-dialog data-initial-view="${view}" aria-labelledby="lesson-create-dialog-title"><div class="card form-card"><button class="cancel-dialog-close" type="button" data-lesson-create-close aria-label="Close new booking dialog">×</button><div data-booking-choice-view${view === "choice" ? "" : " hidden"}><h2 id="lesson-create-dialog-title">New booking</h2><p class="muted">Choose the type of booking to create.</p><div class="booking-choice-actions"><button class="button" type="button" data-booking-option="standalone">Standalone lesson</button><button class="button secondary" type="button" data-booking-option="recurring">Recurring lesson</button></div></div><div data-booking-form-view="standalone"${view === "standalone" ? "" : " hidden"}><button class="booking-dialog-back" type="button" data-booking-choice-back aria-label="Back to booking type" title="Back to booking type"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg></button><h2>New booking</h2>${lessonCreateFormMarkup(csrfToken, "/learn/admin/lessons/new", students, undefined, "", "", true)}</div><div data-booking-form-view="recurring"${view === "recurring" ? "" : " hidden"}><button class="booking-dialog-back" type="button" data-booking-choice-back aria-label="Back to booking type" title="Back to booking type"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11H7.83l5.59-5.59L12 4l8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg></button><h2>Create recurring series</h2><p class="lede">The first six weeks will be materialised after creation. FoxTutor time is always Europe/London.</p>${recurringSeriesFormMarkup(csrfToken, students, undefined, true)}</div></div></dialog>`;
+  return `<dialog class="lesson-create-dialog" data-lesson-create-dialog data-initial-view="${view}" aria-labelledby="lesson-create-dialog-title"><div class="card form-card"><button class="cancel-dialog-close" type="button" data-lesson-create-close aria-label="Close Create Booking dialog">×</button><div data-booking-choice-view${view === "choice" ? "" : " hidden"}><h2 id="lesson-create-dialog-title">Create Booking</h2><p class="muted">Choose the type of booking to create.</p><div class="booking-choice-actions"><button class="button" type="button" data-booking-option="standalone">Standalone lesson</button><button class="button secondary" type="button" data-booking-option="recurring">Recurring lesson</button></div></div><div data-booking-form-view="standalone"${view === "standalone" ? "" : " hidden"}><button class="booking-dialog-back" type="button" data-booking-choice-back aria-label="Back to booking type" title="Back to booking type"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg></button>  <h2>Create Booking</h2>${lessonCreateFormMarkup(csrfToken, "/learn/admin/lessons/new", students, undefined, "", "", true)}</div><div data-booking-form-view="recurring"${view === "recurring" ? "" : " hidden"}><button class="booking-dialog-back" type="button" data-booking-choice-back aria-label="Back to booking type" title="Back to booking type"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11H7.83l5.59-5.59L12 4l8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg></button><h2>Create recurring series</h2><p class="lede">The first six weeks will be materialised after creation. FoxTutor time is always Europe/London.</p>${recurringSeriesFormMarkup(csrfToken, students, undefined, true)}</div></div></dialog>`;
 }
 
 async function parseForm(request: Request): Promise<FormData | null> {
@@ -2094,12 +2096,12 @@ async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database):
   const students = await listStudents(db);
   const preview = upcoming.length
     ? `<div class="dashboard-bookings">${upcoming.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${lessonRouteId(lesson.id)}"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/bookings">View all bookings</a>`
-    : `<div class="dashboard-empty"><p>No upcoming bookings.</p>${buttonTrigger("New Booking")}</div>`;
+    : `<div class="dashboard-empty"><p>No upcoming bookings.</p>${buttonTrigger("Create Booking")}</div>`;
   const reportPreview = reportQueue.length
     ? `<div class="dashboard-bookings">${reportQueue.map((lesson) => `<a class="dashboard-booking" href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report"><span><strong>${escapeHtml(lesson.student_name ?? "Student")}</strong><small>${escapeHtml(bookingDate(lesson))} · ${escapeHtml(bookingTime(lesson))}</small></span><span class="status status-${lesson.report_status === "DRAFT" ? "draft" : "scheduled"}">${lesson.report_status === "DRAFT" ? "Edit draft" : "Create report"}</span></a>`).join("")}</div><a class="text-link" href="/learn/admin/lessons">View past lessons</a>`
     : `<div class="dashboard-empty"><p>No lesson reports waiting to be written.</p></div>`;
   const nextLessonHref = upcoming[0] ? `/learn/admin/lessons/${lessonRouteId(upcoming[0].id)}` : "/learn/admin/bookings";
-  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonTrigger("New Booking")}</div><div class="summary-grid"><a class="summary-card" href="${nextLessonHref}"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</a><a class="summary-card" href="/learn/admin/bookings"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></a><a class="summary-card" href="/learn/admin/students"><span>Active Students</span><strong>${activeStudents}</strong></a><a class="summary-card" href="/learn/admin/reschedules"><span>Reschedule requests</span><strong>${rescheduleRequests}</strong></a></div><section class="card dashboard-section"><div class="section-heading"><h2>Reports to write</h2><a class="text-link" href="/learn/admin/lessons">Past Lessons</a></div>${reportPreview}</section><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>${lessonCreateDialog(csrfToken, students)}`);
+  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><h1>Dashboard</h1>${buttonTrigger("Create Booking")}</div><div class="summary-grid"><a class="summary-card" href="${nextLessonHref}"><span>Next Lesson</span><strong>${upcoming[0] ? escapeHtml(bookingDate(upcoming[0])) : "None"}</strong>${upcoming[0] ? `<small>${escapeHtml(bookingTime(upcoming[0]))}</small>` : ""}</a><a class="summary-card" href="/learn/admin/bookings"><span>Upcoming Bookings</span><strong>${upcomingCount}</strong></a><a class="summary-card" href="/learn/admin/students"><span>Active Students</span><strong>${activeStudents}</strong></a><a class="summary-card" href="/learn/admin/reschedules"><span>Reschedule requests</span><strong>${rescheduleRequests}</strong></a></div><section class="card dashboard-section"><div class="section-heading"><h2>Reports to write</h2><a class="text-link" href="/learn/admin/lessons">Past Lessons</a></div>${reportPreview}</section><section class="card dashboard-section"><div class="section-heading"><h2>Upcoming Bookings</h2><a class="text-link" href="/learn/admin/bookings">See all</a></div>${preview}</section>${lessonCreateDialog(csrfToken, students)}`);
 }
 
 function billingMinorValue(value: number | string | bigint | null | undefined): bigint | null {
@@ -2998,7 +3000,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin-calendar") {
     const lessons = await listLessons(db);
     const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
-    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/admin/calendar/feed", lessons, "ADMIN", feed, await currentCalendarFeedUrl(request, env, feed)));
+    const students = await listStudents(db);
+    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/admin/calendar/feed", lessons, "ADMIN", feed, await currentCalendarFeedUrl(request, env, feed), false, students));
   }
   if (route === "admin-calendar-feed") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -3019,7 +3022,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const feed = await findActiveCalendarFeedForOwner(db, active.user.id);
     const subscription = calendarSubscriptionCard(csrfToken, "/learn/admin/calendar/feed", feed, calendarFeedUrl(request, env, token), true);
     if (request.headers.get("X-Calendar-Fragment") === "1") return calendarFragmentResponse(subscription, hadFeed ? "Calendar link regenerated" : "Calendar link generated");
-    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/admin/calendar/feed", lessons, "ADMIN", feed, calendarFeedUrl(request, env, token), true));
+    const students = await listStudents(db);
+    return appPage(active.user, csrfToken, "Calendar", calendarPage(csrfToken, "/learn/admin/calendar/feed", lessons, "ADMIN", feed, calendarFeedUrl(request, env, token), true, students));
   }
   if (route === "admin-bookings") {
     const { page, pageSize } = parseLessonPagination(url);

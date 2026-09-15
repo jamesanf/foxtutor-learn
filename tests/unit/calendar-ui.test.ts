@@ -115,7 +115,10 @@ describe("calendar presentation contract", () => {
     expect(cssSource).toContain(".recurring-series-section { margin-top: 28px; }");
     expect(workerSource).toContain('lessonCreateDialog(csrfToken, students, initialBookingView)');
     expect(workerSource).toContain('data-lesson-create-trigger');
-    expect(workerSource).toContain('New Booking');
+    expect(workerSource).toContain('buttonTrigger("Create Booking")');
+    expect(workerSource).toContain('const bookingDialog = role === "ADMIN" ? lessonCreateDialog(csrfToken, students) : "";');
+    expect(workerSource).not.toContain("Add lesson");
+    expect(workerSource).not.toContain("New Booking");
     expect(workerSource).toContain('data-booking-option="standalone"');
     expect(workerSource).toContain('data-booking-option="recurring"');
     expect(workerSource).toContain('studentCombobox(students, selectedStudent, "lesson-student")');

@@ -87,6 +87,9 @@ student ID continues to be submitted through the existing protected routes.
 The embedded recurring-series section no longer shows a separate `Create
 series` link; the shared New Booking modal is now its only creation entry
 point.
+Calendar now renders the same Create Booking modal tree as Dashboard and
+Bookings. All admin creation triggers use `Create Booking`; the old Add lesson
+calendar link has been removed.
 
 ## Required validation
 

@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 sitewide Create Booking entry point
+
+- Replaced the Calendar Add lesson link with the shared Create Booking modal
+  tree.
+- Standardized admin booking creation labels to `Create Booking` across
+  Calendar, Dashboard and Bookings.
+
 ### 2026-09-15 - Phase 7.17 recurring-series creation entry point
 
 - Removed the redundant `Create series` link from the embedded recurring
