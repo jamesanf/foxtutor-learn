@@ -184,11 +184,13 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".learn-footer-copy small { margin: 0; color: #b8c7d6; font-size: .7rem; }");
   });
 
-  it("uses outlined resources and notifications icons until their nav item is selected", () => {
+  it("uses outlined calendar, bookings, lessons, resources and notifications icons until selected", () => {
     expect(workerSource).toContain("nav-icon-${name}");
     expect(workerSource).toContain('aria-current="page"');
+    expect(cssSource).toContain("nav a .nav-icon-calendar, nav a .nav-icon-bookings, nav a .nav-icon-lessons,");
     expect(cssSource).toContain("nav a .nav-icon-resources, nav a .nav-icon-notifications { fill: none; stroke: currentColor");
-    expect(cssSource).toContain('nav a[aria-current="page"] .nav-icon-resources, nav a[aria-current="page"] .nav-icon-notifications { fill: currentColor; stroke: none; }');
+    expect(cssSource).toContain('nav a[aria-current="page"] .nav-icon-calendar, nav a[aria-current="page"] .nav-icon-bookings,');
+    expect(cssSource).toContain('nav a[aria-current="page"] .nav-icon-lessons, nav a[aria-current="page"] .nav-icon-resources,');
   });
 
   it("prevents upstream authentication from immediately recreating a logged-out Learn session", () => {
