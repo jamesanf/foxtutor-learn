@@ -30,6 +30,9 @@ Automated UI contracts cover:
   height matching the adjacent status pill.
 - the admin recurring-series table appearing below Upcoming Bookings, with no
   separate Recurring series navigation item.
+- the embedded recurring-series table using standard result-range and
+  previous/next pagination with independent `seriesPage` and `seriesSize`
+  parameters, while Upcoming Bookings retains its own pagination.
 - mobile table pages retaining real columns in a horizontal scrolling
   container instead of converting rows into unusable stacked cards.
 - notification delivery-log headers sorting the server-side result set, with
@@ -78,9 +81,9 @@ link must provision a fresh session and clear the marker.
 The complete suite passes:
 
 ```text
-40 test files
-281 tests
-281 passed
+41 test files
+290 tests
+290 passed
 0 failed
 ```
 

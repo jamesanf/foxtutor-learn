@@ -56,6 +56,10 @@ Admin recurring-series management now appears directly below Upcoming
 Bookings. The standalone Recurring series navigation item has been removed,
 while legacy `/learn/admin/series` links redirect to Bookings and the existing
 create, pause and resume actions remain available.
+The embedded recurring-series table now uses a database-level page query and
+the standard result-range, navigation and page-size controls. Its
+`seriesPage` and `seriesSize` parameters remain independent from Upcoming
+Bookings pagination.
 
 ## Required validation
 
@@ -90,9 +94,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `598302b`
+- Git commit: `df7d8c2`
 - Worker: `foxtutor-learn`
-- Worker version: `6abcf793-19da-412d-a3da-5780484f7afb`
+- Worker version: `770d89df-c94b-4fa5-b2f5-f758bc8cc477`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

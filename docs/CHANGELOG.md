@@ -1,5 +1,15 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series pagination
+
+- Added database-level pagination to the recurring-series table embedded in
+  Bookings.
+- Added the standard result range, previous/next controls and page-size
+  selector using independent `seriesPage` and `seriesSize` parameters.
+- Kept Upcoming Bookings pagination independent.
+- Deployed commit `df7d8c2` as Worker version
+  `770d89df-c94b-4fa5-b2f5-f758bc8cc477`.
+
 ### 2026-09-15 - Phase 7.17 recurring series in Bookings
 
 - Moved the admin recurring-series table directly below Upcoming Bookings.

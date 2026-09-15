@@ -14,7 +14,8 @@ The shared rules apply to:
 - accounting outbox, contact mappings and billing tables;
 - notification logs;
 - lesson, student, resource, recurring-series and reschedule tables. The admin
-  recurring-series table is presented below the upcoming Bookings table;
+  recurring-series table is presented below the upcoming Bookings table and
+  uses independent `seriesPage` and `seriesSize` pagination parameters;
 - student upcoming-charge, credit-history and billing-history tables;
 - billing-chain, invoice and credit detail tables.
 
@@ -34,3 +35,8 @@ Table action cells use a vertically middle-aligned treatment with no default
 button top offset. Recurring-series actions begin at the same padded edge as
 the Action header and use a compact 24px variant so their visual height matches
 the adjacent status pill.
+
+Recurring-series rows are queried with a deterministic status/date/id order and
+database-level limit and offset. The standard result range, previous/next
+controls and page-size selector appear below the embedded table without
+changing Upcoming Bookings pagination.
