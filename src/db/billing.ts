@@ -1135,6 +1135,27 @@ export async function updateBillingAlertStatus(
   return true;
 }
 
+export async function resolveBillingAlertsForInvoice(
+  db: D1Database,
+  invoiceId: string,
+  userId: string,
+  note: string,
+  now: string
+): Promise<void> {
+  const alerts = await db.prepare(
+    `SELECT id
+     FROM billing_alerts
+     WHERE invoice_id = ? AND status IN ('OPEN', 'ACKNOWLEDGED')`
+  ).bind(invoiceId).all<{ id: string }>();
+  for (const alert of alerts.results) {
+    await updateBillingAlertStatus(db, alert.id, {
+      status: "RESOLVED",
+      userId,
+      note
+    }, now);
+  }
+}
+
 export async function listBillingHistory(
   db: D1Database,
   studentId: string,

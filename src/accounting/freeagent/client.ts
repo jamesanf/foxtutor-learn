@@ -13,6 +13,7 @@ export interface FreeAgentErrorShape {
   retryable: boolean;
   unknown: boolean;
   retryAfterSeconds: number | null;
+  diagnosticMessage?: string | null;
 }
 
 export class FreeAgentApiError extends Error {
@@ -132,16 +133,27 @@ export function freeAgentAuthorizationUrl(
   return url.toString();
 }
 
-function classifyStatus(status: number, retryAfter: string | null): FreeAgentErrorShape {
+function classifyStatus(status: number, retryAfter: string | null, diagnosticMessage: string | null = null): FreeAgentErrorShape {
   const retryAfterSeconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : null;
-  if (status === 401) return { code: "AUTHENTICATION", status, message: "FreeAgent authentication failed.", retryable: false, unknown: false, retryAfterSeconds };
-  if (status === 403) return { code: "AUTHORIZATION", status, message: "FreeAgent denied the configured access.", retryable: false, unknown: false, retryAfterSeconds };
-  if (status === 404) return { code: "NOT_FOUND", status, message: "The FreeAgent resource was not found.", retryable: false, unknown: false, retryAfterSeconds };
-  if (status === 409) return { code: "CONFLICT", status, message: "FreeAgent reported a conflicting resource.", retryable: false, unknown: false, retryAfterSeconds };
-  if (status === 429) return { code: "RATE_LIMIT", status, message: "FreeAgent rate limit reached.", retryable: true, unknown: false, retryAfterSeconds };
-  if (status >= 500) return { code: "TEMPORARY_PROVIDER", status, message: "FreeAgent is temporarily unavailable.", retryable: true, unknown: true, retryAfterSeconds };
-  if (status >= 400) return { code: "VALIDATION", status, message: "FreeAgent rejected the accounting request.", retryable: false, unknown: false, retryAfterSeconds };
-  return { code: "UNKNOWN", status, message: "FreeAgent returned an unexpected response.", retryable: false, unknown: true, retryAfterSeconds };
+  const base = { status, retryAfterSeconds, diagnosticMessage };
+  if (status === 401) return { ...base, code: "AUTHENTICATION", message: "FreeAgent authentication failed.", retryable: false, unknown: false };
+  if (status === 403) return { ...base, code: "AUTHORIZATION", message: "FreeAgent denied the configured access.", retryable: false, unknown: false };
+  if (status === 404) return { ...base, code: "NOT_FOUND", message: "The FreeAgent resource was not found.", retryable: false, unknown: false };
+  if (status === 409) return { ...base, code: "CONFLICT", message: "FreeAgent reported a conflicting resource.", retryable: false, unknown: false };
+  if (status === 429) return { ...base, code: "RATE_LIMIT", message: "FreeAgent rate limit reached.", retryable: true, unknown: false };
+  if (status >= 500) return { ...base, code: "TEMPORARY_PROVIDER", message: "FreeAgent is temporarily unavailable.", retryable: true, unknown: true };
+  if (status >= 400) return { ...base, code: "VALIDATION", message: "FreeAgent rejected the accounting request.", retryable: false, unknown: false };
+  return { ...base, code: "UNKNOWN", message: "FreeAgent returned an unexpected response.", retryable: false, unknown: true };
+}
+
+function providerDiagnostic(body: string): string | null {
+  const compact = body.replace(/\s+/g, " ").trim();
+  if (!compact) return null;
+  const redacted = compact
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
+    .replace(/https?:\/\/\S+/gi, "[url]")
+    .replace(/\b\d{8,}\b/g, "[number]");
+  return redacted.slice(0, 240);
 }
 
 function canonicalProviderUrl(value: unknown, environment: FreeAgentEnvironment): string | null {
@@ -302,7 +314,14 @@ export class FreeAgentClient {
       if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
       const response = await this.fetcher(target, { ...init, headers, signal: controller.signal });
       if (!response.ok) {
-        const shape = classifyStatus(response.status, response.headers.get("Retry-After"));
+        const diagnosticMessage = providerDiagnostic(await response.text());
+        const shape = classifyStatus(response.status, response.headers.get("Retry-After"), diagnosticMessage);
+        console.warn("freeagent_api_rejected", {
+          environment: this.options.environment,
+          status: response.status,
+          code: shape.code,
+          diagnosticMessage
+        });
         throw new FreeAgentApiError(shape);
       }
       let data: T;

@@ -193,6 +193,33 @@ describe("Phase 5 accounting boundary", () => {
     expect(statements.some((statement) => statement.sql.includes("'GRANT'"))).toBe(false);
   });
 
+  it("closes a failed invoice and its provider operation when the lesson is cancelled before provider creation", async () => {
+    const { db, statements } = mockBatchDb({
+      id: "invoice-failed-1",
+      status: "FAILED",
+      freeagent_url: null,
+      provider_status: "PROVIDER_FAILED",
+      collection_started: 0,
+      credit_eligible: 0,
+      collection_unknown: 0
+    });
+    await cancelLesson(db, {
+      lessonId: "lesson-failed-1",
+      studentId: "student-1",
+      actorUserId: "admin-1",
+      actorRole: "ADMIN",
+      eventType: "ADMIN_CANCELLED",
+      billingConsequence: "ADMIN_CANCELLED",
+      now: "2026-09-13T12:00:00.000Z",
+      previousStartAt: "2026-09-15T12:00:00.000Z",
+      previousEndAt: "2026-09-15T12:55:00.000Z",
+      previousTimezone: "Europe/London"
+    });
+    expect(statements.some((statement) => statement.sql.includes("SET status = 'CANCELLED'"))).toBe(true);
+    expect(statements.some((statement) => statement.sql.includes("'CANCELLED_BEFORE_PROVIDER'"))).toBe(true);
+    expect(statements.some((statement) => statement.sql.includes("SET status = 'BLOCKED'"))).toBe(true);
+  });
+
   it("creates cancellation credit only after collection has started", async () => {
     const { db, statements } = mockBatchDb({
       id: "invoice-1",

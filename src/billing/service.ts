@@ -237,7 +237,8 @@ async function markOperationFailure(
     operationType: operation.operation_type,
     invoiceId: context.invoiceId ?? null,
     errorName: error instanceof Error ? error.name : "UnknownError",
-    errorMessage: error instanceof Error ? error.message.slice(0, 200) : "Unknown billing provider failure"
+    errorMessage: error instanceof Error ? error.message.slice(0, 200) : "Unknown billing provider failure",
+    providerDiagnostic: error instanceof FreeAgentApiError ? error.shape.diagnosticMessage ?? null : null
   });
   const apiError = providerFailure(error);
   const shape = apiError?.shape;

@@ -1,6 +1,11 @@
 import type { BillingConsequence } from "../domain/cancellations";
 import { accountingOutboxStatement } from "./accounting";
-import { cancellationCreditStatements, invoiceCancellationStatement, invoiceCreditReversalStatements } from "./billing";
+import {
+  cancellationCreditStatements,
+  invoiceCancellationStatement,
+  invoiceCreditReversalStatements,
+  resolveBillingAlertsForInvoice
+} from "./billing";
 import { collectionDateSevenDaysBeforeLesson, datedInvoiceReference } from "../domain/billing";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
 
@@ -363,6 +368,19 @@ export async function cancelLesson(
        || (billedInvoice.status === "PAID" && ["CREDIT_COVERED", "CREDIT_COVERED_EMAIL"].includes(billedInvoice.provider_status ?? "") && BigInt(billedInvoice.net_amount_minor) === 0n)
      )
   );
+  const failedProviderCreationCancellationRequired = Boolean(
+    billedInvoice
+    && !billedInvoice.collection_started
+    && !billedInvoice.freeagent_url
+    && billedInvoice.status === "FAILED"
+  );
+  const missingProviderInvoiceCancellationRequired = Boolean(
+    billedInvoice
+    && !billedInvoice.collection_started
+    && billedInvoice.status === "UNKNOWN"
+    && billedInvoice.provider_status === "NOT_FOUND"
+    && billedInvoice.freeagent_url
+  );
   const historyId = crypto.randomUUID();
   const accountingStatement = accountingOutboxStatement(db, {
     id: crypto.randomUUID(),
@@ -443,10 +461,46 @@ export async function cancelLesson(
          WHERE id = ?`
       ).bind(input.now, billedInvoice!.id)] : []),
       ...(providerInvoiceCancellationRequired ? [invoiceCancellationStatement(db, billedInvoice!.id, input.now)] : [])
+      ,
+      ...(failedProviderCreationCancellationRequired ? [
+        db.prepare(
+          `UPDATE billing_invoices
+           SET status = 'CANCELLED', provider_status = 'CANCELLED_BEFORE_PROVIDER', updated_at = ?
+           WHERE id = ? AND status = 'FAILED' AND freeagent_url IS NULL`
+        ).bind(input.now, billedInvoice!.id),
+        db.prepare(
+          `UPDATE billing_invoice_operations
+           SET status = 'BLOCKED', provider_status = 'CANCELLED_BEFORE_PROVIDER',
+               safe_error_code = 'CANCELLED_BEFORE_PROVIDER',
+               safe_error_message = 'The lesson was cancelled before a provider invoice was created.',
+               completed_at = ?, updated_at = ?
+           WHERE invoice_id = ? AND operation_type = 'CREATE_INVOICE'
+             AND status IN ('PENDING', 'PROCESSING', 'RETRYABLE', 'FAILED', 'UNKNOWN')`
+        ).bind(input.now, input.now, billedInvoice!.id)
+      ] : [])
+      ,
+      ...(missingProviderInvoiceCancellationRequired ? [
+        db.prepare(
+          `UPDATE billing_invoices
+           SET status = 'CANCELLED', provider_status = 'NOT_FOUND_CANCELED', updated_at = ?
+           WHERE id = ? AND status = 'UNKNOWN' AND provider_status = 'NOT_FOUND'`
+        ).bind(input.now, billedInvoice!.id)
+      ] : [])
     ] : []),
     ...creditStatements,
     ...(accountingStatement ? [accountingStatement] : [])
   ]);
+  if ((failedProviderCreationCancellationRequired || missingProviderInvoiceCancellationRequired) && billedInvoice) {
+    await resolveBillingAlertsForInvoice(
+      db,
+      billedInvoice.id,
+      input.actorUserId,
+      missingProviderInvoiceCancellationRequired
+        ? "Lesson cancelled after the provider invoice was confirmed absent; reconciliation is no longer actionable."
+        : "Lesson cancelled before a provider invoice was created; failed creation is no longer actionable.",
+      input.now
+    );
+  }
   return Boolean(results[0]?.meta.changes);
 }
 
