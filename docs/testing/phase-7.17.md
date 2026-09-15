@@ -23,6 +23,8 @@ Automated UI contracts cover:
   cell at reduced desktop widths, with the mobile stacked form preserved.
 - accounting page Production FreeAgent card spacing matching the page heading
   rhythm and the other cards on the page.
+- 25% smaller main page titles across standard, calendar, resource-upload and
+  billing-settings heading variants.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

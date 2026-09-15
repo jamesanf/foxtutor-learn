@@ -184,6 +184,13 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".learn-footer-copy small { margin: 0; color: #b8c7d6; font-size: .7rem; }");
   });
 
+  it("uses the reduced main-title scale across page-specific heading variants", () => {
+    expect(cssSource).toContain("h1 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; }");
+    expect(cssSource).toContain(".calendar-page h1 { font-size: clamp(1.35rem, 2.25vw, 1.76rem); }");
+    expect(cssSource).toContain(".resource-upload-heading h1 { font-size: clamp(1.35rem, 2.625vw, 1.84rem); }");
+    expect(cssSource).toContain(".billing-settings-card .page-heading h1 { min-width: 0; white-space: nowrap; font-size: clamp(1.125rem, 2.25vw, 1.76rem); }");
+  });
+
   it("uses outlined resources and notifications icons until their nav item is selected", () => {
     expect(workerSource).toContain("nav-icon-${name}");
     expect(workerSource).toContain('aria-current="page"');
