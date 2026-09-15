@@ -58,6 +58,7 @@ export interface CancellationProcessedEmailData extends LessonEmailData {
   billingOutcome?: "NOT_INVOICED" | "CANCELLATION_PENDING_PROVIDER" | "PAYMENT_IN_TRANSIT" | "PAYMENT_FAILED" | "CREDIT_GRANTED" | "CREDIT_RESTORED" | "RECONCILIATION_REQUIRED";
   billingAmountMinor?: number | string;
   billingInvoiceReference?: string | null;
+  billingSourceLessonDate?: string | null;
 }
 
 export interface DirectDebitEmailData {
@@ -171,6 +172,9 @@ export function renderCancellationProcessed(data: CancellationProcessedEmailData
   const undoLink = "undoPath" in data && typeof data.undoPath === "string" ? learnLink(origin, data.undoPath) : null;
   const reference = data.billingInvoiceReference ? ` (${data.billingInvoiceReference})` : "";
   const amount = data.billingAmountMinor === undefined ? "" : ` £${(Number(data.billingAmountMinor) / 100).toFixed(2)}`;
+  const sourceLesson = data.billingSourceLessonDate
+    ? ` originally paid for the lesson on ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: data.timezone }).format(new Date(`${data.billingSourceLessonDate}T12:00:00Z`))}`
+    : "";
   const billingText = data.billingOutcome === "NOT_INVOICED"
     ? "This lesson was cancelled before invoicing. No payment will be taken."
     : data.billingOutcome === "CANCELLATION_PENDING_PROVIDER"
@@ -178,7 +182,7 @@ export function renderCancellationProcessed(data: CancellationProcessedEmailData
       : data.billingOutcome === "CREDIT_GRANTED"
         ? `Payment was confirmed and${amount} has been retained as credit from invoice${reference} for a future booking.`
         : data.billingOutcome === "CREDIT_RESTORED"
-          ? `The lesson was cancelled and${amount} of credit from invoice${reference} has been restored to the account for a future booking.`
+          ? `The lesson was cancelled and${amount} of credit from invoice${reference}${sourceLesson} has been restored to the account for a future booking.`
         : data.billingOutcome === "PAYMENT_IN_TRANSIT"
           ? `A payment is still in transit${reference}. The account credit will remain subject to provider confirmation.`
           : data.billingOutcome === "PAYMENT_FAILED"

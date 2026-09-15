@@ -1,7 +1,7 @@
 import type { BillingConsequence } from "../domain/cancellations";
 import { accountingOutboxStatement } from "./accounting";
 import { cancellationCreditStatements, invoiceCancellationStatement, invoiceCreditReversalStatements } from "./billing";
-import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
+import { collectionDateSevenDaysBeforeLesson, datedInvoiceReference } from "../domain/billing";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
 
 export type CancellationRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -61,8 +61,8 @@ export type CancellationBillingOutcome =
   | { kind: "CANCELLATION_PENDING_PROVIDER" }
   | { kind: "PAYMENT_IN_TRANSIT"; amountMinor: bigint; invoiceReference: string | null }
   | { kind: "PAYMENT_FAILED"; amountMinor: bigint; invoiceReference: string | null }
-  | { kind: "CREDIT_GRANTED"; amountMinor: bigint; invoiceReference: string | null }
-  | { kind: "CREDIT_RESTORED"; amountMinor: bigint; invoiceReference: string | null }
+  | { kind: "CREDIT_GRANTED"; amountMinor: bigint; invoiceReference: string | null; sourceLessonDate?: string | null }
+  | { kind: "CREDIT_RESTORED"; amountMinor: bigint; invoiceReference: string | null; sourceLessonDate?: string | null }
   | { kind: "RECONCILIATION_REQUIRED" };
 
 export async function findCancellationBillingOutcome(
@@ -144,11 +144,36 @@ export async function findCancellationBillingOutcome(
       invoiceReference: row.freeagent_reference
     };
   }
-  if (row.provider_status === "CREDIT_COVERED" && BigInt(row.net_amount_minor) === 0n && BigInt(row.credit_applied_minor) > 0n) {
+  if (["CREDIT_COVERED", "CREDIT_COVERED_EMAIL"].includes(row.provider_status ?? "") && BigInt(row.net_amount_minor) === 0n && BigInt(row.credit_applied_minor) > 0n) {
+    const source = await db.prepare(
+      `SELECT source_invoice.freeagent_reference,
+              source_reference.business_date,
+              source_reference.sequence,
+              COALESCE(substr(source_lesson.start_at, 1, 10), source_event.lesson_date) AS source_lesson_date
+       FROM billing_invoice_credit_applications application
+       JOIN customer_credits credit ON credit.id = application.credit_id
+       LEFT JOIN lessons source_lesson ON source_lesson.id = credit.source_lesson_id
+       LEFT JOIN billing_events source_event
+         ON source_event.id = credit.source_event_id
+         OR (credit.source_lesson_id IS NOT NULL AND source_event.lesson_id = credit.source_lesson_id)
+       LEFT JOIN billing_invoices source_invoice ON source_invoice.billing_event_id = source_event.id
+       LEFT JOIN billing_invoice_references source_reference ON source_reference.invoice_id = source_invoice.id
+       WHERE application.invoice_id = ?
+       ORDER BY application.created_at ASC
+       LIMIT 1`
+    ).bind(row.invoice_id).first<{
+      freeagent_reference: string | null;
+      business_date: string | null;
+      sequence: number | string | null;
+      source_lesson_date: string | null;
+    }>();
     return {
       kind: "CREDIT_RESTORED",
       amountMinor: BigInt(row.credit_applied_minor),
-      invoiceReference: row.freeagent_reference
+      invoiceReference: source?.business_date && source.sequence !== null
+        ? datedInvoiceReference(source.business_date, Number(source.sequence))
+        : source?.freeagent_reference ?? row.freeagent_reference,
+      sourceLessonDate: source?.source_lesson_date ?? null
     };
   }
   if (row.credit_amount_minor !== null && row.payment_confirmed) {
@@ -301,7 +326,7 @@ export async function cancelLesson(
            WHERE p.invoice_id = i.id
              AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
          ) OR (
-             i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED'
+             i.status = 'PAID' AND i.provider_status IN ('CREDIT_COVERED', 'CREDIT_COVERED_EMAIL')
              AND i.net_amount_minor = 0 AND i.credit_applied_minor > 0
          ) AS credit_eligible,
          EXISTS (
@@ -335,7 +360,7 @@ export async function cancelLesson(
     billedInvoice && !billedInvoice.collection_started && billedInvoice.freeagent_url
      && (
        ["SENT", "PAYMENT_PENDING"].includes(billedInvoice.status)
-       || (billedInvoice.status === "PAID" && billedInvoice.provider_status === "CREDIT_COVERED" && BigInt(billedInvoice.net_amount_minor) === 0n)
+       || (billedInvoice.status === "PAID" && ["CREDIT_COVERED", "CREDIT_COVERED_EMAIL"].includes(billedInvoice.provider_status ?? "") && BigInt(billedInvoice.net_amount_minor) === 0n)
      )
   );
   const historyId = crypto.randomUUID();

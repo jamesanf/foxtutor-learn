@@ -510,7 +510,8 @@ async function cancellationMailData(
     ...(outcome.kind === "CREDIT_GRANTED" || outcome.kind === "CREDIT_RESTORED" || outcome.kind === "PAYMENT_IN_TRANSIT" || outcome.kind === "PAYMENT_FAILED"
       ? {
         billingAmountMinor: outcome.amountMinor.toString(),
-        billingInvoiceReference: outcome.invoiceReference
+        billingInvoiceReference: outcome.invoiceReference,
+        ...("sourceLessonDate" in outcome && outcome.sourceLessonDate ? { billingSourceLessonDate: outcome.sourceLessonDate } : {})
       }
       : {})
   };

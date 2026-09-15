@@ -116,9 +116,9 @@ It voids historical cancellation grants without provider invoice/payment
 evidence through auditable ledger reversal/refund rows, leaving no remaining
 usable balance while retaining the original grant and consumption history.
 The Worker now gates new credits on collection/payment evidence, renders
-provider-aware cancellation outcomes, creates auditable zero-value invoices
-for fully credit-covered lessons, and labels no-mandate lessons as manual
-payment rather than treating them as Direct Debit-pending.
+provider-aware cancellation outcomes, creates auditable FoxMail billing
+statements for fully credit-covered lessons, and labels no-mandate lessons as
+manual payment rather than treating them as Direct Debit-pending.
 
 ## Required validation
 
@@ -210,8 +210,11 @@ retry cannot strand the customer's balance. The mail idempotency key prevents
 duplicate statements when a provider accepted a request but the Worker did
 not receive a definitive response.
 
-Cancelling a credit-covered zero-value invoice now reverses the original
-credit application through the immutable ledger exactly once and queues the
-provider-document cancellation. Recurring cancellation uses the same rule.
-Failed collection is classified separately from an unissued invoice, never
-creates credit, and produces a billing-review message.
+Cancelling a credit-covered FoxMail statement now reverses the original credit
+application through the immutable ledger exactly once. Because the statement
+is not a FreeAgent document, no provider-document cancellation is queued.
+Recurring cancellation uses the same rule. The statement identifies the
+destination lesson and the originating normalized invoice and lesson date when
+that source metadata exists; cancellation notices preserve that original
+provenance. Failed collection is classified separately from an unissued
+invoice, never creates credit, and produces a billing-review message.

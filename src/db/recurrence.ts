@@ -416,7 +416,7 @@ export async function cancelRecurringLesson(
               WHERE p.invoice_id = i.id
                 AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
             ) OR (
-              i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED'
+              i.status = 'PAID' AND i.provider_status IN ('CREDIT_COVERED', 'CREDIT_COVERED_EMAIL')
               AND i.net_amount_minor = 0 AND i.credit_applied_minor > 0
             ) AS credit_eligible
      FROM lessons l
@@ -472,7 +472,7 @@ export async function cancelRecurringLesson(
                 WHERE p.invoice_id = i.id
                   AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
               ) OR (
-                i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED'
+                i.status = 'PAID' AND i.provider_status IN ('CREDIT_COVERED', 'CREDIT_COVERED_EMAIL')
                 AND i.net_amount_minor = 0 AND i.credit_applied_minor > 0
               ) AS credit_eligible
        FROM lessons l
@@ -535,7 +535,7 @@ export async function cancelRecurringLesson(
     );
     if (actorRole === "ADMIN" && item.billing_event_id && item.gross_amount_minor) {
       if (
-        item.provider_status === "CREDIT_COVERED"
+        ["CREDIT_COVERED", "CREDIT_COVERED_EMAIL"].includes(item.provider_status ?? "")
         && BigInt(item.net_amount_minor ?? 0) === 0n
         && BigInt(item.credit_applied_minor ?? 0) > 0n
         && item.invoice_id
@@ -560,7 +560,7 @@ export async function cancelRecurringLesson(
         && item.freeagent_url
         && (
           ["SENT", "PAYMENT_PENDING"].includes(item.invoice_status ?? "")
-          || (item.invoice_status === "PAID" && item.provider_status === "CREDIT_COVERED" && BigInt(item.net_amount_minor ?? 0) === 0n)
+          || (item.invoice_status === "PAID" && ["CREDIT_COVERED", "CREDIT_COVERED_EMAIL"].includes(item.provider_status ?? "") && BigInt(item.net_amount_minor ?? 0) === 0n)
         )
       ) {
         statements.push(

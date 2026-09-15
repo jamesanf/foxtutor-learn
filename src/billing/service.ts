@@ -63,18 +63,45 @@ class BillingMailError extends Error {
   }
 }
 
+export interface CreditSourceProvenance {
+  invoiceReference: string | null;
+  lessonDate: string | null;
+  amountMinor: number | string;
+}
+
+function statementDate(value: string | null): string {
+  if (!value) return "date not recorded";
+  const [year, month, day] = value.split("-");
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return `${day} ${months[Number(month) - 1] ?? month} ${year}`;
+}
+
+function sourceProvenanceText(source: CreditSourceProvenance): string {
+  const origin = source.invoiceReference
+    ? `invoice ${source.invoiceReference}`
+    : "a previous FoxTutor credit from a cancelled lesson";
+  const lesson = source.lessonDate ? ` for the lesson on ${statementDate(source.lessonDate)}` : "";
+  return `${origin}${lesson} (£${formatMinorUnits(BigInt(source.amountMinor))})`;
+}
+
 export function renderCreditCoveredStatement(
   studentName: string,
   invoiceReference: string,
   lessonDate: string,
-  sourceReferences: string[]
+  amountMinor: number | string,
+  sources: CreditSourceProvenance[]
 ): { subject: string; text: string; html: string } {
-  const safeReferences = sourceReferences.filter((reference) => /^FT-INV-\d{8,10}$/.test(reference));
-  const source = safeReferences.length ? `invoice ${safeReferences.join(", ")}` : "a previous FoxTutor invoice";
+  const sourceLines = sources.length
+    ? sources.map(sourceProvenanceText)
+    : ["a previous FoxTutor credit; source lesson history is not available"];
+  const sourceText = sourceLines.join("; ");
+  const sourceHtml = sourceLines.map((line) => `<li>${escapeMailHtml(line)}</li>`).join("");
+  const coveredLesson = statementDate(lessonDate);
+  const amount = formatMinorUnits(BigInt(amountMinor));
   return {
     subject: `Credit-covered billing statement ${invoiceReference}`,
-    text: `Hello ${studentName},\n\nThis is a credit-covered FoxTutor billing statement for your lesson on ${lessonDate}.\n\nInvoice reference: ${invoiceReference}\nCredit applied from ${source}\nAmount due: £0.00\nDirect Debit is not required and no payment is due.\n\nPlease contact billing@foxtutor.org if you have any questions.`,
-    html: `<p>Hello ${escapeMailHtml(studentName)},</p><p>This is a credit-covered FoxTutor billing statement for your lesson on <strong>${escapeMailHtml(lessonDate)}</strong>.</p><dl><dt>Invoice reference</dt><dd>${escapeMailHtml(invoiceReference)}</dd><dt>Credit applied</dt><dd>From ${escapeMailHtml(source)}</dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>Direct Debit is not required and no payment is due.</p><p>Please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a> if you have any questions.</p>`
+    text: `Hello ${studentName},\n\nThis is a credit-covered FoxTutor billing statement.\n\nInvoice reference: ${invoiceReference}\nLesson covered: ${coveredLesson}\nLesson charge covered: £${amount}\nCredit applied from: ${sourceText}\nAmount due: £0.00\nDirect Debit is not required and no payment is due.\n\nPlease contact billing@foxtutor.org if you have any questions.`,
+    html: `<p>Hello ${escapeMailHtml(studentName)},</p><p>This is a credit-covered FoxTutor billing statement.</p><dl><dt>Invoice reference</dt><dd>${escapeMailHtml(invoiceReference)}</dd><dt>Lesson covered</dt><dd>${escapeMailHtml(coveredLesson)}</dd><dt>Lesson charge covered</dt><dd>£${escapeMailHtml(amount)}</dd><dt>Credit applied from</dt><dd><ul>${sourceHtml}</ul></dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>Direct Debit is not required and no payment is due.</p><p>Please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a> if you have any questions.</p>`
   };
 }
 
@@ -84,30 +111,39 @@ function legacyInvoiceReference(id: string): string {
   return `FT-INV-${compact}`;
 }
 
-async function creditSourceReferences(db: D1Database, invoiceId: string): Promise<string[]> {
+async function creditSourceProvenance(db: D1Database, invoiceId: string): Promise<CreditSourceProvenance[]> {
   const result = await db.prepare(
-    `SELECT DISTINCT source_invoice.freeagent_reference,
+    `SELECT DISTINCT a.amount_minor,
+            source_invoice.freeagent_reference,
             source_reference.business_date,
-            source_reference.sequence
+            source_reference.sequence,
+            COALESCE(c.source_lesson_id, source_event.lesson_id) AS source_lesson_id,
+            COALESCE(source_event.lesson_date, substr(source_lesson.start_at, 1, 10)) AS source_lesson_date
      FROM billing_invoice_credit_applications a
      JOIN customer_credits c ON c.id = a.credit_id
-     LEFT JOIN billing_events source_event ON source_event.lesson_id = c.source_lesson_id
+     LEFT JOIN billing_events source_event
+       ON source_event.id = c.source_event_id
+       OR (c.source_lesson_id IS NOT NULL AND source_event.lesson_id = c.source_lesson_id)
+     LEFT JOIN lessons source_lesson ON source_lesson.id = c.source_lesson_id
      LEFT JOIN billing_invoices source_invoice ON source_invoice.billing_event_id = source_event.id
      LEFT JOIN billing_invoice_references source_reference ON source_reference.invoice_id = source_invoice.id
      WHERE a.invoice_id = ?`
   ).bind(invoiceId).all<{
+    amount_minor: number | string;
     freeagent_reference: string | null;
     business_date: string | null;
     sequence: number | string | null;
+    source_lesson_id: string | null;
+    source_lesson_date: string | null;
   }>();
   return result.results
-    .map((row) => {
-      if (row.business_date && row.sequence !== null) {
-        return datedInvoiceReference(row.business_date, Number(row.sequence));
-      }
-      return row.freeagent_reference?.startsWith("FT-INV-") ? row.freeagent_reference : null;
-    })
-    .filter((reference): reference is string => Boolean(reference));
+    .map((row) => ({
+      invoiceReference: row.business_date && row.sequence !== null
+        ? datedInvoiceReference(row.business_date, Number(row.sequence))
+        : row.freeagent_reference?.startsWith("FT-INV-") ? row.freeagent_reference : null,
+      lessonDate: row.source_lesson_date,
+      amountMinor: row.amount_minor
+    }));
 }
 
 async function invoiceReferenceFor(
@@ -156,14 +192,20 @@ async function sendCreditCoveredStatement(
   event: BillingEvent,
   invoiceReference: string,
   lessonDate: string,
-  sourceReferences: string[],
+  sourceProvenance: CreditSourceProvenance[],
   fetcher: typeof fetch
 ): Promise<Extract<MailDeliveryResult, { kind: "accepted" }>> {
   const student = await db.prepare("SELECT name, email FROM students WHERE id = ?")
     .bind(event.student_id)
     .first<{ name: string; email: string }>();
   if (!student?.email) throw new Error("A student email is required for the credit-covered billing statement.");
-  const { subject, text, html } = renderCreditCoveredStatement(student.name, invoiceReference, lessonDate, sourceReferences);
+  const { subject, text, html } = renderCreditCoveredStatement(
+    student.name,
+    invoiceReference,
+    lessonDate,
+    event.gross_amount_minor,
+    sourceProvenance
+  );
   const result = await sendMailDetailed(env, {
     to: student.email,
     fromAddress: env.MAIL_API_BILLING_FROM ?? "billing@foxtutor.org",
@@ -305,12 +347,10 @@ async function processCreateInvoice(
     const collectionDate = event.collection_date ?? lessonDate;
     const zeroValue = allocated.netAmountMinor === 0n;
     const reference = await invoiceReferenceFor(db, invoice);
-    const sourceReferences = zeroValue ? await creditSourceReferences(db, invoice.id) : [];
-    const comments = zeroValue
-      ? renderCreditCoveredInvoiceComment(sourceReferences)
-      : `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`;
+    const sourceProvenance = zeroValue ? await creditSourceProvenance(db, invoice.id) : [];
+    const comments = `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`;
     if (zeroValue) {
-      const delivery = await sendCreditCoveredStatement(db, env, event, reference, lessonDate, sourceReferences, fetcher);
+      const delivery = await sendCreditCoveredStatement(db, env, event, reference, lessonDate, sourceProvenance, fetcher);
       await updateBillingInvoice(db, invoice.id, {
         status: "PAID",
         creditAppliedMinor: allocated.creditAppliedMinor,

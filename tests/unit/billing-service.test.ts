@@ -26,14 +26,22 @@ describe("credit-covered invoice comments", () => {
       "KJHGBH Live Customer",
       "FT-INV-26091504",
       "2026-09-20",
-      ["credit:phase717-live-zero", "FT-INV-26091501"]
+      5500,
+      [
+        { invoiceReference: "FT-INV-26091501", lessonDate: "2026-09-16", amountMinor: 5500 },
+        { invoiceReference: null, lessonDate: "2026-09-17", amountMinor: 0 }
+      ]
     );
 
     expect(statement.subject).toBe("Credit-covered billing statement FT-INV-26091504");
     expect(statement.text).toContain("invoice FT-INV-26091501");
+    expect(statement.text).toContain("lesson on 16 September 2026");
+    expect(statement.text).toContain("lesson on 17 September 2026");
     expect(statement.text).not.toContain("credit:phase717-live-zero");
     expect(statement.text).not.toMatch(/sort code|account number|bank details|payment reference/i);
     expect(statement.html).not.toMatch(/sort code|account number|bank details|payment reference/i);
-    expect(statement.text).toContain("£0.00");
+    expect(statement.text).toContain("Lesson covered: 20 September 2026");
+    expect(statement.text).toContain("Lesson charge covered: £55.00");
+    expect(statement.text).toContain("Amount due: £0.00");
   });
 });

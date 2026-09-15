@@ -9,15 +9,16 @@
 - Cancellation notifications now distinguish no invoice, provider cancellation
   pending, payment in transit, confirmed credit and reconciliation-required
   outcomes.
-- Fully credit-covered lessons now create a zero-value FreeAgent invoice with
-  the original invoice reference in its comments, are locally marked secured,
-  and never trigger Direct Debit.
+- Fully credit-covered lessons now create an idempotent FoxMail billing
+  statement with the original normalized invoice and lesson provenance, are
+  locally marked secured only after mail acceptance, and never create a
+  zero-value FreeAgent document or Direct Debit operation.
 - Added `NO_MANDATE_MANUAL_PAYMENT` readiness and provider-aware Billing health
   copy; active credit is separated from consumed audit history.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
-- Automated acceptance: 42 test files, 305 tests passed.
+- Automated acceptance: 43 test files, 310 tests passed.
 - Deployed commit `2f2f64f` as Worker version
   `bdf8637c-f67a-4161-9fac-675412a146cf`.
 

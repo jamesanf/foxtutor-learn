@@ -180,10 +180,15 @@ Settlement-safe credit and cancellation acceptance now also covers:
 - zero-value credit-covered statements use only normalized `FT-INV-YYMMDDNN`
   source references, never internal credit IDs, and contain no bank details or
   payment instructions;
-- cancelling a credit-covered zero-value lesson reverses the original credit
-  ledger application exactly once and queues provider-document cancellation;
-- recurring cancellation uses the same zero-value credit reversal and provider
-  cancellation rules;
+- cancelling a credit-covered FoxMail statement reverses the original credit
+  ledger application exactly once and does not queue a provider-document
+  cancellation because no FreeAgent document exists;
+- recurring cancellation uses the same zero-value credit reversal rule;
+- credit-covered statements identify the destination lesson and, when source
+  metadata exists, the originating normalized invoice and lesson date;
+- cancellation notifications identify when a restored credit came from an
+  originating invoice and lesson rather than treating the zero-value follow-up
+  statement as a new source;
 - failed collection outcomes are reported as billing review required, with no
   credit grant and no false claim that the lesson was unpaid or unbilled.
 
@@ -211,7 +216,19 @@ reconciliation alerts. This fail-closed result is intentional: an externally
 deleted invoice is not silently treated as paid or cancelled while its lesson
 remains scheduled.
 
-The TypeScript check and client build also pass. Authenticated Chromium
+The TypeScript check and client build also pass. The final automated suite
+after the FoxMail cancellation/provenance fix is:
+
+```text
+43 test files
+310 tests
+310 passed
+0 failed
+```
+
+The focused regression test confirms that a `CREDIT_COVERED_EMAIL` settlement
+creates exactly one idempotent ledger reversal and no `CANCEL_INVOICE`
+operation. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and
 explicit resume path in addition to the dashboard and student submission
 journeys. The conflict flows additionally require an authenticated admin

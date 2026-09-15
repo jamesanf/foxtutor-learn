@@ -6,7 +6,17 @@ interface MockStatement {
   values: unknown[];
 }
 
-function mockBatchDb(invoice?: { id: string; status: string; freeagent_url: string | null; collection_started: number; credit_eligible?: number; collection_unknown?: number }) {
+function mockBatchDb(invoice?: {
+  id: string;
+  status: string;
+  freeagent_url: string | null;
+  provider_status?: string | null;
+  net_amount_minor?: number;
+  credit_applied_minor?: number;
+  collection_started: number;
+  credit_eligible?: number;
+  collection_unknown?: number;
+}) {
   const statements: MockStatement[] = [];
   const db = {
     prepare(sql: string) {
@@ -18,6 +28,19 @@ function mockBatchDb(invoice?: { id: string; status: string; freeagent_url: stri
             async first<T>() {
               if (invoice && sql.includes("SELECT i.id")) return invoice as T;
               return null;
+            },
+            async all<T>() {
+              if (sql.includes("billing_invoice_credit_applications")) {
+                return {
+                  results: [{
+                    credit_id: "credit-source-1",
+                    ledger_transaction_id: "ledger-application-1",
+                    account_id: "credit-account-1",
+                    amount_minor: 5500
+                  }]
+                } as { results: T[] };
+              }
+              return { results: [] } as { results: T[] };
             }
           };
         }
@@ -126,5 +149,37 @@ describe("Phase 5 accounting boundary", () => {
     });
     expect(statements.some((statement) => statement.sql.includes("'GRANT'"))).toBe(true);
     expect(statements.some((statement) => statement.sql.includes("'CANCEL_INVOICE'"))).toBe(false);
+  });
+
+  it("restores a FoxMail credit settlement exactly once without a provider cancellation", async () => {
+    const { db, statements } = mockBatchDb({
+      id: "invoice-mail-1",
+      status: "PAID",
+      provider_status: "CREDIT_COVERED_EMAIL",
+      net_amount_minor: 0,
+      credit_applied_minor: 5500,
+      freeagent_url: null,
+      collection_started: 0,
+      credit_eligible: 1,
+      collection_unknown: 0
+    });
+    await cancelLesson(db, {
+      lessonId: "lesson-mail-1",
+      studentId: "student-1",
+      actorUserId: "admin-1",
+      actorRole: "ADMIN",
+      eventType: "ADMIN_CANCELLED",
+      billingConsequence: "ADMIN_CANCELLED",
+      creditAmountMinor: 5500n,
+      now: "2026-09-13T12:00:00.000Z",
+      previousStartAt: "2026-09-15T12:00:00.000Z",
+      previousEndAt: "2026-09-15T12:55:00.000Z",
+      previousTimezone: "Europe/London"
+    });
+    const reversals = statements.filter((statement) => statement.sql.includes("'REVERSAL'"));
+    expect(reversals).toHaveLength(1);
+    expect(reversals[0]?.values).toContain("credit-reversal:invoice-mail-1");
+    expect(statements.some((statement) => statement.sql.includes("'CANCEL_INVOICE'"))).toBe(false);
+    expect(statements.some((statement) => statement.sql.includes("'GRANT'"))).toBe(false);
   });
 });
