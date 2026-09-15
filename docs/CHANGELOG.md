@@ -15,6 +15,9 @@
   zero-value FreeAgent document or Direct Debit operation.
 - Added `NO_MANDATE_MANUAL_PAYMENT` readiness and provider-aware Billing health
   copy; active credit is separated from consumed audit history.
+- Credit detail now shows source invoice/date provenance and provides a
+  guarded manual-refund acknowledgement that records an immutable `REFUND`
+  transaction without initiating an external payment.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.

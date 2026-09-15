@@ -189,6 +189,10 @@ Settlement-safe credit and cancellation acceptance now also covers:
 - cancellation notifications identify when a restored credit came from an
   originating invoice and lesson rather than treating the zero-value follow-up
   statement as a new source;
+- administrators can record an externally processed refund against the
+  remaining credit balance with an external refund reference; the immutable
+  `REFUND` ledger entry removes only the refunded amount and cannot exceed the
+  available balance;
 - failed collection outcomes are reported as billing review required, with no
   credit grant and no false claim that the lesson was unpaid or unbilled.
 
@@ -228,7 +232,9 @@ after the FoxMail cancellation/provenance fix is:
 
 The focused regression test confirms that a `CREDIT_COVERED_EMAIL` settlement
 creates exactly one idempotent ledger reversal and no `CANCEL_INVOICE`
-operation. Authenticated Chromium
+operation. The admin credit detail now exposes a guarded manual-refund flow;
+it requires an explicit confirmation and external refund reference, then
+records the refund as `PAID`/`REFUNDED` in the credit ledger. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and
 explicit resume path in addition to the dashboard and student submission
 journeys. The conflict flows additionally require an authenticated admin

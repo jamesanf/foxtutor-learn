@@ -218,3 +218,7 @@ destination lesson and the originating normalized invoice and lesson date when
 that source metadata exists; cancellation notices preserve that original
 provenance. Failed collection is classified separately from an unissued
 invoice, never creates credit, and produces a billing-review message.
+The admin credit detail now provides a guarded manual-refund acknowledgement:
+the administrator enters the amount already refunded externally and its
+external reference, and FoxTutor records an auditable `REFUND` transaction
+without initiating money movement.
