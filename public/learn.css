@@ -68,7 +68,8 @@ nav a span { min-width: 0; }
 nav a:hover, nav a:focus-visible { color: var(--action-hover); background: #d6e4ee; }
 nav a[aria-current="page"] { color: #0b4f6c; background: var(--surface); box-shadow: inset 3px 0 var(--brand), 0 1px 2px rgb(16 42 67 / 8%); font-weight: 650; }
 .content { width: min(100%, 1160px); padding: clamp(26px, 4vw, 44px); padding-bottom: 24px; }
-.learn-footer { padding: 16px clamp(20px, 5vw, 64px); color: #e2e8f0; background: #172a3a; }
+.student-dashboard-shell .layout { min-height: 0; }
+.learn-footer { padding: 10px clamp(20px, 5vw, 64px); color: #e2e8f0; background: #172a3a; }
 .learn-footer-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; width: min(100%, 1160px); margin: 0 auto; }
 .learn-footer-copy, .learn-footer-links { display: grid; gap: 2px; font-size: .76rem; }
 .learn-footer-copy small { margin: 0; color: #b8c7d6; font-size: .7rem; }
@@ -76,7 +77,7 @@ nav a[aria-current="page"] { color: #0b4f6c; background: var(--surface); box-sha
 .learn-footer-brand-line > span { color: #b8c7d6; }
 .learn-footer-name { color: white; font-size: .92rem; font-weight: 700; text-decoration: none; }
 .learn-footer-logo { display: flex; justify-content: center; }
-.learn-footer-logo img { display: block; width: 48px; height: 46px; object-fit: contain; }
+.learn-footer-logo img { display: block; width: 38px; height: 36px; object-fit: contain; }
 .learn-footer-links { justify-items: end; }
 .learn-footer-links a { color: #e0f2fe; text-underline-offset: 3px; }
 .learn-footer-legal-links { display: flex; gap: 12px; }
@@ -177,10 +178,12 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .student-billing-summary .summary-card { min-height: 112px; grid-template-rows: 1fr auto 1fr; align-items: center; }
 .student-billing-summary .summary-card span { align-self: end; }
 .student-billing-summary .summary-card small { align-self: start; min-height: 1.2em; }
-.student-dashboard-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.student-dashboard .page-heading { margin-bottom: 16px; }
+.student-dashboard-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
 .student-dashboard-greeting { font-size: clamp(1.65rem, 3vw, 2.3rem); }
 .student-dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.student-dashboard-panels .dashboard-section { margin-top: var(--space-6); }
+.student-dashboard-panels { gap: var(--space-3); }
+.student-dashboard-panels .dashboard-section { margin-top: var(--space-4); }
 .student-dashboard-panels .dashboard-section p { max-width: 58ch; }
 .student-dashboard-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); width: 100%; max-width: 58ch; margin-top: var(--space-4); }
 .student-dashboard-actions .button { width: 100%; margin-top: 0; }

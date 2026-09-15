@@ -102,7 +102,13 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain('href="${lastLessonPath}/submit"');
     expect(workerSource).toContain("listUpcomingLessonsForUser(db, user.id, now, 1, 0)");
     expect(workerSource).toContain("findSentLessonReportForStudent(db, lastLesson.id, user.id)");
+    expect(workerSource).toContain('class="student-dashboard"');
+    expect(workerSource).toContain('"student-dashboard-shell"');
     expect(cssSource).toContain(".student-dashboard-panels { display: grid;");
+    expect(cssSource).toContain(".student-dashboard-shell .layout { min-height: 0; }");
+    expect(cssSource).toContain(".student-dashboard .page-heading { margin-bottom: 16px; }");
+    expect(cssSource).toContain(".student-dashboard-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }");
+    expect(cssSource).toContain(".student-dashboard-panels .dashboard-section { margin-top: var(--space-4); }");
     expect(workerSource).toContain('class="student-dashboard-actions"');
     expect(cssSource).toContain(".student-dashboard-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));");
     expect(cssSource).toContain(".student-dashboard-actions .button { width: 100%; margin-top: 0; }");

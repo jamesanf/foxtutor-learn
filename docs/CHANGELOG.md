@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 tighter student dashboard spacing
+
+- Removed the viewport-height layout minimum from the student dashboard so
+  the footer follows the dashboard content instead of being pushed down.
+- Reduced dashboard heading, summary, panel and footer spacing, including the
+  footer logo footprint.
+- Updated student dashboard documentation and UI contracts.
+
 ### 2026-09-15 - Phase 7.17 full-width student dashboard actions
 
 - Made the student dashboard `View calendar` and `View resources` buttons
