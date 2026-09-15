@@ -569,6 +569,14 @@ function notificationPreview(eventType: NotificationType, origin: string): { sub
             evenBetterIf: "",
             resources: []
           }, origin)
+          : eventType === "BILLING_CREDIT_COVERED_STATEMENT"
+            ? renderEmail(eventType, {
+              studentName: "Alex Taylor",
+              invoiceReference: "FT26091503",
+              lessonDate: "2026-09-20",
+              amountMinor: 5500,
+              sources: [{ invoiceReference: "FT26091502", lessonDate: "2026-09-16", amountMinor: 5500 }]
+            }, origin)
           : renderEmail(eventType, {
             ...lesson,
             ...(eventType === "CANCELLATION_PROCESSED" ? { undoPath: "/learn/student/lessons/example/undo-cancellation" } : {}),
@@ -583,7 +591,8 @@ function notificationControls(settings: NotificationSetting[], csrfToken: string
     { label: "Lessons", description: "Booking, changes, reminders and rescheduling.", types: ["LESSON_CREATED", "LESSON_CHANGED", "LESSON_REMINDER", "LESSON_RESCHEDULED"] },
     { label: "Cancellations", description: "Cancellation outcomes and student requests.", types: ["CANCELLATION_PROCESSED", "CANCELLATION_REQUESTED", "CANCELLATION_APPROVED", "CANCELLATION_REJECTED"] },
     { label: "Students and reports", description: "Student access, lesson reports and clock-change notices.", types: ["STUDENT_INVITED", "LESSON_REPORT", "DST_WARNING"] },
-    { label: "Resources", description: "New lesson resources.", types: ["RESOURCE_ADDED"] }
+    { label: "Resources", description: "New lesson resources.", types: ["RESOURCE_ADDED"] },
+    { label: "Billing", description: "Credit-covered billing statements and payment notices.", types: ["BILLING_CREDIT_COVERED_STATEMENT", "BILLING_DIRECT_DEBIT_SETUP", "BILLING_DIRECT_DEBIT_REMINDER"] }
   ];
   const settingByType = new Map(settings.map((setting) => [setting.event_type, setting]));
   const rowForSetting = (setting: NotificationSetting): string => {

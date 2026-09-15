@@ -7,7 +7,7 @@ import {
   reminderIdempotencyKey
 } from "../../src/domain/notifications";
 import { learnLink } from "../../src/notifications/links";
-import { renderCancellationProcessed, renderDirectDebitStatus, renderDstWarning, renderEmail, renderLessonReminder, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
+import { renderCancellationProcessed, renderCreditCoveredStatement, renderDirectDebitStatus, renderDstWarning, renderEmail, renderLessonReminder, renderLessonReport, renderStudentInvitation } from "../../src/notifications/templates";
 import { findNotificationById } from "../../src/db/notifications";
 
 function mockNotificationDb(firstResult: unknown): D1Database {
@@ -145,6 +145,28 @@ describe("notification domain", () => {
     expect(rendered.text).toContain("Bank details must be entered only through the provider's secure flow");
     expect(rendered.text).not.toContain("set up Direct Debit here");
     expect(rendered.html).not.toContain("href=");
+  });
+
+  it("renders credit-covered statements with safe provenance for notification previews", () => {
+    const rendered = renderEmail("BILLING_CREDIT_COVERED_STATEMENT", {
+      studentName: "Jamie",
+      invoiceReference: "FT26091503",
+      lessonDate: "2026-09-20",
+      amountMinor: 5500,
+      sources: [{ invoiceReference: "FT26091502", lessonDate: "2026-09-16", amountMinor: 5500 }]
+    }, "https://foxtutor.org/learn");
+    expect(rendered.subject).toBe("Your FoxTutor lesson is paid - 20 September 2026");
+    expect(rendered.text).toContain("Amount due: £0.00");
+    expect(rendered.text).toContain("Invoice FT26091502");
+    expect(rendered.html).toContain(">Billing</div>");
+    expect(rendered.text).not.toMatch(/credit:[\w-]+|bank details|sort code|account number/i);
+    expect(() => renderCreditCoveredStatement({
+      studentName: "Jamie",
+      invoiceReference: "FT26091503",
+      lessonDate: "2026-09-20",
+      amountMinor: 5500,
+      sources: []
+    })).not.toThrow();
   });
 
   it("keeps cancellation email content concise and exposes undo only for student cancellations", () => {

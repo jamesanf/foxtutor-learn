@@ -27,8 +27,10 @@ import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
 import { creditRefundMethodLabel, datedInvoiceReference, isCollectionDateReached, isInvoiceReference, type CreditRefundMethod } from "../domain/billing";
 import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
-import { sendMailDetailed, type MailDeliveryResult, type MailEnvironment } from "../mail/client";
-import { frame } from "../notifications/templates";
+import type { Notification } from "../db/notifications";
+import { createAndDeliverNotification } from "../notifications/service";
+import { renderCreditCoveredStatement as renderCreditCoveredStatementEmail, frame } from "../notifications/templates";
+import type { MailEnvironment } from "../mail/client";
 
 function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
@@ -105,14 +107,6 @@ function statementDate(value: string | null): string {
   return `${day} ${months[Number(month) - 1] ?? month} ${year}`;
 }
 
-function sourceProvenanceText(source: CreditSourceProvenance): string {
-  const origin = source.invoiceReference
-    ? `Invoice ${source.invoiceReference}`
-    : "a previous FoxTutor credit from a cancelled lesson";
-  const lesson = source.lessonDate ? ` - lesson on ${statementDate(source.lessonDate)}` : "";
-  return `${origin}${lesson} - £${formatMinorUnits(BigInt(source.amountMinor))}`;
-}
-
 export function renderCreditCoveredStatement(
   studentName: string,
   invoiceReference: string,
@@ -120,20 +114,13 @@ export function renderCreditCoveredStatement(
   amountMinor: number | string,
   sources: CreditSourceProvenance[]
 ): { subject: string; text: string; html: string } {
-  const sourceLines = sources.length
-    ? sources.map(sourceProvenanceText)
-    : ["a previous FoxTutor credit; source lesson history is not available"];
-  const sourceHtml = sourceLines.map((line) => `<li>${escapeMailHtml(line)}</li>`).join("");
-  const coveredLesson = statementDate(lessonDate);
-  const amount = formatMinorUnits(BigInt(amountMinor));
-  const sourceLabel = sourceLines.length === 1 ? "Credit source" : "Credit sources";
-  const text = `Hello ${studentName},\n\nYour FoxTutor lesson on ${coveredLesson} has been paid for using credit from an earlier FoxTutor payment. No payment is needed from you.\n\nStatement reference: ${invoiceReference}\n\nLesson paid for: ${coveredLesson}\nLesson fee: £${amount}\nCredit used: £${amount}\n${sourceLabel}:\n- ${sourceLines.join("\n- ")}\nAmount due: £0.00\n\nYou do not need to make a payment or set up Direct Debit for this lesson.\n\nThis statement is for your records. If you have any questions, please contact billing@foxtutor.org.`;
-  const htmlBody = `<p>Hello ${escapeMailHtml(studentName)},</p><p>Your FoxTutor lesson on <strong>${escapeMailHtml(coveredLesson)}</strong> has been paid for using credit from an earlier FoxTutor payment. No payment is needed from you.</p><dl><dt>Statement reference</dt><dd>${escapeMailHtml(invoiceReference)}</dd><dt>Lesson paid for</dt><dd>${escapeMailHtml(coveredLesson)}</dd><dt>Lesson fee</dt><dd>£${escapeMailHtml(amount)}</dd><dt>Credit used</dt><dd>£${escapeMailHtml(amount)}</dd><dt>${sourceLabel}</dt><dd><ul>${sourceHtml}</ul></dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>You do not need to make a payment or set up Direct Debit for this lesson.</p><p>This statement is for your records. If you have any questions, please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a>.</p>`;
-  return {
-    subject: `Your FoxTutor lesson is paid - ${coveredLesson}`,
-    text,
-    html: frame("Payment received", "FoxTutor Learn", htmlBody, "Billing")
-  };
+  return renderCreditCoveredStatementEmail({
+    studentName,
+    invoiceReference,
+    lessonDate,
+    amountMinor,
+    sources
+  });
 }
 
 function legacyInvoiceReference(id: string): string {
@@ -226,32 +213,46 @@ async function sendCreditCoveredStatement(
   lessonDate: string,
   sourceProvenance: CreditSourceProvenance[],
   fetcher: typeof fetch
-): Promise<Extract<MailDeliveryResult, { kind: "accepted" }>> {
-  const student = await db.prepare("SELECT name, email FROM students WHERE id = ?")
-    .bind(event.student_id)
-    .first<{ name: string; email: string }>();
+): Promise<Notification> {
+  const student = await db.prepare(
+    `SELECT s.name, s.email, s.learn_user_id, u.status AS user_status, u.role AS user_role
+     FROM students s
+     LEFT JOIN users u ON u.id = s.learn_user_id
+     WHERE s.id = ?`
+  ).bind(event.student_id).first<{
+    name: string;
+    email: string;
+    learn_user_id: string | null;
+    user_status: string | null;
+    user_role: string | null;
+  }>();
   if (!student?.email) throw new Error("A student email is required for the credit-covered billing statement.");
-  const { subject, text, html } = renderCreditCoveredStatement(
+  if (!student.learn_user_id || student.user_status !== "ACTIVE" || student.user_role !== "STUDENT") {
+    throw new BillingMailError("An active Learn notification recipient is required for the credit-covered billing statement.", false, false);
+  }
+  const content = renderCreditCoveredStatement(
     student.name,
     invoiceReference,
     lessonDate,
     event.gross_amount_minor,
     sourceProvenance
   );
-  const result = await sendMailDetailed(env, {
-    to: student.email,
-    fromAddress: env.MAIL_API_BILLING_FROM ?? "billing@foxtutor.org",
-    fromName: "FoxTutor Billing",
-    replyTo: env.MAIL_API_REPLY_TO,
-    subject,
-    text,
-    html,
-    idempotencyKey: `billing-credit-statement-${event.id}`
-  }, fetcher);
-  if (result.kind === "failed") {
-    throw new BillingMailError(result.safeMessage, result.retryable, result.unknown);
+  const notification = await createAndDeliverNotification(db, env, {
+    type: "BILLING_CREDIT_COVERED_STATEMENT",
+    eventId: event.id,
+    recipientUserId: student.learn_user_id,
+    studentId: event.student_id,
+    lessonId: event.lesson_id,
+    content
+  }, new Date().toISOString(), fetcher);
+  if (notification.status === "FAILED" || notification.status === "UNKNOWN") {
+    throw new BillingMailError(
+      notification.error_message ?? "The credit-covered billing statement could not be delivered.",
+      notification.status === "FAILED" && notification.next_attempt_at !== null,
+      notification.status === "UNKNOWN"
+    );
   }
-  return result;
+  return notification;
 }
 
 async function markOperationFailure(
@@ -403,7 +404,7 @@ async function processCreateInvoice(
       await updateBillingEventStatus(db, event.id, "SETTLED", now, reference, null, "CREDIT_COVERED_EMAIL");
       await markBillingInvoiceOperation(db, operation.id, {
         status: "SUCCEEDED",
-        providerReference: delivery.providerReference ?? reference,
+        providerReference: delivery.provider_reference ?? reference,
         providerStatus: "CREDIT_COVERED_EMAIL"
       }, now);
       return;

@@ -1,5 +1,19 @@
 # Changelog
 
+### 2026-09-15 - Credit-covered statement notification controls
+
+- Routed credit-covered billing statements through the durable notification
+  outbox so administrators can inspect the exact plain-text and HTML email
+  from the Notifications pane.
+- Added a Billing notification setting and preview for enabling or
+  suppressing these statements without changing the underlying credit or
+  billing ledger.
+- Added migration `0042_credit_statement_notifications.sql` and retained
+  event-key idempotency so retries cannot send duplicate statements.
+- Classified the remaining Production notification records: two historical
+  provider-validation failures for resource messages and 17 future scheduled
+  lesson reminders; no open billing alerts or failed accounting work remain.
+
 ### 2026-09-15 - Shorter payment references
 
 - New lesson invoice and payment references now use `FTYYMMDDNN`, for example

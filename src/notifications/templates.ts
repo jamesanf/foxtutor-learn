@@ -66,6 +66,14 @@ export interface DirectDebitEmailData {
   status: "setup" | "pending";
 }
 
+export interface CreditCoveredStatementEmailData {
+  studentName: string;
+  invoiceReference: string;
+  lessonDate: string;
+  amountMinor: number | string;
+  sources: Array<{ invoiceReference: string | null; lessonDate: string | null; amountMinor: number | string }>;
+}
+
 function requireFields(data: Record<string, unknown>, fields: string[]): void {
   for (const field of fields) {
     if (typeof data[field] !== "string" || !(data[field] as string).trim()) throw new Error(`Missing notification template field: ${field}`);
@@ -280,6 +288,36 @@ export function renderDirectDebitStatus(data: DirectDebitEmailData): EmailConten
   return { subject: title, text, html: frame(title, "FoxTutor Learn", body) };
 }
 
+function statementDate(value: string | null): string {
+  if (!value) return "date not recorded";
+  const [year, month, day] = value.split("-");
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return `${day} ${months[Number(month) - 1] ?? month} ${year}`;
+}
+
+export function renderCreditCoveredStatement(data: CreditCoveredStatementEmailData): EmailContent {
+  const amount = (Number(data.amountMinor) / 100).toFixed(2);
+  const sourceLines = data.sources.length
+    ? data.sources.map((source) => {
+      const origin = source.invoiceReference
+        ? `Invoice ${source.invoiceReference}`
+        : "a previous FoxTutor credit from a cancelled lesson";
+      const lesson = source.lessonDate ? ` - lesson on ${statementDate(source.lessonDate)}` : "";
+      return `${origin}${lesson} - £${(Number(source.amountMinor) / 100).toFixed(2)}`;
+    })
+    : ["a previous FoxTutor credit; source lesson history is not available"];
+  const sourceLabel = sourceLines.length === 1 ? "Credit source" : "Credit sources";
+  const coveredLesson = statementDate(data.lessonDate);
+  const text = `Hello ${data.studentName},\n\nYour FoxTutor lesson on ${coveredLesson} has been paid for using credit from an earlier FoxTutor payment. No payment is needed from you.\n\nStatement reference: ${data.invoiceReference}\n\nLesson paid for: ${coveredLesson}\nLesson fee: £${amount}\nCredit used: £${amount}\n${sourceLabel}:\n- ${sourceLines.join("\n- ")}\nAmount due: £0.00\n\nYou do not need to make a payment or set up Direct Debit for this lesson.\n\nThis statement is for your records. If you have any questions, please contact billing@foxtutor.org.`;
+  const sourceHtml = sourceLines.map((line) => `<li>${escapeHtml(line)}</li>`).join("");
+  const htmlBody = `<p>Hello ${escapeHtml(data.studentName)},</p><p>Your FoxTutor lesson on <strong>${escapeHtml(coveredLesson)}</strong> has been paid for using credit from an earlier FoxTutor payment. No payment is needed from you.</p><dl><dt>Statement reference</dt><dd>${escapeHtml(data.invoiceReference)}</dd><dt>Lesson paid for</dt><dd>${escapeHtml(coveredLesson)}</dd><dt>Lesson fee</dt><dd>£${escapeHtml(amount)}</dd><dt>Credit used</dt><dd>£${escapeHtml(amount)}</dd><dt>${sourceLabel}</dt><dd><ul>${sourceHtml}</ul></dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>You do not need to make a payment or set up Direct Debit for this lesson.</p><p>This statement is for your records. If you have any questions, please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a>.</p>`;
+  return {
+    subject: `Your FoxTutor lesson is paid - ${coveredLesson}`,
+    text,
+    html: frame("Payment received", "FoxTutor Learn", htmlBody, "Billing")
+  };
+}
+
 export function renderEmail(type: NotificationType, data: Record<string, unknown>, origin: string): EmailContent {
   if (type === "STUDENT_INVITED") {
     requireFields(data, ["studentName", "origin"]);
@@ -311,6 +349,12 @@ export function renderEmail(type: NotificationType, data: Record<string, unknown
       studentName: data.studentName as string,
       status: type === "BILLING_DIRECT_DEBIT_REMINDER" ? "pending" : "setup"
     });
+  }
+  if (type === "BILLING_CREDIT_COVERED_STATEMENT") {
+    if (typeof data.studentName !== "string" || typeof data.invoiceReference !== "string" || typeof data.lessonDate !== "string" || !Array.isArray(data.sources)) {
+      throw new Error("Missing credit-covered statement template fields");
+    }
+    return renderCreditCoveredStatement(data as unknown as CreditCoveredStatementEmailData);
   }
   requireFields(data, ["studentName", "startAt", "endAt", "timezone", "lessonPath", "pupilName", "level", "reportPath", "thisLessonsFocus"]);
   return renderLessonReport(data as unknown as ReportEmailData, origin);

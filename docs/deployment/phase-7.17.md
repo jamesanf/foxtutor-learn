@@ -345,3 +345,22 @@ FreeAgent draft: omitting `item_type` caused FreeAgent to inherit the company
 default and render `1:00 Hour`. New FoxTutor payloads now send the supported
 `-no unit-` API value and retain the explicit `1 Unit; 55 minutes` lesson
 description. This prevents an hourly representation of a 55-minute lesson.
+
+## Latest deployment: credit-covered statement notifications
+
+- Git commit: pending
+- Production migration: `0042_credit_statement_notifications.sql`
+- Worker version: pending
+- Deployment date: 2026-09-15
+
+Credit-covered billing statements now enter the durable notification outbox.
+The Notifications pane exposes the exact text and HTML content, delivery
+status, retry state and provider reference, while the Billing notification
+group provides a dedicated preview and enable/disable control. Suppression
+does not reverse the credit or alter billing settlement, and event-key
+idempotency prevents duplicate statements on retries.
+
+Production’s current notification audit has two historical failed resource
+messages caused by provider validation responses and 17 future lesson
+reminders in `PENDING`; billing alerts, invoice operations and accounting
+outbox errors are clear.

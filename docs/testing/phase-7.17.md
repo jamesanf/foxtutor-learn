@@ -305,6 +305,37 @@ persisted refund-method field.
 | New-customer no-mandate payment | AMBER | Manual-payment readiness is classified safely; live mailbox/provider onboarding remains a separate acceptance gate. |
 | Full live recurring provenance cycle | AMBER | Single-lesson provenance is proven; a fresh recurring-series mail cycle still requires an isolated provider fixture. |
 
+## Current Production error audit
+
+The earlier statement about open production errors referred to the pre-cleanup
+state investigated before the cancellation, reconciliation and accounting
+repairs were deployed. A current aggregate read-only D1 check shows all
+`billing_alerts` resolved, no failed or retryable accounting-outbox work, and
+no failed invoice operations.
+
+The notification channel is not completely clear: Production currently has
+two historical `RESOURCE_ADDED` notifications in `FAILED` with provider
+validation responses, and 17 future `LESSON_REMINDER` notifications in
+`PENDING` because their scheduled lesson times have not arrived. The failed
+resource messages are retained for audit and are not billing or payment
+failures; the pending reminders are expected scheduled work.
+
+## Credit-covered statement notification controls
+
+Credit-covered billing statements now use the durable notification outbox
+instead of bypassing it with a direct mail call. The Notifications pane
+therefore shows the recipient, exact subject, plain-text content, HTML
+content, delivery status, attempts and provider reference for each statement.
+The Billing notification group includes a dedicated
+`Credit-covered billing statement` enable/disable control and a preview link.
+Disabling it suppresses the customer email without deleting the billing
+ledger, credit application or provenance; re-enabling does not duplicate a
+statement because delivery remains idempotent by billing event.
+
+The preview uses the same provenance-aware FoxTutor Billing template as the
+actual statement and contains no internal credit IDs, bank details or payment
+instructions.
+
 ## Recurring cancellation stress evidence
 
 An authenticated Chromium admin session created a controlled five-occurrence

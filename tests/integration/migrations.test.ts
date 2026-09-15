@@ -216,6 +216,14 @@ describe("D1 foundation", () => {
     expect(migration).toContain("ALTER TABLE notification_settings RENAME TO notification_settings_phase76");
   });
 
+  it("adds credit-covered billing statements to the notification controls", () => {
+    const migration = readFileSync("migrations/0042_credit_statement_notifications.sql", "utf8");
+    expect(migration).toContain("'BILLING_CREDIT_COVERED_STATEMENT'");
+    expect(migration).toContain("ALTER TABLE notifications RENAME TO notifications_phase717_credit_statement");
+    expect(migration).toContain("ALTER TABLE notification_settings RENAME TO notification_settings_phase717_credit_statement");
+    expect(migration).toContain("('BILLING_CREDIT_COVERED_STATEMENT', 1");
+  });
+
   it("isolates FreeAgent connections, mappings and provider records by environment", () => {
     const migration = readFileSync("migrations/0028_phase79_environment_isolation.sql", "utf8");
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS accounting_connections_by_environment");

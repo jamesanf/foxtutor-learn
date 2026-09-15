@@ -117,7 +117,9 @@ export async function deliverNotification(
   if (!claimed) return null;
   const result = await sendMailDetailed(env, {
     to: claimed.recipient_email ?? "",
-    fromName: "FoxTutor",
+    ...(claimed.event_type === "BILLING_CREDIT_COVERED_STATEMENT"
+      ? { fromAddress: env.MAIL_API_BILLING_FROM ?? "billing@foxtutor.org", fromName: "FoxTutor Billing" }
+      : { fromName: "FoxTutor" }),
     ...(env.MAIL_API_REPLY_TO ? { replyTo: env.MAIL_API_REPLY_TO } : {}),
     subject: claimed.subject,
     text: claimed.text_body,
