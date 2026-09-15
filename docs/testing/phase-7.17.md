@@ -26,7 +26,8 @@ Automated UI contracts cover:
 - 25% smaller main page titles across standard, calendar, resource-upload and
   billing-settings heading variants.
 - recurring-series Pause/Resume controls remaining centered in their table
-  row with no default button top offset and a compact 30px control height.
+  row with no default button top offset and a compact 24px control height
+  matching the adjacent status pill.
 - mobile table pages retaining real columns in a horizontal scrolling
   container instead of converting rows into unusable stacked cards.
 - notification delivery-log headers sorting the server-side result set, with

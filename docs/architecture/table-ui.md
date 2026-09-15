@@ -32,5 +32,5 @@ on narrow mobile layouts.
 Table action cells use a centered, vertically middle-aligned treatment with no
 default button top offset. This keeps controls such as recurring-series Pause
 on the same horizontal line as the other row values. Recurring-series
-Pause/Resume controls use a compact 30px table-action variant so their visual
-height matches the surrounding row content.
+Pause/Resume controls use a compact 24px table-action variant so their visual
+height matches the adjacent status pill.
