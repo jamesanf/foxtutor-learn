@@ -105,7 +105,7 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain('class="student-dashboard"');
     expect(workerSource).toContain('"student-dashboard-shell"');
     expect(cssSource).toContain(".student-dashboard-panels { display: grid;");
-    expect(cssSource).toContain(".student-dashboard-shell .layout { min-height: 0; }");
+    expect(cssSource).toContain(".student-dashboard-shell .layout { min-height: calc(100vh - 64px); }");
     expect(cssSource).toContain(".student-dashboard .page-heading { margin-bottom: 16px; }");
     expect(cssSource).toContain(".student-dashboard-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }");
     expect(cssSource).toContain(".student-dashboard-panels .dashboard-section { margin-top: var(--space-4); }");

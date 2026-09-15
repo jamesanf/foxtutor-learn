@@ -41,9 +41,10 @@ The `View calendar` and `View resources` actions in the My learning panel use
 a full-width two-column action row aligned to the paragraph above. On narrow
 screens the buttons stack and remain full width.
 
-The student dashboard does not force the shared viewport-height minimum used by
-longer Learn pages, so its footer follows the dashboard content without a
-large empty gap. Its dashboard heading, summary and panel spacing are reduced
+The student dashboard keeps a viewport-height minimum so the footer hugs the
+bottom of the browser when the content is short. If the dashboard content
+exceeds the viewport, the layout grows naturally and browser scrolling is used
+instead. Its dashboard heading, summary and panel spacing are reduced
 independently from other authenticated pages.
 
 ## Student submissions

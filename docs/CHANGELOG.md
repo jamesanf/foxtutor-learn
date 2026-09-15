@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 restore dashboard viewport minimum
+
+- Restored the student dashboard's viewport-height minimum so the compact
+  footer remains at the bottom of a short page.
+- Preserved normal document growth and browser scrolling when dashboard
+  content exceeds the viewport.
+
 ### 2026-09-15 - Phase 7.17 tighter student dashboard spacing
 
 - Removed the viewport-height layout minimum from the student dashboard so
