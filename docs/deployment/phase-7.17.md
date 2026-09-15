@@ -158,9 +158,9 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `a43b637`
+- Git commit: `1062185`
 - Worker: `foxtutor-learn`
-- Worker version: `75518bd1-79b1-486a-997f-74fd27bfdaf9`
+- Worker version: `720614ce-37d8-4fa4-907e-2159422cf9f9`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
@@ -170,3 +170,7 @@ for its normal collection date.
   before issuance leaves no invoice or collection operation. The deployed
   application now uses the FreeAgent cancellation API for future sent-invoice
   cancellations rather than relying on browser deletion.
+- Production D1 migration `0033_cancel_invoice_operation.sql` is applied. The
+  authenticated Chromium billing dashboard rendered successfully after the
+  deployment; the only observed console errors were pre-existing CSP blocks for
+  inline Access/font/manifest resources, not application JavaScript errors.
