@@ -192,7 +192,7 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `2770dfc`
+- Git commit: `e4e8b44`
 - Worker: `foxtutor-learn`
 - Worker version: `fbb25783-b416-4290-a98d-7735e4a9e57a`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
