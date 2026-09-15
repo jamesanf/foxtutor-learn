@@ -413,7 +413,7 @@ function navigation(role: Role, title: string): string {
 }
 
 function learnFooter(): string {
-  return `<footer class="learn-footer"><div class="learn-footer-inner"><div class="learn-footer-copy"><a href="/learn" class="learn-footer-name">James Fox</a><p>Bespoke English Tuition</p><small>© 2026 Fox Learning Ltd. All rights reserved.</small></div><div class="learn-footer-logo"><img src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46" loading="lazy"></div><div class="learn-footer-links"><a href="mailto:hello@foxtutor.org">hello@foxtutor.org</a><span aria-hidden="true"></span><a href="/learn/terms">Terms &amp; Conditions</a><span aria-hidden="true"></span><a href="/learn/privacy">Privacy Policy</a></div></div></footer>`;
+  return `<footer class="learn-footer"><div class="learn-footer-inner"><div class="learn-footer-copy"><div class="learn-footer-brand-line"><a href="/learn" class="learn-footer-name">FoxTutor</a><span>Bespoke English Tuition</span></div><small>© 2026 Fox Learning Ltd. All rights reserved.</small></div><div class="learn-footer-logo"><img src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46" loading="lazy"></div><div class="learn-footer-links"><a href="mailto:hello@foxtutor.org">hello@foxtutor.org</a><div class="learn-footer-legal-links"><a href="/learn/terms">Terms &amp; Conditions</a><a href="/learn/privacy">Privacy Policy</a></div></div></div></footer>`;
 }
 
 function legalPage(title: string, content: string): string {

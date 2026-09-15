@@ -7,9 +7,12 @@ derived from `public/learn_logo.png`, inside a white rounded panel so it remains
 clear against the dark header. The centered mark uses a 105px by 48px panel
 with a 90px display width on desktop, and the topbar contracts to a 64px
 minimum height; the mobile breakpoint scales the mark and bar down further.
-The footer mirrors the public site's James Fox,
-Bespoke English Tuition, contact and legal-link structure without changing the
-public site repository.
+The footer uses a compact two-row layout on each side of the centered logo.
+The left side shows bold `FoxTutor` followed by `Bespoke English Tuition` on
+the first row, with the copyright notice below. The right side keeps the
+contact address above a same-line `Terms & Conditions` and `Privacy Policy`
+pair. This preserves the public site's contact and legal-link structure
+without changing the public site repository.
 
 The Resources and Notifications navigation icons use outline strokes by
 default, matching the other navigation icon treatment, and switch to a filled

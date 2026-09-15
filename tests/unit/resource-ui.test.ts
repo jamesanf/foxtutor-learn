@@ -152,6 +152,9 @@ describe("resource UX contract", () => {
     expect(workerSource).toContain('/learn/assets/learn_logo-240.webp');
     expect(workerSource).toContain('class="learn-footer"');
     expect(workerSource).toContain('<div class="learn-footer-logo"><img src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor"');
+    expect(workerSource).toContain('<a href="/learn" class="learn-footer-name">FoxTutor</a><span>Bespoke English Tuition</span>');
+    expect(workerSource).toContain('<div class="learn-footer-legal-links"><a href="/learn/terms">Terms &amp; Conditions</a><a href="/learn/privacy">Privacy Policy</a></div>');
+    expect(workerSource).not.toContain('class="learn-footer-name">James Fox');
     expect(workerSource).not.toContain('/learn/assets/learn_logo-120.webp');
     expect(workerSource).toContain('href="/learn/terms"');
     expect(workerSource).toContain('href="/learn/privacy"');
@@ -169,6 +172,14 @@ describe("resource UX contract", () => {
     expect(cssSource).toContain(".topbar-center-logo { display: inline-flex; align-items: center; justify-content: center; justify-self: center; width: 105px; height: 48px; padding: 3px 6px; border: 1px solid #9bd6e2; border-radius: 10px; background: #e8f7fa");
     expect(cssSource).toContain(".topbar { min-height: 54px; gap: 8px; padding: 8px 12px");
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
+  });
+
+  it("keeps the footer compact with two text rows on each side of the logo", () => {
+    expect(cssSource).toContain(".content { width: min(100%, 1160px); padding: clamp(26px, 4vw, 44px); padding-bottom: 24px; }");
+    expect(cssSource).toContain(".learn-footer { padding: 16px");
+    expect(cssSource).toContain(".learn-footer-brand-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }");
+    expect(cssSource).toContain(".learn-footer-legal-links { display: flex; gap: 12px; }");
+    expect(cssSource).toContain(".learn-footer-copy small { margin: 0; color: #b8c7d6; font-size: .7rem; }");
   });
 
   it("uses outlined resources and notifications icons until their nav item is selected", () => {

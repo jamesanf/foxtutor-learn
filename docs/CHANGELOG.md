@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 compact Learn footer
+
+- Replaced the footer's `James Fox` label with bold `FoxTutor` followed by
+  `Bespoke English Tuition` on the same line.
+- Kept the copyright notice on the second left-hand line and placed the legal
+  links on one right-hand line beneath the contact address.
+- Reduced footer typography, padding and dashboard-to-footer whitespace.
+- Updated footer UI contracts and branding documentation.
+
 ### 2026-09-15 - Phase 7.17 navigation icon refinement
 
 - Changed the Resources and admin Notifications navigation icons to outlined
