@@ -17,7 +17,9 @@
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
-- Automated acceptance: 42 test files, 303 tests passed.
+- Automated acceptance: 42 test files, 305 tests passed.
+- Deployed commit `2f2f64f` as Worker version
+  `bdf8637c-f67a-4161-9fac-675412a146cf`.
 
 ### 2026-09-15 - Phase 7.17 API-safe cancellation and exact billing cutoff
 

@@ -187,3 +187,9 @@ for its normal collection date.
 - Production verification found nine historical test credits with no provider
   invoice/payment evidence; all now have zero remaining balance and an
   `INTERNAL_REPAIR_VOID` ledger marker.
+- Git commit: `2f2f64f`
+- Worker version: `bdf8637c-f67a-4161-9fac-675412a146cf`
+- Live authenticated Chromium reload of `/learn/admin/billing` confirmed the
+  deployed settlement-safe UI: no active customer credits, nine consumed
+  historical credits, `Billing audit` links, `Record manual-payment exception`
+  actions, and no application errors in the rendered page.

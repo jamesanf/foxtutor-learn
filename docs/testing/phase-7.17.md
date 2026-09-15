@@ -120,8 +120,8 @@ The complete suite passes:
 
 ```text
 42 test files
-303 tests
-303 passed
+305 tests
+305 passed
 0 failed
 ```
 
