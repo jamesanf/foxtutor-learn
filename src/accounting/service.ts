@@ -70,6 +70,12 @@ export interface AccountingEnvironment {
   FREEAGENT_INVOICE_SALES_TAX_RATE?: string;
   FREEAGENT_COMPANY_SUBDOMAIN?: string;
   FREEAGENT_TEMP_PRODUCTION_REUSE_LEGACY_APP?: string;
+  MAIL_API_URL?: string;
+  MAIL_API_TOKEN?: string;
+  MAIL_API_FROM?: string;
+  MAIL_API_BILLING_FROM?: string;
+  MAIL_API_REPLY_TO?: string;
+  ENVIRONMENT?: string;
 }
 
 export interface AccountingIntegrationStatus {

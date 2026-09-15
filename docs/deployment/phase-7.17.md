@@ -194,14 +194,21 @@ for its normal collection date.
   historical credits, `Billing audit` links, `Record manual-payment exception`
   actions, and no application errors in the rendered page.
 
-The follow-up zero-value billing hardening sends `bank_account: null` to
-FreeAgent for credit-covered invoices. Omitting that field causes FreeAgent to
-render the company-wide bank details, which is misleading for a £0 balance.
-The customer-facing comment uses a normalized `FT-INV-YYMMDDNN` source
-reference or the safe phrase `a previous FoxTutor invoice`; internal credit
-identifiers are never emitted. If FreeAgent rejects the explicit empty
-bank-account field, the operation fails closed rather than creating a
-misleading payable document.
+The follow-up zero-value billing hardening does not create a FreeAgent
+document. Live authenticated testing showed that FreeAgent renders the
+company-wide bank details even when `bank_account: null` is supplied, so a
+provider £0 invoice is not safe for this use. FoxTutor now sends an idempotent
+customer billing statement through FoxMail from `billing@foxtutor.org`,
+using a normalized `FT-INV-YYMMDDNN` reference, the lesson date and a £0.00
+amount due. The statement contains no bank details or payment instructions;
+internal credit identifiers are never emitted.
+
+The local invoice and billing event become settled only after FoxMail accepts
+the message. A rejected, timed-out or ambiguous mail result fails closed,
+records the billing operation outcome and reverses the credit allocation so a
+retry cannot strand the customer's balance. The mail idempotency key prevents
+duplicate statements when a provider accepted a request but the Worker did
+not receive a definitive response.
 
 Cancelling a credit-covered zero-value invoice now reverses the original
 credit application through the immutable ledger exactly once and queues the

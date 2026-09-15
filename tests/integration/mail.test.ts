@@ -63,6 +63,36 @@ describe("mail boundary", () => {
     });
   });
 
+  it("allows billing statements to use the dedicated billing sender", async () => {
+      const calls: Request[] = [];
+      await sendMailDetailed(
+        {
+          ENVIRONMENT: "production",
+          MAIL_API_URL: "https://mail.foxtutor.org",
+          MAIL_API_TOKEN: "test-token",
+          MAIL_API_FROM: "hello@foxtutor.org",
+          MAIL_API_BILLING_FROM: "billing@foxtutor.org"
+        },
+        {
+          to: "student@example.com",
+          fromAddress: "billing@foxtutor.org",
+          fromName: "FoxTutor Billing",
+          subject: "Credit-covered billing statement FT-INV-26091504",
+          text: "Amount due: £0.00",
+          idempotencyKey: "billing-credit-statement-test-1"
+        },
+        async (input, init) => {
+          calls.push(new Request(input, init));
+          return new Response(null, { status: 202 });
+        }
+      );
+      await expect(calls[0].json()).resolves.toMatchObject({
+        from: "billing@foxtutor.org",
+        fromName: "FoxTutor Billing",
+        text: "Amount due: £0.00"
+    });
+  });
+
   it("classifies a request timeout as unknown rather than a permanent failure", async () => {
     const result = await sendMailDetailed(
       {

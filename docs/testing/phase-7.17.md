@@ -167,18 +167,19 @@ Settlement-safe credit and cancellation acceptance now also covers:
 - cancellation emails distinguish not invoiced, provider-cancellation
   pending, payment in transit, confirmed credit and reconciliation-required
   outcomes;
-- credit-covered lessons create a zero-value FreeAgent invoice with the
-  original invoice reference in the comments, are marked locally secured and
-  never receive a Direct Debit operation;
+- credit-covered lessons create an idempotent FoxMail billing statement from
+  `billing@foxtutor.org` with a normalized `FT-INV-YYMMDDNN` reference,
+  lesson date, source-invoice reference and £0.00 amount due. They are marked
+  locally secured only after mail acceptance and never receive a FreeAgent
+  invoice or Direct Debit operation;
 - no-mandate lessons are explicitly classified as
   `NO_MANDATE_MANUAL_PAYMENT`, leaving the lesson bookable while warning the
   tutor that manual payment is required;
 - active credit is separated from consumed history in the student and admin
   billing views.
-- zero-value credit-covered invoices use only normalized `FT-INV-YYMMDDNN`
-  source references, never internal credit IDs, and explicitly clear
-  FreeAgent's invoice bank-account field so a customer is not given payment
-  instructions for a £0 balance;
+- zero-value credit-covered statements use only normalized `FT-INV-YYMMDDNN`
+  source references, never internal credit IDs, and contain no bank details or
+  payment instructions;
 - cancelling a credit-covered zero-value lesson reverses the original credit
   ledger application exactly once and queues provider-document cancellation;
 - recurring cancellation uses the same zero-value credit reversal and provider

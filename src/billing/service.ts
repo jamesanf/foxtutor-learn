@@ -12,7 +12,8 @@ import {
   resetInvoiceCreditAllocation,
   updateBillingEventStatus,
   updateBillingInvoice,
-  type BillingInvoiceOperation
+  type BillingInvoiceOperation,
+  type BillingEvent
 } from "../db/billing";
 import { findExternalAccountingLink } from "../db/accounting";
 import {
@@ -25,6 +26,7 @@ import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
 import { datedInvoiceReference, isCollectionDateReached } from "../domain/billing";
 import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
+import { sendMailDetailed, type MailDeliveryResult, type MailEnvironment } from "../mail/client";
 
 function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
@@ -42,6 +44,38 @@ function providerAmountIsPositive(value: string | null | undefined): boolean {
 function providerAmountIsNotOutstanding(value: string | null | undefined): boolean {
   const amount = Number(value);
   return Number.isFinite(amount) && amount <= 0;
+}
+
+function escapeMailHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character] ?? character
+  ));
+}
+
+class BillingMailError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+    readonly unknown: boolean
+  ) {
+    super(message);
+    this.name = "BillingMailError";
+  }
+}
+
+export function renderCreditCoveredStatement(
+  studentName: string,
+  invoiceReference: string,
+  lessonDate: string,
+  sourceReferences: string[]
+): { subject: string; text: string; html: string } {
+  const safeReferences = sourceReferences.filter((reference) => /^FT-INV-\d{8,10}$/.test(reference));
+  const source = safeReferences.length ? `invoice ${safeReferences.join(", ")}` : "a previous FoxTutor invoice";
+  return {
+    subject: `Credit-covered billing statement ${invoiceReference}`,
+    text: `Hello ${studentName},\n\nThis is a credit-covered FoxTutor billing statement for your lesson on ${lessonDate}.\n\nInvoice reference: ${invoiceReference}\nCredit applied from ${source}\nAmount due: £0.00\nDirect Debit is not required and no payment is due.\n\nPlease contact billing@foxtutor.org if you have any questions.`,
+    html: `<p>Hello ${escapeMailHtml(studentName)},</p><p>This is a credit-covered FoxTutor billing statement for your lesson on <strong>${escapeMailHtml(lessonDate)}</strong>.</p><dl><dt>Invoice reference</dt><dd>${escapeMailHtml(invoiceReference)}</dd><dt>Credit applied</dt><dd>From ${escapeMailHtml(source)}</dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>Direct Debit is not required and no payment is due.</p><p>Please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a> if you have any questions.</p>`
+  };
 }
 
 function legacyInvoiceReference(id: string): string {
@@ -113,7 +147,37 @@ async function invoiceReferenceFor(
 
 export function renderCreditCoveredInvoiceComment(sourceReferences: string[]): string {
   const safeReferences = sourceReferences.filter((reference) => /^FT-INV-\d{8,10}$/.test(reference));
-  return `Credit from ${safeReferences.length ? `invoice ${safeReferences.join(", ")}` : "a previous FoxTutor invoice"} applied to this lesson; amount due £0.00. Direct Debit is not required. No payment is due and the bank details shown by FreeAgent must be ignored.`;
+  return `Credit from ${safeReferences.length ? `invoice ${safeReferences.join(", ")}` : "a previous FoxTutor invoice"} applied to this lesson; amount due £0.00. Direct Debit is not required. Please ignore the payment details above.`;
+}
+
+async function sendCreditCoveredStatement(
+  db: D1Database,
+  env: AccountingEnvironment & MailEnvironment,
+  event: BillingEvent,
+  invoiceReference: string,
+  lessonDate: string,
+  sourceReferences: string[],
+  fetcher: typeof fetch
+): Promise<Extract<MailDeliveryResult, { kind: "accepted" }>> {
+  const student = await db.prepare("SELECT name, email FROM students WHERE id = ?")
+    .bind(event.student_id)
+    .first<{ name: string; email: string }>();
+  if (!student?.email) throw new Error("A student email is required for the credit-covered billing statement.");
+  const { subject, text, html } = renderCreditCoveredStatement(student.name, invoiceReference, lessonDate, sourceReferences);
+  const result = await sendMailDetailed(env, {
+    to: student.email,
+    fromAddress: env.MAIL_API_BILLING_FROM ?? "billing@foxtutor.org",
+    fromName: "FoxTutor Billing",
+    replyTo: env.MAIL_API_REPLY_TO,
+    subject,
+    text,
+    html,
+    idempotencyKey: `billing-credit-statement-${event.id}`
+  }, fetcher);
+  if (result.kind === "failed") {
+    throw new BillingMailError(result.safeMessage, result.retryable, result.unknown);
+  }
+  return result;
 }
 
 async function markOperationFailure(
@@ -128,7 +192,10 @@ async function markOperationFailure(
   const code = shape?.code ?? "UNKNOWN";
   const message = apiError?.message ?? "Billing provider operation failed.";
   const unknown = Boolean(shape?.unknown) || code === "NETWORK" || code === "TIMEOUT";
-  const status = unknown ? "UNKNOWN" : shape?.retryable ? "RETRYABLE" : "FAILED";
+  const mailError = error instanceof BillingMailError;
+  const effectiveUnknown = mailError ? error.unknown : unknown;
+  const effectiveRetryable = mailError ? error.retryable : shape?.retryable;
+  const status = effectiveUnknown ? "UNKNOWN" : effectiveRetryable ? "RETRYABLE" : "FAILED";
   const retryAt = status === "RETRYABLE"
     ? shape?.retryAfterSeconds
       ? new Date(Date.parse(now) + shape.retryAfterSeconds * 1000).toISOString()
@@ -136,8 +203,8 @@ async function markOperationFailure(
     : null;
   await markBillingInvoiceOperation(db, operation.id, {
     status,
-    providerStatus: shape?.status ? String(shape.status) : "ERROR",
-    safeErrorCode: code,
+    providerStatus: shape?.status ? String(shape.status) : mailError ? "MAIL_PROVIDER" : "ERROR",
+    safeErrorCode: mailError ? "MAIL_PROVIDER" : code,
     safeErrorMessage: message,
     nextAttemptAt: retryAt
   }, now);
@@ -145,7 +212,18 @@ async function markOperationFailure(
     await reverseInvoiceCreditApplications(db, context.invoiceId, now);
     await updateBillingInvoice(db, context.invoiceId, {
       status: "FAILED",
-      providerStatus: "PROVIDER_FAILED",
+      providerStatus: mailError ? "MAIL_PROVIDER_FAILED" : "PROVIDER_FAILED",
+      now
+    });
+  } else if (context.invoiceId && operation.operation_type !== "CANCEL_INVOICE" && mailError && status === "UNKNOWN") {
+    await reverseInvoiceCreditApplications(db, context.invoiceId, now);
+    const event = context.billingEventId ? await findBillingEvent(db, context.billingEventId) : null;
+    if (event) {
+      await resetInvoiceCreditAllocation(db, context.invoiceId, event.id, BigInt(event.gross_amount_minor), now);
+    }
+    await updateBillingInvoice(db, context.invoiceId, {
+      status: "UNKNOWN",
+      providerStatus: "RECONCILIATION_REQUIRED",
       now
     });
   } else if (context.invoiceId && operation.operation_type !== "CANCEL_INVOICE" && status === "UNKNOWN") {
@@ -169,14 +247,14 @@ async function markOperationFailure(
   await createBillingAlert(db, {
     id: `billing-alert:${operation.id}:${status}`,
     deduplicationKey: `billing-operation:${operation.id}:${status}`,
-    alertType: unknown ? "PROVIDER_TIMEOUT" : status === "FAILED" ? "INVOICE_CREATION_FAILURE" : "RECONCILIATION_REQUIRED",
-    severity: unknown || status === "FAILED" ? "ERROR" : "WARNING",
+    alertType: effectiveUnknown ? "PROVIDER_TIMEOUT" : status === "FAILED" ? "INVOICE_CREATION_FAILURE" : "RECONCILIATION_REQUIRED",
+    severity: effectiveUnknown || status === "FAILED" ? "ERROR" : "WARNING",
     studentId: context.studentId,
     lessonId: context.lessonId,
     billingEventId: context.billingEventId,
     invoiceId: context.invoiceId,
     currentState: `${operation.operation_type}:${status}`,
-    recommendedAction: unknown
+    recommendedAction: effectiveUnknown
       ? "Reconcile the provider reference before retrying."
       : status === "FAILED"
         ? "Review the provider error and correct the billing configuration."
@@ -202,18 +280,6 @@ async function processCreateInvoice(
     }, now);
     return;
   }
-  const environment = env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production"
-    ? env.FREEAGENT_ENVIRONMENT
-    : null;
-  if (!environment || invoice.provider_environment !== environment) {
-    await markBillingInvoiceOperation(db, operation.id, {
-      status: "BLOCKED",
-      providerStatus: "ENVIRONMENT_MISMATCH",
-      safeErrorCode: "CONFIGURATION",
-      safeErrorMessage: "The billing invoice is not associated with the selected FreeAgent environment."
-    }, now);
-    return;
-  }
   const event = await findBillingEvent(db, invoice.billing_event_id);
   if (!event || event.status === "CANCELLED") {
     await updateBillingInvoice(db, invoice.id, { status: "CANCELLED", providerStatus: "LESSON_CANCELLED", now });
@@ -234,58 +300,90 @@ async function processCreateInvoice(
       grossAmountMinor: BigInt(invoice.gross_amount_minor),
       now
     });
-  const config = await configuredInvoiceFromDatabase(db, env, now);
-  const link = await findExternalAccountingLink(db, event.student_id, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
-  if (!config || !link || link.status !== "VERIFIED") {
-    await reverseInvoiceCreditApplications(db, invoice.id, now);
-    await resetInvoiceCreditAllocation(db, invoice.id, event.id, BigInt(invoice.gross_amount_minor), now);
-    await markBillingInvoiceOperation(db, operation.id, {
-      status: "RETRYABLE",
-      providerStatus: !config ? "BILLING_MAPPING_REQUIRED" : "CONTACT_MAPPING_REQUIRED",
-      safeErrorCode: "CONFIGURATION",
-      safeErrorMessage: !config
-        ? "FreeAgent billing mapping is not configured."
-        : "A verified FreeAgent contact mapping is required.",
-      nextAttemptAt: nextAccountingRetryAt(now, operation.attempt_count)
-    }, now);
-    await createBillingAlert(db, {
-      id: `billing-alert:${operation.id}:configuration`,
-      deduplicationKey: `billing-operation:${operation.id}:configuration`,
-      alertType: !config ? "INVOICE_CREATION_FAILURE" : "INVOICE_NOT_CREATED",
-      severity: "ERROR",
-      studentId: event.student_id,
-      payerStudentId: event.payer_student_id,
-      lessonId: event.lesson_id,
-      billingEventId: event.id,
-      invoiceId: invoice.id,
-      currentState: "INVOICE_BLOCKED",
-      recommendedAction: !config ? "Configure the approved FreeAgent billing mapping." : "Verify the payer's FreeAgent contact mapping.",
-      now
-    });
-    return;
-  }
-  const legacyReference = legacyInvoiceReference(event.id);
   try {
-    let existing = await providerCall(db, env, now, fetcher, (client, token) =>
-      client.findInvoiceByReference(token, link.external_url, legacyReference)
-    );
-    const reference = existing ? legacyReference : await invoiceReferenceFor(db, invoice);
-    if (!existing && reference !== legacyReference) {
-      existing = await providerCall(db, env, now, fetcher, (client, token) =>
-        client.findInvoiceByReference(token, link.external_url, reference)
-      );
-    }
     const lessonDate = event.lesson_date ?? event.billing_date ?? now.slice(0, 10);
     const collectionDate = event.collection_date ?? lessonDate;
     const zeroValue = allocated.netAmountMinor === 0n;
+    const reference = await invoiceReferenceFor(db, invoice);
     const sourceReferences = zeroValue ? await creditSourceReferences(db, invoice.id) : [];
     const comments = zeroValue
       ? renderCreditCoveredInvoiceComment(sourceReferences)
       : `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`;
+    if (zeroValue) {
+      const delivery = await sendCreditCoveredStatement(db, env, event, reference, lessonDate, sourceReferences, fetcher);
+      await updateBillingInvoice(db, invoice.id, {
+        status: "PAID",
+        creditAppliedMinor: allocated.creditAppliedMinor,
+        netAmountMinor: allocated.netAmountMinor,
+        freeagentReference: reference,
+        freeagentUrl: null,
+        providerStatus: "CREDIT_COVERED_EMAIL",
+        now
+      });
+      await updateBillingEventStatus(db, event.id, "SETTLED", now, reference, null, "CREDIT_COVERED_EMAIL");
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "SUCCEEDED",
+        providerReference: delivery.providerReference ?? reference,
+        providerStatus: "CREDIT_COVERED_EMAIL"
+      }, now);
+      return;
+    }
+    const environment = env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production"
+      ? env.FREEAGENT_ENVIRONMENT
+      : null;
+    if (!environment || invoice.provider_environment !== environment) {
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "BLOCKED",
+        providerStatus: "ENVIRONMENT_MISMATCH",
+        safeErrorCode: "CONFIGURATION",
+        safeErrorMessage: "The billing invoice is not associated with the selected FreeAgent environment."
+      }, now);
+      return;
+    }
+    const config = await configuredInvoiceFromDatabase(db, env, now);
+    const link = await findExternalAccountingLink(db, event.student_id, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
+    if (!config || !link || link.status !== "VERIFIED") {
+      await reverseInvoiceCreditApplications(db, invoice.id, now);
+      await resetInvoiceCreditAllocation(db, invoice.id, event.id, BigInt(invoice.gross_amount_minor), now);
+      await markBillingInvoiceOperation(db, operation.id, {
+        status: "RETRYABLE",
+        providerStatus: !config ? "BILLING_MAPPING_REQUIRED" : "CONTACT_MAPPING_REQUIRED",
+        safeErrorCode: "CONFIGURATION",
+        safeErrorMessage: !config
+          ? "FreeAgent billing mapping is not configured."
+          : "A verified FreeAgent contact mapping is required.",
+        nextAttemptAt: nextAccountingRetryAt(now, operation.attempt_count)
+      }, now);
+      await createBillingAlert(db, {
+        id: `billing-alert:${operation.id}:configuration`,
+        deduplicationKey: `billing-operation:${operation.id}:configuration`,
+        alertType: !config ? "INVOICE_CREATION_FAILURE" : "INVOICE_NOT_CREATED",
+        severity: "ERROR",
+        studentId: event.student_id,
+        payerStudentId: event.payer_student_id,
+        lessonId: event.lesson_id,
+        billingEventId: event.id,
+        invoiceId: invoice.id,
+        currentState: "INVOICE_BLOCKED",
+        recommendedAction: !config ? "Configure the approved FreeAgent billing mapping." : "Verify the payer's FreeAgent contact mapping.",
+        now
+      });
+      return;
+    }
+    const legacyReference = legacyInvoiceReference(event.id);
+    let existing = await providerCall(db, env, now, fetcher, (client, token) =>
+      client.findInvoiceByReference(token, link.external_url, legacyReference)
+    );
+    const providerReferenceValue = existing ? legacyReference : reference;
+    if (!existing && providerReferenceValue !== legacyReference) {
+      existing = await providerCall(db, env, now, fetcher, (client, token) =>
+        client.findInvoiceByReference(token, link.external_url, providerReferenceValue)
+      );
+    }
     const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
       client.createDraftInvoice(token, {
         contactUrl: link.external_url,
-        reference,
+        reference: providerReferenceValue,
         datedOn: lessonDate,
         paymentTermsInDays: config.paymentTermsInDays,
         itemType: config.itemType,
@@ -295,8 +393,7 @@ async function processCreateInvoice(
         categoryUrl: config.categoryUrl,
         currency: config.currency,
         salesTaxRate: config.salesTaxRate,
-        ...(zeroValue ? { bankAccountUrl: null } : {}),
-        enableGoCardless: !zeroValue && config.currency === "GBP"
+        enableGoCardless: config.currency === "GBP"
       })
     );
     const sent = !draft.status || draft.status === "Draft"

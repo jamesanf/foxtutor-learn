@@ -350,7 +350,8 @@ export async function cancelLesson(
     now: input.now
   });
   const creditStatements = input.eventType === "ADMIN_CANCELLED" && billedInvoice?.credit_eligible
-    ? BigInt(billedInvoice.net_amount_minor) === 0n && BigInt(billedInvoice.credit_applied_minor) > 0n
+    ? billedInvoice.net_amount_minor != null && billedInvoice.credit_applied_minor != null
+      && BigInt(billedInvoice.net_amount_minor) === 0n && BigInt(billedInvoice.credit_applied_minor) > 0n
       ? await invoiceCreditReversalStatements(db, billedInvoice.id, input.now)
       : input.creditAmountMinor
         ? cancellationCreditStatements(db, {

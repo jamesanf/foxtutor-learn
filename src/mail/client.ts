@@ -1,5 +1,6 @@
 export interface MailMessage {
   to: string;
+  fromAddress?: string;
   fromName?: string;
   replyTo?: string;
   subject: string;
@@ -12,6 +13,7 @@ export interface MailEnvironment {
   MAIL_API_URL?: string;
   MAIL_API_TOKEN?: string;
   MAIL_API_FROM?: string;
+  MAIL_API_BILLING_FROM?: string;
   MAIL_API_REPLY_TO?: string;
   MAIL_API_ACCESS_CLIENT_ID?: string;
   MAIL_API_ACCESS_CLIENT_SECRET?: string;
@@ -78,7 +80,7 @@ export async function sendMailDetailed(
         method: "POST",
         headers,
         body: JSON.stringify({
-          from: env.MAIL_API_FROM,
+          from: message.fromAddress ?? env.MAIL_API_FROM,
           ...(message.fromName ? { fromName: message.fromName } : {}),
           to: [message.to],
           cc: [],

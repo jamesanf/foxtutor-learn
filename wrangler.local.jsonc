@@ -31,6 +31,8 @@
     "PUBLIC_ORIGIN": "http://localhost:8787/learn",
     "CALENDAR_FEED_ENCRYPTION_KEY": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     "MAIL_API_URL": "https://mail.foxtutor.org",
-    "MAIL_API_FROM": "hello@foxtutor.org"
+    "MAIL_API_FROM": "hello@foxtutor.org",
+    "MAIL_API_BILLING_FROM": "billing@foxtutor.org",
+    "MAIL_API_REPLY_TO": "james@foxtutor.org"
   }
 }

@@ -232,6 +232,8 @@ export interface Env {
   MAIL_API_URL?: string;
   MAIL_API_TOKEN?: string;
   MAIL_API_FROM?: string;
+  MAIL_API_BILLING_FROM?: string;
+  MAIL_API_REPLY_TO?: string;
   MAIL_API_ACCESS_CLIENT_ID?: string;
   MAIL_API_ACCESS_CLIENT_SECRET?: string;
   FREEAGENT_ENVIRONMENT?: string;
