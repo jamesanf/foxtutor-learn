@@ -305,8 +305,9 @@ invoice whose collection has started now remains outside the FreeAgent
 A separate near-term controlled recurring fixture reached the Production
 FreeAgent scheduler but FreeAgent rejected its invoice creation with HTTP
 422. No provider invoice or collection operation was created; the fixture is
-therefore classified as provider-validation `AMBER`, not as cancellation
-success.
+therefore classified as a controlled provider-validation fixture rather than
+customer payment activity. Its failed local invoice was later cancelled and
+resolved through the authenticated Learn workflow.
 
 ## Traffic-light closure: 15 September 2026
 
@@ -334,10 +335,19 @@ HTTP status, classification and a redacted response summary for future
 validation failures while retaining generic customer-safe error text. It does
 not log emails, URLs or long numeric identifiers.
 
-The authenticated Production Billing dashboard rendered no open billing
-alerts. Remaining historical Sandbox rows were cancelled through Chromium
-and their Sandbox `CANCEL_INVOICE` operations were queued for the scheduled
-worker. No real-money collection was initiated.
+The authenticated Production Billing dashboard rendered zero upcoming lessons
+requiring billing attention and no open billing alerts. Remaining historical
+Sandbox rows were cancelled through Chromium; absent-provider outcomes were
+closed with explicit `NOT_FOUND_CANCELED` or
+`CONTROLLED_SANDBOX_CLOSED` states. Production D1 ended with zero actionable
+billing operations and no real-money collection initiated.
+
+Two controlled zero-value Production invoices whose credit reversals had
+already been recorded locally but whose old provider/application state was
+stale were reconciled by migration
+`0040_reconcile_restored_credit_fixtures.sql`. Their local outcomes are now
+`CANCELLED / CREDIT_RESTORED`; the immutable credit ledger remains intact and
+the historical provider application failure is retained for audit.
 
 ### Remaining amber gates
 
