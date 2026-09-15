@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 booking conflict detection
+
+- Added tutor-wide overlap detection for standalone bookings, excluding
+  cancelled lessons and allowing exact boundary-touching intervals.
+- Conflict notifications now identify the existing student's name, booking
+  type, date and time instead of showing a generic overlap message.
+- Added recurring-series preflight checks for every occurrence in the bounded
+  six-week Europe/London materialisation window.
+- Protected recurring resume and scheduled materialisation from creating
+  overlapping lessons; rejected creation does not persist a new series.
+
 ### 2026-09-15 - Phase 7.17 Dashboard New Booking modal
 
 - Changed the admin Dashboard `Add lesson` action to `New Booking`.

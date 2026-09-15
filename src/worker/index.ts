@@ -19,6 +19,7 @@ import {
 import {
   findLesson,
   findLessonForUser,
+  findOverlappingLesson,
   hasOverlappingLesson,
   insertLesson,
   countActiveStudents,
@@ -41,7 +42,8 @@ import {
   markElapsedScheduledLessonsCompleted,
   updateLesson,
   updateLessonStatus,
-  type Lesson
+  type Lesson,
+  type LessonConflict
 } from "../db/lessons";
 import {
   countResources,
@@ -121,9 +123,11 @@ import {
   createRecurringSeries,
   ensureAllRecurringSeriesMaterialised,
   ensureRecurringSeriesMaterialised,
+  findRecurringSeriesConflict,
   findRecurringSeries,
   listRecurringSeriesPage,
   countRecurringSeries,
+  RecurringLessonConflictError,
   setRecurringSeriesStatus,
   cancelRecurringLesson
 } from "../db/recurrence";
@@ -876,7 +880,7 @@ function calendarView(lessons: Lesson[], role: Role): string {
   return `<section class="calendar-shell" aria-label="${role === "ADMIN" ? "Admin lesson calendar" : "My lesson calendar"}"><div class="calendar-surface"><div id="calendar" class="calendar-host" data-calendar-role="${role}" data-calendar-timezone="${CALENDAR_TIMEZONE}" data-calendar-initial-date="${currentCalendarDate()}" data-calendar-events="${escapeHtml(JSON.stringify(events))}"></div></div></section>`;
 }
 
-function bookingDate(lesson: Lesson): string {
+function bookingDate(lesson: Pick<Lesson, "start_at" | "timezone">): string {
   return new Intl.DateTimeFormat("en-GB", {
     weekday: "short",
     day: "2-digit",
@@ -885,9 +889,14 @@ function bookingDate(lesson: Lesson): string {
   }).format(new Date(lesson.start_at));
 }
 
-function bookingTime(lesson: Lesson): string {
+function bookingTime(lesson: Pick<Lesson, "start_at" | "end_at" | "timezone">): string {
   const formatter = new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: lesson.timezone });
   return `${formatter.format(new Date(lesson.start_at))}–${formatter.format(new Date(lesson.end_at))}`;
+}
+
+function bookingConflictMessage(conflict: LessonConflict): string {
+  const bookingType = conflict.recurring_series_id ? "recurring lesson" : "lesson";
+  return `This booking clashes with ${conflict.student_name}'s existing ${bookingType} on ${bookingDate(conflict)}, ${bookingTime(conflict)}. Choose a different time.`;
 }
 
 function bookingDuration(lesson: Lesson): string {
@@ -2225,6 +2234,17 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       return appPage(active.user, csrfToken, "Create recurring series", recurringSeriesForm(csrfToken, students, "Enter a valid student, weekly time, price and date range."));
     }
     const now = new Date().toISOString();
+    const today = currentCalendarDate(new Date(now));
+    const conflict = await findRecurringSeriesConflict(db, {
+      dayOfWeek,
+      localStartTime,
+      durationMinutes,
+      startDate,
+      endDate
+    }, today);
+    if (conflict) {
+      return appPage(active.user, csrfToken, "Create recurring series", recurringSeriesForm(csrfToken, students, bookingConflictMessage(conflict)));
+    }
     const seriesId = crypto.randomUUID();
     await createRecurringSeries(db, {
       id: seriesId,
@@ -2240,7 +2260,19 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     });
     const createdSeries = await findRecurringSeries(db, seriesId);
     if (!createdSeries) return messagePage("Series creation failed", "The recurring lesson series could not be read after it was saved.", 500);
-    await ensureRecurringSeriesMaterialised(db, createdSeries, currentCalendarDate(new Date(now)), now);
+    try {
+      await ensureRecurringSeriesMaterialised(db, createdSeries, currentCalendarDate(new Date(now)), now);
+    } catch (error) {
+      if (!(error instanceof RecurringLessonConflictError)) throw error;
+      await setRecurringSeriesStatus(db, {
+        id: seriesId,
+        status: "CANCELLED",
+        actorUserId: active.user.id,
+        now,
+        details: bookingConflictMessage(error.conflict)
+      });
+      return messagePage("Booking conflict", bookingConflictMessage(error.conflict), 409);
+    }
     return redirect("/learn/admin/bookings");
   }
   if (route === "admin-series-action") {
@@ -2258,10 +2290,27 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       await addRecurringPause(db, { id: crypto.randomUUID(), seriesId, startsOn, endsOn, reason, actorUserId: active.user.id, now });
       await setRecurringSeriesStatus(db, { id: seriesId, status: "PAUSED", actorUserId: active.user.id, now, details: `${startsOn} to ${endsOn}: ${reason}` });
     } else if (action === "resume") {
+      const pausedSeries = await findRecurringSeries(db, seriesId);
+      if (!pausedSeries) return messagePage("Series resume failed", "The recurring lesson series could not be found.", 404);
+      const conflict = await findRecurringSeriesConflict(db, {
+        seriesId: pausedSeries.id,
+        dayOfWeek: pausedSeries.day_of_week,
+        localStartTime: pausedSeries.local_start_time,
+        durationMinutes: pausedSeries.duration_minutes,
+        startDate: pausedSeries.start_date,
+        endDate: pausedSeries.end_date
+      }, currentCalendarDate(new Date(now)));
+      if (conflict) return messagePage("Booking conflict", bookingConflictMessage(conflict), 409);
       await setRecurringSeriesStatus(db, { id: seriesId, status: "ACTIVE", actorUserId: active.user.id, now, details: "Recurring series resumed." });
       const resumedSeries = await findRecurringSeries(db, seriesId);
       if (!resumedSeries) return messagePage("Series resume failed", "The recurring lesson series could not be read after it was resumed.", 500);
-      await ensureRecurringSeriesMaterialised(db, resumedSeries, currentCalendarDate(new Date(now)), now);
+      try {
+        await ensureRecurringSeriesMaterialised(db, resumedSeries, currentCalendarDate(new Date(now)), now);
+      } catch (error) {
+        if (!(error instanceof RecurringLessonConflictError)) throw error;
+        await setRecurringSeriesStatus(db, { id: seriesId, status: "PAUSED", actorUserId: active.user.id, now, details: bookingConflictMessage(error.conflict) });
+        return messagePage("Booking conflict", bookingConflictMessage(error.conflict), 409);
+      }
     } else {
       const endDate = formText(form ?? new FormData(), "endDate") || currentCalendarDate();
       await setRecurringSeriesStatus(db, { id: seriesId, status: "ENDED", endDate, actorUserId: active.user.id, now, details: `Series ended on ${endDate}.` });
@@ -3111,7 +3160,8 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     if (startError || !validation.value || validation.value.status !== "scheduled") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, startError ?? validation.error ?? "New lessons must start as scheduled.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     const student = await findStudent(db, validation.value.studentId);
     if (!student || student.status !== "ACTIVE") return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "Choose an active student.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
-    if (await hasOverlappingLesson(db, validation.value.studentId, validation.value.startAt, validation.value.endAt)) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, "This student already has a lesson overlapping this time.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
+    const conflict = await findOverlappingLesson(db, validation.value.startAt, validation.value.endAt);
+    if (conflict) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, bookingConflictMessage(conflict), undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     const now = new Date().toISOString();
     const lessonId = crypto.randomUUID();
     await insertLesson(db, { ...validation.value, id: lessonId, now });

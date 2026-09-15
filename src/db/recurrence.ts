@@ -2,6 +2,7 @@ import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
 import { recurringOccurrencesInWindow, sixWeekWindow, type RecurrencePause } from "../domain/recurrence";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
 import { cancellationCreditStatements } from "./billing";
+import { findOverlappingLesson, type LessonConflict } from "./lessons";
 
 export interface RecurringLessonSeries {
   id: string;
@@ -38,6 +39,51 @@ export interface MaterialisationResult {
   createdLessons: number;
   updatedLessons: number;
   createdBillingEvents: number;
+}
+
+export class RecurringLessonConflictError extends Error {
+  constructor(public readonly conflict: LessonConflict) {
+    super("Recurring lesson conflicts with an existing lesson.");
+    this.name = "RecurringLessonConflictError";
+  }
+}
+
+export async function findRecurringSeriesConflict(
+  db: D1Database,
+  input: {
+    seriesId?: string | null;
+    dayOfWeek: number;
+    localStartTime: string;
+    durationMinutes: number;
+    startDate: string;
+    endDate?: string | null;
+  },
+  today: string
+): Promise<LessonConflict | null> {
+  const window = sixWeekWindow(today);
+  const pauses = input.seriesId ? await listRecurringPauses(db, input.seriesId) : [];
+  const occurrences = recurringOccurrencesInWindow({
+    dayOfWeek: input.dayOfWeek,
+    localStartTime: input.localStartTime,
+    durationMinutes: input.durationMinutes,
+    timezone: FOX_TUTOR_TIMEZONE,
+    startDate: input.startDate,
+    endDate: input.endDate
+  }, window.startDate, window.endDate, pauses.map((pause) => ({
+    startsOn: pause.starts_on,
+    endsOn: pause.ends_on
+  })) as RecurrencePause[]);
+
+  for (const occurrence of occurrences) {
+    const existing = input.seriesId
+      ? await db.prepare(
+        "SELECT id FROM lessons WHERE recurring_series_id = ? AND recurrence_key = ?"
+      ).bind(input.seriesId, occurrence.recurrenceKey).first<{ id: string }>()
+      : null;
+    const conflict = await findOverlappingLesson(db, occurrence.startAt, occurrence.endAt, existing?.id);
+    if (conflict) return conflict;
+  }
+  return null;
 }
 
 export async function findRecurringSeries(db: D1Database, id: string): Promise<RecurringLessonSeries | null> {
@@ -231,6 +277,13 @@ export async function ensureRecurringSeriesMaterialised(
     startsOn: pause.starts_on,
     endsOn: pause.ends_on
   })) as RecurrencePause[]);
+  for (const occurrence of occurrences) {
+    const existing = await db.prepare(
+      "SELECT id FROM lessons WHERE recurring_series_id = ? AND recurrence_key = ?"
+    ).bind(series.id, occurrence.recurrenceKey).first<{ id: string }>();
+    const conflict = await findOverlappingLesson(db, occurrence.startAt, occurrence.endAt, existing?.id);
+    if (conflict) throw new RecurringLessonConflictError(conflict);
+  }
   let createdLessons = 0;
   let updatedLessons = 0;
   let createdBillingEvents = 0;

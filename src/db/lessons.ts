@@ -17,6 +17,17 @@ export interface Lesson {
   report_status?: "DRAFT" | "SENT" | null;
 }
 
+export interface LessonConflict {
+  id: string;
+  student_id: string;
+  student_name: string;
+  start_at: string;
+  end_at: string;
+  timezone: string;
+  status: LessonStatus;
+  recurring_series_id?: string | null;
+}
+
 const lessonColumns = "l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.status, l.notes, l.external_url, l.created_at, l.updated_at";
 const studentLessonColumns = "l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.status, l.external_url, l.created_at, l.updated_at, l.recurring_series_id";
 
@@ -306,6 +317,25 @@ export async function hasOverlappingLesson(
   const bindings = excludeId ? [studentId, excludeId, endAt, startAt] : [studentId, endAt, startAt];
   const row = await db.prepare(query).bind(...bindings).first<{ id: string }>();
   return Boolean(row);
+}
+
+export async function findOverlappingLesson(
+  db: D1Database,
+  startAt: string,
+  endAt: string,
+  excludeId?: string
+): Promise<LessonConflict | null> {
+  const query = excludeId
+    ? `SELECT l.id, l.student_id, s.name AS student_name, l.start_at, l.end_at, l.timezone, l.status, l.recurring_series_id
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       WHERE l.status != 'cancelled' AND l.id != ? AND l.start_at < ? AND l.end_at > ?
+       ORDER BY l.start_at ASC, l.id ASC LIMIT 1`
+    : `SELECT l.id, l.student_id, s.name AS student_name, l.start_at, l.end_at, l.timezone, l.status, l.recurring_series_id
+       FROM lessons l JOIN students s ON s.id = l.student_id
+       WHERE l.status != 'cancelled' AND l.start_at < ? AND l.end_at > ?
+       ORDER BY l.start_at ASC, l.id ASC LIMIT 1`;
+  const bindings = excludeId ? [excludeId, endAt, startAt] : [endAt, startAt];
+  return db.prepare(query).bind(...bindings).first<LessonConflict>();
 }
 
 export async function insertLesson(db: D1Database, lesson: LessonInput & { id: string; now: string }): Promise<void> {

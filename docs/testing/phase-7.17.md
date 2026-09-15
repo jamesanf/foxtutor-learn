@@ -52,6 +52,16 @@ Automated UI contracts cover:
   sent time descending as the default and a ten-page cap for each page size.
 - scheduled notification cleanup retaining the latest 480 completed records
   while preserving active and unresolved delivery states.
+- standalone booking conflict checks covering exact overlap, cancelled lessons,
+  boundary-touching intervals and cross-student tutor schedule clashes;
+- conflict messages identifying the existing student's name, booking type,
+  date and time;
+- recurring-series preflight checks across the bounded six-week
+  Europe/London materialisation window, including existing materialised
+  lessons, deterministic first-conflict selection and DST-safe occurrence
+  calculation;
+- recurring resume and scheduled materialisation guards that leave the series
+  paused or cancelled rather than silently creating an overlapping lesson.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,
@@ -95,12 +105,14 @@ The complete suite passes:
 
 ```text
 41 test files
-290 tests
-290 passed
+292 tests
+292 passed
 0 failed
 ```
 
 The TypeScript check and client build also pass. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and
 explicit resume path in addition to the dashboard and student submission
-journeys. No real financial operation is part of this feature.
+journeys. The conflict flows additionally require an authenticated admin
+session to exercise both New Booking modal paths against live data. No real
+financial operation is part of this feature.

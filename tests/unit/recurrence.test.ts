@@ -4,7 +4,7 @@ import {
   sixWeekWindow,
   zonedDateTimeToUtc
 } from "../../src/domain/recurrence";
-import { ensureRecurringSeriesMaterialised } from "../../src/db/recurrence";
+import { ensureRecurringSeriesMaterialised, findRecurringSeriesConflict } from "../../src/db/recurrence";
 
 describe("recurring lesson materialisation", () => {
   it("maintains a six-week inclusive rolling window without generating an infinite series", () => {
@@ -58,6 +58,40 @@ describe("recurring lesson materialisation", () => {
       timezone: "America/New_York",
       startDate: "2026-09-01"
     }, "2026-09-01", "2026-10-01")).toThrow("Europe/London");
+  });
+
+  it("finds the first pre-existing lesson in the six-week materialisation window", async () => {
+    const conflict = {
+      id: "lesson-existing",
+      student_id: "student-existing",
+      student_name: "Another Student",
+      start_at: "2026-09-14T10:00:00.000Z",
+      end_at: "2026-09-14T10:55:00.000Z",
+      timezone: "Europe/London",
+      status: "scheduled" as const,
+      recurring_series_id: null
+    };
+    const db = {
+      prepare(sql: string) {
+        return {
+          bind(..._values: unknown[]) {
+            return {
+              async first<T>() {
+                if (sql.includes("SELECT id FROM lessons WHERE recurring_series_id")) return null;
+                return conflict as T;
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+
+    await expect(findRecurringSeriesConflict(db, {
+      dayOfWeek: 1,
+      localStartTime: "10:00",
+      durationMinutes: 55,
+      startDate: "2026-09-14"
+    }, "2026-09-14")).resolves.toEqual(conflict);
   });
 
   it("materialises a recurring lesson against the partial unique index", async () => {

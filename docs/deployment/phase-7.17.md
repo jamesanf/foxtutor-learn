@@ -72,6 +72,12 @@ legacy recurring-series creation URL redirects to Bookings with the recurring
 form selected in the modal.
 The admin Dashboard now uses the same `New Booking` trigger and modal tree,
 including when there are no upcoming bookings.
+Standalone booking creation now checks the complete tutor schedule before
+inserting a lesson and reports the conflicting student's name, booking type,
+date and time. Recurring creation preflights every occurrence in the bounded
+six-week Europe/London materialisation window before persisting the series.
+Resume and later materialisation perform the same check and refuse to create
+an occupied occurrence rather than silently overlapping an existing booking.
 
 ## Required validation
 
@@ -100,15 +106,20 @@ Authenticated Chromium should verify:
 - the logout POST, signed-out landing page and explicit resume link.
 - the reduced centered Learn mark and contracted header bar at desktop and
   mobile widths.
+- standalone and recurring New Booking conflict notifications, including
+  cross-student clashes and the no-mutation result for a rejected recurring
+  creation;
+- recurring resume remaining paused when a newly occupied occurrence is
+  detected.
 
 No Production invoice, payment, Direct Debit, credit note, bank transaction or
 £1 test is part of this feature.
 
 ## Deployment provenance
 
-- Git commit: `4d24bad`
+- Git commit: pending conflict-detection commit
 - Worker: `foxtutor-learn`
-- Worker version: `ec178afa-96d3-4550-bd5c-8a50578d2b44`
+- Worker version: pending deployment
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

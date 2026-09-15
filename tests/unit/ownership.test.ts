@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findLessonForUser, hasOverlappingLesson } from "../../src/db/lessons";
+import { findLessonForUser, findOverlappingLesson, hasOverlappingLesson } from "../../src/db/lessons";
 import { findCalendarFeedByTokenHash } from "../../src/db/calendar-feeds";
 
 function mockDb(firstResult: unknown): D1Database {
@@ -41,6 +41,25 @@ describe("server-side lesson ownership", () => {
     expect((db as D1Database & { query: string }).query).toContain("status != 'cancelled'");
     expect((db as D1Database & { query: string }).query).toContain("start_at < ?");
     expect((db as D1Database & { query: string }).query).toContain("end_at > ?");
+  });
+
+  it("returns the conflicting student and booking metadata for tutor schedule checks", async () => {
+    const conflict = {
+      id: "lesson-b",
+      student_id: "student-b",
+      student_name: "James Fox",
+      start_at: "2026-10-09T14:00:00.000Z",
+      end_at: "2026-10-09T14:55:00.000Z",
+      timezone: "Europe/London",
+      status: "scheduled" as const,
+      recurring_series_id: null
+    };
+    const db = mockDb(conflict);
+    await expect(findOverlappingLesson(db, "2026-10-09T14:15:00.000Z", "2026-10-09T15:15:00.000Z")).resolves.toEqual(conflict);
+    const query = (db as D1Database & { query: string }).query;
+    expect(query).toContain("JOIN students s ON s.id = l.student_id");
+    expect(query).toContain("l.status != 'cancelled'");
+    expect(query).toContain("ORDER BY l.start_at ASC, l.id ASC");
   });
 
   it("requires role and explicit student linkage when resolving a feed token", async () => {
