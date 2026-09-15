@@ -8,6 +8,8 @@
 - Updated invoice detail so the human/provider reference is the primary
   identifier; the internal invoice ID remains available as a secondary field.
 - Preserved provider-operation idempotency and avoided early payment mutation.
+- Deployed commit `908b1a6` as Worker version
+  `b68a49d5-32ff-4a4f-a53e-12625e168ac9`.
 
 ### 2026-09-15 - Phase 7.17 sitewide Create Booking entry point
 
