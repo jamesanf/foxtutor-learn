@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 concise page headings
+
+- Removed redundant explanatory subtitles from Accounting, Notifications,
+  resource upload, billing and billing-audit headings.
+- Kept safety guidance, status metadata and operational instructions where
+  they provide information beyond the page title.
+- Deployed commit `feea9e5` as Worker version
+  `883ca780-c123-4859-af24-d9120c7eb04f`.
+
 ### 2026-09-15 - Phase 7.17 mobile table scrolling
 
 - Replaced the mobile stacked-card table transformation with horizontal

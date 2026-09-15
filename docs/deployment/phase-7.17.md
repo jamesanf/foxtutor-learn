@@ -36,6 +36,9 @@ Recurring-series table action cells now center Pause/Resume controls and remove
 the generic button top offset, keeping the controls aligned with row values.
 At mobile widths, all Learn tables now remain real horizontally scrollable
 tables instead of becoming stacked card layouts that obscure column context.
+Redundant page subtitles have been removed from Accounting, Notifications,
+resource upload, billing and billing-audit headings so page titles carry the
+interface without restating their purpose.
 
 ## Required validation
 
@@ -70,9 +73,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `e20ffb8`
+- Git commit: `feea9e5`
 - Worker: `foxtutor-learn`
-- Worker version: `defc6112-ddb3-4627-8fc4-a708cf2bebd9`
+- Worker version: `883ca780-c123-4859-af24-d9120c7eb04f`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
