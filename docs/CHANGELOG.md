@@ -6,6 +6,8 @@
   back-arrow control.
 - Preserved keyboard focus, accessible labelling and chooser navigation for
   standalone and recurring booking forms.
+- Deployed commit `97bb50d` as Worker version
+  `96a176aa-04e7-4f0e-b596-ca99d02a5fea`.
 
 ### 2026-09-15 - Phase 7.17 booking conflict detection
 
