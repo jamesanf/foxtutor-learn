@@ -512,8 +512,14 @@ export async function createAuthorisedCreditRefund(
       authorised_by_user_id, requested_at)
      SELECT ?, credit_id, student_id, ?, 'GBP', 'AUTHORISED', ?, ?, ?
      FROM customer_credit_balances
-     WHERE credit_id = ? AND student_id = ? AND remaining_amount_minor >= ?
-     ON CONFLICT(idempotency_key) DO NOTHING`
+      WHERE credit_id = ? AND student_id = ?
+        AND remaining_amount_minor - COALESCE((
+          SELECT SUM(amount_minor)
+          FROM billing_refunds pending
+          WHERE pending.credit_id = customer_credit_balances.credit_id
+            AND pending.status IN ('AUTHORISED', 'PROCESSING')
+        ), 0) >= ?
+      ON CONFLICT(idempotency_key) DO NOTHING`
   ).bind(
     input.refundId,
     Number(input.amountMinor),

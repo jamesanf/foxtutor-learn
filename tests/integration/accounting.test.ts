@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cancelLesson, rescheduleLesson } from "../../src/db/cancellations";
-import { recordCompletedCreditRefund } from "../../src/db/billing";
+import { createAuthorisedCreditRefund, recordCompletedCreditRefund } from "../../src/db/billing";
 
 interface MockStatement {
   sql: string;
@@ -89,6 +89,38 @@ describe("Phase 5 accounting boundary", () => {
     expect(statements[0]?.values).toHaveLength(10);
     expect(statements[0]?.values).toContain("2026-09-15T20:00:00.000Z");
     expect(statements[1]?.values).toEqual(["bank-ref-1", "2026-09-15T20:00:00.000Z", "refund-1"]);
+  });
+
+  it("reserves outstanding refund authorizations before allowing another refund", async () => {
+    const statements: MockStatement[] = [];
+    const db = {
+      prepare(sql: string) {
+        return {
+          bind(...values: unknown[]) {
+            statements.push({ sql, values });
+            return {
+              async run() {
+                return { meta: { changes: 0 } };
+              },
+              async first<T>() {
+                return null as T | null;
+              }
+            };
+          }
+        };
+      }
+    } as unknown as D1Database;
+
+    await createAuthorisedCreditRefund(db, {
+      refundId: "refund-2",
+      creditId: "credit-1",
+      studentId: "student-1",
+      amountMinor: 5500n,
+      authorisedByUserId: "admin-1",
+      now: "2026-09-15T20:00:00.000Z"
+    });
+
+    expect(statements[0]?.sql).toContain("pending.status IN ('AUTHORISED', 'PROCESSING')");
   });
 
   it("writes cancellation history and its accounting outbox in one D1 batch", async () => {
