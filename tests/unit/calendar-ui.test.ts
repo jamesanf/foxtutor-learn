@@ -47,8 +47,10 @@ describe("calendar presentation contract", () => {
     expect(workerSource).not.toContain("data-confirm-submit");
     expect(workerSource).toContain("/learn/admin/bookings");
     expect(workerSource).toContain("listUpcomingLessons");
-    expect(cssSource).toContain(".table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td");
-    expect(cssSource).not.toContain("table, tbody, tr, td { display: block; }");
+    expect(cssSource).toContain(".table-wrap { overflow-x: auto; border: 1px solid #c3d0dc; background: var(--surface); }");
+    expect(cssSource).toContain(".table-wrap table { display: table; width: max-content; min-width: 100%; table-layout: auto; }");
+    expect(cssSource).toContain(".table-wrap thead { position: static; width: auto; height: auto; overflow: visible;");
+    expect(cssSource).not.toContain(".table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; }");
   });
 
   it("uses a native quarter-hour time input and a date-independent end preview", () => {

@@ -151,6 +151,6 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain("th, td { padding: 13px 8px;");
     expect(cssSource).toContain("font-size: clamp(.6rem, .7vw, .75rem);");
     expect(cssSource).toContain("overflow-wrap: normal; word-break: normal; hyphens: none;");
-    expect(cssSource).toContain(".table-wrap td { display: grid; grid-template-columns: minmax(5.5rem, 34%) minmax(0, 1fr); gap: 6px; padding: 11px 7px; }");
+    expect(cssSource).toContain(".table-wrap td { display: table-cell; gap: normal; padding: 11px 7px; }");
   });
 });

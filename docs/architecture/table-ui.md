@@ -17,10 +17,11 @@ The shared rules apply to:
 - student upcoming-charge, credit-history and billing-history tables;
 - billing-chain, invoice and credit detail tables.
 
-At the narrow responsive breakpoint, table rows become labelled cards. The
-same reduced horizontal spacing is retained between each label and value so
-the mobile presentation remains compact without changing its information
-hierarchy.
+At the narrow responsive breakpoint, tables remain real tables inside a
+horizontal scrolling container. Headers, rows, column alignment and action
+controls are preserved rather than being converted into stacked cards. Tables
+use their intrinsic readable width, with a `min-width` of the viewport so
+short tables do not create unnecessary scrolling.
 
 The Production FreeAgent contact-mapping action cell uses a shrinkable grid:
 the Contact ID input takes the available width while the save and remove
