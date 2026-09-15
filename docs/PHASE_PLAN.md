@@ -13,6 +13,11 @@ duplicating the lesson model:
 
 - next scheduled and latest past lesson summaries link to the existing
   student lesson routes;
+- the dashboard greets the learner by local time and pupil first name;
+- the four dashboard cards use matching two-column widths, with a responsive
+  single-column fallback;
+- lessons starting in under 30 minutes show a red launch notice, linked to
+  the lesson destination only when one exists;
 - the latest sent report's home-learning task is shown in a dedicated panel;
 - missing tasks render as `None available`;
 - available tasks link to a lesson-scoped student submission page;

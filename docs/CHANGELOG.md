@@ -2,6 +2,11 @@
 
 ### 2026-09-15 - Phase 7.17 student dashboard and home-learning submission
 
+- Balanced the four student dashboard cards into equal two-column rows.
+- Replaced the dashboard heading with a time-of-day greeting using the pupil's
+  first name, with a safe first-word fallback.
+- Added a red launch notice for lessons starting in under 30 minutes; it links
+  to the lesson destination only when an external URL is available.
 - Added student dashboard summaries for the next scheduled lesson and the
   latest past lesson.
 - Added a right-hand home-learning panel sourced from the latest sent lesson

@@ -3367,9 +3367,37 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   return messagePage("Not found", "That Learn route does not exist.", 404);
 }
 
+function studentGreeting(now: string): string {
+  const hourPart = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hour12: false,
+    timeZone: CALENDAR_TIMEZONE
+  }).formatToParts(new Date(now)).find((part) => part.type === "hour")?.value;
+  const hour = Number(hourPart);
+  if (!Number.isFinite(hour) || hour >= 22 || hour < 5) return "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function studentFirstName(name: string | null | undefined): string {
+  return (name ?? "").trim().split(/\s+/)[0] || "there";
+}
+
+function studentLessonLaunchNotice(lesson: Lesson, now: string): string {
+  const startsInMs = Date.parse(lesson.start_at) - Date.parse(now);
+  if (!Number.isFinite(startsInMs) || startsInMs < 0 || startsInMs >= 30 * 60 * 1000) return "";
+  const minutes = Math.max(1, Math.ceil(startsInMs / 60_000));
+  const message = `Your lesson starts in ${minutes} minute${minutes === 1 ? "" : "s"}, click here to launch.`;
+  return lesson.external_url
+    ? `<small class="student-lesson-launch-notice"><a href="${escapeHtml(lesson.external_url)}" rel="noreferrer">${message}</a></small>`
+    : `<small class="student-lesson-launch-notice">${message}</small>`;
+}
+
 async function studentDashboard(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
   const now = new Date().toISOString();
-  const [upcoming, past] = await Promise.all([
+  const [student, upcoming, past] = await Promise.all([
+    findActiveStudentForUser(db, user.id),
     listUpcomingLessonsForUser(db, user.id, now, 1, 0),
     listPastLessonsForUser(db, user.id, now, 1, 0)
   ]);
@@ -3379,10 +3407,13 @@ async function studentDashboard(user: AppUser, csrfToken: string, db: D1Database
   const homeLearningTask = lastReport ? reportViewModel(lastReport).homeLearningTask.trim() : "";
   const nextLessonPath = nextLesson ? `/learn/student/lessons/${lessonRouteId(nextLesson.id)}` : "/learn/student/lessons";
   const lastLessonPath = lastLesson ? `/learn/student/lessons/${lessonRouteId(lastLesson.id)}` : "/learn/student/lessons";
+  const greeting = studentGreeting(now);
+  const name = studentFirstName(student?.name ?? user.display_name);
+  const launchNotice = nextLesson ? studentLessonLaunchNotice(nextLesson, now) : "";
   const homeLearning = homeLearningTask
     ? `<div class="home-learning-task">${renderRichTextHtml(homeLearningTask)}</div><a class="button" href="${lastLessonPath}/submit">Submit here</a>`
     : `<p class="muted">None available</p>`;
-  return appPage(user, csrfToken, "Dashboard", `<div class="page-heading"><div><h1>Dashboard</h1><p class="lede">Your lessons and latest home learning task.</p></div></div><div class="summary-grid student-dashboard-summary"><a class="summary-card" href="${nextLessonPath}"><span>Next lesson scheduled</span><strong>${nextLesson ? escapeHtml(bookingDate(nextLesson)) : "None"}</strong>${nextLesson ? `<small>${escapeHtml(bookingTime(nextLesson))}</small>` : ""}</a><a class="summary-card" href="${lastLessonPath}"><span>Last lesson</span><strong>${lastLesson ? escapeHtml(bookingDate(lastLesson)) : "None"}</strong>${lastLesson ? `<small>${escapeHtml(bookingTime(lastLesson))}</small>` : ""}</a></div><div class="student-dashboard-panels"><section class="card dashboard-section"><div class="section-heading"><h2>My learning</h2><a class="text-link" href="/learn/student/lessons">View all lessons</a></div><p>Keep track of your upcoming lessons, lesson reports, and shared resources.</p><div class="form-actions">${buttonLink("/learn/student/calendar", "View calendar")}<a class="button secondary" href="/learn/student/resources">View resources</a></div></section><aside class="card dashboard-section home-learning-card"><div class="section-heading"><h2>Home learning</h2>${lastLesson ? `<small>${escapeHtml(bookingDate(lastLesson))}</small>` : ""}</div>${homeLearning}</aside></div>`);
+  return appPage(user, csrfToken, greeting, `<div class="page-heading"><div><h1>${escapeHtml(`${greeting}, ${name}`)}</h1><p class="lede">Your lessons and latest home learning task.</p></div></div><div class="summary-grid student-dashboard-summary"><a class="summary-card" href="${nextLessonPath}"><span>Next lesson scheduled</span><strong>${nextLesson ? escapeHtml(bookingDate(nextLesson)) : "None"}</strong>${nextLesson ? `<small>${escapeHtml(bookingTime(nextLesson))}</small>${launchNotice}` : ""}</a><a class="summary-card" href="${lastLessonPath}"><span>Last lesson</span><strong>${lastLesson ? escapeHtml(bookingDate(lastLesson)) : "None"}</strong>${lastLesson ? `<small>${escapeHtml(bookingTime(lastLesson))}</small>` : ""}</a></div><div class="student-dashboard-panels"><section class="card dashboard-section"><div class="section-heading"><h2>My learning</h2><a class="text-link" href="/learn/student/lessons">View all lessons</a></div><p>Keep track of your upcoming lessons, lesson reports, and shared resources.</p><div class="form-actions">${buttonLink("/learn/student/calendar", "View calendar")}<a class="button secondary" href="/learn/student/resources">View resources</a></div></section><aside class="card dashboard-section home-learning-card"><div class="section-heading"><h2>Home learning</h2>${lastLesson ? `<small>${escapeHtml(bookingDate(lastLesson))}</small>` : ""}</div>${homeLearning}</aside></div>`);
 }
 
 function studentBillingStage(stage: string, context: { userId: string; studentId?: string | null }): void {

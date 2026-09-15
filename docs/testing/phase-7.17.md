@@ -8,7 +8,9 @@ Automated UI contracts cover:
 - the right-hand home-learning panel;
 - the `None available` state;
 - the `Submit here` link;
-- responsive dashboard panel layout.
+- responsive dashboard panel layout;
+- time-of-day greeting and first-name fallback;
+- red under-30-minute launch notice, with and without an external lesson URL.
 
 The dashboard reads only the authenticated student's own upcoming and past
 lessons. The home-learning task is taken from the latest sent report, not a

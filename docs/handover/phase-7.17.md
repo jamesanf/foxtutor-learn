@@ -3,6 +3,8 @@
 ## Delivered
 
 - Student dashboard cards for the next scheduled and last lesson.
+- Time-of-day first-name greeting.
+- Red near-term lesson launch notice, linked only when a lesson URL exists.
 - Right-hand home-learning panel using the latest sent lesson report.
 - Explicit `None available` state when no task exists.
 - Lesson-scoped `Submit here` flow for student home-learning uploads.

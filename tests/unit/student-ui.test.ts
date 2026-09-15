@@ -105,6 +105,19 @@ describe("student profile form UI", () => {
     expect(cssSource).toContain(".student-dashboard-panels { display: grid;");
   });
 
+  it("greets the student by time of day and warns before a near-term lesson", () => {
+    expect(workerSource).toContain("Good morning");
+    expect(workerSource).toContain("Good afternoon");
+    expect(workerSource).toContain("Good evening");
+    expect(workerSource).toContain("Good night");
+    expect(workerSource).toContain("studentFirstName(student?.name ?? user.display_name)");
+    expect(workerSource).toContain("Your lesson starts in");
+    expect(workerSource).toContain("student-lesson-launch-notice");
+    expect(workerSource).toContain('rel="noreferrer">${message}</a>');
+    expect(cssSource).toContain(".student-lesson-launch-notice { display: block; color: #b91c1c");
+    expect(cssSource).toContain(".student-dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));");
+  });
+
   it("provides a secured student home-learning submission route", () => {
     expect(workerSource).toContain('"student-lesson-submit"');
     expect(workerSource).toContain('const action = `/learn/student/lessons/${lessonRouteId(lesson.id)}/submit`;');

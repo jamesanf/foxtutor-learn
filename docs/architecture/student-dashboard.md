@@ -17,6 +17,25 @@ The two lesson summaries link to the existing student lesson-detail route.
 The home-learning panel displays `None available` when the latest sent report
 has no task.
 
+The dashboard heading uses the student's first name, taking the first word of
+the linked pupil name when no separate first-name field exists. The greeting
+is selected in `Europe/London` time:
+
+```text
+05:00–11:59  Good morning
+12:00–17:59  Good afternoon
+18:00–21:59  Good evening
+22:00–04:59  Good night
+```
+
+When the next scheduled lesson starts in fewer than 30 minutes, the next
+lesson card displays a red launch notice. If the lesson has an external lesson
+URL, the notice links directly to it; otherwise the same notice is rendered as
+plain text without a hyperlink.
+
+The four dashboard cards use matching two-column widths on desktop and stack
+into one column on narrow screens.
+
 ## Student submissions
 
 When a sent report contains a home-learning task, the dashboard provides a
