@@ -416,10 +416,10 @@ function navigation(role: Role, title: string): string {
     students: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3ZM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm8 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5ZM8 13c-2.33 0-7 1.17-7 3.5V19h5v-2.5c0-1.03.42-1.91 1.09-2.63C6.98 13.32 7.5 13.12 8 13Z"
   } as const;
   const icon = (name: keyof typeof icons): string => `<svg class="nav-icon nav-icon-${name}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
-  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "accounting", Students: "students", "My lessons": "lessons", Billing: "accounting", "Recurring series": "lessons" };
+  const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "accounting", Students: "students", "My lessons": "lessons", Billing: "accounting" };
   const activeLabel = title === "Add resource" ? "Resources" : title === "Notification" ? "Notifications" : ["Billing health", "Billing settings"].includes(title) ? "Accounting" : title;
   const links: Array<[string, string]> = role === "ADMIN"
-    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/series", "Recurring series"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
+    ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/billing", "Billing"], ["/learn/student/resources", "Resources"]];
   return links.map(([href, label]) => `<a href="${href}"${label === activeLabel ? ' aria-current="page"' : ""}>${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
@@ -2141,19 +2141,22 @@ async function billingOperationsPage(
   return appPage(user, csrfToken, "Billing health", `<div class="page-heading"><div><h1>Billing health</h1><p class="lede">Operational payment readiness for ${escapeHtml(todayLabel)} through the next seven days. Business time is always Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Today</span><strong>${todayRows.length}</strong><small>lessons</small></section><section class="summary-card"><span>Payment secured</span><strong>${secured}</strong><small>next seven days</small></section><section class="summary-card"><span>Credit-covered</span><strong>${creditCovered}</strong></section><section class="summary-card"><span>Needs attention</span><strong>${attention}</strong></section><section class="summary-card"><span>Failed payments</span><strong>${failed}</strong></section></div><section class="card"><div class="section-heading"><div><h2>Next seven days</h2><p class="muted">Collection date is seven calendar days before the lesson date. Payment-secured means credit coverage or a confirmed provider payment.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Lesson</th><th>Charge</th><th>Credit available</th><th>Invoice amount</th><th>Readiness</th><th>Collection</th><th>Document</th></tr></thead><tbody>${rowMarkup}</tbody></table></div></section><section class="card"><div class="section-heading"><div><h2>Customer credit</h2><p class="muted">Immutable credit history remains the source of the balance shown here.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Original</th><th>Available</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><div class="section-heading"><h2>Alerts</h2><a class="text-link" href="/learn/admin/billing">Refresh</a></div><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Alert</th><th>Student</th><th>State</th><th>Action</th></tr></thead><tbody>${alertRows}</tbody></table></div></section>`);
 }
 
-async function recurringSeriesPage(user: AppUser, csrfToken: string, db: D1Database): Promise<Response> {
-  const [series, students] = await Promise.all([listRecurringSeries(db), listStudents(db)]);
+function recurringSeriesSection(
+  series: Awaited<ReturnType<typeof listRecurringSeries>>,
+  students: Student[],
+  csrfToken: string
+): string {
   const studentNames = new Map(students.map((student) => [student.id, student.name]));
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const rows = series.length
     ? series.map((item) => `<tr><td>${escapeHtml(studentNames.get(item.student_id) ?? item.student_id)}</td><td>${escapeHtml(dayNames[item.day_of_week] ?? "Day")} ${escapeHtml(item.local_start_time)}</td><td>${item.duration_minutes} minutes</td><td>${billingMoney(item.price_minor)}</td><td>${escapeHtml(item.start_date)}${item.end_date ? ` to ${escapeHtml(item.end_date)}` : ""}</td><td><span class="status status-${item.status.toLowerCase()}">${escapeHtml(item.status)}</span></td><td class="table-action-cell">${item.status === "ACTIVE" ? `<form method="post" action="/learn/admin/series/${entityRouteId(item.id)}/pause">${hiddenCsrf(csrfToken)}<input type="hidden" name="startsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="endsOn" value="${escapeHtml(currentCalendarDate())}"><input type="hidden" name="reason" value="Administrator pause"><button class="button secondary recurring-series-action" type="submit">Pause</button></form>` : item.status === "PAUSED" ? `<form method="post" action="/learn/admin/series/${entityRouteId(item.id)}/resume">${hiddenCsrf(csrfToken)}<button class="button secondary recurring-series-action" type="submit">Resume</button></form>` : "—"}</td></tr>`).join("")
     : `<tr><td colspan="7">No recurring lesson series.</td></tr>`;
-  return appPage(user, csrfToken, "Recurring series", `<div class="page-heading"><div><h1>Recurring lesson series</h1><p class="lede">FoxTutor owns recurrence. Future lessons are materialised only through the bounded six-week Europe/London horizon.</p></div>${buttonLink("/learn/admin/series/new", "Create series")}</div><section class="card"><div class="table-wrap"><table><thead><tr><th>Student</th><th>Weekly time</th><th>Duration</th><th>Price</th><th>Dates</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>`);
+  return `<section class="card recurring-series-section"><div class="section-heading"><div><h2>Recurring lesson series</h2><p class="muted">Future lessons are materialised through the bounded six-week Europe/London horizon.</p></div>${buttonLink("/learn/admin/series/new", "Create series")}</div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Weekly time</th><th>Duration</th><th>Price</th><th>Dates</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
 
 function recurringSeriesForm(csrfToken: string, students: Student[], error?: string): string {
   const options = students.filter((student) => student.status === "ACTIVE").map((student) => `<option value="${escapeHtml(student.id)}">${escapeHtml(student.name)}</option>`).join("");
-  return `<section class="card form-card"><div class="page-heading"><div><h1>Create recurring series</h1><p class="lede">The first six weeks will be materialised after creation. FoxTutor time is always Europe/London.</p></div></div>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="/learn/admin/series/new"><label>Student and payer<select name="studentId" required>${options}</select></label><div class="form-grid"><label>Day<select name="dayOfWeek" required><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label><label>Local start time<input type="time" name="localStartTime" step="900" required></label><label>Duration (minutes)<input type="number" name="durationMinutes" min="1" max="1440" value="55" required></label><label>Price (£)<input type="number" name="price" min="0.01" step="0.01" value="55.00" required></label><label>Start date<input type="date" name="startDate" value="${escapeHtml(currentCalendarDate())}" required></label><label>End date (optional)<input type="date" name="endDate"></label></div><p class="muted">The payer is currently the selected student. Any future payer relationship workflow must be explicit and audited.</p><div class="form-actions"><a class="button secondary" href="/learn/admin/series">Cancel</a><button class="button" type="submit">${hiddenCsrf(csrfToken)}Create series</button></div></form></section>`;
+  return `<section class="card form-card"><div class="page-heading"><div><h1>Create recurring series</h1><p class="lede">The first six weeks will be materialised after creation. FoxTutor time is always Europe/London.</p></div></div>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="/learn/admin/series/new"><label>Student and payer<select name="studentId" required>${options}</select></label><div class="form-grid"><label>Day<select name="dayOfWeek" required><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label><label>Local start time<input type="time" name="localStartTime" step="900" required></label><label>Duration (minutes)<input type="number" name="durationMinutes" min="1" max="1440" value="55" required></label><label>Price (£)<input type="number" name="price" min="0.01" step="0.01" value="55.00" required></label><label>Start date<input type="date" name="startDate" value="${escapeHtml(currentCalendarDate())}" required></label><label>End date (optional)<input type="date" name="endDate"></label></div><p class="muted">The payer is currently the selected student. Any future payer relationship workflow must be explicit and audited.</p><div class="form-actions"><a class="button secondary" href="/learn/admin/bookings">Cancel</a><button class="button" type="submit">${hiddenCsrf(csrfToken)}Create series</button></div></form></section>`;
 }
 
 async function handleAdmin(request: Request, env: Env, active: ActiveSession, route: LearnRoute): Promise<Response> {
@@ -2163,7 +2166,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
   if (route === "admin") return adminDashboard(active.user, csrfToken, db);
   if (route === "admin-series") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the series controls to make changes.", 405);
-    return recurringSeriesPage(active.user, csrfToken, db);
+    return redirect("/learn/admin/bookings");
   }
   if (route === "admin-series-form") {
     const students = await listStudents(db);
@@ -2200,7 +2203,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const createdSeries = await findRecurringSeries(db, seriesId);
     if (!createdSeries) return messagePage("Series creation failed", "The recurring lesson series could not be read after it was saved.", 500);
     await ensureRecurringSeriesMaterialised(db, createdSeries, currentCalendarDate(new Date(now)), now);
-    return redirect("/learn/admin/series");
+    return redirect("/learn/admin/bookings");
   }
   if (route === "admin-series-action") {
     if (request.method !== "POST" || !(await csrfValid(request, active))) return messagePage("Request not verified", "Refresh the page and try again.", 403);
@@ -2225,7 +2228,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       const endDate = formText(form ?? new FormData(), "endDate") || currentCalendarDate();
       await setRecurringSeriesStatus(db, { id: seriesId, status: "ENDED", endDate, actorUserId: active.user.id, now, details: `Series ended on ${endDate}.` });
     }
-    return redirect("/learn/admin/series");
+    return redirect("/learn/admin/bookings");
   }
   if (route === "admin-billing") {
     if (request.method !== "GET") return messagePage("Method not allowed", "Use the alert controls provided on the billing dashboard.", 405);
@@ -2932,8 +2935,12 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const total = await countUpcomingLessons(db, now);
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
-    const bookings = await listUpcomingLessons(db, now, pageSize, (safePage - 1) * pageSize);
-    return appPage(active.user, csrfToken, "Bookings", lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" }));
+    const [bookings, series, students] = await Promise.all([
+      listUpcomingLessons(db, now, pageSize, (safePage - 1) * pageSize),
+      listRecurringSeries(db),
+      listStudents(db)
+    ]);
+    return appPage(active.user, csrfToken, "Bookings", `${lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" })}${recurringSeriesSection(series, students, csrfToken)}`);
   }
   if (route === "admin-lessons") {
     const { page, pageSize } = parseLessonPagination(url);

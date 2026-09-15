@@ -28,6 +28,8 @@ Automated UI contracts cover:
 - recurring-series Pause/Resume controls starting at the Action header edge,
   remaining vertically aligned with the row, and using a compact 24px control
   height matching the adjacent status pill.
+- the admin recurring-series table appearing below Upcoming Bookings, with no
+  separate Recurring series navigation item.
 - mobile table pages retaining real columns in a horizontal scrolling
   container instead of converting rows into unusable stacked cards.
 - notification delivery-log headers sorting the server-side result set, with

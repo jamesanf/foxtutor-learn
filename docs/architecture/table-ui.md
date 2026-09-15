@@ -13,7 +13,8 @@ The shared rules apply to:
 
 - accounting outbox, contact mappings and billing tables;
 - notification logs;
-- lesson, student, resource, recurring-series and reschedule tables;
+- lesson, student, resource, recurring-series and reschedule tables. The admin
+  recurring-series table is presented below the upcoming Bookings table;
 - student upcoming-charge, credit-history and billing-history tables;
 - billing-chain, invoice and credit detail tables.
 

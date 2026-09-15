@@ -102,6 +102,15 @@ describe("calendar presentation contract", () => {
     expect(workerSource).not.toContain(">Rows<");
   });
 
+  it("places recurring-series administration below bookings without a separate tab", () => {
+    expect(workerSource).toContain("function recurringSeriesSection(");
+    expect(workerSource).toContain('`${lessonList(bookings, total, safePage, pageSize');
+    expect(workerSource).toContain("${recurringSeriesSection(series, students, csrfToken)}");
+    expect(workerSource).not.toContain('["/learn/admin/series", "Recurring series"]');
+    expect(workerSource).toContain('if (route === "admin-series")');
+    expect(workerSource).toContain('return redirect("/learn/admin/bookings");');
+  });
+
   it("aligns recurring-series table actions with the Action header", () => {
     expect(workerSource).toContain('<td class="table-action-cell">${item.status === "ACTIVE"');
     expect(cssSource).toContain(".table-action-cell { vertical-align: middle; text-align: left; }");
