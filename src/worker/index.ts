@@ -450,6 +450,10 @@ function buttonLink(href: string, label: string): string {
   return `<a class="button" href="${href}">${escapeHtml(label)}</a>`;
 }
 
+function buttonTrigger(label: string, attributes = 'data-lesson-create-trigger'): string {
+  return `<button class="button" type="button" ${attributes}>${escapeHtml(label)}</button>`;
+}
+
 async function emitNotification(
   env: Env,
   draft: Parameters<typeof createAndDeliverNotification>[2],
@@ -914,7 +918,7 @@ function parseStudentSectionPagination(url: URL, pageParam: string, sizeParam: s
 }
 
 function lessonRows(lessons: Lesson[], emptyHeading: string, emptyCopy: string, emptyAction?: string): string {
-  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? `<a class="button" href="/learn/admin/lessons/new">${escapeHtml(emptyAction)}</a>` : ""}</div>`;
+  if (!lessons.length) return `<div class="empty-state compact-empty"><h2>${escapeHtml(emptyHeading)}</h2><p>${escapeHtml(emptyCopy)}</p>${emptyAction ? buttonTrigger("New booking") : ""}</div>`;
   return `<div class="table-wrap lesson-list-table"><table><thead><tr><th>Date</th><th>Time</th><th>Student</th><th>Duration</th><th>Status</th><th>Report</th><th>Action</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td data-label="Date">${escapeHtml(bookingDate(lesson))}</td><td data-label="Time"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">${escapeHtml(bookingTime(lesson))}</a></td><td data-label="Student"><a href="/learn/admin/students/${encodeURIComponent(lesson.student_id)}">${escapeHtml(lesson.student_name ?? "Student")}</a></td><td data-label="Duration">${escapeHtml(bookingDuration(lesson))}</td><td data-label="Status"><span class="status status-${lesson.status}">${statusLabel(lesson.status)}</span></td><td data-label="Report">${!lessonReportEligible(lesson) ? "—" : lesson.report_status === "SENT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">View report</a>` : lesson.report_status === "DRAFT" ? `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Edit report</a>` : `<a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}/report">Create report</a>`}</td><td data-label="Action"><a href="/learn/admin/lessons/${lessonRouteId(lesson.id)}">View</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -942,7 +946,7 @@ function lessonPagination(page: number, pageSize: number, total: number, path: s
 }
 
 function lessonList(lessons: Lesson[], total: number, page: number, pageSize: number, options: { path: string; label: string; title: string; emptyHeading: string; emptyCopy: string; emptyAction?: string }): string {
-  return `<div class="page-heading"><h1>${escapeHtml(options.title)}</h1>${options.emptyAction ? buttonLink("/learn/admin/lessons/new", "Add lesson") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
+  return `<div class="page-heading"><h1>${escapeHtml(options.title)}</h1>${options.emptyAction ? buttonTrigger("New booking") : ""}</div>${lessonRows(lessons, options.emptyHeading, options.emptyCopy, options.emptyAction)}${lessonPagination(page, pageSize, total, options.path, options.label)}`;
 }
 
 function studentSectionPagination(page: number, pageSize: number, total: number, path: string, label: string, pageParam: string, sizeParam: string): string {
@@ -1606,11 +1610,32 @@ function lessonForm(
   const activeStudents = students.filter((student) => student.status === "ACTIVE");
   const studentSelect = `<label class="field-wide">Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === studentId ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>`;
   if (!lesson) {
-    const selected = localStartParts(start, "Europe/London");
-    const preview = derivedEndLabel(selected.time);
-    return `<section class="card form-card"><h1>Create lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start time<input type="time" name="startTime" value="${escapeHtml(selected.time)}" step="900" lang="en-GB" required aria-describedby="start-time-help"><span id="start-time-help" class="field-help">15-minute intervals · 24-hour time</span></label><div class="derived-time" aria-live="polite"><span>Duration / end time</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes · Ends <output data-end-preview>${escapeHtml(preview)}</output></strong></div><div class="timezone-context"><span>Timezone</span><strong>Europe/London</strong></div><label class="field-wide">Lesson link<input type="url" name="externalUrl" value="" placeholder="https://"></label><details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions"><a class="button secondary" href="/learn/admin/lessons">Cancel</a><button class="button" type="submit">Create lesson</button></div></form></section>`;
+    return `<section class="card form-card"><h1>Create lesson</h1>${lessonCreateFormMarkup(csrfToken, action, students, error, studentId, start)}</section>`;
   }
   return `<section class="card form-card"><h1>Edit lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("Lesson link", "externalUrl", lesson.external_url ?? "", "url")}<label class="field-wide">Notes<textarea name="notes" rows="4" maxlength="10000">${escapeHtml(lesson.notes)}</textarea></label></div><input type="hidden" name="status" value="${escapeHtml(lesson.status)}"><div class="form-actions"><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
+}
+
+function lessonCreateFormMarkup(
+  csrfToken: string,
+  action: string,
+  students: Student[],
+  error: string | undefined,
+  selectedStudent: string,
+  selectedStart: string,
+  dialog = false
+): string {
+  const selected = localStartParts(selectedStart, "Europe/London");
+  const preview = derivedEndLabel(selected.time);
+  const activeStudents = students.filter((student) => student.status === "ACTIVE");
+  const studentSelect = `<label class="field-wide">Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === selectedStudent ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>`;
+  const cancel = dialog
+    ? `<button class="button secondary" type="button" data-lesson-create-close>Cancel</button>`
+    : `<a class="button secondary" href="/learn/admin/lessons">Cancel</a>`;
+  return `${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form class="lesson-create-form" method="post" action="${action}" data-timezone="Europe/London" data-duration-minutes="${STANDARD_LESSON_DURATION_MINUTES}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}<label>Date<input type="date" name="lessonDate" value="${escapeHtml(selected.date)}" required></label><label>Start time<input type="time" name="startTime" value="${escapeHtml(selected.time)}" step="900" lang="en-GB" required aria-describedby="start-time-help"><span id="start-time-help" class="field-help">15-minute intervals · 24-hour time</span></label><div class="derived-time" aria-live="polite"><span>Duration / end time</span><strong>${STANDARD_LESSON_DURATION_MINUTES} minutes · Ends <output data-end-preview>${escapeHtml(preview)}</output></strong></div><div class="timezone-context"><span>Timezone</span><strong>Europe/London</strong></div><label class="field-wide">Lesson link<input type="url" name="externalUrl" value="" placeholder="https://"></label><details class="additional-details"><summary>Additional details</summary><label>Notes<textarea name="notes" rows="4" maxlength="10000"></textarea></label></details></div><input type="hidden" name="timezone" value="Europe/London"><input type="hidden" name="status" value="scheduled"><div class="form-actions">${cancel}<button class="button" type="submit">${dialog ? "Create booking" : "Create lesson"}</button></div></form>`;
+}
+
+function lessonCreateDialog(csrfToken: string, students: Student[]): string {
+  return `<dialog class="lesson-create-dialog" data-lesson-create-dialog aria-labelledby="lesson-create-dialog-title"><div class="card form-card"><button class="cancel-dialog-close" type="button" data-lesson-create-close aria-label="Close new booking dialog">×</button><h2 id="lesson-create-dialog-title">New booking</h2>${lessonCreateFormMarkup(csrfToken, "/learn/admin/lessons/new", students, undefined, "", "", true)}</div></dialog>`;
 }
 
 async function parseForm(request: Request): Promise<FormData | null> {
@@ -2948,7 +2973,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
       listRecurringSeriesPage(db, seriesPagination.pageSize, (safeSeriesPage - 1) * seriesPagination.pageSize),
       listStudents(db)
     ]);
-    return appPage(active.user, csrfToken, "Bookings", `${lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "Add lesson" })}${recurringSeriesSection(series, students, csrfToken, safeSeriesPage, seriesPagination.pageSize, seriesTotal)}`);
+    return appPage(active.user, csrfToken, "Bookings", `${lessonList(bookings, total, safePage, pageSize, { path: "/learn/admin/bookings", label: "Bookings", title: "Upcoming Bookings", emptyHeading: "No upcoming bookings", emptyCopy: "There are no scheduled lessons coming up.", emptyAction: "New booking" })}${recurringSeriesSection(series, students, csrfToken, safeSeriesPage, seriesPagination.pageSize, seriesTotal)}${lessonCreateDialog(csrfToken, students)}`);
   }
   if (route === "admin-lessons") {
     const { page, pageSize } = parseLessonPagination(url);

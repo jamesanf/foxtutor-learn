@@ -7,6 +7,11 @@ describe("lesson creation client behavior", () => {
         <input type="time" name="startTime" step="900">
         <output data-end-preview>—</output>
       </form>
+      <button type="button" data-lesson-create-trigger>New booking</button>
+      <dialog data-lesson-create-dialog>
+        <button type="button" data-lesson-create-close>Close</button>
+        <input type="text" aria-label="Student">
+      </dialog>
     `;
 
     await import("../../src/client/learn");
@@ -26,5 +31,15 @@ describe("lesson creation client behavior", () => {
     time!.value = "";
     time!.dispatchEvent(new Event("input", { bubbles: true }));
     expect(output!.textContent).toBe("—");
+
+    const trigger = document.querySelector<HTMLButtonElement>("[data-lesson-create-trigger]");
+    const dialog = document.querySelector<HTMLDialogElement>("[data-lesson-create-dialog]");
+    const close = document.querySelector<HTMLButtonElement>("[data-lesson-create-close]");
+    expect(trigger).not.toBeNull();
+    expect(dialog).not.toBeNull();
+    trigger!.click();
+    expect(dialog!.open).toBe(true);
+    close!.click();
+    expect(dialog!.open).toBe(false);
   });
 });

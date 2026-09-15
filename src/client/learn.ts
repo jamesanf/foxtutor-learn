@@ -299,6 +299,27 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     });
   }
 
+  const lessonCreateDialog = document.querySelector<HTMLDialogElement>("[data-lesson-create-dialog]");
+  if (lessonCreateDialog) {
+    let lastTrigger: HTMLButtonElement | null = null;
+    const close = () => lessonCreateDialog.close();
+    document.querySelectorAll<HTMLButtonElement>("[data-lesson-create-trigger]").forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        lastTrigger = trigger;
+        if (!lessonCreateDialog.open) lessonCreateDialog.showModal();
+        lessonCreateDialog.querySelector<HTMLElement>("select, input, textarea")?.focus();
+      });
+    });
+    lessonCreateDialog.querySelectorAll<HTMLButtonElement>("[data-lesson-create-close]").forEach((button) => button.addEventListener("click", close));
+    lessonCreateDialog.addEventListener("click", (event) => {
+      if (event.target === lessonCreateDialog) close();
+    });
+    lessonCreateDialog.addEventListener("close", () => {
+      lastTrigger?.focus();
+      lastTrigger = null;
+    });
+  }
+
   document.querySelectorAll<HTMLElement>(".calendar-host").forEach((element) => {
     const rawEvents = element.dataset.calendarEvents;
     const timezone = element.dataset.calendarTimezone;
