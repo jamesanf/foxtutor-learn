@@ -4,7 +4,10 @@ The authenticated Learn shell keeps the public FoxTutor visual language while
 remaining a separate private application. The left header label is `FoxTutor`;
 the centered Learn mark is served from generated, transparent display assets
 derived from `public/learn_logo.png`, inside a white rounded panel so it remains
-clear against the dark header. The footer mirrors the public site's James Fox,
+clear against the dark header. The centered mark uses a 105px by 48px panel
+with a 90px display width on desktop, and the topbar contracts to a 64px
+minimum height; the mobile breakpoint scales the mark and bar down further.
+The footer mirrors the public site's James Fox,
 Bespoke English Tuition, contact and legal-link structure without changing the
 public site repository.
 

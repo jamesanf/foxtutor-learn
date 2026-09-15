@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 compact Learn header mark
+
+- Reduced the centered `FoxTutor Learn` header mark by 25% on desktop and
+  mobile.
+- Reduced the centered mark panel, topbar padding and minimum height so the
+  header bar contracts instead of retaining the former whitespace.
+- Updated the branding architecture documentation and header UI contracts.
+
 ### 2026-09-15 - Phase 7.17 logout session repair
 
 - Diagnosed the non-functional logout control: deleting the Learn session was
