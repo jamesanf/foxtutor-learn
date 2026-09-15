@@ -131,7 +131,9 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
     expect(cssSource).toContain("@media (max-width: 900px) {\n  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }");
     expect(workerSource).toContain('class="form-actions accounting-connection-actions"');
-    expect(workerSource).toContain('class="card"><div class="section-heading"><div class="accounting-connection-title"><h2>FreeAgent ${label}</h2>${!status.errorMessage ? `<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span>` : ""}</div><div class="form-actions accounting-connection-actions">');
+    expect(workerSource).toContain('<section class="card accounting-connection-card">');
+    expect(cssSource).toContain(".accounting-connection-card { margin-top: 0; }");
+    expect(workerSource).toContain('class="card accounting-connection-card"><div class="section-heading"><div class="accounting-connection-title"><h2>FreeAgent ${label}</h2>${!status.errorMessage ? `<span class="status status-${status.connected ? "sent" : "failed"}">${status.connected ? "Connected" : "Needs attention"}</span>` : ""}</div><div class="form-actions accounting-connection-actions">');
     expect(workerSource).toContain('${connectionAction}${environmentSettingsAction}');
     expect(workerSource).not.toContain('>${escapeHtml(status.connected ? "Connected" : "Not connected")} · ${escapeHtml(label)}</p>');
     expect(cssSource).toContain(".accounting-connection-actions { display: flex; width: auto; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: nowrap; }");

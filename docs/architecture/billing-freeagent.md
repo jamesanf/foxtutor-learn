@@ -92,6 +92,11 @@ definite provider failure creates a compensating `REVERSAL`; an unknown or
 timeout outcome does not release credit and instead marks the invoice and
 operation for reconciliation.
 
+The admin Accounting page treats the first Production FreeAgent connection
+card as the page-heading's first content block. Its top margin is removed so
+the page heading's bottom spacing is not doubled by the generic card margin;
+later accounting cards retain the shared card rhythm.
+
 When the invoice worker is enabled, the intended order is: establish the
 local billing event and invoice identity, establish the provider invoice,
 then record local credit consumption. A zero-net local invoice must never

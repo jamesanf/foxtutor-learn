@@ -21,6 +21,8 @@ Automated UI contracts cover:
   boundaries without splitting words.
 - Production FreeAgent contact-mapping actions remaining inside their table
   cell at reduced desktop widths, with the mobile stacked form preserved.
+- accounting page Production FreeAgent card spacing matching the page heading
+  rhythm and the other cards on the page.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

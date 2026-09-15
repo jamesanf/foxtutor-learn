@@ -370,6 +370,7 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .accounting-connection-actions .button { width: auto; justify-content: center; white-space: nowrap; }
 .accounting-connection-actions .accounting-settings-link { order: 3; }
 .accounting-connection-actions .button { order: 2; }
+.accounting-connection-card { margin-top: 0; }
 .accounting-connection-title { display: flex; min-width: 0; align-items: center; gap: 10px; }
 .accounting-connection-title h2 { margin: 0; }
 .accounting-connection-title .status { white-space: nowrap; }
