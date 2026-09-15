@@ -10,6 +10,8 @@
 - Applied migration `0037_admin_cancellation_accounting_no_action.sql` to
   Production, repairing 20 historical rows; the Production outbox now has 22
   `NOT_REQUIRED` rows and no failed or retryable cancellation-accounting rows.
+- Clarified the Accounting outbox UI: `NOT_REQUIRED` rows are retained as
+  audit records and do not create or cancel a FreeAgent document.
 - Reran all billing-focused accounting, billing, payment, cancellation, credit,
   FreeAgent, notification and environment suites: 18 test files and 138 tests
   passed with no failures.

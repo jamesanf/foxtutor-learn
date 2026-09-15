@@ -164,6 +164,10 @@ describe("billing admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-summary-grid .summary-card:last-child { grid-column: span 2; }");
   });
 
+  it("explains that no-action accounting rows are audit records", () => {
+    expect(workerSource).toContain("No action required rows are retained as an audit trail; they do not create or cancel a FreeAgent document.");
+  });
+
   it("uses compact shared table spacing and responsive header sizing", () => {
     expect(cssSource).toContain("th, td { padding: 13px 8px;");
     expect(cssSource).toContain("font-size: clamp(.6rem, .7vw, .75rem);");
