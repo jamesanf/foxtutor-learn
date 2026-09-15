@@ -6,6 +6,8 @@
   tree.
 - Standardized admin booking creation labels to `Create Booking` across
   Calendar, Dashboard and Bookings.
+- Deployed commit `c3dc09c` as Worker version
+  `866fe51b-9089-454c-bc21-ff1e7b669170`.
 
 ### 2026-09-15 - Phase 7.17 recurring-series creation entry point
 
