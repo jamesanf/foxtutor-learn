@@ -9,8 +9,8 @@ Learn header branding. It also uses outlined Resources and Notifications
 navigation icons when unselected, with filled selected states, and the compact
 two-row footer layout. Student dashboard calendar and resource actions are
 full-width and aligned to the panel copy. The student dashboard now also
-removes the shared viewport-height minimum so its footer follows the content
-closely.
+keeps a viewport-height minimum so the footer sits at the browser bottom when
+the content is short and normal scrolling takes over when it is long.
 The submission flow reuses the existing private resource/R2 pipeline and
 the logout repair does not change billing or provider behavior.
 
@@ -47,9 +47,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `b95c305`
+- Git commit: `541fc35`
 - Worker: `foxtutor-learn`
-- Worker version: `32997c33-2dc8-4a27-acab-e7c0eb31799a`
+- Worker version: `a8932e5b-efb7-4735-bb33-fe453281b8a6`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
