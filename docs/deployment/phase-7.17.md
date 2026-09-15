@@ -147,9 +147,9 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `8703633`
+- Git commit: `580f2f4`
 - Worker: `foxtutor-learn`
-- Worker version: `5e5e76a0-d1ef-4b03-a3ed-85a76041a890`
+- Worker version: `9b36227c-4090-4c79-8aa0-821b76608f72`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

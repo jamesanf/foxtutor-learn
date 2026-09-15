@@ -12,6 +12,8 @@
   invoice `94628424` and a collection date seven days before the lesson.
 - New provider invoice descriptions now state the earlier Direct Debit
   collection date while retaining the lesson date as the invoice date.
+- Deployed commit `580f2f4` as Worker version
+  `9b36227c-4090-4c79-8aa0-821b76608f72`.
 - Deployed commit `8703633` as Worker version
   `5e5e76a0-d1ef-4b03-a3ed-85a76041a890`.
 
