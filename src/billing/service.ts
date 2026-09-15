@@ -229,6 +229,13 @@ async function markOperationFailure(
   error: unknown,
   context: { studentId?: string | null; lessonId?: string | null; billingEventId?: string | null; invoiceId?: string | null }
 ): Promise<void> {
+  console.error("billing_invoice_operation_failed", {
+    operationId: operation.id,
+    operationType: operation.operation_type,
+    invoiceId: context.invoiceId ?? null,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    errorMessage: error instanceof Error ? error.message.slice(0, 200) : "Unknown billing provider failure"
+  });
   const apiError = providerFailure(error);
   const shape = apiError?.shape;
   const code = shape?.code ?? "UNKNOWN";
