@@ -238,8 +238,8 @@ mandate-aware FreeAgent fixes is:
 
 ```text
 44 test files
-321 tests
-321 passed
+322 tests
+322 passed
 0 failed
 ```
 
@@ -254,7 +254,7 @@ cancellation, credit, FreeAgent, notification, and environment suites:
 ```
 
 The complete repository regression suite was rerun immediately afterward with
-the same 44-file, 321-test result. The three documented amber items remain
+the same 44-file, 322-test result. The three documented amber items remain
 live-acceptance fixtures rather than automated test failures: a live partial
 refund, a new-customer mailbox/provider onboarding cycle, and a full recurring
 credit-provenance mail cycle.

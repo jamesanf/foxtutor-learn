@@ -15,10 +15,10 @@
 - Reran all billing-focused accounting, billing, payment, cancellation, credit,
   FreeAgent, notification and environment suites: 18 test files and 138 tests
   passed with no failures.
-- Reran the complete repository regression suite: 44 test files and 321 tests
+- Reran the complete repository regression suite: 44 test files and 322 tests
   passed with no failures.
-- Deployed revision `21b2f96` as Worker version
-  `872d5531-0a2d-44d9-ad2a-cb432d2b355f` with the Learn routes and five-minute
+- Deployed revision `48f5eaf` as Worker version
+  `8cfd8c8e-ceb0-40c4-aed8-b99062a95d93` with the Learn routes and five-minute
   billing scheduler active.
 - The remaining partial-refund, new-customer onboarding and full recurring
   credit-provenance items remain explicitly classified as live-acceptance
