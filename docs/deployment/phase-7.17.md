@@ -92,8 +92,10 @@ Bookings. All admin creation triggers use `Create Booking`; the old Add lesson
 calendar link has been removed.
 Invoice detail now leads with the human/provider reference instead of the
 internal UUID-style invoice ID, while retaining that internal ID as a
-secondary operational field. New provider references use canonical UUID
-formatting and recurring references retain their occurrence date.
+secondary operational field. New provider references use the short
+date-sequential `FT-INV-YYMMDDNN` format. A D1-backed unique sequence table
+allocates each daily number once, and retries also search the prior UUID
+reference so existing provider invoices cannot be duplicated.
 
 ## Required validation
 
@@ -130,7 +132,8 @@ Authenticated Chromium should verify:
 - the tested invoice detail showing provider reference `94627880` as the
   primary identifier, with the internal invoice ID secondary;
 - no duplicate provider invoice when an existing billing operation is
-  reprocessed after the reference-format change.
+  reprocessed after the reference-format change, including legacy-reference
+  lookup.
 
 No early Production payment, Direct Debit, credit note, bank transaction or
 £1 test is part of this feature. The verified £55 invoice remains scheduled

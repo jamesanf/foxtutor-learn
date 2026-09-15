@@ -21,7 +21,7 @@ import {
 } from "../accounting/service";
 import { FreeAgentApiError, freeAgentFetch } from "../accounting/freeagent/client";
 import { formatMinorUnits, nextAccountingRetryAt } from "../domain/accounting";
-import { billingReference, isCollectionDateReached } from "../domain/billing";
+import { datedInvoiceReference, isCollectionDateReached } from "../domain/billing";
 import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
 
@@ -41,6 +41,47 @@ function providerAmountIsPositive(value: string | null | undefined): boolean {
 function providerAmountIsNotOutstanding(value: string | null | undefined): boolean {
   const amount = Number(value);
   return Number.isFinite(amount) && amount <= 0;
+}
+
+function legacyInvoiceReference(id: string): string {
+  const compact = id.replace(/[^A-Za-z0-9]/g, "");
+  if (!compact) throw new Error("Billing reference requires a stable identifier.");
+  return `FT-INV-${compact}`;
+}
+
+async function invoiceReferenceFor(
+  db: D1Database,
+  invoice: { id: string; created_at: string }
+): Promise<string> {
+  const createdDate = invoice.created_at.slice(0, 10);
+  const existing = await db.prepare(
+    "SELECT sequence FROM billing_invoice_references WHERE invoice_id = ?"
+  ).bind(invoice.id).first<{ sequence: number | string }>();
+  if (existing) return datedInvoiceReference(createdDate, Number(existing.sequence));
+
+  for (let attempt = 0; attempt < 99; attempt += 1) {
+    const assigned = await db.prepare(
+      "SELECT sequence FROM billing_invoice_references WHERE invoice_id = ?"
+    ).bind(invoice.id).first<{ sequence: number | string }>();
+    if (assigned) return datedInvoiceReference(createdDate, Number(assigned.sequence));
+    const latest = await db.prepare(
+      "SELECT MAX(sequence) AS sequence FROM billing_invoice_references WHERE business_date = ?"
+    ).bind(createdDate).first<{ sequence: number | string | null }>();
+    const sequence = Number(latest?.sequence ?? 0) + 1;
+    if (sequence > 99) {
+      throw new Error(`Invoice reference sequence exhausted for ${createdDate}.`);
+    }
+    try {
+      await db.prepare(
+        `INSERT INTO billing_invoice_references (invoice_id, business_date, sequence)
+         VALUES (?, ?, ?)`
+      ).bind(invoice.id, createdDate, sequence).run();
+      return datedInvoiceReference(createdDate, sequence);
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.toUpperCase().includes("UNIQUE")) throw error;
+    }
+  }
+  throw new Error(`Unable to allocate an invoice reference sequence for ${createdDate}.`);
 }
 
 async function markOperationFailure(
@@ -204,11 +245,17 @@ async function processCreateInvoice(
     });
     return;
   }
-  const reference = billingReference("INV", event.id);
+  const reference = await invoiceReferenceFor(db, invoice);
+  const legacyReference = legacyInvoiceReference(event.id);
   try {
-    const existing = await providerCall(db, env, now, fetcher, (client, token) =>
+    let existing = await providerCall(db, env, now, fetcher, (client, token) =>
       client.findInvoiceByReference(token, link.external_url, reference)
     );
+    if (!existing && legacyReference !== reference) {
+      existing = await providerCall(db, env, now, fetcher, (client, token) =>
+        client.findInvoiceByReference(token, link.external_url, legacyReference)
+      );
+    }
     const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
       client.createDraftInvoice(token, {
         contactUrl: link.external_url,

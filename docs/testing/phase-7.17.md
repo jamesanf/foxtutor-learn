@@ -74,8 +74,9 @@ Automated UI contracts cover:
   remaining `Add lesson` action.
 - invoice detail using the human/provider reference as its primary identifier,
   with the internal invoice ID retained only as a secondary operational field;
-- canonical provider invoice references using `FT-INV-<UUID>` for standalone
-  billing events and `FT-INV-<UUID>-<date>` for recurring occurrences.
+- short date-sequential provider invoice references using
+  `FT-INV-YYMMDDNN`, with a collision-safe daily sequence from `01` through
+  `99`; legacy UUID references remain a read-only lookup fallback.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,
@@ -125,8 +126,10 @@ The complete suite passes:
 ```
 
 The latest billing-reference and invoice-detail regression tests cover the
-normalised identifier presentation. Existing provider invoices remain
-idempotent and are not recreated when the reference-format code changes.
+normalised identifier presentation, date formatting, and the `01`/`99`
+sequence boundaries. Existing provider invoices remain idempotent and are not
+recreated when the reference-format code changes; retries search both the new
+date-sequential reference and the prior UUID reference.
 
 The TypeScript check and client build also pass. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and

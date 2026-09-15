@@ -100,6 +100,13 @@ export function billingReference(prefix: "INV" | "CRN" | "BILL", id: string): st
   return `FT-${prefix}-${compact}`;
 }
 
+export function datedInvoiceReference(date: string, sequence: number): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(sequence) || sequence < 1 || sequence > 99) {
+    throw new Error("Dated invoice references require a valid date and a sequence from 1 to 99.");
+  }
+  return `FT-INV-${date.slice(2).replaceAll("-", "")}${String(sequence).padStart(2, "0")}`;
+}
+
 export function creditGrantIdempotencyKey(sourceEventId: string): string {
   return `credit-grant:${sourceEventId}`;
 }

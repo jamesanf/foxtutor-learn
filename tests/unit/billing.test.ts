@@ -8,6 +8,7 @@ import {
   creditConsumptionIdempotencyKey,
   creditGrantIdempotencyKey,
   creditStatus,
+  datedInvoiceReference,
   isCollectionDateReached,
   refundIdempotencyKey
 } from "../../src/domain/billing";
@@ -102,6 +103,11 @@ describe("customer credit ledger rules", () => {
       .toBe("FT-INV-12408985-D91F-4C78-8CC4-96D906053F47");
     expect(billingReference("INV", "billing:lesson:ba96d1a1-2ab5-4f7e-ba46-2f881c3311d1:2026-09-24"))
       .toBe("FT-INV-BA96D1A1-2AB5-4F7E-BA46-2F881C3311D1-2026-09-24");
+  });
+
+  it("creates short date-sequenced provider invoice references", () => {
+    expect(datedInvoiceReference("2026-09-15", 1)).toBe("FT-INV-26091501");
+    expect(datedInvoiceReference("2026-09-15", 99)).toBe("FT-INV-26091599");
   });
 
   it("keeps a twelve-lesson future fixture invoice-only until each collection date", () => {

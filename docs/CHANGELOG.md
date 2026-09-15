@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 date-sequential invoice references
+
+- Changed new FreeAgent invoice references to `FT-INV-YYMMDDNN`, using a
+  collision-safe D1-backed daily sequence from `01` through `99`.
+- Added legacy UUID-reference lookup during retries so changing the format
+  cannot create a duplicate provider invoice.
+- Added migration `0032_invoice_reference_sequences.sql` for durable sequence
+  allocation.
+
 ### 2026-09-15 - Phase 7.17 invoice reference normalization
 
 - Normalized new provider invoice references to canonical UUID formatting,
