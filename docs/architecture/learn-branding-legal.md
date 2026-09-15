@@ -11,6 +11,11 @@ The footer mirrors the public site's James Fox,
 Bespoke English Tuition, contact and legal-link structure without changing the
 public site repository.
 
+The Resources and Notifications navigation icons use outline strokes by
+default, matching the other navigation icon treatment, and switch to a filled
+shape when their navigation item is selected. The selected item is marked with
+`aria-current="page"` for both visual state and accessibility.
+
 `/learn/terms` and `/learn/privacy` are authenticated routes available to both
 administrators and students. Their visible legal content is an exact HTML
 mirror of the canonical public-site source:

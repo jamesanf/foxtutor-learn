@@ -391,7 +391,7 @@ function compactLearnUrls(content: string): string {
     .replace(queryPattern, (_match, prefix: string, id: string) => `${prefix}${entityUrlKey(id)}`);
 }
 
-function navigation(role: Role): string {
+function navigation(role: Role, title: string): string {
   const icons = {
     dashboard: "M13 3v6h8V3h-8Zm0 18h8V11h-8v10ZM3 21h8v-8H3v8ZM3 3v8h8V3H3Z",
     calendar: "M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 16H5V9h14v11ZM5 7V6h14v1H5Z",
@@ -403,12 +403,13 @@ function navigation(role: Role): string {
     accounting: "M5 6H23V18H5V6M14 9A3,3 0 0,1 17,12A3,3 0 0,1 14,15A3,3 0 0,1 11,12A3,3 0 0,1 14,9M9 8A2,2 0 0,1 7,10V14A2,2 0 0,1 9,16H19A2,2 0 0,1 21,14V10A2,2 0 0,1 19,8H9M1 10H3V20H19V22H1V10Z",
     students: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3ZM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm8 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5ZM8 13c-2.33 0-7 1.17-7 3.5V19h5v-2.5c0-1.03.42-1.91 1.09-2.63C6.98 13.32 7.5 13.12 8 13Z"
   } as const;
-  const icon = (name: keyof typeof icons): string => `<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
+  const icon = (name: keyof typeof icons): string => `<svg class="nav-icon nav-icon-${name}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name]}"></path></svg>`;
   const iconByLabel: Record<string, keyof typeof icons> = { Dashboard: "dashboard", Calendar: "calendar", Bookings: "bookings", "Past Lessons": "lessons", Reschedules: "reschedules", Resources: "resources", Notifications: "notifications", Accounting: "accounting", Students: "students", "My lessons": "lessons", Billing: "accounting", "Recurring series": "lessons" };
+  const activeLabel = title === "Add resource" ? "Resources" : title === "Notification" ? "Notifications" : ["Billing health", "Billing settings"].includes(title) ? "Accounting" : title;
   const links: Array<[string, string]> = role === "ADMIN"
     ? [["/learn/admin", "Dashboard"], ["/learn/admin/calendar", "Calendar"], ["/learn/admin/bookings", "Bookings"], ["/learn/admin/lessons", "Past Lessons"], ["/learn/admin/series", "Recurring series"], ["/learn/admin/reschedules", "Reschedules"], ["/learn/admin/resources", "Resources"], ["/learn/admin/notifications", "Notifications"], ["/learn/admin/accounting", "Accounting"], ["/learn/admin/students", "Students"]]
     : [["/learn/student", "Dashboard"], ["/learn/student/calendar", "Calendar"], ["/learn/student/lessons", "My lessons"], ["/learn/student/billing", "Billing"], ["/learn/student/resources", "Resources"]];
-  return links.map(([href, label]) => `<a href="${href}">${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
+  return links.map(([href, label]) => `<a href="${href}"${label === activeLabel ? ' aria-current="page"' : ""}>${icon(iconByLabel[label])}<span>${label}</span></a>`).join("");
 }
 
 function learnFooter(): string {
@@ -423,7 +424,7 @@ function appPage(user: AppUser, csrfToken: string, title: string, content: strin
   const identity = user.role === "ADMIN"
     ? `<span class="header-control identity-role">ADMIN</span>`
     : `<span class="identity-name">${escapeHtml(user.display_name)}<small>STUDENT</small></span>`;
-  const body = `<div class="app-shell"><header class="topbar"><div class="brand"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor</strong></span></div><div class="topbar-center-logo"><a class="topbar-center-logo-link" href="/learn" aria-label="FoxTutor Learn dashboard"><img src="/learn/assets/learn_logo-240.webp" alt="FoxTutor Learn" width="120" height="77"></a></div><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role)}</div></nav><main class="content">${compactLearnUrls(content)}</main></div>${learnFooter()}</div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
+  const body = `<div class="app-shell"><header class="topbar"><div class="brand"><img class="brand-logo" src="/learn/assets/foxlearninglogo-240.webp" alt="FoxTutor" width="48" height="46"><span class="brand-copy"><strong>FoxTutor</strong></span></div><div class="topbar-center-logo"><a class="topbar-center-logo-link" href="/learn" aria-label="FoxTutor Learn dashboard"><img src="/learn/assets/learn_logo-240.webp" alt="FoxTutor Learn" width="120" height="77"></a></div><div class="identity">${identity}<form method="post" action="/learn/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}"><button type="submit" class="header-control link-button">Log out</button></form></div></header><div class="layout"><nav aria-label="Primary navigation"><div class="nav-links">${navigation(user.role, title)}</div></nav><main class="content">${compactLearnUrls(content)}</main></div>${learnFooter()}</div><div id="site-notifications" class="site-notifications" aria-live="polite" aria-atomic="false"></div>`;
   return htmlDocument(title, body, !exactTitle);
 }
 

@@ -62,6 +62,8 @@ nav { padding: 28px 16px; border-right: 1px solid var(--line); background: var(-
 .nav-links { display: grid; gap: 4px; }
 nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #243b53; text-decoration: none; }
 nav a .nav-icon { width: 19px; height: 19px; flex: 0 0 19px; fill: currentColor; }
+nav a .nav-icon-resources, nav a .nav-icon-notifications { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+nav a[aria-current="page"] .nav-icon-resources, nav a[aria-current="page"] .nav-icon-notifications { fill: currentColor; stroke: none; }
 nav a span { min-width: 0; }
 nav a:hover, nav a:focus-visible { color: var(--action-hover); background: #d6e4ee; }
 nav a[aria-current="page"] { color: #0b4f6c; background: var(--surface); box-shadow: inset 3px 0 var(--brand), 0 1px 2px rgb(16 42 67 / 8%); font-weight: 650; }

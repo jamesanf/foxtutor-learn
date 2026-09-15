@@ -171,6 +171,13 @@ describe("resource UX contract", () => {
     expect(cssSource).not.toMatch(/\.identity(?:-role)?[^{}]*\b(?:top|transform|position)\s*:/);
   });
 
+  it("uses outlined resources and notifications icons until their nav item is selected", () => {
+    expect(workerSource).toContain("nav-icon-${name}");
+    expect(workerSource).toContain('aria-current="page"');
+    expect(cssSource).toContain("nav a .nav-icon-resources, nav a .nav-icon-notifications { fill: none; stroke: currentColor");
+    expect(cssSource).toContain('nav a[aria-current="page"] .nav-icon-resources, nav a[aria-current="page"] .nav-icon-notifications { fill: currentColor; stroke: none; }');
+  });
+
   it("prevents upstream authentication from immediately recreating a logged-out Learn session", () => {
     expect(workerSource).toContain("hasSignedOutMarker(request) && !resume");
     expect(workerSource).toContain('href="/learn?resume=1"');

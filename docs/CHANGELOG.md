@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 navigation icon refinement
+
+- Changed the Resources and admin Notifications navigation icons to outlined
+  shapes when unselected.
+- Preserved filled icons for the selected navigation item and added the
+  corresponding `aria-current="page"` state.
+- Updated the navigation icon contract and branding documentation.
+
 ### 2026-09-15 - Phase 7.17 compact Learn header mark
 
 - Reduced the centered `FoxTutor Learn` header mark by 25% on desktop and
