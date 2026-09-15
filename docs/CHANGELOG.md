@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 notification log sorting and retention
+
+- Added server-side sorting to every notification delivery-log column.
+- Defaulted the log to most-recent sent time, with unsent notifications after
+  sent notifications.
+- Limited the visible log to ten pages for the selected page size.
+- Added a daily 03:00 Europe/London cleanup that retains the latest 480
+  completed records and preserves active or unresolved deliveries.
+- Deployed commit `c38ef12` as Worker version
+  `84bfaf0b-cf56-4f40-9826-1076e13905e4`.
+
 ### 2026-09-15 - Phase 7.17 concise page headings
 
 - Removed redundant explanatory subtitles from Accounting, Notifications,

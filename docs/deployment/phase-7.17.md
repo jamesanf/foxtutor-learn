@@ -39,6 +39,11 @@ tables instead of becoming stacked card layouts that obscure column context.
 Redundant page subtitles have been removed from Accounting, Notifications,
 resource upload, billing and billing-audit headings so page titles carry the
 interface without restating their purpose.
+Notification delivery-log headers now sort by event, recipient, pupil, lesson,
+status, scheduled time, sent time or created time, defaulting to sent time
+descending. The visible log is capped at ten pages for the selected page size,
+and the scheduled Worker retains the latest 480 completed records while
+preserving active or unresolved deliveries.
 
 ## Required validation
 
@@ -73,9 +78,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `feea9e5`
+- Git commit: `c38ef12`
 - Worker: `foxtutor-learn`
-- Worker version: `883ca780-c123-4859-af24-d9120c7eb04f`
+- Worker version: `84bfaf0b-cf56-4f40-9826-1076e13905e4`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
