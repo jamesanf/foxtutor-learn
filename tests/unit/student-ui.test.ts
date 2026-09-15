@@ -118,6 +118,13 @@ describe("student profile form UI", () => {
     expect(cssSource).toContain(".student-dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));");
   });
 
+  it("uses a compact exclamatory dashboard greeting without a caption", () => {
+    expect(workerSource).toContain('class="student-dashboard-greeting"');
+    expect(workerSource).toContain('${greeting}, ${name}!');
+    expect(workerSource).not.toContain("Your lessons and latest home learning task.</p>");
+    expect(cssSource).toContain(".student-dashboard-greeting { font-size: clamp(1.65rem, 3vw, 2.3rem);");
+  });
+
   it("provides a secured student home-learning submission route", () => {
     expect(workerSource).toContain('"student-lesson-submit"');
     expect(workerSource).toContain('const action = `/learn/student/lessons/${lessonRouteId(lesson.id)}/submit`;');

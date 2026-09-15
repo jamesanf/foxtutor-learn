@@ -10,6 +10,7 @@ Automated UI contracts cover:
 - the `Submit here` link;
 - responsive dashboard panel layout;
 - time-of-day greeting and first-name fallback;
+- compact exclamatory greeting without the former supporting caption;
 - red under-30-minute launch notice, with and without an external lesson URL.
 
 The dashboard reads only the authenticated student's own upcoming and past

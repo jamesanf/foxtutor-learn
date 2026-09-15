@@ -19,7 +19,8 @@ has no task.
 
 The dashboard heading uses the student's first name, taking the first word of
 the linked pupil name when no separate first-name field exists. The greeting
-is selected in `Europe/London` time:
+is selected in `Europe/London` time, ends with an exclamation mark, and uses a
+compact heading size without a supporting caption:
 
 ```text
 05:00–11:59  Good morning
