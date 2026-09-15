@@ -19,6 +19,8 @@ Automated UI contracts cover:
   when selected.
 - shared compact table columns and responsive headers that wrap at word
   boundaries without splitting words.
+- Production FreeAgent contact-mapping actions remaining inside their table
+  cell at reduced desktop widths, with the mobile stacked form preserved.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

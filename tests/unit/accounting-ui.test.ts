@@ -112,10 +112,11 @@ describe("accounting admin presentation contract", () => {
     expect(cssSource).toContain(".accounting-contact-table th, .accounting-contact-table td { width: 25%; }");
     expect(cssSource).toContain(".accounting-contact-table th:nth-child(3) { text-align: center; }");
     expect(cssSource).toContain(".accounting-contact-table th:last-child, .accounting-contact-table td:last-child { text-align: left; }");
-    expect(cssSource).toContain(".accounting-contact-table .inline-form { align-items: center; justify-content: flex-start;");
-    expect(cssSource).toContain(".accounting-contact-table .status { display: flex; width: 112px; min-width: 112px;");
-    expect(cssSource).toContain("justify-content: flex-end;");
-    expect(cssSource).toContain("width: 104px; min-width: 104px; flex: 0 0 104px;");
+    expect(cssSource).toContain(".accounting-contact-table .inline-form { display: grid; grid-template-columns: minmax(0, 1fr) 34px 34px; align-items: center; gap: 4px;");
+    expect(cssSource).toContain(".accounting-contact-table .status { display: flex; width: min(112px, 100%); min-width: 0;");
+    expect(cssSource).toContain(".accounting-contact-table .inline-form { display: grid; grid-template-columns: minmax(0, 1fr) 34px 34px; align-items: center; gap: 4px;");
+    expect(cssSource).toContain(".accounting-contact-table .inline-form input { width: 100%; min-width: 0;");
+    expect(cssSource).toContain(".accounting-contact-table .inline-form { display: flex; align-items: stretch; flex-wrap: wrap; }");
     expect(cssSource).toContain(".accounting-contact-table { overflow: visible; }");
     expect(cssSource).toContain(".accounting-icon-button { display: inline-grid; width: 34px;");
   });

@@ -21,3 +21,9 @@ At the narrow responsive breakpoint, table rows become labelled cards. The
 same reduced horizontal spacing is retained between each label and value so
 the mobile presentation remains compact without changing its information
 hierarchy.
+
+The Production FreeAgent contact-mapping action cell uses a shrinkable grid:
+the Contact ID input takes the available width while the save and remove
+buttons retain their 34px hit areas. This prevents either icon from leaving
+the table at reduced desktop widths; the existing stacked form is retained
+on narrow mobile layouts.
