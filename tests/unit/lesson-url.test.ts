@@ -29,6 +29,13 @@ describe("lesson route keys", () => {
     expect(entityIdFromUrlKey(key)).toBe(id);
   });
 
+  it("compacts billing invoice UUIDs in invoice detail route keys", () => {
+    const id = "invoice:billing:eb80ea14-9f0a-45cc-a068-82d030099bb1";
+    const key = entityUrlKey(id);
+    expect(key).toBe("invoice:billing:64DqFJ8KRcygaILQMAmbsQ");
+    expect(entityIdFromUrlKey(key)).toBe(id);
+  });
+
   it("compacts materialised lesson UUIDs inside billing event keys", () => {
     const id = "billing:lesson:lesson:9c4a0309-86a4-4823-9b34-73dfd58bf947:2026-09-17";
     const key = entityUrlKey(id);

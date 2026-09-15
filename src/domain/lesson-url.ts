@@ -31,6 +31,8 @@ export function uuidFromCompactKey(value: string): string | null {
 }
 
 export function entityUrlKey(id: string): string {
+  const billingInvoice = /^invoice:billing:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(id);
+  if (billingInvoice) return `invoice:billing:${compactUuidKey(billingInvoice[1])}`;
   const billingMaterialisedLesson = /^billing:lesson:lesson:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(\d{4}-\d{2}-\d{2})$/i.exec(id);
   if (billingMaterialisedLesson) {
     return `billing:lesson:lesson:${compactUuidKey(billingMaterialisedLesson[1])}:${billingMaterialisedLesson[2]}`;
@@ -44,6 +46,11 @@ export function entityUrlKey(id: string): string {
 
 export function entityIdFromUrlKey(value: string): string | null {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
+  const billingInvoice = /^invoice:billing:([^:]+)$/i.exec(value);
+  if (billingInvoice) {
+    const invoiceId = uuidFromCompactKey(billingInvoice[1]);
+    return invoiceId ? `invoice:billing:${invoiceId}` : null;
+  }
   const billingMaterialisedLesson = /^billing:lesson:lesson:([^:]+):(\d{4}-\d{2}-\d{2})$/i.exec(value);
   if (billingMaterialisedLesson) {
     const lessonId = entityIdFromUrlKey(`lesson:${billingMaterialisedLesson[1]}:${billingMaterialisedLesson[2]}`);
