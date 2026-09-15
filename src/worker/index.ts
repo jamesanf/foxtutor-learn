@@ -105,6 +105,7 @@ import {
   ensureBillingInvoiceForEvent,
   ensureDirectDebitOperationForInvoice,
   authorizeBillingInvoiceDirectDebit,
+  createLessonBillingEvent,
   findCreditById,
   findBillingInvoice,
   ensureDueDirectDebitOperations,
@@ -173,6 +174,7 @@ import {
   currentCalendarDate
 } from "../domain/calendar";
 import { calculatePaymentReadiness } from "../domain/payment-readiness";
+import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
 import { classifyDirectDebitState, directDebitStatusCopy, mapDirectDebitStatus, shouldReconcileDirectDebitStatus, type DirectDebitStatus } from "../domain/direct-debit";
 import { runBillingSentinel } from "../billing/sentinel";
 import {
@@ -3172,8 +3174,29 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
     const conflict = await findOverlappingLesson(db, validation.value.startAt, validation.value.endAt);
     if (conflict) return appPage(active.user, csrfToken, "Create lesson", lessonForm(csrfToken, "/learn/admin/lessons/new", students, bookingConflictMessage(conflict), undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE));
     const now = new Date().toISOString();
+    const billingConfiguration = await configuredInvoiceFromDatabase(db, env, now);
+    if (!billingConfiguration) {
+      return appPage(
+        active.user,
+        csrfToken,
+        "Create lesson",
+        lessonForm(csrfToken, "/learn/admin/lessons/new", students, "Billing settings are not configured; the lesson cannot be created until its invoice amount and FreeAgent mapping are ready.", undefined, fields.studentId, startAt, undefined, CALENDAR_TIMEZONE)
+      );
+    }
     const lessonId = crypto.randomUUID();
     await insertLesson(db, { ...validation.value, id: lessonId, now });
+    await createLessonBillingEvent(db, {
+      id: `billing:${lessonId}`,
+      lessonId,
+      studentId: student.id,
+      payerStudentId: student.id,
+      lessonDate: validation.value.startAt.slice(0, 10),
+      billingDate: validation.value.startAt.slice(0, 10),
+      dueDate: null,
+      collectionDate: collectionDateSevenDaysBeforeLesson(validation.value.startAt.slice(0, 10)),
+      grossAmountMinor: billingConfiguration.amountMinorUnits,
+      now
+    });
     const createdLesson = await findLesson(db, lessonId);
     const recipient = await findActiveStudentRecipient(db, student.id);
     if (createdLesson && recipient?.learn_user_id && recipient.learn_user_email) {

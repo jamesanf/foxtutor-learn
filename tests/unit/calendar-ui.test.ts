@@ -136,6 +136,9 @@ describe("calendar presentation contract", () => {
     expect(cssSource).toContain(".booking-dialog-back { display: inline-grid;");
     expect(cssSource).toContain("border: 0;");
     expect(workerSource).toContain('recurringSeriesFormMarkup(csrfToken, students, undefined, true)');
+    expect(workerSource).toContain("createLessonBillingEvent(db, {");
+    expect(workerSource).toContain("collectionDateSevenDaysBeforeLesson(validation.value.startAt.slice(0, 10))");
+    expect(workerSource).toContain("Billing settings are not configured; the lesson cannot be created");
     expect(workerSource).toContain('if (request.method === "GET") return redirect("/learn/admin/bookings?open=recurring");');
     expect(workerSource).toContain('async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database)');
     expect(workerSource).toContain('return appPage(user, csrfToken, "Dashboard"');
