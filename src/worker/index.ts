@@ -2523,14 +2523,24 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         now: new Date().toISOString()
       });
       if (!authorised) return messagePage("Refund unavailable", "The credit balance changed before the refund could be recorded. Refresh and try again.", 409);
-      const completed = await recordCompletedCreditRefund(db, {
-        refundId,
-        creditId: credit.credit_id,
-        studentId: credit.student_id,
-        amountMinor,
-        providerReference,
-        now: new Date().toISOString()
-      });
+      let completed: boolean;
+      try {
+        completed = await recordCompletedCreditRefund(db, {
+          refundId,
+          creditId: credit.credit_id,
+          studentId: credit.student_id,
+          amountMinor,
+          providerReference,
+          now: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error("manual_credit_refund_completion_failed", {
+          creditId: credit.credit_id,
+          refundId,
+          message: error instanceof Error ? error.message : String(error)
+        });
+        return messagePage("Refund requires review", "The refund was authorised but could not be marked complete. Do not repeat the external payment; review the credit record.", 500);
+      }
       return completed
         ? redirect(`/learn/admin/billing/credits/${encodeURIComponent(entityUrlKey(credit.credit_id))}`)
         : messagePage("Refund requires review", "The refund was authorised but could not be marked complete. Do not repeat the external payment; review the credit record.", 500);
