@@ -27,6 +27,9 @@ headers that shrink dynamically and wrap only at natural word boundaries.
 Production FreeAgent contact-mapping actions now use a shrinkable input grid
 so the save and remove icons remain inside their table cell at reduced desktop
 widths, while retaining the stacked mobile form.
+The first Production FreeAgent connection card no longer applies the generic
+card top margin in addition to the page-heading bottom margin, so its spacing
+matches the other Accounting page content blocks.
 
 ## Required validation
 
@@ -61,9 +64,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `78b5197`
+- Git commit: `3d3295a`
 - Worker: `foxtutor-learn`
-- Worker version: `e9532a45-7aa9-4c1c-8400-64a58a4144b7`
+- Worker version: `506ffff3-efd2-4e21-a587-46a95546451f`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

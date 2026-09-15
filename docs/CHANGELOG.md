@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 Accounting connection spacing
+
+- Removed the duplicated top margin above the Production FreeAgent connection
+  card so its `FreeAgent Production` and `Connected` row aligns with the
+  Accounting page spacing rhythm.
+- Preserved the generic card spacing for subsequent Accounting content.
+- Deployed commit `3d3295a` as Worker version
+  `506ffff3-efd2-4e21-a587-46a95546451f`.
+
 ### 2026-09-15 - Phase 7.17 contact mapping action containment
 
 - Kept the Production FreeAgent contact-mapping save and remove icons inside
