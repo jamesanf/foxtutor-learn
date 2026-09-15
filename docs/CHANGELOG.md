@@ -7,6 +7,8 @@
 - Reduced the centered mark panel, topbar padding and minimum height so the
   header bar contracts instead of retaining the former whitespace.
 - Updated the branding architecture documentation and header UI contracts.
+- Deployed commit `ef3c325` as Worker version
+  `fd45ff20-c8b3-4ce3-be88-783eed460667`.
 
 ### 2026-09-15 - Phase 7.17 logout session repair
 

@@ -4,7 +4,8 @@
 
 This deployment contains the balanced student dashboard cards, time-of-day
 greeting, near-term lesson launch notice, home-learning panel, secured
-lesson-scoped student submission route and logout-session repair.
+lesson-scoped student submission route, logout-session repair and compact
+Learn header branding.
 The submission flow reuses the existing private resource/R2 pipeline and
 the logout repair does not change billing or provider behavior.
 
@@ -33,15 +34,17 @@ Authenticated Chromium should verify:
 - a successful student upload;
 - student ownership isolation for another student's lesson submission URL.
 - the logout POST, signed-out landing page and explicit resume link.
+- the reduced centered Learn mark and contracted header bar at desktop and
+  mobile widths.
 
 No Production invoice, payment, Direct Debit, credit note, bank transaction or
 £1 test is part of this feature.
 
 ## Deployment provenance
 
-- Git commit: `cb762d5`
+- Git commit: `ef3c325`
 - Worker: `foxtutor-learn`
-- Worker version: `a2cb9093-764b-4afa-8d12-4047934f7c31`
+- Worker version: `fd45ff20-c8b3-4ce3-be88-783eed460667`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
