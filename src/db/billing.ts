@@ -480,6 +480,7 @@ export async function recordCompletedCreditRefund(
       input.refundId,
       input.providerReference,
       `credit-refund:${input.refundId}`,
+      input.now,
       input.refundId,
       input.studentId,
       Number(input.amountMinor)

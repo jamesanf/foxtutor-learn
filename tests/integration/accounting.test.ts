@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cancelLesson, rescheduleLesson } from "../../src/db/cancellations";
+import { recordCompletedCreditRefund } from "../../src/db/billing";
 
 interface MockStatement {
   sql: string;
@@ -55,6 +56,41 @@ function mockBatchDb(invoice?: {
 }
 
 describe("Phase 5 accounting boundary", () => {
+  it("binds the refund ledger timestamp before completing a manual credit refund", async () => {
+    const statements: MockStatement[] = [];
+    const db = {
+      prepare(sql: string) {
+        return {
+          bind(...values: unknown[]) {
+            statements.push({ sql, values });
+            return {
+              async first<T>() {
+                return { id: "refund-1" } as T;
+              }
+            };
+          }
+        };
+      },
+      async batch(batchStatements: MockStatement[]) {
+        return batchStatements.map(() => ({ meta: { changes: 1 } }));
+      }
+    } as unknown as D1Database;
+
+    const completed = await recordCompletedCreditRefund(db, {
+      refundId: "refund-1",
+      creditId: "credit-1",
+      studentId: "student-1",
+      amountMinor: 5500n,
+      providerReference: "bank-ref-1",
+      now: "2026-09-15T20:00:00.000Z"
+    });
+
+    expect(completed).toBe(true);
+    expect(statements[0]?.values).toHaveLength(10);
+    expect(statements[0]?.values).toContain("2026-09-15T20:00:00.000Z");
+    expect(statements[1]?.values).toEqual(["bank-ref-1", "2026-09-15T20:00:00.000Z", "refund-1"]);
+  });
+
   it("writes cancellation history and its accounting outbox in one D1 batch", async () => {
     const { db, statements } = mockBatchDb();
     const changed = await cancelLesson(db, {
