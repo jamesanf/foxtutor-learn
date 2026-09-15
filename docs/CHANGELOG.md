@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 navigation icon consistency
+
+- Made Calendar, Bookings and Past Lessons icons outlined by default, with
+  their existing filled MDI paths shown when selected.
+- Kept the same outline/filled behavior for Resources and Notifications and
+  left the remaining navigation icons unchanged.
+- Deployed commit `c0c873e` as Worker version
+  `d6f7678f-15a0-4215-8097-75361cedc300`.
+
 ### 2026-09-15 - Phase 7.17 footer page-height correction
 
 - Replaced the stacked viewport-height content row with a flex-column Learn

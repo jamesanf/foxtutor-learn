@@ -18,6 +18,9 @@ sidebar navigation button, including the student dashboard greeting.
 The Learn shell now uses a flex column layout so short student dashboards
 place the footer at the browser bottom without an extra viewport-sized content
 row, while longer dashboards continue to scroll naturally.
+Calendar, Bookings and Past Lessons navigation now use outline icons by
+default and their existing filled MDI paths when selected, matching Resources
+and Notifications.
 
 ## Required validation
 
@@ -52,9 +55,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `5e03640`
+- Git commit: `c0c873e`
 - Worker: `foxtutor-learn`
-- Worker version: `920ad2b3-5b97-459b-a7d9-d94080a337d4`
+- Worker version: `d6f7678f-15a0-4215-8097-75361cedc300`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
