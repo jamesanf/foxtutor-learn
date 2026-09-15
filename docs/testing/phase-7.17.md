@@ -25,6 +25,8 @@ Automated UI contracts cover:
   rhythm and the other cards on the page.
 - 25% smaller main page titles across standard, calendar, resource-upload and
   billing-settings heading variants.
+- recurring-series Pause/Resume controls remaining centered in their table
+  row with no default button top offset.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

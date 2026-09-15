@@ -100,6 +100,13 @@ describe("calendar presentation contract", () => {
     expect(workerSource).not.toContain(">Rows<");
   });
 
+  it("centers recurring-series table actions without the default button offset", () => {
+    expect(workerSource).toContain('<td class="table-action-cell">${item.status === "ACTIVE"');
+    expect(cssSource).toContain(".table-action-cell { vertical-align: middle; text-align: center; }");
+    expect(cssSource).toContain(".table-action-cell form { margin: 0; }");
+    expect(cssSource).toContain(".table-action-cell .button { margin-top: 0; }");
+  });
+
   it("keeps every lesson status above the normal-text contrast threshold", () => {
     const white: [number, number, number] = [255, 255, 255];
     const statusColours: Record<string, [number, number, number]> = {

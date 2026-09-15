@@ -27,3 +27,7 @@ the Contact ID input takes the available width while the save and remove
 buttons retain their 34px hit areas. This prevents either icon from leaving
 the table at reduced desktop widths; the existing stacked form is retained
 on narrow mobile layouts.
+
+Table action cells use a centered, vertically middle-aligned treatment with no
+default button top offset. This keeps controls such as recurring-series Pause
+on the same horizontal line as the other row values.
