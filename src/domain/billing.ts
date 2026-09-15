@@ -92,6 +92,9 @@ export function creditStatus(originalMinor: bigint, consumedMinor: bigint, refun
 }
 
 export function billingReference(prefix: "INV" | "CRN" | "BILL", id: string): string {
+  const uuid = id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+  const date = id.match(/(\d{4}-\d{2}-\d{2})$/)?.[1];
+  if (uuid) return `FT-${prefix}-${uuid.toUpperCase()}${date ? `-${date}` : ""}`;
   const compact = id.replace(/[^A-Za-z0-9]/g, "");
   if (!compact) throw new Error("Billing reference requires a stable identifier.");
   return `FT-${prefix}-${compact}`;

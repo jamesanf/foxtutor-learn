@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyAvailableCredits,
   billingDatesForLesson,
+  billingReference,
   collectionDateSevenDaysBeforeLesson,
   creditApplicationIsRecoverable,
   creditConsumptionIdempotencyKey,
@@ -94,6 +95,13 @@ describe("customer credit ledger rules", () => {
       cancellationDate: null,
       creditNoteDate: null
     });
+  });
+
+  it("normalises provider references without exposing internal billing prefixes", () => {
+    expect(billingReference("INV", "billing:12408985-d91f-4c78-8cc4-96d906053f47"))
+      .toBe("FT-INV-12408985-D91F-4C78-8CC4-96D906053F47");
+    expect(billingReference("INV", "billing:lesson:ba96d1a1-2ab5-4f7e-ba46-2f881c3311d1:2026-09-24"))
+      .toBe("FT-INV-BA96D1A1-2AB5-4F7E-BA46-2F881C3311D1-2026-09-24");
   });
 
   it("keeps a twelve-lesson future fixture invoice-only until each collection date", () => {

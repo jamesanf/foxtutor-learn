@@ -127,6 +127,12 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).not.toContain("await ensureAllRecurringSeriesMaterialised(db, currentCalendarDate(new Date(now)), now);");
   });
 
+  it("uses the provider reference as the primary invoice identifier", () => {
+    expect(workerSource).toContain("const displayReference = invoice.freeagent_reference ?? invoice.id;");
+    expect(workerSource).toContain("FoxTutor invoice ${escapeHtml(displayReference)}");
+    expect(workerSource).toContain("<dt>Internal invoice ID</dt>");
+  });
+
   it("uses a four-card dashboard grid and side-by-side accounting actions", () => {
     expect(cssSource).toContain(".summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
     expect(cssSource).toContain("@media (max-width: 900px) {\n  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }");

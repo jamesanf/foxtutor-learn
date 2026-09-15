@@ -90,6 +90,10 @@ point.
 Calendar now renders the same Create Booking modal tree as Dashboard and
 Bookings. All admin creation triggers use `Create Booking`; the old Add lesson
 calendar link has been removed.
+Invoice detail now leads with the human/provider reference instead of the
+internal UUID-style invoice ID, while retaining that internal ID as a
+secondary operational field. New provider references use canonical UUID
+formatting and recurring references retain their occurrence date.
 
 ## Required validation
 
@@ -123,15 +127,20 @@ Authenticated Chromium should verify:
   creation;
 - recurring resume remaining paused when a newly occupied occurrence is
   detected.
+- the tested invoice detail showing provider reference `94627880` as the
+  primary identifier, with the internal invoice ID secondary;
+- no duplicate provider invoice when an existing billing operation is
+  reprocessed after the reference-format change.
 
-No Production invoice, payment, Direct Debit, credit note, bank transaction or
-£1 test is part of this feature.
+No early Production payment, Direct Debit, credit note, bank transaction or
+£1 test is part of this feature. The verified £55 invoice remains scheduled
+for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `c3dc09c`
+- Git commit: pending final normalization deployment
 - Worker: `foxtutor-learn`
-- Worker version: `866fe51b-9089-454c-bc21-ff1e7b669170`
+- Worker version: pending final normalization deployment
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

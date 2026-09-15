@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 invoice reference normalization
+
+- Normalized new provider invoice references to canonical UUID formatting,
+  removing the internal `billing` prefix and preserving recurring occurrence
+  dates.
+- Updated invoice detail so the human/provider reference is the primary
+  identifier; the internal invoice ID remains available as a secondary field.
+- Preserved provider-operation idempotency and avoided early payment mutation.
+
 ### 2026-09-15 - Phase 7.17 sitewide Create Booking entry point
 
 - Replaced the Calendar Add lesson link with the shared Create Booking modal

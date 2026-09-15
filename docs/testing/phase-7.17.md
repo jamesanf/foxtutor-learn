@@ -72,6 +72,10 @@ Automated UI contracts cover:
 - every admin booking entry point, including Calendar, using the `Create
   Booking` trigger and shared standalone/recurring modal tree, with no
   remaining `Add lesson` action.
+- invoice detail using the human/provider reference as its primary identifier,
+  with the internal invoice ID retained only as a secondary operational field;
+- canonical provider invoice references using `FT-INV-<UUID>` for standalone
+  billing events and `FT-INV-<UUID>-<date>` for recurring occurrences.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,
@@ -119,6 +123,10 @@ The complete suite passes:
 292 passed
 0 failed
 ```
+
+The latest billing-reference and invoice-detail regression tests cover the
+normalised identifier presentation. Existing provider invoices remain
+idempotent and are not recreated when the reference-format code changes.
 
 The TypeScript check and client build also pass. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and
