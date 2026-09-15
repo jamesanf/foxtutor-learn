@@ -11,6 +11,8 @@
   and clears the marker.
 - Preserved CSRF validation, D1 session deletion and session-cookie clearing.
 - Added automated logout/session-marker regression coverage.
+- Deployed commit `cb762d5` as Worker version
+  `a2cb9093-764b-4afa-8d12-4047934f7c31`.
 
 ### 2026-09-15 - Phase 7.17 student dashboard and home-learning submission
 

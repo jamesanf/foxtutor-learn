@@ -39,8 +39,10 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: recorded below after the logout deployment completes.
+- Git commit: `cb762d5`
 - Worker: `foxtutor-learn`
-- Worker version: recorded below after the logout deployment completes.
+- Worker version: `a2cb9093-764b-4afa-8d12-4047934f7c31`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
-- Deployment completed after the logout repair was validated.
+- Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
+  correctly reached the Cloudflare Access login boundary. Authenticated
+  Chromium logout acceptance remains a human-session check.
