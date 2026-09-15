@@ -131,6 +131,15 @@ sequence boundaries. Existing provider invoices remain idempotent and are not
 recreated when the reference-format code changes; retries search both the new
 date-sequential reference and the prior UUID reference.
 
+Live Chromium and Production FreeAgent acceptance created a James Fox lesson
+for 30 September 2026. FreeAgent displayed invoice `94628424` with reference
+`FT-INV-26091501`, total £55.00 and status Open. FoxTutor recorded the
+Production invoice as SENT with a successful provider operation and a
+collection date seven days before the lesson.
+
+New provider invoices use the lesson date as their invoice date and include a
+visible line-item note stating the scheduled Direct Debit collection date.
+
 The TypeScript check and client build also pass. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and
 explicit resume path in addition to the dashboard and student submission

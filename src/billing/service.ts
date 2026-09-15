@@ -245,25 +245,27 @@ async function processCreateInvoice(
     });
     return;
   }
-  const reference = await invoiceReferenceFor(db, invoice);
   const legacyReference = legacyInvoiceReference(event.id);
   try {
     let existing = await providerCall(db, env, now, fetcher, (client, token) =>
-      client.findInvoiceByReference(token, link.external_url, reference)
+      client.findInvoiceByReference(token, link.external_url, legacyReference)
     );
-    if (!existing && legacyReference !== reference) {
+    const reference = existing ? legacyReference : await invoiceReferenceFor(db, invoice);
+    if (!existing && reference !== legacyReference) {
       existing = await providerCall(db, env, now, fetcher, (client, token) =>
-        client.findInvoiceByReference(token, link.external_url, legacyReference)
+        client.findInvoiceByReference(token, link.external_url, reference)
       );
     }
+    const lessonDate = event.lesson_date ?? event.billing_date ?? now.slice(0, 10);
+    const collectionDate = event.collection_date ?? lessonDate;
     const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
       client.createDraftInvoice(token, {
         contactUrl: link.external_url,
         reference,
-        datedOn: event.billing_date ?? now.slice(0, 10),
+        datedOn: lessonDate,
         paymentTermsInDays: config.paymentTermsInDays,
         itemType: config.itemType,
-        description: `FoxTutor lesson ${event.lesson_date ?? ""}`.trim(),
+        description: `FoxTutor lesson ${lessonDate}. Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`,
         price: formatMinorUnits(allocated.netAmountMinor),
         categoryUrl: config.categoryUrl,
         currency: config.currency,

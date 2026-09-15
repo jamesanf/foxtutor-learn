@@ -8,6 +8,12 @@
   cannot create a duplicate provider invoice.
 - Added migration `0032_invoice_reference_sequences.sql` for durable sequence
   allocation.
+- Live Production acceptance confirmed `FT-INV-26091501` for FreeAgent
+  invoice `94628424` and a collection date seven days before the lesson.
+- New provider invoice descriptions now state the earlier Direct Debit
+  collection date while retaining the lesson date as the invoice date.
+- Deployed commit `8703633` as Worker version
+  `5e5e76a0-d1ef-4b03-a3ed-85a76041a890`.
 
 ### 2026-09-15 - Phase 7.17 invoice reference normalization
 

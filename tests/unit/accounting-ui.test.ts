@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const workerSource = readFileSync("src/worker/index.ts", "utf8");
 const cssSource = readFileSync("public/learn.css", "utf8");
+const billingServiceSource = readFileSync("src/billing/service.ts", "utf8");
 
 describe("accounting admin presentation contract", () => {
   it("uses a dedicated money icon and keeps FreeAgent setup messaging single-sourced", () => {
@@ -131,6 +132,11 @@ describe("accounting admin presentation contract", () => {
     expect(workerSource).toContain("const displayReference = invoice.freeagent_reference ?? invoice.id;");
     expect(workerSource).toContain("FoxTutor invoice ${escapeHtml(displayReference)}");
     expect(workerSource).toContain("<dt>Internal invoice ID</dt>");
+  });
+
+  it("dates lesson invoices on the lesson and states the earlier collection date", () => {
+    expect(billingServiceSource).toContain("datedOn: lessonDate");
+    expect(billingServiceSource).toContain("Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).");
   });
 
   it("uses a four-card dashboard grid and side-by-side accounting actions", () => {

@@ -96,6 +96,9 @@ secondary operational field. New provider references use the short
 date-sequential `FT-INV-YYMMDDNN` format. A D1-backed unique sequence table
 allocates each daily number once, and retries also search the prior UUID
 reference so existing provider invoices cannot be duplicated.
+The FreeAgent invoice date is the lesson date, and the visible invoice
+description states that Direct Debit collection is scheduled seven days
+earlier.
 
 ## Required validation
 
@@ -134,6 +137,9 @@ Authenticated Chromium should verify:
 - no duplicate provider invoice when an existing billing operation is
   reprocessed after the reference-format change, including legacy-reference
   lookup.
+- live Production FreeAgent showing invoice `94628424` as
+  `FT-INV-26091501`, with the FoxTutor collection date seven days before the
+  30 September lesson.
 
 No early Production payment, Direct Debit, credit note, bank transaction or
 £1 test is part of this feature. The verified £55 invoice remains scheduled
@@ -141,9 +147,9 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `908b1a6`
+- Git commit: `8703633`
 - Worker: `foxtutor-learn`
-- Worker version: `b68a49d5-32ff-4a4f-a53e-12625e168ac9`
+- Worker version: `5e5e76a0-d1ef-4b03-a3ed-85a76041a890`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
