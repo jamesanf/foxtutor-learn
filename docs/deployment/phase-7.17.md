@@ -315,3 +315,17 @@ before deployment. Authenticated Chromium rendered the new workflow with all
 three method choices, the pre-flight checklist and explicit external-refund
 confirmation. The remote schema read-back confirmed the new persisted
 `refund_method` column. No real-money payment or refund was initiated.
+
+## Latest deployment: shorter payment references
+
+- Git commit: `a24b81c`
+- Worker version: `a29b8002-80e3-4a13-99c4-8c0d1b12be60`
+- Production migrations: none required
+- Deployment date: 2026-09-15
+
+New lesson invoice references now use `FTYYMMDDNN`, such as `FT26091503`.
+The date is the lesson date in `YYMMDD` form and the suffix is the
+collision-safe daily invoice sequence from `01` through `99`. Existing
+`FT-INV-YYMMDDNN` and legacy UUID references remain supported for historical
+provider lookup and provenance; newly generated customer and provider
+references use the shorter format.
