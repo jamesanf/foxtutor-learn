@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 footer page-height correction
+
+- Replaced the stacked viewport-height content row with a flex-column Learn
+  shell so the footer reaches the browser bottom on short dashboards.
+- Preserved natural content growth and browser scrolling for longer dashboards.
+- Deployed commit `5e03640` as Worker version
+  `920ad2b3-5b97-459b-a7d9-d94080a337d4`.
+
 ### 2026-09-15 - Phase 7.17 page-title alignment
 
 - Reduced the shared content top spacing so all Learn page titles align with

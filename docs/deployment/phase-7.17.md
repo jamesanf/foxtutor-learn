@@ -15,6 +15,9 @@ The submission flow reuses the existing private resource/R2 pipeline and
 the logout repair does not change billing or provider behavior.
 Shared content spacing now aligns every page title with the top of the first
 sidebar navigation button, including the student dashboard greeting.
+The Learn shell now uses a flex column layout so short student dashboards
+place the footer at the browser bottom without an extra viewport-sized content
+row, while longer dashboards continue to scroll naturally.
 
 ## Required validation
 
@@ -49,9 +52,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `fc3e43a`
+- Git commit: `5e03640`
 - Worker: `foxtutor-learn`
-- Worker version: `447efda8-cf98-42f4-b76b-f6e8b66ee87f`
+- Worker version: `920ad2b3-5b97-459b-a7d9-d94080a337d4`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
