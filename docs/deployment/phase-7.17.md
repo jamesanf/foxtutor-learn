@@ -52,6 +52,10 @@ padding and line-height cannot be overridden by the global button defaults.
 The control height is now 24px to match the adjacent status pill.
 The action form now starts at the same padded left edge as the `Action`
 column header instead of centering the button within the column.
+Admin recurring-series management now appears directly below Upcoming
+Bookings. The standalone Recurring series navigation item has been removed,
+while legacy `/learn/admin/series` links redirect to Bookings and the existing
+create, pause and resume actions remain available.
 
 ## Required validation
 
@@ -86,9 +90,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `1b79562`
+- Git commit: `598302b`
 - Worker: `foxtutor-learn`
-- Worker version: `1de073f6-acf0-4322-a399-c187ab97658c`
+- Worker version: `6abcf793-19da-412d-a3da-5780484f7afb`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

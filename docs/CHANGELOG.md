@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring series in Bookings
+
+- Moved the admin recurring-series table directly below Upcoming Bookings.
+- Removed the standalone Recurring series navigation item.
+- Preserved recurring-series creation and controls, with legacy series links
+  redirecting to the Bookings page.
+- Deployed commit `598302b` as Worker version
+  `6abcf793-19da-412d-a3da-5780484f7afb`.
+
 ### 2026-09-15 - Phase 7.17 recurring-series Action alignment
 
 - Left-aligned the recurring-series Pause/Resume control with the start of
