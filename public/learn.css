@@ -182,6 +182,8 @@ h2 { font-size: 1.3rem; font-weight: 650; }
 .student-dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .student-dashboard-panels .dashboard-section { margin-top: var(--space-6); }
 .student-dashboard-panels .dashboard-section p { max-width: 58ch; }
+.student-dashboard-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); width: 100%; max-width: 58ch; margin-top: var(--space-4); }
+.student-dashboard-actions .button { width: 100%; margin-top: 0; }
 .student-lesson-launch-notice { display: block; color: #b91c1c !important; font-size: .78rem !important; font-weight: 700; }
 .student-lesson-launch-notice a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .student-lesson-launch-notice a:hover, .student-lesson-launch-notice a:focus-visible { color: #7f1d1d; }
@@ -640,6 +642,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   .detail-grid { grid-template-columns: 1fr; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .student-dashboard-panels { grid-template-columns: 1fr; }
+  .student-dashboard-actions { grid-template-columns: 1fr; }
   .billing-settings-actions { width: 100%; align-items: stretch; flex-direction: column; }
   .billing-settings-actions .button { width: 100%; min-width: 0; max-width: none; flex: 1 1 auto; }
   .billing-settings-back { align-self: flex-end; }

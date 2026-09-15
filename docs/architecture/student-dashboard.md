@@ -37,6 +37,10 @@ plain text without a hyperlink.
 The four dashboard cards use matching two-column widths on desktop and stack
 into one column on narrow screens.
 
+The `View calendar` and `View resources` actions in the My learning panel use
+a full-width two-column action row aligned to the paragraph above. On narrow
+screens the buttons stack and remain full width.
+
 ## Student submissions
 
 When a sent report contains a home-learning task, the dashboard provides a

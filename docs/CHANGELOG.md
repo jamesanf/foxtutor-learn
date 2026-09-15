@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 full-width student dashboard actions
+
+- Made the student dashboard `View calendar` and `View resources` buttons
+  fill the action row and align with the paragraph above.
+- Added a responsive single-column version for narrow screens.
+- Updated the dashboard architecture documentation and UI contract.
+
 ### 2026-09-15 - Phase 7.17 compact Learn footer
 
 - Replaced the footer's `James Fox` label with bold `FoxTutor` followed by

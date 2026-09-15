@@ -103,6 +103,9 @@ describe("student profile form UI", () => {
     expect(workerSource).toContain("listUpcomingLessonsForUser(db, user.id, now, 1, 0)");
     expect(workerSource).toContain("findSentLessonReportForStudent(db, lastLesson.id, user.id)");
     expect(cssSource).toContain(".student-dashboard-panels { display: grid;");
+    expect(workerSource).toContain('class="student-dashboard-actions"');
+    expect(cssSource).toContain(".student-dashboard-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(cssSource).toContain(".student-dashboard-actions .button { width: 100%; margin-top: 0; }");
   });
 
   it("greets the student by time of day and warns before a near-term lesson", () => {
