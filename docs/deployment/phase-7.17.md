@@ -348,9 +348,9 @@ description. This prevents an hourly representation of a 55-minute lesson.
 
 ## Latest deployment: credit-covered statement notifications
 
-- Git commit: pending
+- Git commit: `1948374`
 - Production migration: `0042_credit_statement_notifications.sql`
-- Worker version: pending
+- Worker version: `510963f5-83ce-4d82-8ba5-19c7e40dafbf`
 - Deployment date: 2026-09-15
 
 Credit-covered billing statements now enter the durable notification outbox.
@@ -364,3 +364,10 @@ Production’s current notification audit has two historical failed resource
 messages caused by provider validation responses and 17 future lesson
 reminders in `PENDING`; billing alerts, invoice operations and accounting
 outbox errors are clear.
+
+Authenticated Chromium acceptance on `/learn/admin/notifications` verified
+the Billing group, enabled `Credit Covered Statement` toggle, Save control and
+preview link. The live preview rendered the FoxTutor Billing frame, statement
+reference `FT26091503`, source invoice `FT26091502`, £0.00 amount due and no
+bank-detail or payment-reference leakage. The deployed notification setting
+is enabled in Production D1.
