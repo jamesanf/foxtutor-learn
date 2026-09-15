@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 mobile table scrolling
+
+- Replaced the mobile stacked-card table transformation with horizontal
+  scrolling for all Learn tables.
+- Preserved table headers, row alignment, column relationships and action
+  controls on iPhone-sized viewports.
+- Deployed commit `e20ffb8` as Worker version
+  `defc6112-ddb3-4627-8fc4-a708cf2bebd9`.
+
 ### 2026-09-15 - Phase 7.17 recurring-series table actions
 
 - Centered the recurring-series Pause/Resume controls within their action

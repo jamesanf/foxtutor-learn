@@ -34,6 +34,8 @@ Main page titles are now 25% smaller across the shared, calendar,
 resource-upload and billing-settings heading variants.
 Recurring-series table action cells now center Pause/Resume controls and remove
 the generic button top offset, keeping the controls aligned with row values.
+At mobile widths, all Learn tables now remain real horizontally scrollable
+tables instead of becoming stacked card layouts that obscure column context.
 
 ## Required validation
 
@@ -68,9 +70,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `b601106`
+- Git commit: `e20ffb8`
 - Worker: `foxtutor-learn`
-- Worker version: `4f183ecc-322a-494b-906e-a74b86642762`
+- Worker version: `defc6112-ddb3-4627-8fc4-a708cf2bebd9`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
