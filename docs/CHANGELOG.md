@@ -10,6 +10,14 @@
 - Updated billing, cancellation, credit-provenance and notification paths to
   emit the shorter reference for newly created invoices.
 
+### 2026-09-15 - Correct FreeAgent lesson units
+
+- FreeAgent invoice payloads now send the supported `-no unit-` item type for
+  FoxTutor's `Units` setting instead of omitting `item_type` and inheriting
+  FreeAgent's misleading `Hours` default.
+- Invoice details continue to state `1 Unit; 55 minutes`, so the customer sees
+  the correct lesson quantity and duration.
+
 ### 2026-09-15 - Guided external credit refunds
 
 - Added a step-by-step admin refund workflow with explicit GoCardless,

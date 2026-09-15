@@ -266,9 +266,11 @@ it has been seen and leaves it open for reconciliation; resolving it is a
 separate action after the provider state is confirmed. This fixes the prior
 `Invalid alert action` response for reconciliation alert IDs.
 
-FreeAgent invoice settings now use API item type `Units`, not `Hours`. A
-quantity of one renders as `Unit` and represents one 55-minute FoxTutor
-lesson. Migrations `0035_invoice_item_type_unit.sql` and
+FreeAgent invoice settings remain `Units` in FoxTutor, but the API payload now
+uses FreeAgent's supported `-no unit-` item type rather than omitting the field
+and inheriting the company-wide `Hours` default. The description explicitly
+states `1 Unit; 55 minutes`, representing one 55-minute FoxTutor lesson.
+Migrations `0035_invoice_item_type_unit.sql` and
 `0036_freeagent_invoice_item_type_units.sql` normalize existing persisted settings in
 both the legacy and environment-specific billing settings tables.
 

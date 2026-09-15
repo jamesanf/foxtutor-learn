@@ -687,7 +687,7 @@ export class FreeAgentClient {
       ...(input.enableGoCardless ? { payment_methods: { gocardless_preauth: true } } : {}),
       ...(input.bankAccountUrl !== undefined ? { bank_account: input.bankAccountUrl } : {}),
       invoice_items: [{
-        ...(input.itemType === "Unit" || input.itemType === "Units" ? {} : { item_type: input.itemType }),
+        item_type: input.itemType === "Unit" || input.itemType === "Units" ? "-no unit-" : input.itemType,
         description: input.description,
         quantity: "1.0",
         price: input.price,

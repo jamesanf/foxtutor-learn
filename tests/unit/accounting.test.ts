@@ -491,7 +491,7 @@ describe("FreeAgent adapter", () => {
     expect(requestBody).not.toContain("gocardless_preauth");
   });
 
-  it("uses FreeAgent's no-unit API value for FoxTutor Units", async () => {
+  it("uses FreeAgent's explicit no-unit API value for FoxTutor Units", async () => {
     let requestBody = "";
     const client = new FreeAgentClient({
       environment: "sandbox",
@@ -517,7 +517,7 @@ describe("FreeAgent adapter", () => {
         invoice_items: [{ description: "FoxTutor lesson 2026-09-22 (1 Unit; 55 minutes)" }]
       }
     });
-    expect(JSON.parse(requestBody).invoice.invoice_items[0]).not.toHaveProperty("item_type");
+    expect(JSON.parse(requestBody).invoice.invoice_items[0]).toHaveProperty("item_type", "-no unit-");
   });
 
   it("falls back to the documented draft-then-delete API path when cancellation transition is denied", async () => {
