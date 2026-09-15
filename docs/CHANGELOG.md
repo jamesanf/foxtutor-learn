@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series table actions
+
+- Centered the recurring-series Pause/Resume controls within their action
+  cells.
+- Removed the generic button top offset so the controls remain on the same
+  horizontal line as the other row values.
+- Deployed commit `b601106` as Worker version
+  `4f183ecc-322a-494b-906e-a74b86642762`.
+
 ### 2026-09-15 - Phase 7.17 reduced page title scale
 
 - Reduced main page titles by 25% across standard, calendar, resource-upload

@@ -32,6 +32,8 @@ card top margin in addition to the page-heading bottom margin, so its spacing
 matches the other Accounting page content blocks.
 Main page titles are now 25% smaller across the shared, calendar,
 resource-upload and billing-settings heading variants.
+Recurring-series table action cells now center Pause/Resume controls and remove
+the generic button top offset, keeping the controls aligned with row values.
 
 ## Required validation
 
@@ -66,9 +68,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `4c41d26`
+- Git commit: `b601106`
 - Worker: `foxtutor-learn`
-- Worker version: `893905bd-c247-487f-abff-244a65481add`
+- Worker version: `4f183ecc-322a-494b-906e-a74b86642762`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
