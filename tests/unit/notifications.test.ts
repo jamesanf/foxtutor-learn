@@ -211,6 +211,33 @@ describe("notification domain", () => {
       billingOutcome: "NOT_INVOICED"
     }, "https://foxtutor.org/learn");
     expect(notInvoiced.text).toContain("No payment will be taken");
+
+    const failed = renderCancellationProcessed({
+      studentName: "Jamie",
+      startAt: "2026-09-15T19:00:00.000Z",
+      endAt: "2026-09-15T19:55:00.000Z",
+      timezone: "Europe/London",
+      lessonPath: "/learn/student/lessons/lesson-1",
+      externalUrl: null,
+      billingOutcome: "PAYMENT_FAILED",
+      billingAmountMinor: "5500",
+      billingInvoiceReference: "FT26091501"
+    }, "https://foxtutor.org/learn");
+    expect(failed.text).toContain("did not complete");
+    expect(failed.text).toContain("No action is needed from you");
+    expect(failed.text).not.toContain("FoxTutor is reviewing");
+
+    const pendingCancellation = renderCancellationProcessed({
+      studentName: "Jamie",
+      startAt: "2026-09-15T19:00:00.000Z",
+      endAt: "2026-09-15T19:55:00.000Z",
+      timezone: "Europe/London",
+      lessonPath: "/learn/student/lessons/lesson-1",
+      externalUrl: null,
+      billingOutcome: "CANCELLATION_PENDING_PROVIDER"
+    }, "https://foxtutor.org/learn");
+    expect(pendingCancellation.text).toContain("will not initiate a Direct Debit collection");
+    expect(pendingCancellation.text).not.toContain("being confirmed");
   });
 
   it("rejects incomplete untyped template projections", () => {

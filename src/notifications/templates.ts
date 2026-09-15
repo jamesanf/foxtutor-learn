@@ -186,7 +186,7 @@ export function renderCancellationProcessed(data: CancellationProcessedEmailData
   const billingText = data.billingOutcome === "NOT_INVOICED"
     ? "This lesson was cancelled before invoicing. No payment will be taken."
     : data.billingOutcome === "CANCELLATION_PENDING_PROVIDER"
-      ? "The lesson was cancelled before collection. The provider invoice cancellation is being confirmed; no Direct Debit collection will be initiated by FoxTutor."
+      ? "This lesson was cancelled before collection. FoxTutor will not initiate a Direct Debit collection for it, and no payment has been taken."
       : data.billingOutcome === "CREDIT_GRANTED"
         ? `Payment was confirmed and${amount} has been retained as credit from invoice${reference} for a future booking.`
         : data.billingOutcome === "CREDIT_RESTORED"
@@ -194,7 +194,7 @@ export function renderCancellationProcessed(data: CancellationProcessedEmailData
         : data.billingOutcome === "PAYMENT_IN_TRANSIT"
           ? `A payment is still in transit${reference}. The account credit will remain subject to provider confirmation.`
           : data.billingOutcome === "PAYMENT_FAILED"
-            ? `The payment attempt${reference} failed. No credit has been created; FoxTutor is reviewing the billing provider outcome.`
+            ? `The payment attempt${reference} did not complete. No credit has been created for this cancelled lesson. No action is needed from you.`
           : data.billingOutcome === "RECONCILIATION_REQUIRED"
             ? "The cancellation was recorded, but the payment provider state is being reconciled. FoxTutor will send a separate financial update once confirmed."
             : "";

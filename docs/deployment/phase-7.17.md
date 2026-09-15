@@ -371,3 +371,13 @@ preview link. The live preview rendered the FoxTutor Billing frame, statement
 reference `FT26091503`, source invoice `FT26091502`, £0.00 amount due and no
 bank-detail or payment-reference leakage. The deployed notification setting
 is enabled in Production D1.
+
+Cancellation email wording was also corrected in the Worker source. Failed
+payment cancellations no longer say that FoxTutor is reviewing the outcome,
+and pending pre-collection cancellations no longer tell customers that an
+internal provider-cancellation operation is being confirmed. The Billing
+health alert table now exposes an Admin steps dialogue with safe
+retry/reconcile guidance. The financial policy remains fail-closed: unpaid
+open invoices are prevented from entering collection and cancelled through
+the supported provider path; credit notes are not created without confirmed
+payment.

@@ -320,6 +320,28 @@ validation responses, and 17 future `LESSON_REMINDER` notifications in
 resource messages are retained for audit and are not billing or payment
 failures; the pending reminders are expected scheduled work.
 
+## Cancellation wording and provider policy
+
+Cancellation emails do not claim that FoxTutor is actively reviewing a
+customer's failed payment. A failed payment now states only that the attempt
+did not complete, no credit was created for the cancelled lesson, and no
+customer action is needed.
+
+For a sent/open invoice that has not entered collection, the current financial
+policy is to prevent Direct Debit collection and cancel the unpaid provider
+invoice through the supported FreeAgent path. A credit note is not issued for
+an unpaid invoice because that would create a credit without a confirmed
+customer payment. Credit notes and customer credit are reserved for confirmed
+payment or credit-ledger cases. The cancellation email therefore no longer
+describes an internal provider-cancellation operation as a customer
+follow-up; it simply states that no Direct Debit collection will be initiated
+and no payment has been taken.
+
+Billing health alerts now include an expandable Admin steps dialogue showing
+the lesson, invoice and billing-audit links, the current provider state,
+recommended action, retry/reconcile safety rule, and the precise distinction
+between Acknowledge and Resolve.
+
 ## Credit-covered statement notification controls
 
 Credit-covered billing statements now use the durable notification outbox

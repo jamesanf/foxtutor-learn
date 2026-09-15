@@ -22,4 +22,10 @@ describe("notification delivery log UI contract", () => {
     expect(notificationDbSource).toContain("status IN ('SENT', 'FAILED', 'SUPPRESSED')");
     expect(notificationDbSource).not.toContain("status IN ('PENDING', 'SENDING', 'UNKNOWN')");
   });
+
+  it("provides an admin decision tree for billing alerts", () => {
+    expect(workerSource).toContain("function billingAlertGuidance(alert: BillingAlert): string");
+    expect(workerSource).toContain("Do not retry or refund while the provider state is unknown");
+    expect(workerSource).toContain("After the provider and local records agree, use Resolve");
+  });
 });

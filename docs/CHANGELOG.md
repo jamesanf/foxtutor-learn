@@ -14,6 +14,19 @@
   provider-validation failures for resource messages and 17 future scheduled
   lesson reminders; no open billing alerts or failed accounting work remain.
 
+### 2026-09-15 - Neutral cancellation billing messages
+
+- Removed customer-facing wording that implied FoxTutor was actively reviewing
+  a failed payment when no customer follow-up was planned.
+- Reworded pre-collection cancellation messages to state the actual customer
+  outcome: no FoxTutor Direct Debit collection is initiated and no payment has
+  been taken.
+- Added expandable Billing health Admin steps with safe links, recommended
+  action, retry/reconcile protection and Acknowledge versus Resolve guidance.
+- Clarified that credit notes are not created for unpaid invoices; confirmed
+  payments and existing credit-ledger cases remain the only credit-note/credit
+  paths.
+
 ### 2026-09-15 - Shorter payment references
 
 - New lesson invoice and payment references now use `FTYYMMDDNN`, for example
