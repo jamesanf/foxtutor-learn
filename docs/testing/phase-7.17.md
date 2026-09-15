@@ -12,6 +12,7 @@ Automated UI contracts cover:
 - time-of-day greeting and first-name fallback;
 - compact exclamatory greeting without the former supporting caption;
 - red under-30-minute launch notice, with and without an external lesson URL.
+- shared page-title alignment with the first sidebar navigation button.
 
 The dashboard reads only the authenticated student's own upcoming and past
 lessons. The home-learning task is taken from the latest sent report, not a

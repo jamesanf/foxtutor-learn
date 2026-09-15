@@ -175,7 +175,7 @@ describe("resource UX contract", () => {
   });
 
   it("keeps the footer compact with two text rows on each side of the logo", () => {
-    expect(cssSource).toContain(".content { width: min(100%, 1160px); padding: clamp(26px, 4vw, 44px); padding-bottom: 24px; }");
+    expect(cssSource).toContain(".content { width: min(100%, 1160px); padding: 28px clamp(26px, 4vw, 44px) 24px; }");
     expect(cssSource).toContain(".learn-footer { padding: 10px");
     expect(workerSource).toContain('width="38" height="36" loading="lazy"');
     expect(cssSource).toContain(".learn-footer-brand-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }");

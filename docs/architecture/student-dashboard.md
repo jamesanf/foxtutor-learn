@@ -47,6 +47,11 @@ exceeds the viewport, the layout grows naturally and browser scrolling is used
 instead. Its dashboard heading, summary and panel spacing are reduced
 independently from other authenticated pages.
 
+All authenticated page content starts 28px below the top of the content area,
+matching the first sidebar button's 28px top offset. This keeps the dashboard
+greeting and headings on other Learn pages aligned with the top navigation
+control.
+
 ## Student submissions
 
 When a sent report contains a home-learning task, the dashboard provides a

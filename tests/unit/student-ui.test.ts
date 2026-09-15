@@ -134,6 +134,11 @@ describe("student profile form UI", () => {
     expect(cssSource).toContain(".student-dashboard-greeting { font-size: clamp(1.65rem, 3vw, 2.3rem);");
   });
 
+  it("aligns page titles with the first sidebar button", () => {
+    expect(cssSource).toContain(".content { width: min(100%, 1160px); padding: 28px clamp(26px, 4vw, 44px) 24px; }");
+    expect(cssSource).toContain("nav { padding: 28px 16px;");
+  });
+
   it("provides a secured student home-learning submission route", () => {
     expect(workerSource).toContain('"student-lesson-submit"');
     expect(workerSource).toContain('const action = `/learn/student/lessons/${lessonRouteId(lesson.id)}/submit`;');
