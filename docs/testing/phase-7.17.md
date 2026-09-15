@@ -119,9 +119,9 @@ link must provision a fresh session and clear the marker.
 The complete suite passes:
 
 ```text
-41 test files
-292 tests
-292 passed
+42 test files
+298 tests
+298 passed
 0 failed
 ```
 
@@ -146,6 +146,24 @@ policy, a lesson invoice is therefore created on the calendar date seven days
 before the lesson, and the Direct Debit operation becomes eligible in the next
 five-minute scheduler cycle after the invoice is sent. A lesson cancelled
 before that date remains provider-uninvoiced and cannot enter collection.
+
+Live acceptance on 15 September 2026 created a James Fox lesson for 7 October
+2026 through the authenticated admin booking flow. Its billing event remained
+`PENDING` with a 30 September collection date and no billing invoice. The
+lesson was then cancelled through the admin lesson status flow. Production D1
+confirmed the lesson and billing event became `cancelled`/`CANCELLED`, with no
+invoice and no provider operation.
+
+The two explicitly supplied FreeAgent test invoices were processed in the
+authenticated provider session. FreeAgent required each Open invoice to be
+moved to Draft and then deleted; it does not expose a separate cancellation
+status for this flow. FreeAgent confirmed deletion of invoice IDs `94628424`
+and `94627880`. FoxTutor reconciliation subsequently recorded both local
+invoices as `UNKNOWN` with provider status `NOT_FOUND`, marked their billing
+events `UNKNOWN` with `RECONCILIATION_REQUIRED`, and raised two ERROR
+reconciliation alerts. This fail-closed result is intentional: an externally
+deleted invoice is not silently treated as paid or cancelled while its lesson
+remains scheduled.
 
 The TypeScript check and client build also pass. Authenticated Chromium
 acceptance must verify the logout POST, redirect, signed-out state and

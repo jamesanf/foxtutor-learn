@@ -158,3 +158,6 @@ for its normal collection date.
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
   Chromium logout acceptance remains a human-session check.
+- Live cancellation acceptance confirmed that provider deletion is quarantined
+  as `NOT_FOUND`/`RECONCILIATION_REQUIRED`, while a FoxTutor lesson cancelled
+  before issuance leaves no invoice or collection operation.

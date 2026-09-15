@@ -19,6 +19,8 @@
   invoicing and collection.
 - Deployed commit `a43b637` as Worker version
   `75518bd1-79b1-486a-997f-74fd27bfdaf9`.
+- Live acceptance confirmed the seven-day pre-issuance cancellation window and
+  fail-closed handling for the two deleted FreeAgent test invoices.
 - Deployed commit `8703633` as Worker version
   `5e5e76a0-d1ef-4b03-a3ed-85a76041a890`.
 
