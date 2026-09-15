@@ -6,6 +6,8 @@
   series section in Bookings.
 - Kept the shared New Booking modal as the single standalone and recurring
   booking creation path.
+- Deployed commit `3a68e78` as Worker version
+  `3782ecf7-4795-4d44-b0e9-b572fc2eb1f7`.
 
 ### 2026-09-15 - Phase 7.17 searchable booking student selector
 

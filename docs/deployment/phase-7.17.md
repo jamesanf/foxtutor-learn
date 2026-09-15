@@ -126,9 +126,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `29dd126`
+- Git commit: `3a68e78`
 - Worker: `foxtutor-learn`
-- Worker version: `81ba91f5-f594-45d3-8144-32c1a365e40f`
+- Worker version: `3782ecf7-4795-4d44-b0e9-b572fc2eb1f7`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
