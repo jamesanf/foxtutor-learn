@@ -30,6 +30,8 @@ widths, while retaining the stacked mobile form.
 The first Production FreeAgent connection card no longer applies the generic
 card top margin in addition to the page-heading bottom margin, so its spacing
 matches the other Accounting page content blocks.
+Main page titles are now 25% smaller across the shared, calendar,
+resource-upload and billing-settings heading variants.
 
 ## Required validation
 
@@ -64,9 +66,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `3d3295a`
+- Git commit: `4c41d26`
 - Worker: `foxtutor-learn`
-- Worker version: `506ffff3-efd2-4e21-a587-46a95546451f`
+- Worker version: `893905bd-c247-487f-abff-244a65481add`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

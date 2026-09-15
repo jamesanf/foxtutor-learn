@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 reduced page title scale
+
+- Reduced main page titles by 25% across standard, calendar, resource-upload
+  and billing-settings heading variants.
+- Kept section headings and the already compact student lesson title unchanged.
+- Deployed commit `4c41d26` as Worker version
+  `893905bd-c247-487f-abff-244a65481add`.
+
 ### 2026-09-15 - Phase 7.17 Accounting connection spacing
 
 - Removed the duplicated top margin above the Production FreeAgent connection
