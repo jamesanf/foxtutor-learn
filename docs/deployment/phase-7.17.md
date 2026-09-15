@@ -60,6 +60,8 @@ The embedded recurring-series table now uses a database-level page query and
 the standard result-range, navigation and page-size controls. Its
 `seriesPage` and `seriesSize` parameters remain independent from Upcoming
 Bookings pagination.
+Upcoming Bookings and the embedded recurring-series section now use the same
+unboxed surface, with matching section spacing.
 
 ## Required validation
 
@@ -94,9 +96,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `df7d8c2`
+- Git commit: `249dedf`
 - Worker: `foxtutor-learn`
-- Worker version: `770d89df-c94b-4fa5-b2f5-f758bc8cc477`
+- Worker version: `8aab1044-732f-4d50-857d-f096f06b07a0`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

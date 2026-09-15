@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 Bookings section surface alignment
+
+- Removed the recurring-series card surface so it matches the unboxed Upcoming
+  Bookings section.
+- Preserved equivalent vertical spacing between the two sections.
+- Deployed commit `249dedf` as Worker version
+  `8aab1044-732f-4d50-857d-f096f06b07a0`.
+
 ### 2026-09-15 - Phase 7.17 recurring-series pagination
 
 - Added database-level pagination to the recurring-series table embedded in
