@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 billing regression rerun
+
+- Reran all billing-focused accounting, billing, payment, cancellation, credit,
+  FreeAgent, notification and environment suites: 18 test files and 138 tests
+  passed with no failures.
+- Reran the complete repository regression suite: 44 test files and 320 tests
+  passed with no failures.
+- The remaining partial-refund, new-customer onboarding and full recurring
+  credit-provenance items remain explicitly classified as live-acceptance
+  fixtures, not automated regressions.
+
 ### 2026-09-15 - Phase 7.17 settlement-safe credits and provider-aware cancellation
 
 - Cancellation credits now require persisted collection/payment evidence;

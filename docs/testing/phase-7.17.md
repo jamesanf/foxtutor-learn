@@ -226,15 +226,31 @@ reconciliation alerts. This fail-closed result is intentional: an externally
 deleted invoice is not silently treated as paid or cancelled while its lesson
 remains scheduled.
 
-The TypeScript check and client build also pass. The final automated suite
-after the FoxMail cancellation/provenance fix is:
+The TypeScript check and client build also pass. The final automated suite after the FoxMail cancellation/provenance and
+mandate-aware FreeAgent fixes is:
 
 ```text
-43 test files
-314 tests
-314 passed
+44 test files
+320 tests
+320 passed
 0 failed
 ```
+
+The billing-focused rerun covered 18 accounting, billing, payment,
+cancellation, credit, FreeAgent, notification, and environment suites:
+
+```text
+18 test files
+138 tests
+138 passed
+0 failed
+```
+
+The complete repository regression suite was rerun immediately afterward with
+the same 44-file, 320-test result. The three documented amber items remain
+live-acceptance fixtures rather than automated test failures: a live partial
+refund, a new-customer mailbox/provider onboarding cycle, and a full recurring
+credit-provenance mail cycle.
 
 The focused regression test confirms that a `CREDIT_COVERED_EMAIL` settlement
 creates exactly one idempotent ledger reversal and no `CANCEL_INVOICE`
