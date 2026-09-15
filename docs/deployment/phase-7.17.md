@@ -47,6 +47,8 @@ preserving active or unresolved deliveries.
 Recurring-series Pause/Resume controls now use a compact 30px action style,
 with flex-centered forms so the button text aligns vertically with the rest of
 the table row.
+The compact rule is declared after the shared button rule so its height,
+padding and line-height cannot be overridden by the global button defaults.
 
 ## Required validation
 
@@ -81,9 +83,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `ebb832c`
+- Git commit: `82c771b`
 - Worker: `foxtutor-learn`
-- Worker version: `c431d24a-2cec-40d5-b417-74f90b96a4be`
+- Worker version: `9299c3af-39c2-4527-9d7f-4da396a3d06a`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

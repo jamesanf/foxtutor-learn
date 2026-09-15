@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series action cascade correction
+
+- Corrected the CSS cascade so the recurring-series Pause/Resume controls
+  actually use the compact height, padding and line-height overrides.
+- Deployed commit `82c771b` as Worker version
+  `9299c3af-39c2-4527-9d7f-4da396a3d06a`.
+
 ### 2026-09-15 - Phase 7.17 recurring-series action sizing
 
 - Reduced the recurring-series Pause/Resume controls to a compact 30px height.
