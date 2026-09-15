@@ -1,7 +1,7 @@
 import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
 import { recurringOccurrencesInWindow, sixWeekWindow, type RecurrencePause } from "../domain/recurrence";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
-import { cancellationCreditStatements, invoiceCancellationStatement } from "./billing";
+import { cancellationCreditStatements, invoiceCancellationStatement, invoiceCreditReversalStatements } from "./billing";
 import { findOverlappingLesson, type LessonConflict } from "./lessons";
 
 export interface RecurringLessonSeries {
@@ -395,7 +395,7 @@ export async function cancelRecurringLesson(
     `SELECT l.id, l.student_id, l.recurring_series_id, l.recurrence_key,
             l.start_at, l.end_at, l.timezone, s.payer_student_id,
             b.id AS billing_event_id, b.gross_amount_minor, b.status AS billing_event_status,
-            i.id AS invoice_id, i.status AS invoice_status, i.freeagent_url,
+            i.id AS invoice_id, i.status AS invoice_status, i.provider_status, i.net_amount_minor, i.credit_applied_minor, i.freeagent_url,
             EXISTS (
               SELECT 1 FROM billing_invoice_operations op
               WHERE op.invoice_id = i.id
@@ -415,6 +415,9 @@ export async function cancelRecurringLesson(
               SELECT 1 FROM billing_payments p
               WHERE p.invoice_id = i.id
                 AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+            ) OR (
+              i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED'
+              AND i.net_amount_minor = 0 AND i.credit_applied_minor > 0
             ) AS credit_eligible
      FROM lessons l
      JOIN recurring_lesson_series s ON s.id = l.recurring_series_id
@@ -435,6 +438,9 @@ export async function cancelRecurringLesson(
     billing_event_status: string | null;
     invoice_id: string | null;
     invoice_status: string | null;
+    provider_status: string | null;
+    net_amount_minor: number | string | null;
+    credit_applied_minor: number | string | null;
     freeagent_url: string | null;
     collection_started: number;
     credit_eligible: number;
@@ -445,7 +451,7 @@ export async function cancelRecurringLesson(
       `SELECT l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.recurrence_key,
               s.payer_student_id, b.id AS billing_event_id, b.gross_amount_minor,
               b.status AS billing_event_status, i.id AS invoice_id,
-              i.status AS invoice_status, i.freeagent_url,
+              i.status AS invoice_status, i.provider_status, i.net_amount_minor, i.credit_applied_minor, i.freeagent_url,
               EXISTS (
                 SELECT 1 FROM billing_invoice_operations op
                 WHERE op.invoice_id = i.id
@@ -465,6 +471,9 @@ export async function cancelRecurringLesson(
                 SELECT 1 FROM billing_payments p
                 WHERE p.invoice_id = i.id
                   AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+              ) OR (
+                i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED'
+                AND i.net_amount_minor = 0 AND i.credit_applied_minor > 0
               ) AS credit_eligible
        FROM lessons l
        JOIN recurring_lesson_series s ON s.id = l.recurring_series_id
@@ -476,6 +485,7 @@ export async function cancelRecurringLesson(
       id: string; student_id: string; start_at: string; end_at: string; timezone: string;
       recurrence_key: string; payer_student_id: string; billing_event_id: string | null; gross_amount_minor: number | string | null;
       billing_event_status: string | null; invoice_id: string | null; invoice_status: string | null;
+      provider_status: string | null; net_amount_minor: number | string | null; credit_applied_minor: number | string | null;
       freeagent_url: string | null; collection_started: number;
       credit_eligible: number;
     }>()).results
@@ -492,6 +502,9 @@ export async function cancelRecurringLesson(
       billing_event_status: target.billing_event_status,
       invoice_id: target.invoice_id,
       invoice_status: target.invoice_status,
+      provider_status: target.provider_status,
+      net_amount_minor: target.net_amount_minor,
+      credit_applied_minor: target.credit_applied_minor,
       freeagent_url: target.freeagent_url,
       collection_started: target.collection_started
       , credit_eligible: target.credit_eligible
@@ -521,7 +534,14 @@ export async function cancelRecurringLesson(
       ).bind(item.collection_started ? 1 : 0, input.now, item.id)
     );
     if (actorRole === "ADMIN" && item.billing_event_id && item.gross_amount_minor) {
-      if (item.credit_eligible) {
+      if (
+        item.provider_status === "CREDIT_COVERED"
+        && BigInt(item.net_amount_minor ?? 0) === 0n
+        && BigInt(item.credit_applied_minor ?? 0) > 0n
+        && item.invoice_id
+      ) {
+        statements.push(...await invoiceCreditReversalStatements(db, item.invoice_id, input.now));
+      } else if (item.credit_eligible) {
         statements.push(...cancellationCreditStatements(db, {
           creditId: `credit:${historyId}`,
           accountId: `credit-account:${item.payer_student_id}`,
@@ -534,7 +554,15 @@ export async function cancelRecurringLesson(
           now: input.now,
           createProviderOperation: true
         }));
-      } else if (item.invoice_id && item.freeagent_url && ["SENT", "PAYMENT_PENDING"].includes(item.invoice_status ?? "")) {
+      }
+      if (
+        item.invoice_id
+        && item.freeagent_url
+        && (
+          ["SENT", "PAYMENT_PENDING"].includes(item.invoice_status ?? "")
+          || (item.invoice_status === "PAID" && item.provider_status === "CREDIT_COVERED" && BigInt(item.net_amount_minor ?? 0) === 0n)
+        )
+      ) {
         statements.push(
           db.prepare(
             `UPDATE billing_invoices

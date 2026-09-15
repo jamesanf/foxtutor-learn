@@ -52,15 +52,28 @@ function legacyInvoiceReference(id: string): string {
 
 async function creditSourceReferences(db: D1Database, invoiceId: string): Promise<string[]> {
   const result = await db.prepare(
-    `SELECT DISTINCT COALESCE(source_invoice.freeagent_reference, c.id) AS reference
+    `SELECT DISTINCT source_invoice.freeagent_reference,
+            source_reference.business_date,
+            source_reference.sequence
      FROM billing_invoice_credit_applications a
      JOIN customer_credits c ON c.id = a.credit_id
      LEFT JOIN billing_events source_event ON source_event.lesson_id = c.source_lesson_id
      LEFT JOIN billing_invoices source_invoice ON source_invoice.billing_event_id = source_event.id
-     WHERE a.invoice_id = ?
-     ORDER BY reference`
-  ).bind(invoiceId).all<{ reference: string }>();
-  return result.results.map((row) => row.reference);
+     LEFT JOIN billing_invoice_references source_reference ON source_reference.invoice_id = source_invoice.id
+     WHERE a.invoice_id = ?`
+  ).bind(invoiceId).all<{
+    freeagent_reference: string | null;
+    business_date: string | null;
+    sequence: number | string | null;
+  }>();
+  return result.results
+    .map((row) => {
+      if (row.business_date && row.sequence !== null) {
+        return datedInvoiceReference(row.business_date, Number(row.sequence));
+      }
+      return row.freeagent_reference?.startsWith("FT-INV-") ? row.freeagent_reference : null;
+    })
+    .filter((reference): reference is string => Boolean(reference));
 }
 
 async function invoiceReferenceFor(
@@ -96,6 +109,11 @@ async function invoiceReferenceFor(
     }
   }
   throw new Error(`Unable to allocate an invoice reference sequence for ${createdDate}.`);
+}
+
+export function renderCreditCoveredInvoiceComment(sourceReferences: string[]): string {
+  const safeReferences = sourceReferences.filter((reference) => /^FT-INV-\d{8,10}$/.test(reference));
+  return `Credit from ${safeReferences.length ? `invoice ${safeReferences.join(", ")}` : "a previous FoxTutor invoice"} applied to this lesson; amount due £0.00. Direct Debit is not required. No payment is due and the bank details shown by FreeAgent must be ignored.`;
 }
 
 async function markOperationFailure(
@@ -262,7 +280,7 @@ async function processCreateInvoice(
     const zeroValue = allocated.netAmountMinor === 0n;
     const sourceReferences = zeroValue ? await creditSourceReferences(db, invoice.id) : [];
     const comments = zeroValue
-      ? `Credit from invoice ${sourceReferences.join(", ") || "a previous lesson"} applied to this lesson; amount due £0.00. Direct Debit is not required.`
+      ? renderCreditCoveredInvoiceComment(sourceReferences)
       : `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`;
     const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
       client.createDraftInvoice(token, {
@@ -277,6 +295,7 @@ async function processCreateInvoice(
         categoryUrl: config.categoryUrl,
         currency: config.currency,
         salesTaxRate: config.salesTaxRate,
+        ...(zeroValue ? { bankAccountUrl: null } : {}),
         enableGoCardless: !zeroValue && config.currency === "GBP"
       })
     );
@@ -605,6 +624,9 @@ async function processCancelInvoice(
       return;
     }
     const providerStatus = providerInvoice.status ?? "";
+    const creditCoveredInvoice = invoice.status === "PAID"
+      && invoice.provider_status === "CREDIT_COVERED"
+      && BigInt(invoice.net_amount_minor) === 0n;
     if (providerStatus.toLowerCase() === "cancelled") {
       await updateBillingInvoice(db, invoice.id, {
         status: "CANCELLED",
@@ -620,9 +642,12 @@ async function processCancelInvoice(
       return;
     }
     if (
+      !creditCoveredInvoice
+      && (
       providerStatus.toLowerCase() === "paid"
       || providerAmountIsPositive(providerInvoice.paidValue)
       || providerAmountIsNotOutstanding(providerInvoice.dueValue)
+      )
     ) {
       await markBillingInvoiceOperation(db, operation.id, {
         status: "BLOCKED",

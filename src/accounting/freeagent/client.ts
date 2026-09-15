@@ -647,6 +647,7 @@ export class FreeAgentClient {
       categoryUrl: string;
       currency: string;
       enableGoCardless?: boolean;
+      bankAccountUrl?: string | null;
     }
   ): Promise<FreeAgentInvoice> {
     const invoice = {
@@ -660,6 +661,7 @@ export class FreeAgentClient {
       currency: input.currency,
       ...(input.comments ? { comments: input.comments } : {}),
       ...(input.enableGoCardless ? { payment_methods: { gocardless_preauth: true } } : {}),
+      ...(input.bankAccountUrl !== undefined ? { bank_account: input.bankAccountUrl } : {}),
       invoice_items: [{
         item_type: input.itemType,
         description: input.description,

@@ -656,11 +656,11 @@ export async function applyCreditToInvoice(
   };
 }
 
-export async function reverseInvoiceCreditApplications(
+export async function invoiceCreditReversalStatements(
   db: D1Database,
   invoiceId: string,
   now: string
-): Promise<void> {
+): Promise<D1PreparedStatement[]> {
   const applications = await db.prepare(
     `SELECT a.credit_id, a.ledger_transaction_id, c.account_id, a.amount_minor
      FROM billing_invoice_credit_applications a
@@ -672,8 +672,7 @@ export async function reverseInvoiceCreditApplications(
     account_id: string;
     amount_minor: number | string;
   }>();
-  if (!applications.results.length) return;
-  await db.batch(applications.results.flatMap((application) => [
+  return applications.results.flatMap((application) => [
     db.prepare(
       `INSERT INTO credit_ledger_transactions
        (id, account_id, credit_id, transaction_type, amount_minor, source_event_id,
@@ -695,7 +694,16 @@ export async function reverseInvoiceCreditApplications(
        SET status = 'PROVIDER_FAILED'
        WHERE invoice_id = ? AND credit_id = ? AND status = 'RECORDED'`
     ).bind(invoiceId, application.credit_id)
-  ]));
+  ]);
+}
+
+export async function reverseInvoiceCreditApplications(
+  db: D1Database,
+  invoiceId: string,
+  now: string
+): Promise<void> {
+  const statements = await invoiceCreditReversalStatements(db, invoiceId, now);
+  if (statements.length) await db.batch(statements);
 }
 
 export async function resetInvoiceCreditAllocation(
@@ -937,7 +945,10 @@ export function invoiceCancellationStatement(db: D1Database, invoiceId: string, 
             'cancel-invoice:' || i.id, 'PENDING', ?, ?
      FROM billing_invoices i
      WHERE i.id = ? AND i.freeagent_url IS NOT NULL
-       AND i.status IN ('SENT', 'PAYMENT_PENDING')
+     AND (
+       i.status IN ('SENT', 'PAYMENT_PENDING')
+       OR (i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED' AND i.net_amount_minor = 0)
+     )
        AND NOT EXISTS (
          SELECT 1 FROM billing_invoice_operations op
          WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'

@@ -193,3 +193,18 @@ for its normal collection date.
   deployed settlement-safe UI: no active customer credits, nine consumed
   historical credits, `Billing audit` links, `Record manual-payment exception`
   actions, and no application errors in the rendered page.
+
+The follow-up zero-value billing hardening sends `bank_account: null` to
+FreeAgent for credit-covered invoices. Omitting that field causes FreeAgent to
+render the company-wide bank details, which is misleading for a £0 balance.
+The customer-facing comment uses a normalized `FT-INV-YYMMDDNN` source
+reference or the safe phrase `a previous FoxTutor invoice`; internal credit
+identifiers are never emitted. If FreeAgent rejects the explicit empty
+bank-account field, the operation fails closed rather than creating a
+misleading payable document.
+
+Cancelling a credit-covered zero-value invoice now reverses the original
+credit application through the immutable ledger exactly once and queues the
+provider-document cancellation. Recurring cancellation uses the same rule.
+Failed collection is classified separately from an unissued invoice, never
+creates credit, and produces a billing-review message.

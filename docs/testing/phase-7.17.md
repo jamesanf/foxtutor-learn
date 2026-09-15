@@ -175,6 +175,16 @@ Settlement-safe credit and cancellation acceptance now also covers:
   tutor that manual payment is required;
 - active credit is separated from consumed history in the student and admin
   billing views.
+- zero-value credit-covered invoices use only normalized `FT-INV-YYMMDDNN`
+  source references, never internal credit IDs, and explicitly clear
+  FreeAgent's invoice bank-account field so a customer is not given payment
+  instructions for a £0 balance;
+- cancelling a credit-covered zero-value lesson reverses the original credit
+  ledger application exactly once and queues provider-document cancellation;
+- recurring cancellation uses the same zero-value credit reversal and provider
+  cancellation rules;
+- failed collection outcomes are reported as billing review required, with no
+  credit grant and no false claim that the lesson was unpaid or unbilled.
 
 Production D1 migration `0034_settlement_safe_credit_repair.sql` repaired the
 historical test grants that had no provider invoice/payment evidence. It uses

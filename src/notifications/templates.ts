@@ -55,7 +55,7 @@ export interface CancellationDecisionEmailData extends LessonEmailData {
 
 export interface CancellationProcessedEmailData extends LessonEmailData {
   undoPath?: string;
-  billingOutcome?: "NOT_INVOICED" | "CANCELLATION_PENDING_PROVIDER" | "PAYMENT_IN_TRANSIT" | "CREDIT_GRANTED" | "RECONCILIATION_REQUIRED";
+  billingOutcome?: "NOT_INVOICED" | "CANCELLATION_PENDING_PROVIDER" | "PAYMENT_IN_TRANSIT" | "PAYMENT_FAILED" | "CREDIT_GRANTED" | "CREDIT_RESTORED" | "RECONCILIATION_REQUIRED";
   billingAmountMinor?: number | string;
   billingInvoiceReference?: string | null;
 }
@@ -177,8 +177,12 @@ export function renderCancellationProcessed(data: CancellationProcessedEmailData
       ? "The lesson was cancelled before collection. The provider invoice cancellation is being confirmed; no Direct Debit collection will be initiated by FoxTutor."
       : data.billingOutcome === "CREDIT_GRANTED"
         ? `Payment was confirmed and${amount} has been retained as credit from invoice${reference} for a future booking.`
+        : data.billingOutcome === "CREDIT_RESTORED"
+          ? `The lesson was cancelled and${amount} of credit from invoice${reference} has been restored to the account for a future booking.`
         : data.billingOutcome === "PAYMENT_IN_TRANSIT"
           ? `A payment is still in transit${reference}. The account credit will remain subject to provider confirmation.`
+          : data.billingOutcome === "PAYMENT_FAILED"
+            ? `The payment attempt${reference} failed. No credit has been created; FoxTutor is reviewing the billing provider outcome.`
           : data.billingOutcome === "RECONCILIATION_REQUIRED"
             ? "The cancellation was recorded, but the payment provider state is being reconciled. FoxTutor will send a separate financial update once confirmed."
             : "";

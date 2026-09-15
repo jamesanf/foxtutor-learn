@@ -505,7 +505,7 @@ async function cancellationMailData(
     ...lessonMailData(lesson, includeExternalUrl),
     ...(undoPath ? { undoPath } : {}),
     billingOutcome: outcome.kind,
-    ...(outcome.kind === "CREDIT_GRANTED" || outcome.kind === "PAYMENT_IN_TRANSIT"
+    ...(outcome.kind === "CREDIT_GRANTED" || outcome.kind === "CREDIT_RESTORED" || outcome.kind === "PAYMENT_IN_TRANSIT" || outcome.kind === "PAYMENT_FAILED"
       ? {
         billingAmountMinor: outcome.amountMinor.toString(),
         billingInvoiceReference: outcome.invoiceReference

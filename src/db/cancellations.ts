@@ -1,6 +1,6 @@
 import type { BillingConsequence } from "../domain/cancellations";
 import { accountingOutboxStatement } from "./accounting";
-import { cancellationCreditStatements, invoiceCancellationStatement } from "./billing";
+import { cancellationCreditStatements, invoiceCancellationStatement, invoiceCreditReversalStatements } from "./billing";
 import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
 
@@ -60,7 +60,9 @@ export type CancellationBillingOutcome =
   | { kind: "NOT_INVOICED" }
   | { kind: "CANCELLATION_PENDING_PROVIDER" }
   | { kind: "PAYMENT_IN_TRANSIT"; amountMinor: bigint; invoiceReference: string | null }
+  | { kind: "PAYMENT_FAILED"; amountMinor: bigint; invoiceReference: string | null }
   | { kind: "CREDIT_GRANTED"; amountMinor: bigint; invoiceReference: string | null }
+  | { kind: "CREDIT_RESTORED"; amountMinor: bigint; invoiceReference: string | null }
   | { kind: "RECONCILIATION_REQUIRED" };
 
 export async function findCancellationBillingOutcome(
@@ -69,6 +71,7 @@ export async function findCancellationBillingOutcome(
 ): Promise<CancellationBillingOutcome> {
   const row = await db.prepare(
     `SELECT i.id AS invoice_id, i.status AS invoice_status, i.provider_status,
+            i.net_amount_minor, i.credit_applied_minor,
             i.freeagent_reference,
             EXISTS (
               SELECT 1 FROM billing_invoice_operations op
@@ -84,6 +87,10 @@ export async function findCancellationBillingOutcome(
               WHERE p.invoice_id = i.id
                 AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'UNKNOWN')
             ) AS collection_started,
+            EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id AND p.status = 'FAILED'
+            ) OR i.status = 'FAILED' OR i.provider_status = 'PROVIDER_FAILED' AS payment_failed,
             EXISTS (
               SELECT 1 FROM billing_invoice_operations op
               WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
@@ -115,9 +122,12 @@ export async function findCancellationBillingOutcome(
     invoice_id: string | null;
     invoice_status: string | null;
     provider_status: string | null;
+    net_amount_minor: number | string;
+    credit_applied_minor: number | string;
     freeagent_reference: string | null;
     cancellation_pending: number;
     collection_started: number;
+    payment_failed: number;
     credit_eligible: number;
     collection_unknown: number;
     payment_confirmed: number;
@@ -126,6 +136,20 @@ export async function findCancellationBillingOutcome(
   if (!row) return { kind: "NOT_INVOICED" };
   if (row.provider_status === "RECONCILIATION_REQUIRED" || row.provider_status === "CANCELLATION_RECONCILIATION_REQUIRED") {
     return { kind: "RECONCILIATION_REQUIRED" };
+  }
+  if (row.payment_failed) {
+    return {
+      kind: "PAYMENT_FAILED",
+      amountMinor: BigInt(row.net_amount_minor),
+      invoiceReference: row.freeagent_reference
+    };
+  }
+  if (row.provider_status === "CREDIT_COVERED" && BigInt(row.net_amount_minor) === 0n && BigInt(row.credit_applied_minor) > 0n) {
+    return {
+      kind: "CREDIT_RESTORED",
+      amountMinor: BigInt(row.credit_applied_minor),
+      invoiceReference: row.freeagent_reference
+    };
   }
   if (row.credit_amount_minor !== null && row.payment_confirmed) {
     return {
@@ -258,7 +282,7 @@ export async function cancelLesson(
   }
   const billedInvoice = input.eventType === "ADMIN_CANCELLED"
     ? await db.prepare(
-      `SELECT i.id, i.status, i.freeagent_url,
+      `SELECT i.id, i.status, i.freeagent_url, i.provider_status, i.net_amount_minor, i.credit_applied_minor,
          EXISTS (
            SELECT 1 FROM billing_invoice_operations op
            WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
@@ -276,6 +300,9 @@ export async function cancelLesson(
            SELECT 1 FROM billing_payments p
            WHERE p.invoice_id = i.id
              AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+         ) OR (
+             i.status = 'PAID' AND i.provider_status = 'CREDIT_COVERED'
+             AND i.net_amount_minor = 0 AND i.credit_applied_minor > 0
          ) AS credit_eligible,
          EXISTS (
            SELECT 1 FROM billing_invoice_operations op
@@ -293,6 +320,9 @@ export async function cancelLesson(
       id: string;
       status: string;
       freeagent_url: string | null;
+      provider_status: string | null;
+      net_amount_minor: number | string;
+      credit_applied_minor: number | string;
       collection_started: number;
       credit_eligible: number;
       collection_unknown: number;
@@ -303,7 +333,10 @@ export async function cancelLesson(
   );
   const providerInvoiceCancellationRequired = Boolean(
     billedInvoice && !billedInvoice.collection_started && billedInvoice.freeagent_url
-     && ["SENT", "PAYMENT_PENDING"].includes(billedInvoice.status)
+     && (
+       ["SENT", "PAYMENT_PENDING"].includes(billedInvoice.status)
+       || (billedInvoice.status === "PAID" && billedInvoice.provider_status === "CREDIT_COVERED" && BigInt(billedInvoice.net_amount_minor) === 0n)
+     )
   );
   const historyId = crypto.randomUUID();
   const accountingStatement = accountingOutboxStatement(db, {
@@ -316,19 +349,23 @@ export async function cancelLesson(
     accountingEffectiveDate: input.now.slice(0, 10),
     now: input.now
   });
-  const creditStatements = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor && billedInvoice?.credit_eligible
-    ? cancellationCreditStatements(db, {
-      creditId: `credit-${historyId}`,
-      accountId: `credit-account-${input.payerStudentId ?? input.studentId}`,
-      studentId: input.studentId,
-      payerStudentId: input.payerStudentId ?? input.studentId,
-      sourceEventId: historyId,
-      lessonId: input.lessonId,
-      cancellationId: historyId,
-      amountMinor: input.creditAmountMinor,
-      now: input.now,
-      createProviderOperation: providerCorrectionRequired
-    })
+  const creditStatements = input.eventType === "ADMIN_CANCELLED" && billedInvoice?.credit_eligible
+    ? BigInt(billedInvoice.net_amount_minor) === 0n && BigInt(billedInvoice.credit_applied_minor) > 0n
+      ? await invoiceCreditReversalStatements(db, billedInvoice.id, input.now)
+      : input.creditAmountMinor
+        ? cancellationCreditStatements(db, {
+          creditId: `credit-${historyId}`,
+          accountId: `credit-account-${input.payerStudentId ?? input.studentId}`,
+          studentId: input.studentId,
+          payerStudentId: input.payerStudentId ?? input.studentId,
+          sourceEventId: historyId,
+          lessonId: input.lessonId,
+          cancellationId: historyId,
+          amountMinor: input.creditAmountMinor,
+          now: input.now,
+          createProviderOperation: providerCorrectionRequired
+        })
+        : []
     : [];
   const results = await db.batch([
     db.prepare("UPDATE lessons SET status = 'cancelled', updated_at = ? WHERE id = ? AND status = 'scheduled'")

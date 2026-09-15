@@ -476,12 +476,14 @@ describe("FreeAgent adapter", () => {
       salesTaxRate: "0",
       categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/1",
       currency: "GBP",
-      enableGoCardless: false
+      enableGoCardless: false,
+      bankAccountUrl: null
     });
     expect(JSON.parse(requestBody)).toMatchObject({
       invoice: {
         invoice_items: [{ price: "0.00" }],
-        comments: "Credit from invoice FT-INV-26091501 applied to this lesson; amount due £0.00."
+        comments: "Credit from invoice FT-INV-26091501 applied to this lesson; amount due £0.00.",
+        bank_account: null
       }
     });
     expect(requestBody).not.toContain("gocardless_preauth");
