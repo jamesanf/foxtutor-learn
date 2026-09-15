@@ -149,6 +149,12 @@ lesson.
 New provider invoices use the lesson date as their invoice date and include a
 visible line-item note stating the scheduled Direct Debit collection date.
 
+The authenticated FreeAgent tab also exposed a live itemisation defect on the
+existing controlled draft: when FoxTutor omitted `item_type`, FreeAgent
+inherited the company default and rendered `1:00 Hour`. The adapter regression
+now sends FreeAgent's supported `-no unit-` value for FoxTutor's `Units`
+setting, while the line description states `1 Unit; 55 minutes`.
+
 The issuance scheduler now waits until 22:00 Europe/London on the calendar
 date seven days before the lesson. At 21:59 local time no invoice is selected;
 at 22:00 it becomes eligible. The scheduler processes invoice creation before

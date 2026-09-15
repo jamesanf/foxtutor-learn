@@ -332,3 +332,16 @@ and the suffix is the collision-safe daily invoice sequence from `01` through
 `FT-INV-YYMMDDNN` and legacy UUID references remain supported for historical
 provider lookup and provenance; newly generated customer and provider
 references use the shorter format.
+
+## Latest deployment: FreeAgent lesson units
+
+- Git commit: `0c7b824`
+- Worker version: `20c8e33d-549e-4b54-9c59-383ef1ec7485`
+- Production migrations: none required
+- Deployment date: 2026-09-15
+
+Authenticated Chromium confirmed the defect on the existing controlled
+FreeAgent draft: omitting `item_type` caused FreeAgent to inherit the company
+default and render `1:00 Hour`. New FoxTutor payloads now send the supported
+`-no unit-` API value and retain the explicit `1 Unit; 55 minutes` lesson
+description. This prevents an hourly representation of a 55-minute lesson.
