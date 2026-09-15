@@ -62,6 +62,8 @@ Automated UI contracts cover:
   calculation;
 - recurring resume and scheduled materialisation guards that leave the series
   paused or cancelled rather than silently creating an overlapping lesson.
+- the New Booking modal Back controls using an accessible, borderless bold
+  MDI-style arrow in both booking form paths.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

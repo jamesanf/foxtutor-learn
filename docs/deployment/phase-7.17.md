@@ -78,6 +78,9 @@ date and time. Recurring creation preflights every occurrence in the bounded
 six-week Europe/London materialisation window before persisting the series.
 Resume and later materialisation perform the same check and refuse to create
 an occupied occurrence rather than silently overlapping an existing booking.
+The New Booking modal now uses a borderless bold back-arrow icon in the
+standalone and recurring form views while retaining an accessible label and
+the existing chooser navigation.
 
 ## Required validation
 

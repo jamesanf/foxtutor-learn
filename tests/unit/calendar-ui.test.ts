@@ -117,6 +117,12 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('New Booking');
     expect(workerSource).toContain('data-booking-option="standalone"');
     expect(workerSource).toContain('data-booking-option="recurring"');
+    expect(workerSource).toContain('class="booking-dialog-back"');
+    expect(workerSource).toContain('aria-label="Back to booking type"');
+    expect(workerSource).toContain('M20 11H7.83l5.59-5.59');
+    expect(workerSource).not.toContain('class="button secondary booking-dialog-back"');
+    expect(cssSource).toContain(".booking-dialog-back { display: inline-grid;");
+    expect(cssSource).toContain("border: 0;");
     expect(workerSource).toContain('recurringSeriesFormMarkup(csrfToken, students, undefined, true)');
     expect(workerSource).toContain('if (request.method === "GET") return redirect("/learn/admin/bookings?open=recurring");');
     expect(workerSource).toContain('async function adminDashboard(user: AppUser, csrfToken: string, db: D1Database)');

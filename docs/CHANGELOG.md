@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 New Booking Back control
+
+- Replaced the modal's text Back buttons with a bold, borderless MDI-style
+  back-arrow control.
+- Preserved keyboard focus, accessible labelling and chooser navigation for
+  standalone and recurring booking forms.
+
 ### 2026-09-15 - Phase 7.17 booking conflict detection
 
 - Added tutor-wide overlap detection for standalone bookings, excluding
