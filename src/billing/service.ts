@@ -179,37 +179,38 @@ async function creditSourceProvenance(db: D1Database, invoiceId: string): Promis
 
 async function invoiceReferenceFor(
   db: D1Database,
-  invoice: { id: string; created_at: string }
+  invoice: { id: string; created_at: string },
+  lessonDate: string | null
 ): Promise<string> {
-  const createdDate = invoice.created_at.slice(0, 10);
+  const referenceDate = lessonDate ?? invoice.created_at.slice(0, 10);
   const existing = await db.prepare(
     "SELECT sequence FROM billing_invoice_references WHERE invoice_id = ?"
   ).bind(invoice.id).first<{ sequence: number | string }>();
-  if (existing) return datedInvoiceReference(createdDate, Number(existing.sequence));
+  if (existing) return datedInvoiceReference(referenceDate, Number(existing.sequence));
 
   for (let attempt = 0; attempt < 99; attempt += 1) {
     const assigned = await db.prepare(
       "SELECT sequence FROM billing_invoice_references WHERE invoice_id = ?"
     ).bind(invoice.id).first<{ sequence: number | string }>();
-    if (assigned) return datedInvoiceReference(createdDate, Number(assigned.sequence));
+    if (assigned) return datedInvoiceReference(referenceDate, Number(assigned.sequence));
     const latest = await db.prepare(
       "SELECT MAX(sequence) AS sequence FROM billing_invoice_references WHERE business_date = ?"
-    ).bind(createdDate).first<{ sequence: number | string | null }>();
+    ).bind(referenceDate).first<{ sequence: number | string | null }>();
     const sequence = Number(latest?.sequence ?? 0) + 1;
     if (sequence > 99) {
-      throw new Error(`Invoice reference sequence exhausted for ${createdDate}.`);
+      throw new Error(`Invoice reference sequence exhausted for ${referenceDate}.`);
     }
     try {
       await db.prepare(
         `INSERT INTO billing_invoice_references (invoice_id, business_date, sequence)
          VALUES (?, ?, ?)`
-      ).bind(invoice.id, createdDate, sequence).run();
-      return datedInvoiceReference(createdDate, sequence);
+      ).bind(invoice.id, referenceDate, sequence).run();
+      return datedInvoiceReference(referenceDate, sequence);
     } catch (error) {
       if (!(error instanceof Error) || !error.message.toUpperCase().includes("UNIQUE")) throw error;
     }
   }
-  throw new Error(`Unable to allocate an invoice reference sequence for ${createdDate}.`);
+  throw new Error(`Unable to allocate an invoice reference sequence for ${referenceDate}.`);
 }
 
 export function renderCreditCoveredInvoiceComment(sourceReferences: string[]): string {
@@ -385,7 +386,7 @@ async function processCreateInvoice(
     const lessonDate = event.lesson_date ?? event.billing_date ?? now.slice(0, 10);
     const collectionDate = event.collection_date ?? lessonDate;
     const zeroValue = allocated.netAmountMinor === 0n;
-    const reference = await invoiceReferenceFor(db, invoice);
+    const reference = await invoiceReferenceFor(db, invoice, lessonDate);
     const sourceProvenance = zeroValue ? await creditSourceProvenance(db, invoice.id) : [];
     const comments = `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`;
     if (zeroValue) {
