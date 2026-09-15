@@ -15,6 +15,8 @@
 - Reworked credit-covered billing emails into the standard FoxTutor Billing
   layout with plain-language reassurance, a clearer payment summary, and
   preserved source-invoice and source-lesson provenance.
+- Deployed revision `79565df` as Worker version
+  `016d9091-bc65-46db-bb71-85aeb774f55c`.
 - Reran all billing-focused accounting, billing, payment, cancellation, credit,
   FreeAgent, notification and environment suites: 18 test files and 138 tests
   passed with no failures.
