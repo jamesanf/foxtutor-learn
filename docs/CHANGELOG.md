@@ -1,5 +1,24 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 settlement-safe credits and provider-aware cancellation
+
+- Cancellation credits now require persisted collection/payment evidence;
+  unissued or merely sent invoices no longer create customer credit.
+- Recurring cancellation uses the same collection-started guard and queues
+  provider invoice cancellation for sent, uncollected occurrences.
+- Cancellation notifications now distinguish no invoice, provider cancellation
+  pending, payment in transit, confirmed credit and reconciliation-required
+  outcomes.
+- Fully credit-covered lessons now create a zero-value FreeAgent invoice with
+  the original invoice reference in its comments, are locally marked secured,
+  and never trigger Direct Debit.
+- Added `NO_MANDATE_MANUAL_PAYMENT` readiness and provider-aware Billing health
+  copy; active credit is separated from consumed audit history.
+- Added and applied migration `0034_settlement_safe_credit_repair.sql`.
+  Nine historical no-evidence test credits were repaired with auditable
+  reversal/refund rows rather than deleted.
+- Automated acceptance: 42 test files, 303 tests passed.
+
 ### 2026-09-15 - Phase 7.17 API-safe cancellation and exact billing cutoff
 
 - Added `CANCEL_INVOICE` to the billing operation state machine and migration

@@ -455,6 +455,38 @@ describe("FreeAgent adapter", () => {
     expect(requestBody).not.toContain("sales_tax_status");
   });
 
+  it("supports a zero-value credit-covered invoice without enabling Direct Debit", async () => {
+    let requestBody = "";
+    const client = new FreeAgentClient({
+      environment: "sandbox",
+      fetcher: async (_input, init) => {
+        requestBody = String(init?.body ?? "");
+        return jsonResponse({ invoice: { url: "https://api.sandbox.freeagent.com/v2/invoices/43", status: "Draft" } }, 201, { Location: "https://api.sandbox.freeagent.com/v2/invoices/43" });
+      }
+    });
+    await client.createDraftInvoice("access-token", {
+      contactUrl: "https://api.sandbox.freeagent.com/v2/contacts/7",
+      reference: "FT-INV-26091502",
+      datedOn: "2026-09-21",
+      paymentTermsInDays: 0,
+      itemType: "https://api.sandbox.freeagent.com/v2/item_types/1",
+      description: "FoxTutor lesson 2026-09-21",
+      comments: "Credit from invoice FT-INV-26091501 applied to this lesson; amount due £0.00.",
+      price: "0.00",
+      salesTaxRate: "0",
+      categoryUrl: "https://api.sandbox.freeagent.com/v2/categories/1",
+      currency: "GBP",
+      enableGoCardless: false
+    });
+    expect(JSON.parse(requestBody)).toMatchObject({
+      invoice: {
+        invoice_items: [{ price: "0.00" }],
+        comments: "Credit from invoice FT-INV-26091501 applied to this lesson; amount due £0.00."
+      }
+    });
+    expect(requestBody).not.toContain("gocardless_preauth");
+  });
+
   it("normalizes rate limits and rejects provider URLs outside the configured origin", async () => {
     const rateLimited = new FreeAgentClient({
       environment: "sandbox",

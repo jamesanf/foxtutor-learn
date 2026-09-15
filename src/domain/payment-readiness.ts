@@ -2,6 +2,7 @@ export type PaymentReadiness =
   | "CREDIT_COVERED"
   | "NOT_YET_DUE"
   | "INVOICE_OPEN"
+  | "NO_MANDATE_MANUAL_PAYMENT"
   | "MANDATE_PENDING"
   | "COLLECTION_SCHEDULED"
   | "COLLECTION_PENDING"
@@ -86,6 +87,9 @@ export function calculatePaymentReadiness(input: PaymentReadinessInput): Payment
   }
   if (input.now.slice(0, 10) < input.collectionDate) {
     return result("NOT_YET_DUE", false);
+  }
+  if (input.mandateState === "setup" || input.mandateState === "inactive" || input.mandateState === "failed") {
+    return result("NO_MANDATE_MANUAL_PAYMENT", false);
   }
   if (input.mandateState !== "active") {
     return result("MANDATE_PENDING", false);

@@ -164,6 +164,33 @@ describe("notification domain", () => {
     expect(rendered.html).not.toContain("Open lesson");
   });
 
+  it("states the persisted billing outcome without claiming settlement prematurely", () => {
+    const pending = renderCancellationProcessed({
+      studentName: "Jamie",
+      startAt: "2026-09-15T19:00:00.000Z",
+      endAt: "2026-09-15T19:55:00.000Z",
+      timezone: "Europe/London",
+      lessonPath: "/learn/student/lessons/lesson-1",
+      externalUrl: null,
+      billingOutcome: "PAYMENT_IN_TRANSIT",
+      billingInvoiceReference: "FT-INV-26091501",
+      billingAmountMinor: "5500"
+    }, "https://foxtutor.org/learn");
+    expect(pending.text).toContain("payment is still in transit");
+    expect(pending.text).not.toContain("payment was confirmed");
+
+    const notInvoiced = renderCancellationProcessed({
+      studentName: "Jamie",
+      startAt: "2026-09-15T19:00:00.000Z",
+      endAt: "2026-09-15T19:55:00.000Z",
+      timezone: "Europe/London",
+      lessonPath: "/learn/student/lessons/lesson-1",
+      externalUrl: null,
+      billingOutcome: "NOT_INVOICED"
+    }, "https://foxtutor.org/learn");
+    expect(notInvoiced.text).toContain("No payment will be taken");
+  });
+
   it("rejects incomplete untyped template projections", () => {
     expect(() => renderEmail("LESSON_CREATED", { studentName: "Jamie" }, "https://foxtutor.org/learn")).toThrow("startAt");
   });

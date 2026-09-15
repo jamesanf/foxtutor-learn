@@ -142,6 +142,7 @@ import { billingCustomerStatusLabel } from "../domain/billing-history";
 import { listNotificationSettings, upsertNotificationSetting, type NotificationSetting } from "../db/notification-settings";
 import {
   cancelLesson,
+  findCancellationBillingOutcome,
   listLessonHistory,
   rescheduleLesson,
   undoStudentCancellation,
@@ -490,6 +491,26 @@ function lessonMailData(lesson: Lesson, includeExternalUrl = true): {
     timezone: lesson.timezone,
     lessonPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(lesson.id))}`,
     externalUrl: includeExternalUrl ? lesson.external_url : null
+  };
+}
+
+async function cancellationMailData(
+  db: D1Database,
+  lesson: Lesson,
+  includeExternalUrl: boolean,
+  undoPath?: string
+): Promise<Record<string, unknown>> {
+  const outcome = await findCancellationBillingOutcome(db, lesson.id);
+  return {
+    ...lessonMailData(lesson, includeExternalUrl),
+    ...(undoPath ? { undoPath } : {}),
+    billingOutcome: outcome.kind,
+    ...(outcome.kind === "CREDIT_GRANTED" || outcome.kind === "PAYMENT_IN_TRANSIT"
+      ? {
+        billingAmountMinor: outcome.amountMinor.toString(),
+        billingInvoiceReference: outcome.invoiceReference
+      }
+      : {})
   };
 }
 
@@ -2156,7 +2177,18 @@ async function billingOperationsPage(
   ]);
   const readiness = upcoming.map((row) => {
     const gross = BigInt(row.amount_minor ?? 0);
-    const invoiceAmount = row.invoice_id ? gross : 0n;
+    const invoiceAmount = BigInt(row.invoice_amount_minor ?? 0);
+    const mandateState = row.mandate_state === "ACTIVE"
+      ? "active"
+      : row.mandate_state === "AUTHORISATION_PENDING"
+        ? "pending"
+        : row.mandate_state === "SETUP_REQUIRED" || row.mandate_state === "NOT_CONFIGURED"
+          ? "setup"
+          : row.mandate_state === "INACTIVE"
+            ? "inactive"
+            : row.mandate_state === "FAILED"
+              ? "failed"
+              : null;
     const result = calculatePaymentReadiness({
       lessonDate: row.occurred_at.slice(0, 10),
       collectionDate: row.collection_date ?? row.occurred_at.slice(0, 10),
@@ -2166,7 +2198,8 @@ async function billingOperationsPage(
       invoiceAmountMinor: invoiceAmount,
       invoiceStatus: row.invoice_id ? row.status : null,
       paymentStatus: row.payment_status,
-      mandateState: null
+      mandateState,
+      invoiceProviderStatus: row.provider_status
     });
     return { row, result };
   });
@@ -2176,16 +2209,18 @@ async function billingOperationsPage(
   const failed = readiness.filter(({ result }) => result.state === "PAYMENT_FAILED").length;
   const creditCovered = readiness.filter(({ result }) => result.state === "CREDIT_COVERED").length;
   const rowMarkup = readiness.length
-    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a>${row.student_id ? ` <a class="text-link" href="/learn/admin/billing/audit/${encodeURIComponent(row.student_id)}">Audit</a>` : ""}</td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(entityUrlKey(row.billing_event_id))}">Emergency exception</a>` : "Not created"}</td></tr>`).join("")
+    ? readiness.map(({ row, result }) => `<tr><td><a href="/learn/admin/lessons/${row.lesson_id ? lessonRouteId(row.lesson_id) : ""}">${escapeHtml(row.student_name ?? row.student_id)}</a>${row.student_id ? ` <a class="text-link" href="/learn/admin/billing/audit/${encodeURIComponent(row.student_id)}">Billing audit</a>` : ""}</td><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(result.currentCreditMinor)}</td><td>${billingMoney(result.invoiceAmountMinor)}</td><td>${escapeHtml(billingReadinessLabel(result.state))}</td><td>${escapeHtml(billingDateLabel(row.collection_date))}</td><td>${row.invoice_id ? `<a href="/learn/admin/billing/invoices/${encodeURIComponent(row.invoice_id)}">Invoice</a>` : row.billing_event_id ? `<a class="text-link" href="/learn/admin/billing/emergency-payg/${encodeURIComponent(entityUrlKey(row.billing_event_id))}">Record manual-payment exception</a>` : "Not created"}</td></tr>`).join("")
     : `<tr><td colspan="8">No upcoming lessons require billing attention.</td></tr>`;
-  const creditRows = credits.length
-    ? credits.map((credit) => `<tr><td><a href="/learn/admin/billing/credits/${encodeURIComponent(credit.credit_id)}">${escapeHtml(credit.student_name ?? credit.student_id)}</a></td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
+  const activeCredits = credits.filter((credit) => BigInt(credit.remaining_amount_minor) > 0n);
+  const historicalCredits = credits.filter((credit) => BigInt(credit.remaining_amount_minor) === 0n);
+  const creditRows = activeCredits.length
+    ? activeCredits.map((credit) => `<tr><td><a href="/learn/admin/billing/credits/${encodeURIComponent(credit.credit_id)}">${escapeHtml(credit.student_name ?? credit.student_id)}</a></td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(credit.status)}</td></tr>`).join("")
     : `<tr><td colspan="4">No customer credits.</td></tr>`;
   const alertRows = alerts.length
     ? alerts.map((alert) => `<tr><td>${escapeHtml(alert.severity)}</td><td>${escapeHtml(alert.alert_type)}</td><td>${escapeHtml(alert.student_name ?? alert.student_id ?? "Unknown")}</td><td>${escapeHtml(alert.current_state)}</td><td><form method="post" action="/learn/admin/billing/alerts/${encodeURIComponent(alert.id)}">${hiddenCsrf(csrfToken)}${alert.status === "OPEN" ? `<button class="button secondary" name="action" value="ACKNOWLEDGE" type="submit">Acknowledge</button>` : `<button class="button secondary" name="action" value="RESOLVE" type="submit">Resolve</button>`}</form></td></tr>`).join("")
     : `<tr><td colspan="5">No open billing alerts.</td></tr>`;
   const todayLabel = billingDateLabel(today);
-  return appPage(user, csrfToken, "Billing health", `<div class="page-heading"><div><h1>Billing health</h1><p class="lede">Operational payment readiness for ${escapeHtml(todayLabel)} through the next seven days. Business time is always Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Today</span><strong>${todayRows.length}</strong><small>lessons</small></section><section class="summary-card"><span>Payment secured</span><strong>${secured}</strong><small>next seven days</small></section><section class="summary-card"><span>Credit-covered</span><strong>${creditCovered}</strong></section><section class="summary-card"><span>Needs attention</span><strong>${attention}</strong></section><section class="summary-card"><span>Failed payments</span><strong>${failed}</strong></section></div><section class="card"><div class="section-heading"><div><h2>Next seven days</h2><p class="muted">Collection date is seven calendar days before the lesson date. Payment-secured means credit coverage or a confirmed provider payment.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Lesson</th><th>Charge</th><th>Credit available</th><th>Invoice amount</th><th>Readiness</th><th>Collection</th><th>Document</th></tr></thead><tbody>${rowMarkup}</tbody></table></div></section><section class="card"><div class="section-heading"><div><h2>Customer credit</h2><p class="muted">Immutable credit history remains the source of the balance shown here.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Original</th><th>Available</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><div class="section-heading"><h2>Alerts</h2><a class="text-link" href="/learn/admin/billing">Refresh</a></div><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Alert</th><th>Student</th><th>State</th><th>Action</th></tr></thead><tbody>${alertRows}</tbody></table></div></section>`);
+  return appPage(user, csrfToken, "Billing health", `<div class="page-heading"><div><h1>Billing health</h1><p class="lede">Operational payment readiness for ${escapeHtml(todayLabel)} through the next seven days. Business time is always Europe/London.</p></div></div><div class="summary-grid"><section class="summary-card"><span>Today</span><strong>${todayRows.length}</strong><small>lessons</small></section><section class="summary-card"><span>Payment secured</span><strong>${secured}</strong><small>next seven days</small></section><section class="summary-card"><span>Credit-covered</span><strong>${creditCovered}</strong></section><section class="summary-card"><span>Needs attention</span><strong>${attention}</strong></section><section class="summary-card"><span>Failed payments</span><strong>${failed}</strong></section></div><section class="card"><div class="section-heading"><div><h2>Next seven days</h2><p class="muted">Collection date is seven calendar days before the lesson date. Payment-secured means credit coverage or a confirmed provider payment. No active mandate means manual payment is required.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Lesson</th><th>Charge</th><th>Credit available</th><th>Invoice amount</th><th>Readiness</th><th>Collection</th><th>Document</th></tr></thead><tbody>${rowMarkup}</tbody></table></div></section><section class="card"><div class="section-heading"><div><h2>Active customer credit</h2><p class="muted">Only remaining credit is shown here. Fully consumed credit remains available through the billing audit.</p></div></div><div class="table-wrap"><table><thead><tr><th>Student</th><th>Original</th><th>Available</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div>${historicalCredits.length ? `<details><summary>Consumed credit history (${historicalCredits.length})</summary><p class="muted">These rows are retained for audit and are no longer available to apply.</p></details>` : ""}</section><section class="card"><div class="section-heading"><h2>Alerts</h2><a class="text-link" href="/learn/admin/billing">Refresh</a></div><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Alert</th><th>Student</th><th>State</th><th>Action</th></tr></thead><tbody>${alertRows}</tbody></table></div></section>`);
 }
 
 function recurringSeriesSection(
@@ -3467,7 +3502,7 @@ async function handleAdmin(request: Request, env: Env, active: ActiveSession, ro
         if (!changed) return redirect(`/learn/admin/lessons/${lessonRouteId(lesson.id)}`);
         const student = await findActiveStudentRecipient(db, lesson.student_id);
         if (student?.learn_user_id && student.learn_user_email) {
-          const content = renderEmail("CANCELLATION_PROCESSED", lessonMailData(lesson, false), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+          const content = renderEmail("CANCELLATION_PROCESSED", await cancellationMailData(db, lesson, false), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
           await emitNotification(env, {
             type: "CANCELLATION_PROCESSED",
             eventId: lesson.id,
@@ -3710,10 +3745,15 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
   const mandateCopy = directDebitStatusCopy(mandateStatus);
   studentBillingStage("TOTALS_CALCULATED", { ...studentContext, studentId: student.id });
   const availableCredit = credits.reduce((total, credit) => total + (billingMinorValue(credit.remaining_amount_minor) ?? 0n), 0n);
-  const outstanding = upcoming.reduce((total, row) => total + (billingMinorValue(row.amount_minor) ?? 0n), 0n);
-  const creditRows = credits.length
-    ? credits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>Cancellation credit</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel("CREDIT", credit.status))}</td></tr>`).join("")
+  const outstanding = upcoming.reduce((total, row) => total + (billingMinorValue(row.invoice_amount_minor) ?? billingMinorValue(row.amount_minor) ?? 0n), 0n);
+  const activeCredits = credits.filter((credit) => BigInt(credit.remaining_amount_minor) > 0n);
+  const historicalCredits = credits.filter((credit) => BigInt(credit.remaining_amount_minor) === 0n);
+  const creditRows = activeCredits.length
+    ? activeCredits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>Cancellation credit</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${billingMoney(credit.remaining_amount_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel("CREDIT", credit.status))}</td></tr>`).join("")
     : `<tr><td colspan="6">No credit history.</td></tr>`;
+  const creditHistoryRows = historicalCredits.length
+    ? historicalCredits.map((credit) => `<tr><td>${escapeHtml(billingDateLabel(credit.created_at))}</td><td>${billingMoney(credit.original_amount_minor)}</td><td>${billingMoney(credit.amount_consumed_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel("CREDIT", credit.status))}</td></tr>`).join("")
+    : `<tr><td colspan="4">No consumed credit history.</td></tr>`;
   const upcomingRows = upcoming.length
     ? upcoming.map((row) => `<tr><td>${escapeHtml(billingDateLabel(row.occurred_at))}</td><td>${billingMoney(row.amount_minor)}</td><td>${billingMoney(row.credit_available_minor)}</td><td>${escapeHtml(billingCustomerStatusLabel(row.kind, row.status))}</td><td>${escapeHtml(row.collection_date ? billingDateLabel(row.collection_date) : "Not scheduled")}</td></tr>`).join("")
     : `<tr><td colspan="5">No lessons in the next seven days.</td></tr>`;
@@ -3724,7 +3764,7 @@ async function studentBillingPage(user: AppUser, csrfToken: string, db: D1Databa
     ? ""
     : `<div class="direct-debit-actions"><a class="button secondary" href="mailto:billing@foxtutor.org?subject=Direct%20Debit%20setup%20help">Contact billing</a></div><p class="direct-debit-support">Billing support: <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a></p>`;
   studentBillingStage("BILLING_HTML_RENDER_START", studentContext);
-  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1></div></div><div class="summary-grid student-billing-summary"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong><small>available to use</small></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses the secure provider flow for Direct Debit. Bank details must be entered only through that provider flow, never by email or in FoxTutor Learn. FoxTutor stores only the status needed to run billing.</p>${mandateStatus === "AUTHORISATION_PENDING" ? "<p>Use the secure provider authorisation request you received. The provider may take a few working days to confirm it.</p>" : ""}<p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Credit history</h2><p class="muted">Credit is created when an eligible cancellation is processed and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div></section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div>${studentSectionPagination(historyPage, historyPagination.pageSize, historyTotal, "/learn/student/billing", "Billing history", "page", "size")}</section>`);
+  const response = appPage(user, csrfToken, "Billing", `<div class="page-heading"><div><h1>My billing</h1></div></div><div class="summary-grid student-billing-summary"><section class="summary-card"><span>Available credit</span><strong>${billingMoney(availableCredit)}</strong><small>available to use</small></section><section class="summary-card"><span>Upcoming charges</span><strong>${billingMoney(outstanding)}</strong><small>next seven days</small></section></div><section class="card direct-debit-card" aria-labelledby="direct-debit-heading"><div class="section-heading"><div><h2 id="direct-debit-heading">Direct Debit</h2><p class="lede">${escapeHtml(mandateCopy.description)}</p></div><span class="status status-${directDebitStatusClass(mandateStatus)}">${escapeHtml(mandateCopy.label)}</span></div><p>FoxTutor uses the secure provider flow for Direct Debit. Bank details must be entered only through that provider flow, never by email or in FoxTutor Learn. FoxTutor stores only the status needed to run billing.</p>${mandateStatus === "AUTHORISATION_PENDING" ? "<p>Use the secure provider authorisation request you received. The provider may take a few working days to confirm it.</p>" : ""}<p class="muted">${escapeHtml(mandateCopy.action)}</p>${mandateAction}</section><section class="card"><h2>Upcoming lessons and charges</h2><div class="table-wrap"><table><thead><tr><th>Lesson</th><th>Charge</th><th>Credit</th><th>Invoice/payment</th><th>Collection date</th></tr></thead><tbody>${upcomingRows}</tbody></table></div></section><section class="card"><h2>Active credit</h2><p class="muted">Credit is created only when an eligible cancellation has a secured or in-transit payment, and is applied to future lesson charges automatically.</p><div class="table-wrap"><table><thead><tr><th>Created</th><th>Source</th><th>Original</th><th>Consumed</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${creditRows}</tbody></table></div>${historicalCredits.length ? `<details><summary>Consumed credit history (${historicalCredits.length})</summary><div class="table-wrap"><table><thead><tr><th>Created</th><th>Original</th><th>Consumed</th><th>Status</th></tr></thead><tbody>${creditHistoryRows}</tbody></table></div></details>` : ""}</section><section class="card"><h2>Billing history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div>${studentSectionPagination(historyPage, historyPagination.pageSize, historyTotal, "/learn/student/billing", "Billing history", "page", "size")}</section>`);
   studentBillingStage("BILLING_HTML_RENDER_COMPLETE", studentContext);
   studentBillingStage("STUDENT_BILLING_END", studentContext);
   return response;
@@ -3899,10 +3939,12 @@ async function handleStudent(request: Request, env: Env, active: ActiveSession, 
     if (changed) {
       const student = await findActiveStudentRecipient(db, currentLesson.student_id);
       if (student?.learn_user_id && student.learn_user_email) {
-        const content = renderEmail("CANCELLATION_PROCESSED", {
-          ...lessonMailData(currentLesson, false),
-          undoPath: `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(currentLesson.id))}/undo-cancellation`
-        }, canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
+        const content = renderEmail("CANCELLATION_PROCESSED", await cancellationMailData(
+          db,
+          currentLesson,
+          false,
+          `/learn/student/lessons/${encodeURIComponent(lessonUrlKey(currentLesson.id))}/undo-cancellation`
+        ), canonicalLearnOrigin(env.PUBLIC_ORIGIN, url.origin));
         await emitNotification(env, {
           type: "CANCELLATION_PROCESSED",
           eventId: currentLesson.id,

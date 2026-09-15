@@ -6,7 +6,7 @@ interface MockStatement {
   values: unknown[];
 }
 
-function mockBatchDb(invoice?: { id: string; status: string; freeagent_url: string | null; collection_started: number }) {
+function mockBatchDb(invoice?: { id: string; status: string; freeagent_url: string | null; collection_started: number; credit_eligible?: number; collection_unknown?: number }) {
   const statements: MockStatement[] = [];
   const db = {
     prepare(sql: string) {
@@ -99,5 +99,32 @@ describe("Phase 5 accounting boundary", () => {
     });
     expect(statements.some((statement) => statement.sql.includes("'CANCEL_INVOICE'"))).toBe(true);
     expect(statements.some((statement) => statement.sql.includes("'cancel-invoice:' || i.id"))).toBe(true);
+    expect(statements.some((statement) => statement.sql.includes("'GRANT'"))).toBe(false);
+  });
+
+  it("creates cancellation credit only after collection has started", async () => {
+    const { db, statements } = mockBatchDb({
+      id: "invoice-1",
+      status: "PAYMENT_PENDING",
+      freeagent_url: "https://api.freeagent.com/v2/invoices/42",
+      collection_started: 1,
+      credit_eligible: 1,
+      collection_unknown: 0
+    });
+    await cancelLesson(db, {
+      lessonId: "lesson-1",
+      studentId: "student-1",
+      actorUserId: "admin-1",
+      actorRole: "ADMIN",
+      eventType: "ADMIN_CANCELLED",
+      billingConsequence: "ADMIN_CANCELLED",
+      creditAmountMinor: 5500n,
+      now: "2026-09-13T12:00:00.000Z",
+      previousStartAt: "2026-09-15T12:00:00.000Z",
+      previousEndAt: "2026-09-15T12:55:00.000Z",
+      previousTimezone: "Europe/London"
+    });
+    expect(statements.some((statement) => statement.sql.includes("'GRANT'"))).toBe(true);
+    expect(statements.some((statement) => statement.sql.includes("'CANCEL_INVOICE'"))).toBe(false);
   });
 });

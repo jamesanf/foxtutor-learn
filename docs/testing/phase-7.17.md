@@ -120,8 +120,8 @@ The complete suite passes:
 
 ```text
 42 test files
-298 tests
-298 passed
+303 tests
+303 passed
 0 failed
 ```
 
@@ -155,6 +155,32 @@ provider response. If collection has started, FoxTutor blocks invoice
 cancellation and preserves the payment/credit lifecycle. Provider-not-found
 or ambiguous responses remain reconciliation-required rather than being
 treated as successful cancellation.
+
+Settlement-safe credit and cancellation acceptance now also covers:
+
+- admin and recurring cancellation credits are created only when a persisted
+  Direct Debit/payment operation is scheduled, submitted, pending, confirmed,
+  failed or unknown; an unissued or merely sent invoice creates no credit;
+- sent, uncollected invoices remain local `SENT` documents while their
+  `CANCEL_INVOICE` provider operation is pending, preventing a false
+  customer-facing claim that the provider has already cancelled the invoice;
+- cancellation emails distinguish not invoiced, provider-cancellation
+  pending, payment in transit, confirmed credit and reconciliation-required
+  outcomes;
+- credit-covered lessons create a zero-value FreeAgent invoice with the
+  original invoice reference in the comments, are marked locally secured and
+  never receive a Direct Debit operation;
+- no-mandate lessons are explicitly classified as
+  `NO_MANDATE_MANUAL_PAYMENT`, leaving the lesson bookable while warning the
+  tutor that manual payment is required;
+- active credit is separated from consumed history in the student and admin
+  billing views.
+
+Production D1 migration `0034_settlement_safe_credit_repair.sql` repaired the
+historical test grants that had no provider invoice/payment evidence. It uses
+ledger `REVERSAL` plus a marked `REFUND` repair transaction rather than
+deleting rows; each repaired credit now has zero remaining balance and status
+`FAILED` for audit visibility.
 
 Live acceptance on 15 September 2026 created a James Fox lesson for 7 October
 2026 through the authenticated admin booking flow. Its billing event remained

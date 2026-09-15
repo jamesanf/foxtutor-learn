@@ -55,6 +55,9 @@ export interface CancellationDecisionEmailData extends LessonEmailData {
 
 export interface CancellationProcessedEmailData extends LessonEmailData {
   undoPath?: string;
+  billingOutcome?: "NOT_INVOICED" | "CANCELLATION_PENDING_PROVIDER" | "PAYMENT_IN_TRANSIT" | "CREDIT_GRANTED" | "RECONCILIATION_REQUIRED";
+  billingAmountMinor?: number | string;
+  billingInvoiceReference?: string | null;
 }
 
 export interface DirectDebitEmailData {
@@ -166,8 +169,21 @@ export function renderCancellationProcessed(data: CancellationProcessedEmailData
   const date = lessonDate(data);
   const time = lessonTime(data);
   const undoLink = "undoPath" in data && typeof data.undoPath === "string" ? learnLink(origin, data.undoPath) : null;
-  const text = `Your lesson has been cancelled.\n\n${date}\n${time}${undoLink ? `\n\nWas this a mistake? Undo the cancellation: ${undoLink}` : ""}`;
-  const html = `<p>Your lesson has been cancelled.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${undoLink ? `<p>Was this a mistake? <a href="${escapeHtml(undoLink)}">Undo the cancellation</a>.</p>` : ""}`;
+  const reference = data.billingInvoiceReference ? ` (${data.billingInvoiceReference})` : "";
+  const amount = data.billingAmountMinor === undefined ? "" : ` £${(Number(data.billingAmountMinor) / 100).toFixed(2)}`;
+  const billingText = data.billingOutcome === "NOT_INVOICED"
+    ? "This lesson was cancelled before invoicing. No payment will be taken."
+    : data.billingOutcome === "CANCELLATION_PENDING_PROVIDER"
+      ? "The lesson was cancelled before collection. The provider invoice cancellation is being confirmed; no Direct Debit collection will be initiated by FoxTutor."
+      : data.billingOutcome === "CREDIT_GRANTED"
+        ? `Payment was confirmed and${amount} has been retained as credit from invoice${reference} for a future booking.`
+        : data.billingOutcome === "PAYMENT_IN_TRANSIT"
+          ? `A payment is still in transit${reference}. The account credit will remain subject to provider confirmation.`
+          : data.billingOutcome === "RECONCILIATION_REQUIRED"
+            ? "The cancellation was recorded, but the payment provider state is being reconciled. FoxTutor will send a separate financial update once confirmed."
+            : "";
+  const text = `Your lesson has been cancelled.\n\n${date}\n${time}${billingText ? `\n\n${billingText}` : ""}${undoLink ? `\n\nWas this a mistake? Undo the cancellation: ${undoLink}` : ""}`;
+  const html = `<p>Your lesson has been cancelled.</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${billingText ? `<p>${escapeHtml(billingText)}</p>` : ""}${undoLink ? `<p>Was this a mistake? <a href="${escapeHtml(undoLink)}">Undo the cancellation</a>.</p>` : ""}`;
   return {
     subject: `Lesson cancelled — ${date}`,
     text,

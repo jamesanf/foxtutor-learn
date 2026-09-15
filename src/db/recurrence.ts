@@ -1,7 +1,7 @@
 import { collectionDateSevenDaysBeforeLesson } from "../domain/billing";
 import { recurringOccurrencesInWindow, sixWeekWindow, type RecurrencePause } from "../domain/recurrence";
 import { FOX_TUTOR_TIMEZONE } from "../domain/calendar";
-import { cancellationCreditStatements } from "./billing";
+import { cancellationCreditStatements, invoiceCancellationStatement } from "./billing";
 import { findOverlappingLesson, type LessonConflict } from "./lessons";
 
 export interface RecurringLessonSeries {
@@ -394,10 +394,32 @@ export async function cancelRecurringLesson(
   const target = await db.prepare(
     `SELECT l.id, l.student_id, l.recurring_series_id, l.recurrence_key,
             l.start_at, l.end_at, l.timezone, s.payer_student_id,
-            b.id AS billing_event_id, b.gross_amount_minor, b.status AS billing_event_status
+            b.id AS billing_event_id, b.gross_amount_minor, b.status AS billing_event_status,
+            i.id AS invoice_id, i.status AS invoice_status, i.freeagent_url,
+            EXISTS (
+              SELECT 1 FROM billing_invoice_operations op
+              WHERE op.invoice_id = i.id
+                AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                AND op.status IN ('PROCESSING', 'SUCCEEDED', 'UNKNOWN')
+            ) OR EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id
+                AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'UNKNOWN')
+            ) AS collection_started
+            , EXISTS (
+              SELECT 1 FROM billing_invoice_operations op
+              WHERE op.invoice_id = i.id
+                AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                AND op.status IN ('PROCESSING', 'SUCCEEDED')
+            ) OR EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id
+                AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+            ) AS credit_eligible
      FROM lessons l
      JOIN recurring_lesson_series s ON s.id = l.recurring_series_id
      LEFT JOIN billing_events b ON b.lesson_id = l.id
+     LEFT JOIN billing_invoices i ON i.billing_event_id = b.id
      WHERE l.id = ? AND l.status = 'scheduled'`
   ).bind(input.lessonId).first<{
     id: string;
@@ -411,22 +433,51 @@ export async function cancelRecurringLesson(
     billing_event_id: string | null;
     gross_amount_minor: number | string | null;
     billing_event_status: string | null;
+    invoice_id: string | null;
+    invoice_status: string | null;
+    freeagent_url: string | null;
+    collection_started: number;
+    credit_eligible: number;
   }>();
   if (!target) return false;
   const targets = input.mode === "THIS_AND_FUTURE"
     ? (await db.prepare(
       `SELECT l.id, l.student_id, l.start_at, l.end_at, l.timezone, l.recurrence_key,
               s.payer_student_id, b.id AS billing_event_id, b.gross_amount_minor,
-              b.status AS billing_event_status
+              b.status AS billing_event_status, i.id AS invoice_id,
+              i.status AS invoice_status, i.freeagent_url,
+              EXISTS (
+                SELECT 1 FROM billing_invoice_operations op
+                WHERE op.invoice_id = i.id
+                  AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                  AND op.status IN ('PROCESSING', 'SUCCEEDED', 'UNKNOWN')
+              ) OR EXISTS (
+                SELECT 1 FROM billing_payments p
+                WHERE p.invoice_id = i.id
+                  AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'UNKNOWN')
+              ) AS collection_started
+              , EXISTS (
+                SELECT 1 FROM billing_invoice_operations op
+                WHERE op.invoice_id = i.id
+                  AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                  AND op.status IN ('PROCESSING', 'SUCCEEDED')
+              ) OR EXISTS (
+                SELECT 1 FROM billing_payments p
+                WHERE p.invoice_id = i.id
+                  AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+              ) AS credit_eligible
        FROM lessons l
        JOIN recurring_lesson_series s ON s.id = l.recurring_series_id
        LEFT JOIN billing_events b ON b.lesson_id = l.id
+       LEFT JOIN billing_invoices i ON i.billing_event_id = b.id
        WHERE l.recurring_series_id = ? AND l.status = 'scheduled' AND l.start_at >= ?
        ORDER BY l.start_at ASC, l.id ASC`
     ).bind(target.recurring_series_id, target.start_at).all<{
       id: string; student_id: string; start_at: string; end_at: string; timezone: string;
       recurrence_key: string; payer_student_id: string; billing_event_id: string | null; gross_amount_minor: number | string | null;
-      billing_event_status: string | null;
+      billing_event_status: string | null; invoice_id: string | null; invoice_status: string | null;
+      freeagent_url: string | null; collection_started: number;
+      credit_eligible: number;
     }>()).results
     : [{
       id: target.id,
@@ -438,7 +489,12 @@ export async function cancelRecurringLesson(
       payer_student_id: target.payer_student_id,
       billing_event_id: target.billing_event_id,
       gross_amount_minor: target.gross_amount_minor,
-      billing_event_status: target.billing_event_status
+      billing_event_status: target.billing_event_status,
+      invoice_id: target.invoice_id,
+      invoice_status: target.invoice_status,
+      freeagent_url: target.freeagent_url,
+      collection_started: target.collection_started
+      , credit_eligible: target.credit_eligible
     }];
   const statements: D1PreparedStatement[] = [];
   for (const item of targets) {
@@ -458,22 +514,36 @@ export async function cancelRecurringLesson(
          WHERE changes() > 0
          ON CONFLICT(id) DO NOTHING`
       ).bind(historyId, item.id, item.student_id, input.actorUserId, actorRole, eventType, input.reason, billingConsequence, item.start_at, item.end_at, item.timezone, input.now),
-      db.prepare("UPDATE billing_events SET status = 'CANCELLED', updated_at = ? WHERE lesson_id = ? AND status != 'SETTLED'")
-        .bind(input.now, item.id)
+      db.prepare(
+        `UPDATE billing_events
+         SET status = CASE WHEN ? THEN status ELSE 'CANCELLED' END, updated_at = ?
+         WHERE lesson_id = ? AND status != 'CANCELLED'`
+      ).bind(item.collection_started ? 1 : 0, input.now, item.id)
     );
     if (actorRole === "ADMIN" && item.billing_event_id && item.gross_amount_minor) {
-      statements.push(...cancellationCreditStatements(db, {
-        creditId: `credit:${historyId}`,
-        accountId: `credit-account:${item.payer_student_id}`,
-        studentId: item.student_id,
-        payerStudentId: item.payer_student_id,
-        sourceEventId: historyId,
-        lessonId: item.id,
-        cancellationId: historyId,
-        amountMinor: BigInt(item.gross_amount_minor),
-        now: input.now,
-        createProviderOperation: ["INVOICE_CREATED", "SETTLED", "UNKNOWN", "FAILED"].includes(item.billing_event_status ?? "")
-      }));
+      if (item.credit_eligible) {
+        statements.push(...cancellationCreditStatements(db, {
+          creditId: `credit:${historyId}`,
+          accountId: `credit-account:${item.payer_student_id}`,
+          studentId: item.student_id,
+          payerStudentId: item.payer_student_id,
+          sourceEventId: historyId,
+          lessonId: item.id,
+          cancellationId: historyId,
+          amountMinor: BigInt(item.gross_amount_minor),
+          now: input.now,
+          createProviderOperation: true
+        }));
+      } else if (item.invoice_id && item.freeagent_url && ["SENT", "PAYMENT_PENDING"].includes(item.invoice_status ?? "")) {
+        statements.push(
+          db.prepare(
+            `UPDATE billing_invoices
+             SET provider_status = 'CANCELLATION_PENDING', updated_at = ?
+             WHERE id = ?`
+          ).bind(input.now, item.invoice_id),
+          invoiceCancellationStatement(db, item.invoice_id, input.now)
+        );
+      }
     }
   }
   if (input.mode === "THIS_AND_FUTURE") {

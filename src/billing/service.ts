@@ -50,6 +50,19 @@ function legacyInvoiceReference(id: string): string {
   return `FT-INV-${compact}`;
 }
 
+async function creditSourceReferences(db: D1Database, invoiceId: string): Promise<string[]> {
+  const result = await db.prepare(
+    `SELECT DISTINCT COALESCE(source_invoice.freeagent_reference, c.id) AS reference
+     FROM billing_invoice_credit_applications a
+     JOIN customer_credits c ON c.id = a.credit_id
+     LEFT JOIN billing_events source_event ON source_event.lesson_id = c.source_lesson_id
+     LEFT JOIN billing_invoices source_invoice ON source_invoice.billing_event_id = source_event.id
+     WHERE a.invoice_id = ?
+     ORDER BY reference`
+  ).bind(invoiceId).all<{ reference: string }>();
+  return result.results.map((row) => row.reference);
+}
+
 async function invoiceReferenceFor(
   db: D1Database,
   invoice: { id: string; created_at: string }
@@ -203,19 +216,6 @@ async function processCreateInvoice(
       grossAmountMinor: BigInt(invoice.gross_amount_minor),
       now
     });
-  if (allocated.netAmountMinor === 0n) {
-    await updateBillingInvoice(db, invoice.id, {
-      status: "PAID",
-      providerStatus: "CREDIT_COVERED",
-      now
-    });
-    await updateBillingEventStatus(db, event.id, "SETTLED", now, null, null, "CREDIT_COVERED");
-    await markBillingInvoiceOperation(db, operation.id, {
-      status: "SUCCEEDED",
-      providerStatus: "CREDIT_COVERED"
-    }, now);
-    return;
-  }
   const config = await configuredInvoiceFromDatabase(db, env, now);
   const link = await findExternalAccountingLink(db, event.student_id, env.FREEAGENT_ENVIRONMENT === "sandbox" || env.FREEAGENT_ENVIRONMENT === "production" ? env.FREEAGENT_ENVIRONMENT : undefined);
   if (!config || !link || link.status !== "VERIFIED") {
@@ -259,6 +259,11 @@ async function processCreateInvoice(
     }
     const lessonDate = event.lesson_date ?? event.billing_date ?? now.slice(0, 10);
     const collectionDate = event.collection_date ?? lessonDate;
+    const zeroValue = allocated.netAmountMinor === 0n;
+    const sourceReferences = zeroValue ? await creditSourceReferences(db, invoice.id) : [];
+    const comments = zeroValue
+      ? `Credit from invoice ${sourceReferences.join(", ") || "a previous lesson"} applied to this lesson; amount due £0.00. Direct Debit is not required.`
+      : `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`;
     const draft = existing ?? await providerCall(db, env, now, fetcher, (client, token) =>
       client.createDraftInvoice(token, {
         contactUrl: link.external_url,
@@ -267,12 +272,12 @@ async function processCreateInvoice(
         paymentTermsInDays: config.paymentTermsInDays,
         itemType: config.itemType,
         description: `FoxTutor lesson ${lessonDate}`,
-        comments: `Direct Debit collection scheduled for ${collectionDate} (7 days before the lesson).`,
+        comments,
         price: formatMinorUnits(allocated.netAmountMinor),
         categoryUrl: config.categoryUrl,
         currency: config.currency,
         salesTaxRate: config.salesTaxRate,
-        enableGoCardless: config.currency === "GBP"
+        enableGoCardless: !zeroValue && config.currency === "GBP"
       })
     );
     const sent = !draft.status || draft.status === "Draft"
@@ -284,20 +289,20 @@ async function processCreateInvoice(
     if (!readBack) throw new Error("FreeAgent invoice was not found after it was sent.");
     const referenceId = providerReference(readBack.url);
     await updateBillingInvoice(db, invoice.id, {
-      status: "SENT",
+      status: zeroValue ? "PAID" : "SENT",
       creditAppliedMinor: allocated.creditAppliedMinor,
       netAmountMinor: allocated.netAmountMinor,
       freeagentReference: referenceId,
       freeagentUrl: readBack.url,
-      providerStatus: readBack.status ?? "SENT",
+      providerStatus: zeroValue ? "CREDIT_COVERED" : (readBack.status ?? "SENT"),
       now
     });
-    await updateBillingEventStatus(db, event.id, "INVOICE_CREATED", now, referenceId, readBack.url, readBack.status ?? "SENT");
+    await updateBillingEventStatus(db, event.id, zeroValue ? "SETTLED" : "INVOICE_CREATED", now, referenceId, readBack.url, zeroValue ? "CREDIT_COVERED" : (readBack.status ?? "SENT"));
     await markBillingInvoiceOperation(db, operation.id, {
       status: "SUCCEEDED",
       providerReference: referenceId,
       providerUrl: readBack.url,
-      providerStatus: readBack.status ?? "SENT"
+      providerStatus: zeroValue ? "CREDIT_COVERED" : (readBack.status ?? "SENT")
     }, now);
     const currentEvent = await findBillingEvent(db, event.id);
     if (currentEvent?.status === "CANCELLED") {

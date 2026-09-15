@@ -60,6 +60,19 @@ describe("payment readiness", () => {
     }).state).toBe("PAYMENT_SECURED");
   });
 
+  it("requires manual payment when no active mandate exists", () => {
+    expect(calculatePaymentReadiness({
+      ...base,
+      now: "2026-09-15T12:00:00.000Z",
+      mandateState: "setup"
+    }).state).toBe("NO_MANDATE_MANUAL_PAYMENT");
+    expect(calculatePaymentReadiness({
+      ...base,
+      now: "2026-09-15T12:00:00.000Z",
+      mandateState: "inactive"
+    }).state).toBe("NO_MANDATE_MANUAL_PAYMENT");
+  });
+
   it("surfaces failed and unknown provider collection states", () => {
     expect(calculatePaymentReadiness({ ...base, paymentStatus: "FAILED" }).state).toBe("PAYMENT_FAILED");
     expect(calculatePaymentReadiness({ ...base, paymentStatus: "UNKNOWN" }).state).toBe("PAYMENT_UNKNOWN");

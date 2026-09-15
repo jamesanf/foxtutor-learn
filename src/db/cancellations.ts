@@ -56,6 +56,97 @@ export interface LessonHistory {
   actor_name?: string;
 }
 
+export type CancellationBillingOutcome =
+  | { kind: "NOT_INVOICED" }
+  | { kind: "CANCELLATION_PENDING_PROVIDER" }
+  | { kind: "PAYMENT_IN_TRANSIT"; amountMinor: bigint; invoiceReference: string | null }
+  | { kind: "CREDIT_GRANTED"; amountMinor: bigint; invoiceReference: string | null }
+  | { kind: "RECONCILIATION_REQUIRED" };
+
+export async function findCancellationBillingOutcome(
+  db: D1Database,
+  lessonId: string
+): Promise<CancellationBillingOutcome> {
+  const row = await db.prepare(
+    `SELECT i.id AS invoice_id, i.status AS invoice_status, i.provider_status,
+            i.freeagent_reference,
+            EXISTS (
+              SELECT 1 FROM billing_invoice_operations op
+              WHERE op.invoice_id = i.id AND op.operation_type = 'CANCEL_INVOICE'
+                AND op.status IN ('PENDING', 'PROCESSING', 'RETRYABLE')
+            ) AS cancellation_pending,
+            EXISTS (
+              SELECT 1 FROM billing_invoice_operations op
+              WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                AND op.status IN ('PROCESSING', 'SUCCEEDED', 'UNKNOWN')
+            ) OR EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id
+                AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'UNKNOWN')
+            ) AS collection_started,
+            EXISTS (
+              SELECT 1 FROM billing_invoice_operations op
+              WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                AND op.status IN ('PROCESSING', 'SUCCEEDED')
+            ) OR EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id
+                AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+            ) AS credit_eligible,
+            EXISTS (
+              SELECT 1 FROM billing_invoice_operations op
+              WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+                AND op.status = 'UNKNOWN'
+            ) OR EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id AND p.status = 'UNKNOWN'
+            ) AS collection_unknown,
+            EXISTS (
+              SELECT 1 FROM billing_payments p
+              WHERE p.invoice_id = i.id AND p.status = 'CONFIRMED'
+            ) OR i.status = 'PAID' AS payment_confirmed,
+            (SELECT c.original_amount_minor FROM customer_credits c
+             WHERE c.source_lesson_id = ? ORDER BY c.created_at DESC LIMIT 1) AS credit_amount_minor
+     FROM billing_invoices i
+     JOIN billing_events e ON e.id = i.billing_event_id
+     WHERE e.lesson_id = ?
+     LIMIT 1`
+  ).bind(lessonId, lessonId).first<{
+    invoice_id: string | null;
+    invoice_status: string | null;
+    provider_status: string | null;
+    freeagent_reference: string | null;
+    cancellation_pending: number;
+    collection_started: number;
+    credit_eligible: number;
+    collection_unknown: number;
+    payment_confirmed: number;
+    credit_amount_minor: number | string | null;
+  }>();
+  if (!row) return { kind: "NOT_INVOICED" };
+  if (row.provider_status === "RECONCILIATION_REQUIRED" || row.provider_status === "CANCELLATION_RECONCILIATION_REQUIRED") {
+    return { kind: "RECONCILIATION_REQUIRED" };
+  }
+  if (row.credit_amount_minor !== null && row.payment_confirmed) {
+    return {
+      kind: "CREDIT_GRANTED",
+      amountMinor: BigInt(row.credit_amount_minor),
+      invoiceReference: row.freeagent_reference
+    };
+  }
+  if (row.collection_started) {
+    return {
+      kind: "PAYMENT_IN_TRANSIT",
+      amountMinor: row.credit_amount_minor === null ? 0n : BigInt(row.credit_amount_minor),
+      invoiceReference: row.freeagent_reference
+    };
+  }
+  if (row.cancellation_pending || row.invoice_status === "SENT" || row.invoice_status === "PAYMENT_PENDING") {
+    return { kind: "CANCELLATION_PENDING_PROVIDER" };
+  }
+  return { kind: "NOT_INVOICED" };
+}
+
 export async function findPendingCancellationRequestForLesson(db: D1Database, lessonId: string): Promise<CancellationRequest | null> {
   return db.prepare(
     `SELECT r.*, s.name AS student_name, l.start_at AS lesson_start_at, l.end_at AS lesson_end_at, l.timezone AS lesson_timezone
@@ -165,7 +256,7 @@ export async function cancelLesson(
   if (input.previousTimezone !== FOX_TUTOR_TIMEZONE) {
     throw new Error(`FoxTutor lessons always use ${FOX_TUTOR_TIMEZONE}.`);
   }
-  const billedInvoice = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor
+  const billedInvoice = input.eventType === "ADMIN_CANCELLED"
     ? await db.prepare(
       `SELECT i.id, i.status, i.freeagent_url,
          EXISTS (
@@ -175,8 +266,25 @@ export async function cancelLesson(
          ) OR EXISTS (
            SELECT 1 FROM billing_payments p
            WHERE p.invoice_id = i.id
-             AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'FAILED', 'UNKNOWN')
-         ) AS collection_started
+             AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'UNKNOWN')
+         ) AS collection_started,
+         EXISTS (
+           SELECT 1 FROM billing_invoice_operations op
+           WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+             AND op.status IN ('PROCESSING', 'SUCCEEDED')
+         ) OR EXISTS (
+           SELECT 1 FROM billing_payments p
+           WHERE p.invoice_id = i.id
+             AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED')
+         ) AS credit_eligible,
+         EXISTS (
+           SELECT 1 FROM billing_invoice_operations op
+           WHERE op.invoice_id = i.id AND op.operation_type = 'INITIATE_DIRECT_DEBIT'
+             AND op.status = 'UNKNOWN'
+         ) OR EXISTS (
+           SELECT 1 FROM billing_payments p
+           WHERE p.invoice_id = i.id AND p.status = 'UNKNOWN'
+         ) AS collection_unknown
       FROM billing_invoices i
        JOIN billing_events e ON e.id = i.billing_event_id
        WHERE e.lesson_id = ?
@@ -186,6 +294,8 @@ export async function cancelLesson(
       status: string;
       freeagent_url: string | null;
       collection_started: number;
+      credit_eligible: number;
+      collection_unknown: number;
     }>()
     : null;
   const providerCorrectionRequired = Boolean(
@@ -206,7 +316,7 @@ export async function cancelLesson(
     accountingEffectiveDate: input.now.slice(0, 10),
     now: input.now
   });
-  const creditStatements = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor
+  const creditStatements = input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor && billedInvoice?.credit_eligible
     ? cancellationCreditStatements(db, {
       creditId: `credit-${historyId}`,
       accountId: `credit-account-${input.payerStudentId ?? input.studentId}`,
@@ -248,18 +358,27 @@ export async function cancelLesson(
       input.previousTimezone,
       input.now
     ),
-    ...(input.eventType === "ADMIN_CANCELLED" && input.creditAmountMinor ? [
+    ...(input.eventType === "ADMIN_CANCELLED" ? [
       db.prepare(
         `UPDATE billing_events
-         SET status = 'CANCELLED', updated_at = ?, provider_status = CASE WHEN ? THEN 'CANCELLATION_RECONCILIATION_REQUIRED' ELSE provider_status END
-         WHERE lesson_id = ? AND status NOT IN ('SETTLED', 'CANCELLED')`
-      ).bind(input.now, providerCorrectionRequired ? 1 : 0, input.lessonId),
+         SET status = CASE WHEN ? THEN status ELSE 'CANCELLED' END,
+             updated_at = ?,
+             provider_status = CASE
+               WHEN ? THEN CASE WHEN ? THEN 'CANCELLATION_RECONCILIATION_REQUIRED' ELSE 'PAYMENT_IN_TRANSIT' END
+               ELSE provider_status END
+         WHERE lesson_id = ? AND status != 'CANCELLED'`
+      ).bind(providerCorrectionRequired ? 1 : 0, input.now, providerCorrectionRequired ? 1 : 0, billedInvoice?.collection_unknown ? 1 : 0, input.lessonId),
       ...(providerCorrectionRequired ? [db.prepare(
         `UPDATE billing_invoices
-         SET status = 'CANCELLED', provider_status = 'CANCELLATION_RECONCILIATION_REQUIRED', updated_at = ?
+         SET provider_status = CASE WHEN ? THEN 'CANCELLATION_RECONCILIATION_REQUIRED' ELSE 'PAYMENT_IN_TRANSIT' END, updated_at = ?
          WHERE id = ?`
-      ).bind(input.now, billedInvoice?.id ?? "")] : [])
+      ).bind(billedInvoice?.collection_unknown ? 1 : 0, input.now, billedInvoice?.id ?? "")] : [])
       ,
+      ...(providerInvoiceCancellationRequired ? [db.prepare(
+        `UPDATE billing_invoices
+         SET provider_status = 'CANCELLATION_PENDING', updated_at = ?
+         WHERE id = ?`
+      ).bind(input.now, billedInvoice!.id)] : []),
       ...(providerInvoiceCancellationRequired ? [invoiceCancellationStatement(db, billedInvoice!.id, input.now)] : [])
     ] : []),
     ...creditStatements,

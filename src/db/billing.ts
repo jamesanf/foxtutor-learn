@@ -158,7 +158,9 @@ export interface BillingHistoryItem {
   invoice_id: string | null;
   credit_id: string | null;
   amount_minor: number | string | null;
+  invoice_amount_minor?: number | string | null;
   provider_url?: string | null;
+  provider_status?: string | null;
   status: string;
   description: string;
   provider_reference: string | null;
@@ -1279,20 +1281,23 @@ export async function listUpcomingBillingRows(
   endDate: string,
   studentId?: string,
   providerEnvironment?: "sandbox" | "production" | null
-): Promise<Array<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null }>> {
+): Promise<Array<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null; mandate_state: string | null }>> {
   const result = await db.prepare(
     `SELECT e.id, 'LESSON_CHARGE' AS kind, COALESCE(e.lesson_date, e.created_at) AS occurred_at,
             e.student_id, s.name AS student_name, e.lesson_id, e.id AS billing_event_id,
             i.id AS invoice_id, NULL AS credit_id, e.gross_amount_minor AS amount_minor,
+            COALESCE(i.net_amount_minor, e.net_amount_minor, e.gross_amount_minor) AS invoice_amount_minor,
             COALESCE(i.status, e.status) AS status, 'Upcoming lesson' AS description,
             COALESCE(i.freeagent_reference, e.external_reference) AS provider_reference,
+            COALESCE(i.provider_status, e.provider_status) AS provider_status,
             e.collection_date, COALESCE(a.available_minor, 0) AS credit_available_minor,
-            p.status AS payment_status
+            p.status AS payment_status, ba.mandate_state
      FROM billing_events e
      JOIN students s ON s.id = e.student_id
      LEFT JOIN billing_invoices i ON i.billing_event_id = e.id
        ${providerEnvironment ? "AND (i.provider_environment = ? OR i.provider_environment IS NULL)" : ""}
      LEFT JOIN customer_credit_accounts a ON a.student_id = e.payer_student_id
+     LEFT JOIN billing_accounts ba ON ba.student_id = e.payer_student_id
      LEFT JOIN billing_payments p ON p.invoice_id = i.id
      WHERE e.lesson_date >= ? AND e.lesson_date < ? AND e.status != 'CANCELLED'
        AND (? IS NULL OR e.student_id = ?)
@@ -1303,7 +1308,7 @@ export async function listUpcomingBillingRows(
     endDate,
     studentId ?? null,
     studentId ?? null
-  ).all<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null }>();
+  ).all<BillingHistoryItem & { collection_date: string | null; credit_available_minor: number | string; payment_status: string | null; mandate_state: string | null }>();
   return result.results;
 }
 

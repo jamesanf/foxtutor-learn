@@ -111,6 +111,15 @@ API transition only when no collection operation or payment has started.
 Collection-started invoices are never deleted or cancelled; ambiguous provider
 results remain `UNKNOWN`/`RECONCILIATION_REQUIRED`.
 
+Migration `0034_settlement_safe_credit_repair.sql` is applied in Production.
+It voids historical cancellation grants without provider invoice/payment
+evidence through auditable ledger reversal/refund rows, leaving no remaining
+usable balance while retaining the original grant and consumption history.
+The Worker now gates new credits on collection/payment evidence, renders
+provider-aware cancellation outcomes, creates auditable zero-value invoices
+for fully credit-covered lessons, and labels no-mandate lessons as manual
+payment rather than treating them as Direct Debit-pending.
+
 ## Required validation
 
 ```text
@@ -174,3 +183,7 @@ for its normal collection date.
   authenticated Chromium billing dashboard rendered successfully after the
   deployment; the only observed console errors were pre-existing CSP blocks for
   inline Access/font/manifest resources, not application JavaScript errors.
+- Production D1 migration `0034_settlement_safe_credit_repair.sql` is applied.
+- Production verification found nine historical test credits with no provider
+  invoice/payment evidence; all now have zero remaining balance and an
+  `INTERNAL_REPAIR_VOID` ledger marker.
