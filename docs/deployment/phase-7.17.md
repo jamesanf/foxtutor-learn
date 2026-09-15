@@ -66,6 +66,10 @@ The Upcoming Bookings action is now labelled `New booking` and opens the
 existing house-style modal dialog. The dialog reuses the server-side lesson
 creation route, retains the end-time preview, and supports keyboard focus
 return plus Cancel, close-control and backdrop dismissal.
+The New booking dialog now presents `Standalone lesson` and `Recurring lesson`
+choices. Each path has its existing protected form and server route, and the
+legacy recurring-series creation URL redirects to Bookings with the recurring
+form selected in the modal.
 
 ## Required validation
 
@@ -100,9 +104,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `700da36`
+- Git commit: `371abe5`
 - Worker: `foxtutor-learn`
-- Worker version: `35166480-0c50-4e2b-b88c-e3fbaf7311a0`
+- Worker version: `000f2b37-6171-4dca-af22-2e6548682516`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

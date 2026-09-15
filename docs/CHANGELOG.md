@@ -1,5 +1,16 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 booking type chooser
+
+- Extended the New booking modal with `Standalone lesson` and
+  `Recurring lesson` choices.
+- Reused the existing protected lesson and recurring-series form routes,
+  including Back navigation and recurring-form preselection.
+- Redirected direct `/learn/admin/series/new` GET requests into the recurring
+  modal view on Bookings.
+- Deployed commit `371abe5` as Worker version
+  `000f2b37-6171-4dca-af22-2e6548682516`.
+
 ### 2026-09-15 - Phase 7.17 New booking modal
 
 - Replaced the Admin Bookings `Add lesson` navigation with a `New booking`

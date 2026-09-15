@@ -38,6 +38,11 @@ Automated UI contracts cover:
 - the Upcoming Bookings `New booking` trigger opening the house-style modal,
   preserving the lesson end-time preview and closing through Cancel, the close
   control or the backdrop.
+- the modal booking chooser exposing separate `Standalone lesson` and
+  `Recurring lesson` paths, with Back returning to the chooser and the
+  recurring path rendering the complete series form.
+- the legacy `/learn/admin/series/new` GET path redirecting to Bookings with
+  the recurring modal view preselected.
 - mobile table pages retaining real columns in a horizontal scrolling
   container instead of converting rows into unusable stacked cards.
 - notification delivery-log headers sorting the server-side result set, with
