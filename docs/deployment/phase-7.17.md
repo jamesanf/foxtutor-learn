@@ -38,8 +38,8 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `673c1596494610218fc25d065f0b276eac8241f1`
+- Git commit: `d7dd28a2efe6810227856a240462799169d12334`
 - Worker: `foxtutor-learn`
-- Worker version: `e3086fa8-b0ff-4b65-a0e8-bccdc8187125`
+- Worker version: `56230c69-b7b5-4b1f-a12d-ea7ed976dd87`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15.
