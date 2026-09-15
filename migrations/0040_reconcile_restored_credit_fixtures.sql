@@ -36,17 +36,6 @@ WHERE provider_environment = 'production'
       AND p.status IN ('SCHEDULED', 'SUBMITTED', 'PENDING', 'CONFIRMED', 'FAILED', 'UNKNOWN')
   );
 
-UPDATE billing_invoice_credit_applications
-SET status = 'REVERSED'
-WHERE status = 'PROVIDER_FAILED'
-  AND EXISTS (
-    SELECT 1
-    FROM billing_invoices i
-    WHERE i.id = billing_invoice_credit_applications.invoice_id
-      AND i.status = 'CANCELLED'
-      AND i.provider_status = 'CREDIT_RESTORED'
-  );
-
 UPDATE billing_events
 SET provider_status = 'CREDIT_RESTORED',
     updated_at = datetime('now')
