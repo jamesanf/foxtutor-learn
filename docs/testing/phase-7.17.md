@@ -225,8 +225,8 @@ after the FoxMail cancellation/provenance fix is:
 
 ```text
 43 test files
-310 tests
-310 passed
+311 tests
+311 passed
 0 failed
 ```
 
@@ -234,9 +234,23 @@ The focused regression test confirms that a `CREDIT_COVERED_EMAIL` settlement
 creates exactly one idempotent ledger reversal and no `CANCEL_INVOICE`
 operation. The admin credit detail now exposes a guarded manual-refund flow;
 it requires an explicit confirmation and external refund reference, then
-records the refund as `PAID`/`REFUNDED` in the credit ledger. Authenticated Chromium
-acceptance must verify the logout POST, redirect, signed-out state and
-explicit resume path in addition to the dashboard and student submission
-journeys. The conflict flows additionally require an authenticated admin
-session to exercise both New Booking modal paths against live data. No real
-financial operation is part of this feature.
+records the refund as `PAID`/`REFUNDED` in the credit ledger. Authenticated
+Chromium proved the full controlled refund flow for
+`credit:phase717-statement-v4`: the admin form accepted the external reference,
+the browser redirected successfully, and Production D1 showed a `PAID` refund,
+`REFUND` ledger entry, and zero remaining balance. No real-money refund was
+initiated.
+
+## Traffic-light closure matrix
+
+| Area | Status | Evidence or remaining decision |
+| --- | --- | --- |
+| Cancellation before invoice issuance | GREEN | Live admin cancellation left no invoice, collection operation or credit. |
+| Sent but uncollected provider invoice | GREEN | `CANCEL_INVOICE` is idempotent and fail-closed until FreeAgent confirms cancellation. |
+| Collection started, failed or unknown | GREEN | Cancellation does not delete the provider document; reconciliation is required. |
+| Credit-covered FoxMail statement | GREEN | Live statement/cancellation tests preserve the original invoice and lesson provenance. |
+| Repeated credit reversal | GREEN | Idempotent reversal prevents a second credit grant. |
+| Manual refund acknowledgement | GREEN | Live Chromium/D1 test records one `PAID` refund and zero available balance. |
+| Partial manual refund | AMBER | Database helpers support bounded partial refunds, but a separate live partial-refund fixture has not been run. |
+| New-customer no-mandate payment | AMBER | Manual-payment readiness is classified safely; live mailbox/provider onboarding remains a separate acceptance gate. |
+| Full live recurring provenance cycle | AMBER | Single-lesson provenance is proven; a fresh recurring-series mail cycle still requires an isolated provider fixture. |

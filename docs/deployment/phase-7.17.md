@@ -167,9 +167,9 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `1062185`
+- Git commit: `71be5fe`
 - Worker: `foxtutor-learn`
-- Worker version: `720614ce-37d8-4fa4-907e-2159422cf9f9`
+- Worker version: `6826eb38-5bb9-4028-bfb7-a043996900c4`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
@@ -187,8 +187,9 @@ for its normal collection date.
 - Production verification found nine historical test credits with no provider
   invoice/payment evidence; all now have zero remaining balance and an
   `INTERNAL_REPAIR_VOID` ledger marker.
-- Git commit: `2f2f64f`
-- Worker version: `bdf8637c-f67a-4161-9fac-675412a146cf`
+- The earlier deployment provenance entries above are historical; the current
+  deployed revision is `71be5fe` / Worker version
+  `6826eb38-5bb9-4028-bfb7-a043996900c4`.
 - Live authenticated Chromium reload of `/learn/admin/billing` confirmed the
   deployed settlement-safe UI: no active customer credits, nine consumed
   historical credits, `Billing audit` links, `Record manual-payment exception`
