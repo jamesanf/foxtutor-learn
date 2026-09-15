@@ -50,6 +50,8 @@ the table row.
 The compact rule is declared after the shared button rule so its height,
 padding and line-height cannot be overridden by the global button defaults.
 The control height is now 24px to match the adjacent status pill.
+The action form now starts at the same padded left edge as the `Action`
+column header instead of centering the button within the column.
 
 ## Required validation
 
@@ -84,9 +86,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `22fadb0`
+- Git commit: `1b79562`
 - Worker: `foxtutor-learn`
-- Worker version: `5dfc94cf-6380-46bf-b16b-386ffca3ef4d`
+- Worker version: `1de073f6-acf0-4322-a399-c187ab97658c`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

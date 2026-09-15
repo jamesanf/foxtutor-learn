@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 recurring-series Action alignment
+
+- Left-aligned the recurring-series Pause/Resume control with the start of
+  the `Action` column header.
+- Preserved the 24px pill-matched height and vertical row alignment.
+- Deployed commit `1b79562` as Worker version
+  `1de073f6-acf0-4322-a399-c187ab97658c`.
+
 ### 2026-09-15 - Phase 7.17 recurring-series pill alignment
 
 - Matched the recurring-series Pause/Resume control height to the adjacent
