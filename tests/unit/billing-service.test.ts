@@ -33,15 +33,19 @@ describe("credit-covered invoice comments", () => {
       ]
     );
 
-    expect(statement.subject).toBe("Credit-covered billing statement FT-INV-26091504");
-    expect(statement.text).toContain("invoice FT-INV-26091501");
+    expect(statement.subject).toBe("Your FoxTutor lesson is paid - 20 September 2026");
+    expect(statement.text).toContain("Invoice FT-INV-26091501");
     expect(statement.text).toContain("lesson on 16 September 2026");
     expect(statement.text).toContain("lesson on 17 September 2026");
     expect(statement.text).not.toContain("credit:phase717-live-zero");
     expect(statement.text).not.toMatch(/sort code|account number|bank details|payment reference/i);
     expect(statement.html).not.toMatch(/sort code|account number|bank details|payment reference/i);
-    expect(statement.text).toContain("Lesson covered: 20 September 2026");
-    expect(statement.text).toContain("Lesson charge covered: £55.00");
+    expect(statement.text).toContain("Lesson paid for: 20 September 2026");
+    expect(statement.text).toContain("Lesson fee: £55.00");
+    expect(statement.text).toContain("Credit used: £55.00");
     expect(statement.text).toContain("Amount due: £0.00");
+    expect(statement.text).toContain("You do not need to make a payment or set up Direct Debit");
+    expect(statement.html).toContain("Payment received");
+    expect(statement.html).toContain(">Billing</div>");
   });
 });

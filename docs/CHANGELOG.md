@@ -12,6 +12,9 @@
   `NOT_REQUIRED` rows and no failed or retryable cancellation-accounting rows.
 - Clarified the Accounting outbox UI: `NOT_REQUIRED` rows are retained as
   audit records and do not create or cancel a FreeAgent document.
+- Reworked credit-covered billing emails into the standard FoxTutor Billing
+  layout with plain-language reassurance, a clearer payment summary, and
+  preserved source-invoice and source-lesson provenance.
 - Reran all billing-focused accounting, billing, payment, cancellation, credit,
   FreeAgent, notification and environment suites: 18 test files and 138 tests
   passed with no failures.

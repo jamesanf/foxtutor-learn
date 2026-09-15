@@ -27,6 +27,7 @@ import { datedInvoiceReference, isCollectionDateReached } from "../domain/billin
 import { classifyDirectDebitState } from "../domain/direct-debit";
 import { mapFreeAgentInvoicePaymentStatus, mapFreeAgentPaymentStatus } from "../domain/payment-status";
 import { sendMailDetailed, type MailDeliveryResult, type MailEnvironment } from "../mail/client";
+import { frame } from "../notifications/templates";
 
 function providerReference(url: string): string {
   return url.split("/").pop() ?? url;
@@ -78,10 +79,10 @@ function statementDate(value: string | null): string {
 
 function sourceProvenanceText(source: CreditSourceProvenance): string {
   const origin = source.invoiceReference
-    ? `invoice ${source.invoiceReference}`
+    ? `Invoice ${source.invoiceReference}`
     : "a previous FoxTutor credit from a cancelled lesson";
-  const lesson = source.lessonDate ? ` for the lesson on ${statementDate(source.lessonDate)}` : "";
-  return `${origin}${lesson} (£${formatMinorUnits(BigInt(source.amountMinor))})`;
+  const lesson = source.lessonDate ? ` - lesson on ${statementDate(source.lessonDate)}` : "";
+  return `${origin}${lesson} - £${formatMinorUnits(BigInt(source.amountMinor))}`;
 }
 
 export function renderCreditCoveredStatement(
@@ -94,14 +95,16 @@ export function renderCreditCoveredStatement(
   const sourceLines = sources.length
     ? sources.map(sourceProvenanceText)
     : ["a previous FoxTutor credit; source lesson history is not available"];
-  const sourceText = sourceLines.join("; ");
   const sourceHtml = sourceLines.map((line) => `<li>${escapeMailHtml(line)}</li>`).join("");
   const coveredLesson = statementDate(lessonDate);
   const amount = formatMinorUnits(BigInt(amountMinor));
+  const sourceLabel = sourceLines.length === 1 ? "Credit source" : "Credit sources";
+  const text = `Hello ${studentName},\n\nYour FoxTutor lesson on ${coveredLesson} has been paid for using credit from an earlier FoxTutor payment. No payment is needed from you.\n\nStatement reference: ${invoiceReference}\n\nLesson paid for: ${coveredLesson}\nLesson fee: £${amount}\nCredit used: £${amount}\n${sourceLabel}:\n- ${sourceLines.join("\n- ")}\nAmount due: £0.00\n\nYou do not need to make a payment or set up Direct Debit for this lesson.\n\nThis statement is for your records. If you have any questions, please contact billing@foxtutor.org.`;
+  const htmlBody = `<p>Hello ${escapeMailHtml(studentName)},</p><p>Your FoxTutor lesson on <strong>${escapeMailHtml(coveredLesson)}</strong> has been paid for using credit from an earlier FoxTutor payment. No payment is needed from you.</p><dl><dt>Statement reference</dt><dd>${escapeMailHtml(invoiceReference)}</dd><dt>Lesson paid for</dt><dd>${escapeMailHtml(coveredLesson)}</dd><dt>Lesson fee</dt><dd>£${escapeMailHtml(amount)}</dd><dt>Credit used</dt><dd>£${escapeMailHtml(amount)}</dd><dt>${sourceLabel}</dt><dd><ul>${sourceHtml}</ul></dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>You do not need to make a payment or set up Direct Debit for this lesson.</p><p>This statement is for your records. If you have any questions, please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a>.</p>`;
   return {
-    subject: `Credit-covered billing statement ${invoiceReference}`,
-    text: `Hello ${studentName},\n\nThis is a credit-covered FoxTutor billing statement.\n\nInvoice reference: ${invoiceReference}\nLesson covered: ${coveredLesson}\nLesson charge covered: £${amount}\nCredit applied from: ${sourceText}\nAmount due: £0.00\nDirect Debit is not required and no payment is due.\n\nPlease contact billing@foxtutor.org if you have any questions.`,
-    html: `<p>Hello ${escapeMailHtml(studentName)},</p><p>This is a credit-covered FoxTutor billing statement.</p><dl><dt>Invoice reference</dt><dd>${escapeMailHtml(invoiceReference)}</dd><dt>Lesson covered</dt><dd>${escapeMailHtml(coveredLesson)}</dd><dt>Lesson charge covered</dt><dd>£${escapeMailHtml(amount)}</dd><dt>Credit applied from</dt><dd><ul>${sourceHtml}</ul></dd><dt>Amount due</dt><dd>£0.00</dd></dl><p>Direct Debit is not required and no payment is due.</p><p>Please contact <a href="mailto:billing@foxtutor.org">billing@foxtutor.org</a> if you have any questions.</p>`
+    subject: `Your FoxTutor lesson is paid - ${coveredLesson}`,
+    text,
+    html: frame("Payment received", "FoxTutor Learn", htmlBody, "Billing")
   };
 }
 

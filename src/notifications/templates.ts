@@ -91,7 +91,7 @@ function lessonTime(data: LessonEmailData): string {
   return `${formatter.format(new Date(data.startAt))}–${formatter.format(new Date(data.endAt))}`;
 }
 
-function frame(title: string, text: string, body: string, headerLabel = title || "Learn"): string {
+export function frame(title: string, text: string, body: string, headerLabel = title || "Learn"): string {
   const note = text === "FoxTutor Learn" ? "" : `<div style="margin-bottom:6px">${escapeHtml(text)}</div>`;
   const year = new Date().getFullYear();
   return `<div style="margin:0;padding:28px 12px;background:#f1f7f8;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5"><div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d8e5e8;border-radius:12px;overflow:hidden"><div style="padding:20px 32px;background:#0e7490;color:#ffffff"><div style="font-size:21px;font-weight:700;letter-spacing:.02em">FoxTutor</div><div style="font-size:14px;margin-top:3px;color:#d8f3f7">${escapeHtml(headerLabel)}</div></div><div style="padding:36px 38px">${title ? `<h1 style="margin:0 0 28px;color:#155e75;font-size:27px;line-height:1.2">${escapeHtml(title)}</h1>` : ""}${body}</div><div style="padding:18px 38px;border-top:1px solid #e2edf0;color:#64748b;font-size:12px">${note}© ${year} Fox Learning Ltd. All rights reserved.</div></div></div>`;
