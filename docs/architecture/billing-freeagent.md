@@ -168,10 +168,15 @@ mapping is also bound to the connected company subdomain. A Sandbox category
 can therefore never be reused for Production, even if the URL shape is
 otherwise valid.
 
-The established defaults remain £55.00, `Hours`, 0 payment terms days, GBP
+The established defaults remain £55.00, `Unit`, 0 payment terms days, GBP
 and 0% sales tax. These defaults describe normal lesson accounting and do not
 authorize a provider invoice. A controlled Sandbox acceptance amount is a
 separate operation.
+
+`Unit` is intentional: one unit represents one 55-minute FoxTutor lesson.
+Legacy persisted `Hours` settings are normalized to `Unit` by migration
+`0035_invoice_item_type_unit.sql`, so FreeAgent does not describe a lesson as
+an hour.
 
 ### Contact verification
 

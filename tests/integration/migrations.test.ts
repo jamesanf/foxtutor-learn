@@ -248,4 +248,11 @@ describe("D1 foundation", () => {
     expect(migration).toContain("ALTER TABLE billing_invoice_operations ADD COLUMN human_authorized_at");
     expect(migration).toContain("ALTER TABLE billing_invoice_operations ADD COLUMN human_authorized_by_user_id");
   });
+
+  it("normalizes legacy hourly invoice item types to lesson units", () => {
+    const migration = readFileSync("migrations/0035_invoice_item_type_unit.sql", "utf8");
+    expect(migration).toContain("SET item_type = 'Unit'");
+    expect(migration).toContain("WHERE item_type = 'Hours'");
+    expect(migration).toContain("accounting_billing_settings_by_environment");
+  });
 });

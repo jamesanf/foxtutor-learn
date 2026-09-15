@@ -230,6 +230,11 @@ it has been seen and leaves it open for reconciliation; resolving it is a
 separate action after the provider state is confirmed. This fixes the prior
 `Invalid alert action` response for reconciliation alert IDs.
 
+FreeAgent invoice settings now use item type `Unit`, not `Hours`. A unit
+represents one 55-minute FoxTutor lesson. Migration
+`0035_invoice_item_type_unit.sql` normalizes existing persisted settings in
+both the legacy and environment-specific billing settings tables.
+
 Recurring cancellation stress acceptance has also been completed for a
 controlled five-occurrence series. A midpoint single-occurrence cancellation
 and cancellation of the remaining occurrences through the authenticated

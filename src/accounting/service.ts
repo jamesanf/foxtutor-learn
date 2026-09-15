@@ -331,7 +331,7 @@ function billingSettingsValues(
 ): BillingSettingsInput {
   return {
     amount: settings?.amount ?? env.FREEAGENT_INVOICE_AMOUNT ?? "55.00",
-    itemType: settings?.item_type ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Hours",
+    itemType: settings?.item_type ?? env.FREEAGENT_INVOICE_ITEM_TYPE ?? "Unit",
     categoryUrl: settings?.category_url ?? env.FREEAGENT_INVOICE_CATEGORY_URL ?? "",
     paymentTermsDays: String(settings?.payment_terms_days ?? env.FREEAGENT_INVOICE_PAYMENT_TERMS_DAYS ?? "0"),
     currency: settings?.currency ?? env.FREEAGENT_INVOICE_CURRENCY ?? "GBP",

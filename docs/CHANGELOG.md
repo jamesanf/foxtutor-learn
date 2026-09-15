@@ -25,6 +25,9 @@
 - Fixed billing alert acknowledgement for structured `billing-alert:...`
   identifiers and clarified the difference between acknowledging and
   resolving an alert.
+- Changed the FreeAgent invoice item type from `Hours` to `Unit`; one Unit
+  represents one 55-minute FoxTutor lesson, with a migration for existing
+  billing settings.
 - Added and applied migration `0034_settlement_safe_credit_repair.sql`.
   Nine historical no-evidence test credits were repaired with auditable
   reversal/refund rows rather than deleted.
