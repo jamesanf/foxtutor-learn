@@ -1,5 +1,14 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 contact mapping action containment
+
+- Kept the Production FreeAgent contact-mapping save and remove icons inside
+  their table cell at reduced desktop widths.
+- Made the Contact ID input consume only the remaining cell width and
+  preserved the stacked mobile form.
+- Deployed commit `78b5197` as Worker version
+  `e9532a45-7aa9-4c1c-8400-64a58a4144b7`.
+
 ### 2026-09-15 - Phase 7.17 compact table columns
 
 - Halved shared table cell horizontal padding to reduce unnecessary space

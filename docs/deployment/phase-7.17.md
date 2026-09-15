@@ -24,6 +24,9 @@ visual review; Resources and Notifications remain outline by default and
 filled when selected.
 All Learn tables now use compact horizontal cell spacing and responsive
 headers that shrink dynamically and wrap only at natural word boundaries.
+Production FreeAgent contact-mapping actions now use a shrinkable input grid
+so the save and remove icons remain inside their table cell at reduced desktop
+widths, while retaining the stacked mobile form.
 
 ## Required validation
 
@@ -58,9 +61,9 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 ## Deployment provenance
 
-- Git commit: `d2cc9ef`
+- Git commit: `78b5197`
 - Worker: `foxtutor-learn`
-- Worker version: `fd575dbe-50fa-4fa5-9cd3-37e66af019c9`
+- Worker version: `e9532a45-7aa9-4c1c-8400-64a58a4144b7`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated
