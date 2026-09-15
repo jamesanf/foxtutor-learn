@@ -167,7 +167,7 @@ for its normal collection date.
 
 ## Deployment provenance
 
-- Git commit: `b90b0f2`
+- Git commit: `2770dfc`
 - Worker: `foxtutor-learn`
 - Worker version: `6826eb38-5bb9-4028-bfb7-a043996900c4`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
@@ -188,8 +188,8 @@ for its normal collection date.
   invoice/payment evidence; all now have zero remaining balance and an
   `INTERNAL_REPAIR_VOID` ledger marker.
 - The earlier deployment provenance entries above are historical; the current
-  deployed revision is `b90b0f2` / Worker version
-  `8a06df17-807a-4c44-9314-e5200f928e08`.
+  deployed revision is `2770dfc` / Worker version
+  `429ff267-94ad-4b95-9bf0-169a9e8dbd02`.
 - Live authenticated Chromium reload of `/learn/admin/billing` confirmed the
   deployed settlement-safe UI: no active customer credits, nine consumed
   historical credits, `Billing audit` links, `Record manual-payment exception`
@@ -223,3 +223,12 @@ The admin credit detail now provides a guarded manual-refund acknowledgement:
 the administrator enters the amount already refunded externally and its
 external reference, and FoxTutor records an auditable `REFUND` transaction
 without initiating money movement.
+
+Recurring cancellation stress acceptance has also been completed for a
+controlled five-occurrence series. A midpoint single-occurrence cancellation
+and cancellation of the remaining occurrences through the authenticated
+admin lesson-status UI left every billing event `CANCELLED`, created no
+FreeAgent document or provider operation, and delivered five accepted
+cancellation notifications. The recurring `THIS_AND_FUTURE` path is covered
+by automated tests, including the fail-closed rule that collection-started
+invoices are not marked `CANCELLATION_PENDING`.

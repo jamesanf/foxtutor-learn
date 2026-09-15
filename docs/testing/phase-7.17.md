@@ -225,8 +225,8 @@ after the FoxMail cancellation/provenance fix is:
 
 ```text
 43 test files
-312 tests
-312 passed
+314 tests
+314 passed
 0 failed
 ```
 
@@ -254,3 +254,26 @@ initiated.
 | Partial manual refund | AMBER | Database helpers support bounded partial refunds, but a separate live partial-refund fixture has not been run. |
 | New-customer no-mandate payment | AMBER | Manual-payment readiness is classified safely; live mailbox/provider onboarding remains a separate acceptance gate. |
 | Full live recurring provenance cycle | AMBER | Single-lesson provenance is proven; a fresh recurring-series mail cycle still requires an isolated provider fixture. |
+
+## Recurring cancellation stress evidence
+
+An authenticated Chromium admin session created a controlled five-occurrence
+recurring series for KJHGBH Live Customer at £0.01 per lesson. The midpoint
+occurrence was cancelled through the real lesson-status UI, followed by the
+remaining four occurrences one at a time. Production D1 confirmed that all
+five lessons ended as `cancelled`, all five billing events became
+`CANCELLED`, no provider invoices or provider operations existed, and five
+`CANCELLATION_PROCESSED` notifications were accepted as `SENT`.
+
+The recurrence cancellation tests also cover cancelling from a midpoint
+through `THIS_AND_FUTURE`: only the selected and later materialised
+occurrences are changed, the series end date is set to the midpoint
+recurrence key, and the earlier occurrence remains untouched. A recurring
+invoice whose collection has started now remains outside the FreeAgent
+`CANCEL_INVOICE` path and is not marked `CANCELLATION_PENDING`.
+
+A separate near-term controlled recurring fixture reached the Production
+FreeAgent scheduler but FreeAgent rejected its invoice creation with HTTP
+422. No provider invoice or collection operation was created; the fixture is
+therefore classified as provider-validation `AMBER`, not as cancellation
+success.
