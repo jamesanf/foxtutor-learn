@@ -5,7 +5,8 @@
 This deployment contains the balanced student dashboard cards, time-of-day
 greeting, near-term lesson launch notice, home-learning panel, secured
 lesson-scoped student submission route, logout-session repair and compact
-Learn header branding.
+Learn header branding. It also uses outlined Resources and Notifications
+navigation icons when unselected, with filled selected states.
 The submission flow reuses the existing private resource/R2 pipeline and
 the logout repair does not change billing or provider behavior.
 
@@ -44,7 +45,7 @@ No Production invoice, payment, Direct Debit, credit note, bank transaction or
 
 - Git commit: `ef3c325`
 - Worker: `foxtutor-learn`
-- Worker version: `fd45ff20-c8b3-4ce3-be88-783eed460667`
+- Worker version: `ea9ed975-a1e2-436a-b99a-c1db26485cea`
 - Routes: `foxtutor.org/learn` and `foxtutor.org/learn/*`
 - Deployment completed on 2026-09-15. The unauthenticated endpoint smoke test
   correctly reached the Cloudflare Access login boundary. Authenticated

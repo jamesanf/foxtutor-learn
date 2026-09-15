@@ -7,6 +7,8 @@
 - Preserved filled icons for the selected navigation item and added the
   corresponding `aria-current="page"` state.
 - Updated the navigation icon contract and branding documentation.
+- Deployed commit `2c8b4d1` as Worker version
+  `ea9ed975-a1e2-436a-b99a-c1db26485cea`.
 
 ### 2026-09-15 - Phase 7.17 compact Learn header mark
 
