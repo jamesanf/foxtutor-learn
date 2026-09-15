@@ -583,6 +583,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .report-level-options { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 5; max-height: 240px; overflow-y: auto; padding: 5px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); box-shadow: 0 10px 24px rgb(16 42 67 / 15%); }
 .report-level-option { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 0; color: var(--foreground); background: transparent; cursor: pointer; text-align: left; font: inherit; }
 .report-level-option:hover, .report-level-option:focus-visible { color: var(--action); background: #edf5f8; }
+.student-combobox { position: relative; margin: 18px 0; }
+.student-combobox label { margin: 0; }
+.student-combobox-options { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 5; max-height: 240px; overflow-y: auto; padding: 5px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); box-shadow: 0 10px 24px rgb(16 42 67 / 15%); }
+.student-combobox-option { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 0; color: var(--foreground); background: transparent; cursor: pointer; text-align: left; font: inherit; }
+.student-combobox-option span { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; }
+.student-combobox-option:hover, .student-combobox-option:focus-visible, .student-combobox-option[aria-selected="true"] { color: var(--action); background: #edf5f8; }
 .report-tool.is-active { color: var(--action); background: #d8ebf0; }
 .report-attachments { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .report-attachments-grid { display: block; }

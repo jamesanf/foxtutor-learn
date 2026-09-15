@@ -214,6 +214,78 @@ import timeGridPlugin from "@fullcalendar/timegrid";
     });
   });
 
+  document.querySelectorAll<HTMLElement>("[data-student-combobox]").forEach((combobox) => {
+    const input = combobox.querySelector<HTMLInputElement>("[data-student-search]");
+    const value = combobox.querySelector<HTMLInputElement>("[data-student-value]");
+    const menu = combobox.querySelector<HTMLElement>("[role='listbox']");
+    const options = Array.from(combobox.querySelectorAll<HTMLButtonElement>("[data-student-option]"));
+    const form = combobox.closest("form");
+    if (!input || !value || !menu || !options.length) return;
+    let activeIndex = -1;
+
+    const visibleOptions = () => options.filter((option) => !option.hidden);
+    const close = () => {
+      menu.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      activeIndex = -1;
+      options.forEach((option) => option.removeAttribute("aria-selected"));
+    };
+    const render = () => {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+      options.forEach((option) => {
+        const matches = !query || option.textContent?.toLowerCase().includes(query);
+        option.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      menu.hidden = visible === 0;
+      input.setAttribute("aria-expanded", String(visible > 0));
+      activeIndex = -1;
+    };
+    const choose = (option: HTMLButtonElement) => {
+      input.value = option.dataset.studentName ?? option.textContent?.trim() ?? "";
+      value.value = option.dataset.studentId ?? "";
+      input.setCustomValidity("");
+      input.setAttribute("aria-activedescendant", option.id);
+      close();
+    };
+    input.addEventListener("focus", render);
+    input.addEventListener("input", () => {
+      value.value = "";
+      input.removeAttribute("aria-activedescendant");
+      input.setCustomValidity("");
+      render();
+    });
+    input.addEventListener("keydown", (event) => {
+      const visible = visibleOptions();
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (!visible.length) return;
+        event.preventDefault();
+        activeIndex = (activeIndex + (event.key === "ArrowDown" ? 1 : visible.length - 1)) % visible.length;
+        visible.forEach((option, index) => {
+          const active = index === activeIndex;
+          option.setAttribute("aria-selected", String(active));
+          if (active) option.scrollIntoView({ block: "nearest" });
+        });
+      } else if (event.key === "Enter" && activeIndex >= 0) {
+        event.preventDefault();
+        choose(visible[activeIndex]!);
+      } else if (event.key === "Escape") {
+        close();
+      }
+    });
+    options.forEach((option) => option.addEventListener("click", () => choose(option)));
+    form?.addEventListener("submit", (event) => {
+      if (value.value) return;
+      event.preventDefault();
+      input.setCustomValidity("Choose a student from the suggestions.");
+      input.reportValidity();
+    });
+    document.addEventListener("click", (event) => {
+      if (!combobox.contains(event.target as Node)) close();
+    });
+  });
+
   document.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".copy-link");
     if (!button) return;

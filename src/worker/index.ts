@@ -1624,6 +1624,13 @@ function lessonForm(
   return `<section class="card form-card"><h1>Edit lesson</h1>${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="${action}">${hiddenCsrf(csrfToken)}<div class="lesson-form-grid">${studentSelect}${inputField("Start", "startAt", start, "datetime-local", true)}${inputField("End", "endAt", end, "datetime-local", true)}${inputField("Timezone (IANA)", "timezone", timezone, "text", true)}${inputField("Lesson link", "externalUrl", lesson.external_url ?? "", "url")}<label class="field-wide">Notes<textarea name="notes" rows="4" maxlength="10000">${escapeHtml(lesson.notes)}</textarea></label></div><input type="hidden" name="status" value="${escapeHtml(lesson.status)}"><div class="form-actions"><button class="button" type="submit">Save lesson</button> <a class="button secondary" href="/learn/admin/lessons">Cancel</a></div></form></section>`;
 }
 
+function studentCombobox(students: Student[], selectedStudent: string, id: string): string {
+  const activeStudents = students.filter((student) => student.status === "ACTIVE");
+  const selected = activeStudents.find((student) => student.id === selectedStudent);
+  const options = activeStudents.map((student) => `<button type="button" role="option" class="student-combobox-option" id="${id}-option-${escapeHtml(student.id)}" data-student-option data-student-id="${escapeHtml(student.id)}" data-student-name="${escapeHtml(student.name)}">${escapeHtml(student.name)} <span>${escapeHtml(student.email)}</span></button>`).join("");
+  return `<div class="student-combobox" data-student-combobox><label for="${id}">Student</label><input id="${id}" type="text" value="${escapeHtml(selected?.name ?? "")}" placeholder="Search students…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="${id}-options" aria-expanded="false" data-student-search><input type="hidden" name="studentId" value="${escapeHtml(selectedStudent)}" data-student-value><div id="${id}-options" class="student-combobox-options" role="listbox" hidden>${options}</div></div>`;
+}
+
 function lessonCreateFormMarkup(
   csrfToken: string,
   action: string,
@@ -1635,8 +1642,7 @@ function lessonCreateFormMarkup(
 ): string {
   const selected = localStartParts(selectedStart, "Europe/London");
   const preview = derivedEndLabel(selected.time);
-  const activeStudents = students.filter((student) => student.status === "ACTIVE");
-  const studentSelect = `<label class="field-wide">Student<select name="studentId" required><option value="">Choose a student</option>${activeStudents.map((student) => `<option value="${escapeHtml(student.id)}"${student.id === selectedStudent ? " selected" : ""}>${escapeHtml(student.name)} (${escapeHtml(student.email)})</option>`).join("")}</select></label>`;
+  const studentSelect = studentCombobox(students, selectedStudent, "lesson-student");
   const cancel = dialog
     ? `<button class="button secondary" type="button" data-lesson-create-close>Cancel</button>`
     : `<a class="button secondary" href="/learn/admin/lessons">Cancel</a>`;
@@ -2195,11 +2201,10 @@ function recurringSeriesSection(
 }
 
 function recurringSeriesFormMarkup(csrfToken: string, students: Student[], error?: string, dialog = false): string {
-  const options = students.filter((student) => student.status === "ACTIVE").map((student) => `<option value="${escapeHtml(student.id)}">${escapeHtml(student.name)}</option>`).join("");
   const cancel = dialog
     ? `<button class="booking-dialog-back" type="button" data-booking-choice-back aria-label="Back to booking type" title="Back to booking type"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"></path></svg></button>`
     : `<a class="button secondary" href="/learn/admin/bookings">Cancel</a>`;
-  return `${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="/learn/admin/series/new"><label>Student and payer<select name="studentId" required>${options}</select></label><div class="form-grid"><label>Day<select name="dayOfWeek" required><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label><label>Local start time<input type="time" name="localStartTime" step="900" required></label><label>Duration (minutes)<input type="number" name="durationMinutes" min="1" max="1440" value="55" required></label><label>Price (£)<input type="number" name="price" min="0.01" step="0.01" value="55.00" required></label><label>Start date<input type="date" name="startDate" value="${escapeHtml(currentCalendarDate())}" required></label><label>End date (optional)<input type="date" name="endDate"></label></div><p class="muted">The payer is currently the selected student. Any future payer relationship workflow must be explicit and audited.</p><div class="form-actions">${cancel}<button class="button" type="submit">${hiddenCsrf(csrfToken)}${dialog ? "Create recurring series" : "Create series"}</button></div></form>`;
+  return `${error ? `<p class="form-error" role="alert">${escapeHtml(error)}</p>` : ""}<form method="post" action="/learn/admin/series/new">${studentCombobox(students, "", "series-student")}<div class="form-grid"><label>Day<select name="dayOfWeek" required><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label><label>Local start time<input type="time" name="localStartTime" step="900" required></label><label>Duration (minutes)<input type="number" name="durationMinutes" min="1" max="1440" value="55" required></label><label>Price (£)<input type="number" name="price" min="0.01" step="0.01" value="55.00" required></label><label>Start date<input type="date" name="startDate" value="${escapeHtml(currentCalendarDate())}" required></label><label>End date (optional)<input type="date" name="endDate"></label></div><p class="muted">The payer is currently the selected student. Any future payer relationship workflow must be explicit and audited.</p><div class="form-actions">${cancel}<button class="button" type="submit">${hiddenCsrf(csrfToken)}${dialog ? "Create recurring series" : "Create series"}</button></div></form>`;
 }
 
 function recurringSeriesForm(csrfToken: string, students: Student[], error?: string): string {

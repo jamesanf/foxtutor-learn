@@ -64,6 +64,9 @@ Automated UI contracts cover:
   paused or cancelled rather than silently creating an overlapping lesson.
 - the New Booking modal Back controls using an accessible, borderless bold
   MDI-style arrow in both booking form paths.
+- both New Booking student fields using the internal searchable combobox,
+  including live filtering, keyboard selection, hidden ID submission and
+  invalid free-text rejection.
 
 Table-page coverage includes the Accounting outbox and contact mappings,
 notification log, lesson/student/resource lists, recurring series,

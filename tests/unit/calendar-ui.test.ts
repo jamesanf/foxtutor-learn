@@ -117,6 +117,14 @@ describe("calendar presentation contract", () => {
     expect(workerSource).toContain('New Booking');
     expect(workerSource).toContain('data-booking-option="standalone"');
     expect(workerSource).toContain('data-booking-option="recurring"');
+    expect(workerSource).toContain('studentCombobox(students, selectedStudent, "lesson-student")');
+    expect(workerSource).toContain('studentCombobox(students, "", "series-student")');
+    expect(workerSource).not.toContain("Student and payer<select");
+    expect(workerSource).toContain('data-student-search');
+    expect(workerSource).toContain('data-student-option');
+    expect(clientSource).toContain('document.querySelectorAll<HTMLElement>("[data-student-combobox]")');
+    expect(clientSource).toContain('Choose a student from the suggestions.');
+    expect(cssSource).toContain(".student-combobox-options { position: absolute;");
     expect(workerSource).toContain('class="booking-dialog-back"');
     expect(workerSource).toContain('aria-label="Back to booking type"');
     expect(workerSource).toContain('M20 11H7.83l5.59-5.59');

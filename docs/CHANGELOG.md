@@ -1,5 +1,13 @@
 # Changelog
 
+### 2026-09-15 - Phase 7.17 searchable booking student selector
+
+- Replaced the standalone and recurring booking browser student dropdowns with
+  a shared site-internal searchable combobox.
+- Added live suggestions, keyboard selection and server-compatible hidden
+  student ID submission.
+- Renamed the recurring field from `Student and payer` to `Student`.
+
 ### 2026-09-15 - Phase 7.17 New Booking Back control
 
 - Replaced the modal's text Back buttons with a bold, borderless MDI-style

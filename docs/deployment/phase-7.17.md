@@ -81,6 +81,9 @@ an occupied occurrence rather than silently overlapping an existing booking.
 The New Booking modal now uses a borderless bold back-arrow icon in the
 standalone and recurring form views while retaining an accessible label and
 the existing chooser navigation.
+Both booking forms now label the payer selector simply as `Student` and use a
+shared site-internal searchable combobox with live suggestions. The selected
+student ID continues to be submitted through the existing protected routes.
 
 ## Required validation
 

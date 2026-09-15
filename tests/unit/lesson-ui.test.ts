@@ -7,6 +7,16 @@ describe("lesson creation client behavior", () => {
         <input type="time" name="startTime" step="900">
         <output data-end-preview>—</output>
       </form>
+      <form data-student-form>
+        <div data-student-combobox>
+          <input type="text" data-student-search role="combobox" aria-expanded="false">
+          <input type="hidden" data-student-value>
+          <div role="listbox" hidden>
+            <button type="button" data-student-option data-student-id="student-james" data-student-name="James Fox">James Fox <span>james@example.com</span></button>
+            <button type="button" data-student-option data-student-id="student-alex" data-student-name="Alex Smith">Alex Smith <span>alex@example.com</span></button>
+          </div>
+        </div>
+      </form>
       <button type="button" data-lesson-create-trigger>New booking</button>
       <dialog data-lesson-create-dialog data-initial-view="choice">
         <div data-booking-choice-view>
@@ -42,6 +52,18 @@ describe("lesson creation client behavior", () => {
     time!.value = "";
     time!.dispatchEvent(new Event("input", { bubbles: true }));
     expect(output!.textContent).toBe("—");
+
+    const studentSearch = document.querySelector<HTMLInputElement>("[data-student-search]");
+    const studentValue = document.querySelector<HTMLInputElement>("[data-student-value]");
+    const studentOptions = document.querySelectorAll<HTMLButtonElement>("[data-student-option]");
+    expect(studentSearch).not.toBeNull();
+    expect(studentValue).not.toBeNull();
+    studentSearch!.value = "James";
+    studentSearch!.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(studentOptions[0]!.hidden).toBe(false);
+    expect(studentOptions[1]!.hidden).toBe(true);
+    studentOptions[0]!.click();
+    expect(studentValue!.value).toBe("student-james");
 
     const trigger = document.querySelector<HTMLButtonElement>("[data-lesson-create-trigger]");
     const dialog = document.querySelector<HTMLDialogElement>("[data-lesson-create-dialog]");
