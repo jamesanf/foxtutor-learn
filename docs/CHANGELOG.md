@@ -7,6 +7,9 @@
   passed with no failures.
 - Reran the complete repository regression suite: 44 test files and 320 tests
   passed with no failures.
+- Deployed revision `7aceb60` as Worker version
+  `7452c60e-049f-4522-8be8-28605d2e4276` with the Learn routes and five-minute
+  billing scheduler active.
 - The remaining partial-refund, new-customer onboarding and full recurring
   credit-provenance items remain explicitly classified as live-acceptance
   fixtures, not automated regressions.
